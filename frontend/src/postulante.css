@@ -1,0 +1,699 @@
+/* ==========================================================================
+   Módulo postulante — bolsa de empleo (barra superior navy).
+   Solo el shell y las piezas específicas del módulo; tokens y componentes
+   base viven en styles.css (fuente única).
+   ========================================================================== */
+
+.app-postulante {
+  min-height: 100vh;
+  background: var(--fondo);
+  color: var(--text-1);
+}
+.app-postulante a { color: inherit; }
+
+/* ---------- Top bar ---------- */
+.app-postulante .post-header {
+  background: var(--navy);
+  padding: 14px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 20px;
+  min-height: 72px;
+}
+.app-postulante .brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; text-decoration: none; }
+.app-postulante .brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-ctl);
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--navy);
+}
+.app-postulante .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.app-postulante .brand-text .name { color: #fff; font-weight: 600; font-size: 16px; line-height: 1.2; }
+.app-postulante .brand-text .tag1 { color: var(--text-3); font-size: 12px; line-height: 1.2; }
+
+.app-postulante .post-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0;
+}
+.app-postulante .post-nav::-webkit-scrollbar { display: none; }
+.app-postulante .post-nav a {
+  color: #C7D6E8;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.app-postulante .post-nav a:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.app-postulante .post-nav a.active { background: var(--blue); color: #fff; }
+.app-postulante .post-nav a i { vertical-align: -2px; margin-right: 6px; }
+.app-postulante .nav-text-full { display: inline; }
+.app-postulante .nav-text-short { display: none; }
+
+.app-postulante .user-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.app-postulante .user-info { text-align: right; user-select: none; }
+.app-postulante .user-info .who { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.app-postulante .user-info .role { color: var(--text-3); font-size: 11.5px; line-height: 1.2; }
+.app-postulante .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* ---------- Dropdown de usuario ---------- */
+.app-postulante .user-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: 0 10px 30px rgba(11, 37, 66, 0.15);
+  min-width: 210px;
+  padding: 6px 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
+  z-index: 50;
+}
+.app-postulante .user-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.app-postulante .user-dropdown a,
+.app-postulante .user-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-1);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.app-postulante .user-dropdown a:hover, .app-postulante .user-dropdown button:hover { background: var(--sky); }
+.app-postulante .user-dropdown i { font-size: 17px; color: var(--text-2); width: 20px; text-align: center; }
+.app-postulante .user-dropdown .divider { height: 1px; background: var(--line); margin: 4px 12px; }
+.app-postulante .user-dropdown .logout-item { color: var(--red-tx); }
+.app-postulante .user-dropdown .logout-item i { color: var(--red-tx); }
+.app-postulante .user-dropdown .logout-item:hover { background: var(--red-bg); }
+
+/* ---------- Layout ---------- */
+.app-postulante .post-main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 10px;
+}
+
+/* ---------- Pills de filtro ---------- */
+.app-postulante .filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.app-postulante .pill { position: relative; flex-shrink: 0; }
+.app-postulante .pill.open { z-index: 60; }
+.app-postulante .pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.app-postulante .pill-btn .pill-label { display: flex; align-items: center; gap: 6px; }
+.app-postulante .pill-btn .pill-label .clear-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: color 0.15s;
+  line-height: 1;
+}
+.app-postulante .pill-btn .pill-label .clear-btn:hover { color: var(--red-c); }
+.app-postulante .pill.active .pill-btn .pill-label .clear-btn { display: inline-flex; }
+.app-postulante .pill-btn i { font-size: 16px; color: var(--text-2); transition: transform 0.18s, color 0.15s; }
+.app-postulante .pill-btn:hover { border-color: var(--blue); }
+.app-postulante .pill.open .pill-btn { border-color: var(--blue); background: var(--sky); color: var(--blue-dark); }
+.app-postulante .pill.open .pill-btn i { transform: rotate(180deg); color: var(--blue-dark); }
+.app-postulante .pill.active .pill-btn { border-color: var(--blue); background: var(--navy); color: #fff; }
+.app-postulante .pill.active .pill-btn i { color: #fff; }
+.app-postulante .pill.active .pill-btn .pill-label .clear-btn { color: rgba(255, 255, 255, 0.6); }
+.app-postulante .pill.active .pill-btn .pill-label .clear-btn:hover { color: #fff; }
+
+.app-postulante .pill-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 230px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: 0 10px 30px rgba(11, 37, 66, 0.12);
+  padding: 8px 4px;
+  z-index: 999;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.app-postulante .pill.open .pill-panel { display: block; }
+.app-postulante .pill-panel .option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-1);
+  position: relative;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.app-postulante .pill-panel .option-item:hover { background: var(--sky); }
+.app-postulante .pill-panel .option-item.selected { background: var(--sky-2); color: var(--blue-dark); }
+.app-postulante .pill-panel .option-item .count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: var(--sky-2);
+  padding: 0 10px;
+  border-radius: 12px;
+  line-height: 24px;
+  min-width: 28px;
+  text-align: center;
+}
+
+/* ---------- Resultados ---------- */
+.app-postulante .results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  border-radius: 9px;
+  background: var(--white);
+}
+.app-postulante .results-head .count { font-size: 15px; font-weight: 600; color: var(--ink); }
+.app-postulante .results-head .count span { color: var(--blue); }
+.app-postulante .results-head .sort { font-size: 12.5px; color: var(--text-3); }
+.app-postulante .empty-note { text-align: center; color: var(--text-3); font-size: 13px; padding: 18px 0 4px; }
+
+/* ---------- Tarjetas de empleo ---------- */
+.app-postulante .job-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.app-postulante .job-card:hover { border-color: var(--blue); box-shadow: 0 4px 18px rgba(11, 37, 66, 0.07); }
+.app-postulante .job-card .job-fila { display: flex; gap: 18px; align-items: flex-start; }
+.app-postulante .job-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-ctl);
+  background: var(--sky);
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.app-postulante .job-body { flex: 1; min-width: 0; }
+.app-postulante .job-body h3 { margin: 0 0 3px; font-size: 16.5px; font-weight: 600; color: var(--ink); }
+.app-postulante .company { color: var(--text-2); font-size: 13.5px; margin: 0 0 12px; }
+.app-postulante .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.app-postulante .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--sky);
+  color: var(--navy-2);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 7px;
+}
+.app-postulante .tag i { font-size: 14px; }
+.app-postulante .tag.accent { background: var(--navy); color: #fff; }
+.app-postulante .job-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.app-postulante .salary { font-size: 16px; font-weight: 700; color: var(--blue-dark); }
+.app-postulante .salary span { font-size: 12px; font-weight: 500; color: var(--text-3); margin-left: 4px; }
+.app-postulante .btn-detail {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+.app-postulante .btn-detail:hover { background: var(--blue-dark); }
+
+.app-postulante .job-detalle {
+  margin-top: 14px;
+  border-top: 1px dashed var(--line);
+  padding-top: 14px;
+}
+.app-postulante .job-detalle .campo-detalle { margin: 8px 0; }
+.app-postulante .job-detalle p { margin: 0.4rem 0; font-size: 0.9rem; }
+.app-postulante .job-detalle p b { color: var(--navy-2); }
+
+/* ---------- Stats (dashboard) ---------- */
+.app-postulante .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+
+/* ---------- Filas / listas ---------- */
+.app-postulante .fila { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.app-postulante .fila:last-of-type { border-bottom: none; }
+.app-postulante .fila-main { flex: 1; min-width: 0; }
+.app-postulante .fila-titulo { font-size: 14px; font-weight: 600; color: var(--ink); }
+.app-postulante .fila-sub { font-size: 12.5px; color: var(--text-2); margin-top: 2px; }
+.app-postulante .fila-derecha { text-align: right; flex-shrink: 0; }
+.app-postulante .fila-derecha .fecha { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+.app-postulante .estado-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+.app-postulante .estado-fila:last-of-type { border-bottom: none; }
+
+/* ---------- Filtro plegable (bolsa pública) ---------- */
+.app-postulante .filtro-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 42px;
+  padding: 0 14px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  cursor: pointer;
+}
+.app-postulante .filtro-pill-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-postulante .filtro-chevron {
+  font-size: 18px;
+  color: var(--text-2);
+  transition: transform 0.2s ease;
+}
+.app-postulante .filtro-chevron.rotate,
+.app-postulante .filtro-chevron.abierto {
+  transform: rotate(180deg);
+}
+.app-postulante .filtro-pill:hover .filtro-chevron {
+  color: var(--text-1);
+}
+
+/* Texto de detalle de la oferta (multilínea) */
+.app-postulante .texto-con-formato {
+  white-space: pre-wrap;
+  line-height: 1.4;
+  color: var(--text-1);
+}
+
+/* ---------- Cabecero público de la bolsa de empleo (sin sesión) ---------- */
+.app-postulante .guest-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.app-postulante .guest-saludo {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-postulante .guest-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.app-postulante .guest-link:hover {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.app-postulante .guest-link.solid {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+.app-postulante .guest-link.solid:hover {
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+}
+
+/* ---------- Aviso de perfil incompleto para poder postular ---------- */
+.app-postulante .perfil-incompleto {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--amber-bg);
+  border: 1px solid #f5d78e;
+  border-radius: var(--radius-ctl);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 13.5px;
+  flex-wrap: wrap;
+}
+.app-postulante .perfil-incompleto > i {
+  font-size: 24px;
+  color: var(--amber-tx);
+}
+.app-postulante .perfil-incompleto div { flex: 1; min-width: 200px; }
+.app-postulante .perfil-incompleto div span { display: block; color: var(--amber-tx); margin-top: 2px; }
+.app-postulante .perfil-incompleto > a {
+  background: var(--amber-tx);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.app-postulante .perfil-incompleto > a:hover { background: #6f4c0e; }
+
+/* ---------- Resumen de completitud del perfil (para poder postular) ---------- */
+.app-postulante .completitud {
+  border: 1px solid #f5d78e;
+  background: var(--amber-bg);
+  border-radius: var(--radius-ctl);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.app-postulante .completitud-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--amber-tx);
+  font-size: 14px;
+}
+.app-postulante .completitud-titulo i { font-size: 20px; }
+.app-postulante .completitud ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 18px;
+}
+.app-postulante .completitud li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--white);
+}
+.app-postulante .completitud li.ok { color: var(--green-tx); }
+.app-postulante .completitud li.ok i { color: var(--green); }
+.app-postulante .completitud li.falta { color: var(--amber-tx); }
+.app-postulante .completitud li.falta i { color: var(--amber); }
+
+/* ========== Responsive ========== */
+@media (max-width: 1024px) {
+  .app-postulante .post-header { padding: 14px 20px; }
+}
+@media (max-width: 860px) {
+  .app-postulante .post-header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+  .app-postulante .brand { flex-shrink: 0; }
+  .app-postulante .post-nav { order: 3; width: 100%; flex: 0 0 100%; }
+  .app-postulante .post-main { padding: 24px 16px 50px; }
+  .app-postulante .stat-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .app-postulante .nav-text-full { display: none; }
+  .app-postulante .nav-text-short { display: inline; }
+  .app-postulante .post-nav a { font-size: 12.5px; padding: 8px 10px; }
+  .app-postulante .post-nav a i { margin-right: 4px; }
+}
+@media (max-width: 560px) {
+  .app-postulante .post-main { padding: 20px 14px 44px; }
+  .app-postulante .page-head h1 { font-size: 20px; }
+  .app-postulante .brand-text .tag1 { display: none; }
+  .app-postulante .user-info { display: none; }
+  .app-postulante .pill-panel { left: -80px; min-width: 200px; }
+  .app-postulante .job-card .job-fila { flex-direction: column; }
+  .app-postulante .job-card { padding: 16px; }
+  .app-postulante .job-icon { width: 40px; height: 40px; font-size: 17px; }
+  .app-postulante .job-body h3 { font-size: 15.5px; }
+  .app-postulante .job-foot { flex-direction: column; align-items: stretch; gap: 10px; }
+  .app-postulante .btn-detail { width: 100%; justify-content: center; }
+  .app-postulante .results-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+@media (max-width: 400px) {
+  .app-postulante .post-nav a { font-size: 11px; padding: 6px 8px; }
+  .app-postulante .post-nav a i { font-size: 13px; margin-right: 3px; }
+  .app-postulante .pill-btn { font-size: 12px; padding: 8px 12px; }
+  .app-postulante .pill-btn i { font-size: 14px; }
+}
+
+/* ========== Vista maestro-detalle de búsqueda (lista + panel) ========== */
+.app-postulante .busqueda { display: flex; align-items: flex-start; gap: 18px; }
+.app-postulante .lista-ofertas { flex: 1; min-width: 0; }
+.app-postulante .job-card { cursor: pointer; }
+.app-postulante .job-card.seleccionada {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(27, 111, 201, 0.12);
+}
+.app-postulante .job-card.seleccionada .job-icon { background: var(--blue); color: #fff; }
+
+.app-postulante .panel-detalle {
+  width: 400px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 20px;
+  align-self: flex-start;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 18px rgba(11, 37, 66, 0.06);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+.app-postulante .panel-caja { padding: 20px; }
+.app-postulante .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.app-postulante .panel-head h3 { margin: 0; font-size: 17px; font-weight: 600; color: var(--ink); }
+.app-postulante .panel-head .panel-sub {
+  margin: 3px 0 0;
+  color: var(--text-2);
+  font-size: 13px;
+  max-height: 80px;
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.15s ease, margin 0.2s ease;
+}
+.app-postulante .panel-head .panel-sub.oculto {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+/* Encabezado compactable del detalle: tags + salario se colapsan al hacer
+   scroll (UX). La fila se anima con grid-rows sin medir alturas (responsive). */
+.app-postulante .panel-colapsable {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s ease, opacity 0.2s ease;
+}
+.app-postulante .panel-colapsable.oculto {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.app-postulante .panel-colapsable-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.app-postulante .panel-close {
+  background: var(--gray-bg);
+  border: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+  flex-shrink: 0;
+  font-size: 16px;
+}
+.app-postulante .panel-close:hover { background: var(--line); color: var(--text-1); }
+.app-postulante .panel-placeholder { color: var(--text-3); text-align: center; padding: 40px 10px; font-size: 13px; margin: 0; }
+.app-postulante .panel-cabeza { flex-shrink: 0; }
+.app-postulante .panel-contenido { min-height: 0; }
+.app-postulante .panel-detalle .job-detalle { margin-top: 14px; }
+.app-postulante .panel-detalle .job-detalle p { margin: 0.5rem 0; font-size: 1rem; }
+.app-postulante .btn-postular { width: 100%; justify-content: center; margin-top: 14px; }
+
+@media (max-width: 860px) {
+  .app-postulante .busqueda { display: block; }
+  .app-postulante .panel-detalle {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: none;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(11, 37, 66, 0.45);
+    border-radius: 0;
+    border: none;
+    z-index: 200;
+    overflow: hidden;
+  }
+  .app-postulante .panel-detalle.abierto { display: flex; }
+  .app-postulante .panel-detalle .panel-caja {
+    width: 100%;
+    max-width: 560px;
+    background: var(--white);
+    border-radius: 16px 16px 0 0;
+    max-height: 88vh;
+    overflow: hidden;
+    padding: 20px 18px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-postulante .panel-detalle .panel-caja .panel-contenido {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  .app-postulante .panel-detalle.abierto .panel-caja {
+    animation: subirPanel 0.22s ease-out;
+    margin-top: 150px;
+  }
+}
+
+@keyframes subirPanel {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ========== Pantallas grandes: scroll interno por columna y detalle amplio ========== */
+@media (min-width: 861px) {
+  .app-postulante .busqueda {
+    align-items: stretch;
+    height: calc(100vh - 300px);
+    min-height: 570px;
+  }
+  .app-postulante .lista-ofertas {
+    flex: 0 0 42%;
+    max-width: 520px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .app-postulante .panel-detalle {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-height: none;
+    position: static;
+    top: auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .app-postulante .panel-caja {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-postulante .panel-contenido {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin-top: 8px;
+    padding-right: 4px;
+  }
+}
+
+@media (max-width: 860px) {
+  .app-postulante .guest-saludo,
+  .app-postulante .guest-link span,
+  .app-postulante .guest-link i { display: none; }
+  .app-postulante .guest-actions { gap: 6px; }
+}

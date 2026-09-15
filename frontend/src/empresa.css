@@ -1,0 +1,314 @@
+/* ==========================================================================
+   Módulo empresa — panel lateral azul marino.
+   Solo contiene el shell y las piezas específicas del módulo; los tokens y
+   los componentes base viven en styles.css (fuente única).
+   ========================================================================== */
+
+.app-empresa {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--fondo);
+  color: var(--text-1);
+}
+.app-empresa a { color: inherit; }
+
+/* ---------- Sidebar ---------- */
+.app-empresa .sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  background: var(--navy);
+  color: #fff;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.app-empresa .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+  margin-bottom: 28px;
+  text-decoration: none;
+}
+.app-empresa .brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-ctl);
+  background: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.app-empresa .brand-text .name { color: #fff; font-weight: 600; font-size: 15px; line-height: 1.2; }
+.app-empresa .brand-text .tag { color: var(--text-3); font-size: 11px; line-height: 1.3; }
+.app-empresa .nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding: 0 12px;
+  margin: 14px 0 8px;
+  letter-spacing: 0.02em;
+}
+.app-empresa nav { display: flex; flex-direction: column; gap: 2px; }
+.app-empresa nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #C7D6E8;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 9px;
+  transition: background 0.15s, color 0.15s;
+}
+.app-empresa nav a i { font-size: 17px; width: 18px; text-align: center; color: var(--text-3); }
+.app-empresa nav a:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.app-empresa nav a.active { background: var(--blue); color: #fff; }
+.app-empresa nav a.active i { color: #fff; }
+
+.app-empresa .sidebar-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.app-empresa .side-user { display: flex; align-items: center; gap: 10px; padding: 6px 8px 12px; }
+.app-empresa .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.app-empresa .side-user .who { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.app-empresa .side-user .role { color: var(--text-3); font-size: 11px; line-height: 1.2; }
+.app-empresa .logout {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.app-empresa .logout:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* ---------- Content ---------- */
+.app-empresa .content { flex: 1; min-width: 0; padding: 32px 40px 60px; max-width: 1600px; }
+
+/* ---------- KPI ---------- */
+.app-empresa .kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+/* ---------- Dashboard: rejilla actividad + donas ---------- */
+.app-empresa .dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+.app-empresa .dash-grid > * { margin-bottom: 0; }
+.app-empresa .dash-aside { display: grid; gap: 22px; }
+
+/* ---------- Chart cards (donas) ---------- */
+.app-empresa .chart-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--sombra-tarjeta);
+}
+.app-empresa .chart-card-head { margin-bottom: 18px; }
+.app-empresa .chart-card-head h2 { font-size: 15px; font-weight: 600; margin: 0 0 3px; color: var(--ink); }
+.app-empresa .chart-card-head p { margin: 0; font-size: 12.5px; color: var(--text-3); }
+
+.app-empresa .chart-body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.app-empresa .donut {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.app-empresa .donut-hole {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.app-empresa .donut-hole b { font-size: 19px; color: var(--ink); line-height: 1; }
+.app-empresa .donut-hole span { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+
+.app-empresa .legend { flex: 1; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.app-empresa .legend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.app-empresa .legend-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.app-empresa .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.app-empresa .legend-name { font-size: 13px; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-empresa .legend-count { font-size: 13px; font-weight: 600; color: var(--text-1); flex-shrink: 0; }
+.app-empresa .legend-row.zero .legend-name, .app-empresa .legend-row.zero .legend-count { color: var(--text-3); }
+
+/* ---------- Filas de actividad (app-*) ---------- */
+.app-empresa .app-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.app-empresa .app-row:last-of-type { border-bottom: none; }
+.app-empresa .app-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--sky-2);
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.app-empresa .app-main { flex: 1; min-width: 0; }
+.app-empresa .app-main .job { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.app-empresa .app-main .who { font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
+.app-empresa .app-meta { text-align: right; flex-shrink: 0; }
+.app-empresa .app-meta .date { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+
+/* ---------- Filtros (chips) ---------- */
+.app-empresa .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.1rem; }
+.app-empresa .chip {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.app-empresa .chip:hover { border-color: var(--blue); color: var(--blue-dark); }
+.app-empresa .chip.activo { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* ---------- Ofertas ---------- */
+.app-empresa .oferta-item { border-bottom: 1px solid var(--line); padding: 16px 4px; }
+.app-empresa .oferta-item:last-of-type { border-bottom: none; }
+.app-empresa .oferta-cabeza { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.app-empresa .oferta-titulo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.app-empresa .oferta-titulo h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.app-empresa .oferta-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 7px; color: var(--text-2); font-size: 12.5px; }
+.app-empresa .oferta-meta b { color: var(--text-1); font-weight: 600; }
+.app-empresa .oferta-motivo {
+  margin-top: 10px;
+  color: var(--red-tx);
+  font-size: 12.5px;
+  background: var(--red-bg);
+  display: inline-block;
+  padding: 5px 11px;
+  border-radius: 8px;
+}
+.app-empresa .oferta-pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.app-empresa .oferta-cierre { font-size: 12.5px; color: var(--text-3); }
+.app-empresa .oferta-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ---------- Postulaciones ---------- */
+.app-empresa .post-item { border-bottom: 1px solid var(--line); }
+.app-empresa .post-item:last-of-type { border-bottom: none; }
+.app-empresa .post-fila { display: flex; align-items: center; gap: 14px; padding: 15px 4px; flex-wrap: wrap; }
+.app-empresa .post-fila .app-main { flex: 1; min-width: 0; }
+.app-empresa .post-fila .who { font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
+.app-empresa .post-fila .who b { color: var(--text-1); font-weight: 600; }
+.app-empresa .btn-ver {
+  background: var(--sky-2);
+  border: 0;
+  color: var(--blue-dark);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.app-empresa .btn-ver:hover { background: #d3e4f5; }
+.app-empresa .post-detalle { background: var(--sky); border-radius: var(--radius-ctl); padding: 16px; margin: 0 4px 16px; }
+.app-empresa .post-detalle h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; color: var(--ink); }
+.app-empresa .post-detalle .descripcion { margin-bottom: 0.6rem; }
+.app-empresa .post-acciones { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.9rem; }
+.app-empresa .post-acciones .avanzar { font-size: 13px; font-weight: 600; color: var(--text-2); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1020px) {
+  .app-empresa .dash-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .app-empresa { flex-direction: column; }
+  .app-empresa .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 14px 20px;
+  }
+  .app-empresa .brand { margin-bottom: 0; }
+  .app-empresa .nav-label { display: none; }
+  .app-empresa nav {
+    order: 3;
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-top: 12px;
+    gap: 4px;
+  }
+  .app-empresa nav::-webkit-scrollbar { display: none; }
+  .app-empresa nav a { white-space: nowrap; flex-shrink: 0; }
+  .app-empresa .sidebar-foot { margin-top: 0; border-top: none; margin-left: auto; padding-top: 0; }
+  .app-empresa .side-user { display: none; }
+  .app-empresa .logout { width: auto; padding: 8px 10px; }
+  .app-empresa .logout span { display: none; }
+  .app-empresa .content { padding: 24px 20px 50px; }
+}
+@media (max-width: 560px) {
+  .app-empresa .page-head h1 { font-size: 20px; }
+  .app-empresa .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .app-empresa .chart-body { flex-direction: column; align-items: flex-start; }
+  .app-empresa .legend { width: 100%; }
+  .app-empresa .app-row { align-items: flex-start; }
+  .app-empresa .app-meta { text-align: left; }
+}

@@ -1,0 +1,507 @@
+/* =====================================================================
+   Módulo ADMIN — panel institucional.
+   Solo shell (sidebar/topbar) y piezas específicas del módulo; tokens y
+   componentes base viven en styles.css (fuente única).
+   ===================================================================== */
+
+.app-admin {
+  display: flex;
+  min-height: 100vh;
+  background: var(--fondo);
+  color: var(--ink);
+}
+
+/* ---------------- SIDEBAR ---------------- */
+.app-admin .sidebar {
+  width: 245px;
+  background: var(--navy);
+  color: #fff;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.app-admin .brand {
+  height: 82px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-sizing: border-box;
+}
+
+.app-admin .brand h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.app-admin .brand span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.app-admin .menu {
+  padding: 18px 12px;
+  flex: 1;
+}
+
+.pdefin {
+  white-space: pre-wrap;
+}
+
+.app-admin .menu-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 0 12px;
+  margin-bottom: 9px;
+  letter-spacing: 1px;
+}
+
+.app-admin .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 13px;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  border-radius: 9px;
+  font-size: 14px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.app-admin .menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.app-admin .menu-item.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+
+.app-admin .sidebar-footer {
+  padding: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.app-admin .user-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-admin .avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--sky);
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex: none;
+}
+
+.app-admin .user-info strong {
+  display: block;
+  font-size: 13px;
+}
+
+.app-admin .user-info span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------------- MAIN / TOPBAR ---------------- */
+.app-admin .main {
+  margin-left: 245px;
+  width: calc(100% - 245px);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-admin .topbar {
+  height: 82px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 35px;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  flex: none;
+}
+
+.app-admin .page-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.app-admin .page-title p {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.app-admin .sidebar-footer .logout {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.app-admin .sidebar-footer .logout:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-admin .content {
+  padding: 32px 35px 50px;
+  max-width: 1600px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Tablas anchas: el scroll queda dentro de la tarjeta, nunca rompe el layout */
+.app-admin .tarjeta { min-width: 0; }
+.app-admin .tarjeta > table { display: block; overflow-x: auto; }
+
+/* ---------------- FILTROS (período) ---------------- */
+.app-admin .filters {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 17px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+.app-admin .filters-acciones {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-admin .filters-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.app-admin .filter-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-1);
+  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-admin .date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.app-admin .date-field label {
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.app-admin .date-field input {
+  width: 155px;
+}.app-admin .filter-button {
+  height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-ctl);
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.app-admin .filter-button:hover {
+  background: var(--blue-dark);
+}
+
+.app-admin .filter-button.exportar {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-admin .filter-button.exportar:hover {
+  background: var(--sky);
+  border-color: var(--blue);
+}
+
+.app-admin .filter-button.exportar:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.app-admin .filter-button.limpiar {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.app-admin .filter-button.limpiar:hover {
+  background: var(--gray-bg);
+  border-color: var(--text-3);
+}
+
+/* ---------------- KPI (grid; las tarjetas son StatCard global) ---------------- */
+.app-admin .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 17px;
+  margin-bottom: 24px;
+}
+
+/* ---------------- ANALYTICS ---------------- */
+.app-admin .analytics {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.app-admin .card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+
+.app-admin .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.app-admin .card-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
+.app-admin .card-header p { font-size: 11px; color: var(--text-3); margin: 4px 0 0; }
+
+.app-admin .bars {
+  height: 220px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  border-bottom: 1px solid var(--line);
+  padding: 0 10px;
+  gap: 10px;
+}
+
+.app-admin .bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  flex: 1;
+  min-width: 22px;
+}
+
+.app-admin .bar-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+.app-admin .bar {
+  width: 100%;
+  max-width: 44px;
+  border-radius: 5px 5px 0 0;
+  background: var(--blue);
+  min-height: 2px;
+}
+
+.app-admin .bar.empty { background: var(--line); }
+
+.app-admin .bar-cap {
+  height: 200px;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  justify-content: center;
+}
+
+.app-admin .months {
+  display: flex;
+  justify-content: space-around;
+  padding: 9px 10px 0;
+  color: var(--text-3);
+  font-size: 11px;
+  gap: 10px;
+}
+
+.app-admin .months span { flex: 1; text-align: center; }
+
+/* Barras de progreso por estado */
+.app-admin .status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-admin .status-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-admin .status-label { font-size: 12px; color: var(--text-2); }
+.app-admin .progress {
+  height: 8px;
+  background: var(--gray-bg);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.app-admin .progress span {
+  display: block;
+  height: 100%;
+  border-radius: 20px;
+  background: var(--blue);
+}
+
+.app-admin .status-number { font-weight: 600; font-size: 12px; text-align: right; }
+
+/* ---------------- BOTTOM GRID ---------------- */
+.app-admin .bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.app-admin .attention {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-admin .attention:last-child { border-bottom: none; }
+
+.app-admin .attention-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-admin .attention-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-bg);
+  color: var(--text-1);
+  flex: none;
+}
+
+.app-admin .attention strong { display: block; font-size: 12px; }
+.app-admin .attention small { font-size: 10px; color: var(--text-3); }
+
+.app-admin .badge.pending { background: var(--amber-bg); color: var(--amber-tx); }
+.app-admin .badge.success { background: var(--green-bg); color: var(--green-tx); }
+.app-admin .badge.process { background: var(--blue-bg2); color: var(--blue-tx); }
+
+/* Lista de ítems de actividad (cards con inline var(--borde)) */
+.app-admin .list-item-card { border-color: var(--borde); }
+
+/* ---------------- RESPONSIVE ---------------- */
+@media (max-width: 1280px) {
+  .app-admin .bottom-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (min-width: 681px) and (max-width: 1280px) {
+  .app-admin .filters-left { flex: 1 1 auto; }
+  .app-admin .filters-left .date-field { flex: 1 1 150px; }
+  .app-admin .date-field input { width: 100%; }
+}
+
+@media (max-width: 900px) {
+  .app-admin .sidebar { width: 72px; }
+  .app-admin .brand { padding: 20px 0; text-align: center; }
+  .app-admin .brand h1,
+  .app-admin .brand span,
+  .app-admin .menu-title,
+  .app-admin .menu-item span,
+  .app-admin .user-info {
+    display: none;
+  }
+  .app-admin .menu { padding: 14px 8px; }
+  .app-admin .menu-item { justify-content: center; padding: 11px; }
+  .app-admin .main { margin-left: 72px; width: calc(100% - 72px); }
+  .app-admin .analytics { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 680px) {
+  .app-admin .topbar { padding: 0 18px; }
+  .app-admin .content { padding: 20px 15px; }
+  .app-admin .kpi-grid,
+  .app-admin .bottom-grid { grid-template-columns: 1fr; }
+  .app-admin .filters { flex-direction: column; align-items: stretch; }
+  .app-admin .filters-left { flex-direction: column; align-items: stretch; gap: 8px; }
+  .app-admin .filters-left .date-field { width: 100%; }
+  .app-admin .date-field input { width: 100%; }
+  .app-admin .filters-acciones { flex-direction: column; align-items: stretch; }
+  .app-admin .filter-button { width: 100%; justify-content: center; }
+  .app-admin .page-title p { display: none; }
+  .app-admin .status-row { grid-template-columns: 90px 1fr 36px; }
+}

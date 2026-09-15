@@ -1,0 +1,4995 @@
+openapi: 3.0.3
+
+info:
+  title: API Sistema de Empleo — Municipalidad Distrital de José Leonardo Ortiz (SOL)
+  version: 1.1.0
+  description: |
+    Especificación generada a partir de la revisión del código real del backend
+    (CodeIgniter 4.7, PHP 8.2+, MySQL) y de sus rutas en `app/Config/Routes.php`.
+
+    Cambios 2026-09-10 (versión 1.1.0): rate limiting en autenticación y subida de CV,
+    límite de 4 CV por mes calendario, validación de teléfono (9 u 11 dígitos),
+    eliminación de `password_hash` de las respuestas y saneamiento de errores 500.
+
+    Convenciones transversales (verificadas en `app/Controllers/Api/BaseApiController.php`,
+    `app/Exceptions/ApiExceptionHandler.php`, `app/Filters/JwtAuthFilter.php` y
+    `app/Filters/RoleFilter.php`):
+
+    * **Envoltorio de éxito**: `{"success": true, "message": "<texto>", "data": <objeto|array|null>}`.
+      No incluye la clave `errors`. Códigos HTTP: `200` y `201`.
+    * **Envoltorio de error**: `{"success": false, "message": "<texto>", "errors": [<string>, ...]}`.
+      No incluye `data`. `errors` siempre es un arreglo de cadenas (puede ser `[]`).
+      Códigos usados: `400`, `401`, `403`, `404`, `409`, `422`, `429`, `500`.
+    * **Autenticación**: header `Authorization: Bearer <access_token>` (JWT HS256).
+      El rol y el estado `activo` del usuario se recargan desde MySQL en cada
+      petición; no se confía en el `rol` del token.
+    * **Roles**: los grupos de rutas aplican `rol:admin`, `rol:empresa` o
+      `rol:postulante`. Un rol distinto recibe `403`.
+    * **Importante (comportamiento real, no un error de esta documentación)**:
+      el helper `sinContenido()` del backend responde **HTTP 200** (no 204) con
+      `data: null`. No existe ningún `204` en esta API.
+    * **Acciones de estado**: la API no usa PATCH ni DELETE para estados; las
+      transiciones se realizan con `PUT` sobre sub-rutas (`/estado`, `/password`,
+      `/publicar`, `/cerrar`, `/activacion`, `/retirar`).
+    * **Booleano**: algunos endpoints castean con `(bool) $cuerpo['activo']`, donde en
+      PHP `(bool)"false" === true`. Envíe siempre booleanos nativos (`true`/`false`),
+      no las cadenas `"true"`/`"false"`.
+    * **Preflight CORS**: `OPTIONS /api/*` responde `204` sin cuerpo y no requiere
+      autenticación (no se documenta como operación).
+    * **Identidad**: en los módulos empresa y postulante la identidad se resuelve
+      siempre de la sesión; acceder a un recurso de otro rol/empresa/postulante
+      devuelve `404` (no `403`) para no revelar existencia (anti-enumeración).
+    * **Fechas**: los campos `date`/`datetime` se devuelven como cadenas
+      (`YYYY-MM-DD` y `YYYY-MM-DD HH:MM:SS`). El backend opera en UTC
+      (`Config/App.php appTimezone = 'UTC'`); las validaciones de "hoy" y los
+      rangos usan `date('Y-m-d')` en esa zona.
+    * **Rate limiting**: los endpoints sensibles usan el Throttler nativo de CI4
+      (`app/Filters/ThrottleFilter.php` y `AuthService`), que implementa un **token bucket**:
+      permite una ráfaga inicial (la capacidad) y luego repone 1 token a intervalos de
+      `segundos / capacidad`. No es una ventana fija de bloqueo: al agotar la ráfaga
+      responde `429` con `Retry-After` (≈ `segundos / capacidad`) y habilita un intento por
+      intervalo. Los valores concretos se detallan en cada operación.
+    * **Teléfono**: los campos `telefono` de los cuerpos validados aceptan 9 u 11 dígitos
+      (`^(?:\d{9}|\d{11})$`); el backend es la validación definitiva.
+    * **Errores internos**: los `500` devuelven siempre un mensaje genérico
+      ("Ocurrió un error inesperado. Intente nuevamente."); el detalle (SQL, rutas,
+      excepciones) solo queda en el log del backend, nunca en la respuesta HTTP.
+
+    Notas sobre el entorno:
+    * `servers.url` corresponde a la `baseURL` del entorno de desarrollo
+      (`http://localhost:8080`). Debe ajustarse al dominio de producción.
+    * CORS por defecto solo permite `http://localhost:5173` (frontend de
+      desarrollo); en producción se configura con la variable de entorno
+      `cors.allowedOrigins`.
+
+    Esta especificación documenta el comportamiento actual del backend. Cuando la
+    documentación/código observado presenta un comportamiento que conviene
+    verificar o corregir, se indica en la descripción de la operación o del esquema.
+
+servers:
+  - url: http://localhost:8080
+    description: |
+      Entorno de desarrollo (valor de `app.baseURL`). Configurable según despliegue:
+      en producción apuntar a la URL pública del backend y revisar CORS.
+
+tags:
+  - name: Sistema
+    description: Información básica del servicio.
+  - name: Autenticación
+    description: Login, renovación y cierre de sesión, registro público de postulantes e ingreso con Google (público).
+  - name: Cuenta
+    description: Operaciones de la cuenta propia de cualquier rol autenticado.
+  - name: Admin
+    description: "Gestión municipal (rol `admin`): usuarios, empresas y solicitudes de registro, ofertas, actividades, oportunidades, contrataciones, dashboard y reportes."
+  - name: Empresa
+    description: "Portal de la empresa (rol `empresa`): perfil, ofertas, postulaciones, contrataciones y CV."
+  - name: Postulante
+    description: "Portal del postulante (rol `postulante`): perfil (datos personales y CV), bolsa pública, postulaciones y oportunidades."
+  - name: Catálogos y divulgación
+    description: Categorías, actividades y oportunidades públicas y para roles autenticados.
+  - name: Bolsa pública
+    description: "Ofertas publicadas y vigentes consultables sin sesión (`GET /api/ofertas`); el detalle informa `ya_postule` si la petición trae un token válido de postulante."
+  - name: Registro y activación de empresas
+    description: "Solicitud pública de registro de empresa (RUC verificado), verificación previa del RUC y activación de la cuenta con enlace de un solo uso tras la aprobación municipal."
+
+security:
+  - {}
+
+paths:
+  /:
+    get:
+      tags: [Sistema]
+      operationId: raiz
+      summary: Información de la API
+      description: Endpoint raíz (fuera de `/api`). Devuelve el mensaje institucional. Sin autenticación.
+      responses:
+        '200':
+          description: Información del sistema.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaSistema'
+
+  /api/auth/login:
+    post:
+      tags: [Autenticación]
+      operationId: login
+      summary: Iniciar sesión
+      description: |
+        Autentica con `username` (para empresa/postulante es el RUC/DNI) y `password`.
+        Devuelve access token (JWT, 120 min), refresh token (64 caracteres hex, 15 días) y el
+        usuario público. Público (sin autenticación).
+
+        **Rate limit (token bucket)**: 5 tokens por IP+usuario con recarga de 1 token cada
+        60 s (capacidad 5 en 300 s). Se permiten 5 intentos seguidos; agotada la ráfaga, el
+        6.º y siguientes responden `429` con `Retry-After` ≈ 60 s y luego se habilita
+        1 intento por minuto. El bucket vuelve a 5 solo tras 5 min sin intentos. Solo
+        cuentan los fallos (un login correcto borra el contador). No hay bloqueo permanente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginBody'
+      responses:
+        '200':
+          description: Sesión iniciada. `data` contiene las credenciales de acceso.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Bienvenido.
+                  data:
+                    $ref: '#/components/schemas/Sesion'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '429':
+          $ref: '#/components/responses/DemasiadasSolicitudes'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/auth/refresh:
+    post:
+      tags: [Autenticación]
+      operationId: renovarSesion
+      summary: Renovar sesión (rotación de refresh token)
+      description: |
+        Presenta el `refresh_token` vigente. El token presentado se revoca y se emite un
+        par nuevo (rotación). Un refresh token usado o revocado no puede reutilizarse.
+        Público (sin autenticación). No se exige header Authorization.
+
+        **Rate limit (token bucket)**: 10 tokens por IP con recarga de 1 token cada 30 s
+        (`throttle:10,300`). Tras la ráfaga de 10 responde `429` con `Retry-After` y luego
+        habilita 1 solicitud cada 30 s.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshBody'
+      responses:
+        '200':
+          description: Sesión renovada. `data` trae un par de tokens nuevo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Sesión renovada.
+                  data:
+                    $ref: '#/components/schemas/Sesion'
+        '401':
+          description: "Refresh token ausente, expirado o revocado. Mensajes reales: \"No se recibió el token de renovación.\", \"La sesión expiró. Inicie sesión nuevamente.\", \"Su cuenta no se encuentra activa.\""
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '429':
+          $ref: '#/components/responses/DemasiadasSolicitudes'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/registro/postulante:
+    post:
+      tags: [Autenticación]
+      operationId: registrarPostulante
+      summary: Registro público de postulante
+      description: |
+        Crea una cuenta con rol `postulante`. El `username` es el DNI. Solo crea cuentas
+        de postulante (nunca empresa/admin). Los mensajes de conflicto permiten conocer
+        si un DNI o correo ya está registrado. Público.
+
+        La cuenta se crea con **auto-login**: `data` es la misma sesión que devuelve el
+        login (`access_token`, `refresh_token`, `usuario`, …), por lo que el frontend
+        redirige directo a la bolsa de empleo.
+
+        **Rate limit (token bucket)**: 10 tokens por IP con recarga de 1 token cada 30 s
+        (`throttle:10,300`). Tras la ráfaga de 10 responde `429` con `Retry-After` y luego
+        habilita 1 solicitud cada 30 s.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistroPostulanteBody'
+      responses:
+        '201':
+          description: Cuenta creada con sesión iniciada (auto-login). `data` es la sesión.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Cuenta creada correctamente. Bienvenido.
+                  data:
+                    $ref: '#/components/schemas/Sesion'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '429':
+          $ref: '#/components/responses/DemasiadasSolicitudes'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/auth/me:
+    get:
+      tags: [Autenticación]
+      operationId: usuarioActual
+      summary: Datos de la cuenta autenticada
+      description: |
+        Devuelve el usuario público de la sesión. Acepta cualquier rol autenticado y
+        activo. El `rol` refleja el estado vigente en MySQL (se recarga en cada petición).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Datos de la cuenta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Datos de la cuenta.
+                  data:
+                    $ref: '#/components/schemas/UsuarioPublico'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/auth/logout:
+    post:
+      tags: [Autenticación]
+      operationId: cerrarSesion
+      summary: Cerrar sesión
+      description: |
+        Revoca todos los refresh tokens del usuario. Los access tokens emitidos siguen
+        siendo válidos hasta su expiración (no existe blacklist). Cualquier rol autenticado.
+        Responde HTTP 200 (no 204) con `data: null`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/cuenta/contrasena:
+    put:
+      tags: [Cuenta]
+      operationId: cambiarContrasena
+      summary: Cambiar contraseña propia
+      description: |
+        Cambia la contraseña del usuario autenticado. Verifica la contraseña actual
+        contra el hash almacenado (si no coincide responde 400). Cualquier rol.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarContrasenaBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '400':
+          description: La contraseña actual es incorrecta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/categorias:
+    get:
+      tags: [Catálogos y divulgación]
+      operationId: listarCategorias
+      summary: Categorías laborales activas
+      description: |
+        Lista las categorías con `activo = 1`, ordenadas por nombre. Disponible para
+        cualquier rol autenticado. `data` es un arreglo plano.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Categorías laborales.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Categorías laborales.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Categoria'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # Rutas de divulgación compartidas (cualquier rol autenticado)
+  # ---------------------------------------------------------------
+  /api/actividades:
+    get:
+      tags: [Catálogos y divulgación]
+      operationId: divulgacionActividades
+      summary: Ferias y actividades programadas (públicas)
+      description: |
+        Lista actividades con estado `programado` o `en_curso`, ordenadas por
+        `fecha_inicio DESC`, con tope fijo de 200 filas (sin paginación). No filtra por
+        fecha: una actividad "programado" con fecha pasada sigue apareciendo aquí.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ferias y actividades programadas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Ferias y actividades programadas.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Actividad'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/oportunidades:
+    get:
+      tags: [Catálogos y divulgación]
+      operationId: divulgacionOportunidades
+      summary: Oportunidades de empleo públicas
+      description: |
+        Oportunidades con `activo = 1` y `fecha_publicacion <= hoy`, ordenadas por
+        `created_at DESC`, tope fijo 200 (sin paginación). Cada fila incluye la
+        `razon_social` de la empresa (LEFT JOIN, puede ser `null`).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Oportunidades de empleo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Oportunidades de empleo.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Oportunidad'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — usuarios
+  # ---------------------------------------------------------------
+  /api/admin/usuarios:
+    get:
+      tags: [Admin]
+      operationId: adminListarUsuarios
+      summary: Listar usuarios (admin)
+      description: |
+        Listado paginado con `limite`/`offset`. Filtros opcionales `rol`, `estado` y `q`
+        (búsqueda en username/nombres/apellidos/RUC/razón social/DNI). Sin validación de
+        los valores de filtro. Orden: `created_at DESC`.
+
+        La consulta selecciona columnas explícitas de `users` y **nunca** incluye
+        `password_hash` (ver esquema `UsuarioAdminFila`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UsuarioRol'
+        - $ref: '#/components/parameters/EstadoCuenta'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Limite'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: "Lista de usuarios. `data` = `{ data: [...], total }`."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Lista de usuarios.
+                  data:
+                    type: object
+                    required: [data, total]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UsuarioAdminFila'
+                      total:
+                        type: integer
+                        example: 12
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Admin]
+      operationId: adminCrearUsuario
+      summary: Crear usuario (admin)
+      description: |
+        Crea personal municipal: **siempre** con rol `admin` (no existe campo `rol` en el
+        cuerpo). Los roles empresa/postulante se crean por sus propios flujos. El username
+        debe ser único.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCrearBody'
+      responses:
+        '201':
+          description: Usuario creado correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Usuario creado correctamente.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '409':
+          description: El nombre de usuario ya está en uso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Admin]
+      operationId: adminVerUsuario
+      summary: Detalle de usuario (admin)
+      description: |
+        Detalle del usuario sin `password_hash`. Mensaje real 404: "El usuario no existe."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Detalle del usuario.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Detalle del usuario.
+                  data:
+                    $ref: '#/components/schemas/UsuarioDetalle'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    put:
+      tags: [Admin]
+      operationId: adminActualizarUsuario
+      summary: Actualizar datos de usuario (admin)
+      description: |
+        Actualiza nombres, apellidos, email y teléfono. No modifica `username`, `rol` ni
+        contraseña. HTTP 200 con `data: null`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioActualizarBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/usuarios/{id}/estado:
+    put:
+      tags: [Admin]
+      operationId: adminCambiarEstadoUsuario
+      summary: Activar/desactivar usuario (admin)
+      description: |
+        Cambia `users.estado` a `activo` o `inactivo`. Si el usuario es rol `empresa`,
+        sincroniza también `empresas.estado`. Si el valor ya es el actual no hace nada
+        (no-op) y responde igual.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstadoBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/usuarios/{id}/password:
+    put:
+      tags: [Admin]
+      operationId: adminResetearPasswordUsuario
+      summary: Restablecer contraseña de usuario (admin)
+      description: |
+        Reemplaza el hash de la contraseña del usuario. En la ruta se usa el segmento
+        `password` (inglés), a diferencia de `PUT /api/cuenta/contrasena` (español).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuevaPasswordBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — empresas
+  # ---------------------------------------------------------------
+  /api/admin/empresas:
+    get:
+      tags: [Admin]
+      operationId: adminListarEmpresas
+      summary: Listar empresas (admin)
+      description: |
+        Listado paginado con `limite`/`offset`. Filtros `estado` y `q` (RUC, razón social
+        o nombre comercial). Orden `created_at DESC`.
+
+        **Hallazgo documentado**: el `total` se calcula ignorando el filtro `q`, por lo
+        que al buscar con `q` el `total` puede superar a la cantidad de filas devueltas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EstadoEmpresa'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Limite'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: "Lista de empresas. `data` = `{ data: [...], total }`."
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Lista de empresas.
+                  data:
+                    type: object
+                    required: [data, total]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EmpresaFila'
+                      total:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Admin]
+      operationId: adminRegistrarEmpresa
+      summary: Registrar empresa (admin)
+      description: |
+        Registro exclusivo municipal. Crea el usuario (rol `empresa`, `username` = RUC) y el
+        perfil de empresa en una transacción. Si `evaluacion_presencial` es truthy la cuenta
+        y la empresa nacen `activo`; si no, `inactivo`. Campos no validados pero usados:
+        `evaluacion_presencial` e `info_adicional`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpresaCrearBody'
+      responses:
+        '201':
+          description: Empresa registrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Empresa registrada. Las credenciales de acceso corresponden a la Municipalidad entregarlas.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '409':
+          description: RUC ya registrado o RUC en uso como username.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/empresas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Admin]
+      operationId: adminVerEmpresa
+      summary: Detalle de empresa (admin)
+      description: |
+        Fila de empresa con datos del usuario asociado y `cantidad_ofertas` (todas las
+        ofertas, sin filtro de estado). Mensaje real 404: "La empresa no existe."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Detalle de la empresa.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Detalle de la empresa.
+                  data:
+                    $ref: '#/components/schemas/EmpresaDetalle'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    put:
+      tags: [Admin]
+      operationId: adminActualizarEmpresa
+      summary: Actualizar datos de empresa (admin)
+      description: |
+        Actualiza razón social, datos de contacto e `info_adicional`. No modifica RUC,
+        estado ni la cuenta `users` asociada (los datos de la cuenta de acceso quedan
+        desactualizados tras cambiar email/razón social — ver informe de auditoría).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpresaActualizarBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/empresas/{id}/estado:
+    put:
+      tags: [Admin]
+      operationId: adminCambiarEstadoEmpresa
+      summary: Activar/desactivar empresa (admin)
+      description: |
+        Cambia `empresas.estado` y sincroniza `users.estado` de su usuario. No-op si ya
+        coincide. Estado inactivo bloquea el acceso de la empresa.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstadoBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/empresas/{id}/password:
+    put:
+      tags: [Admin]
+      operationId: adminResetearPasswordEmpresa
+      summary: Restablecer contraseña de empresa (admin)
+      description: |
+        Reemplaza el hash de la contraseña del usuario asociado a la empresa.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuevaPasswordBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — dashboard
+  # ---------------------------------------------------------------
+  /api/admin/dashboard:
+    get:
+      tags: [Admin]
+      operationId: adminDashboard
+      summary: Dashboard municipal
+      description: |
+        Indicadores de gestión del empleo con rango de fechas opcional (`AAAA-MM-DD`).
+        Nota (comportamiento real): el contador `ofertas` es global (no se filtra por
+        rango), mientras que postulaciones/contrataciones/empresas con procesos
+        sí se filtran por el rango. Un rango invertido (`hasta` < `desde`) responde 422.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: Indicadores de gestión del empleo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Indicadores de gestión del empleo.
+                  data:
+                    $ref: '#/components/schemas/DashboardAdmin'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — ofertas
+  # ---------------------------------------------------------------
+  /api/admin/ofertas:
+    get:
+      tags: [Admin]
+      operationId: adminListarOfertas
+      summary: Bandeja de ofertas (admin)
+      description: |
+        Lista todas las ofertas. El estado se valida (422 "Estado de oferta no válido." si
+        no está en la lista). Orden por `estado` ASC (alfabético) y luego `created_at DESC`;
+        esto NO prioriza las ofertas pendientes. Sin paginación ni límite. Las filas no
+        incluyen `habilidades` ni `cantidad_postulaciones`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EstadoOferta'
+      responses:
+        '200':
+          description: Bandeja de ofertas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Bandeja de ofertas.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OfertaFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/ofertas/{id}:
+    get:
+      tags: [Admin]
+      operationId: adminVerOferta
+      summary: Detalle de oferta (admin)
+      description: |
+        Detalle con `habilidades` y `cantidad_postulaciones` (solo postulaciones activas).
+        Visible para cualquier estado (borrador incluido).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle de la oferta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Detalle de la oferta.
+                  data:
+                    $ref: '#/components/schemas/OfertaDetalle'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/actividades:
+    get:
+      tags: [Admin]
+      operationId: adminListarActividades
+      summary: Listar actividades (admin)
+      description: |
+        Filtros `tipo` y `estado` (sin validación de valores). Orden `fecha_inicio DESC`,
+        tope fijo 200.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TipoActividad'
+        - $ref: '#/components/parameters/EstadoActividad'
+      responses:
+        '200':
+          description: Actividades y eventos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Actividades y eventos.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Actividad'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Admin]
+      operationId: adminRegistrarActividad
+      summary: Registrar actividad (admin)
+      description: |
+        Crea una actividad. `estado` no se recibe del cuerpo: nace con el valor por defecto
+        de la BD (`programado`). `fecha_inicio`/`fecha_fin` con solo fecha se guardan con
+        hora `08:00:00`. `fecha_fin` no puede ser anterior a `fecha_inicio`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadBody'
+      responses:
+        '201':
+          description: Actividad registrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Actividad registrada.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/actividades/{id}:
+    put:
+      tags: [Admin]
+      operationId: adminActualizarActividad
+      summary: Actualizar actividad (admin)
+      description: |
+        Actualiza los campos editables de una actividad (no valida estado previo: una
+        actividad finalizada o cancelada puede editarse). No permite cambiar `estado` (use
+        el endpoint de estado).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActividadBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/actividades/{id}/estado:
+    put:
+      tags: [Admin]
+      operationId: adminCambiarEstadoActividad
+      summary: Cambiar estado de actividad (admin)
+      description: |
+        Transiciones permitidas (máquina de estados):
+        `programado → en_curso | finalizado | cancelado`; `en_curso → finalizado | cancelado`;
+        `cancelado → programado`; `finalizado` es terminal. Transición no permitida → 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstadoActividadBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — oportunidades
+  # ---------------------------------------------------------------
+  /api/admin/oportunidades:
+    get:
+      tags: [Admin]
+      operationId: adminListarOportunidades
+      summary: Listar oportunidades (admin)
+      description: |
+        Filtros `fuente` y `activo`. `activo` se interpreta con `(int)` (use `0`/`1`).
+        `fuente` no se valida (un valor inválido devuelve lista vacía). Orden
+        `created_at DESC`, tope fijo 300. Filas con `razon_social` y `ruc` (LEFT JOIN).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fuente
+          in: query
+          description: Fuente de la oportunidad (sin validación).
+          schema:
+            type: string
+            enum: [empleos_peru, mype_local, otro]
+        - name: activo
+          in: query
+          description: Filtro por activo (`0` o `1`). Otro valor inválido se castea a 0.
+          schema:
+            type: integer
+            enum: [0, 1]
+      responses:
+        '200':
+          description: Oportunidades de difusión.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Oportunidades de difusión.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Oportunidad'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Admin]
+      operationId: adminCrearOportunidad
+      summary: Crear oportunidad (admin)
+      description: |
+        Crea una oportunidad de difusión. El campo `activo` NO se lee del cuerpo: la
+        oportunidad nace siempre `activo = 1` (desactívela luego con `/activacion`).
+        `empresa_id` opcional pero si se envía debe existir.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OportunidadBody'
+      responses:
+        '201':
+          description: Oportunidad publicada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Oportunidad publicada.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/oportunidades/{id}:
+    put:
+      tags: [Admin]
+      operationId: adminActualizarOportunidad
+      summary: Actualizar oportunidad (admin)
+      description: |
+        Mismos campos y validaciones que la creación. La actualización vuelve a forzar
+        `activo = 1` (no puede fijar inactiva por este endpoint).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OportunidadBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/oportunidades/{id}/activacion:
+    put:
+      tags: [Admin]
+      operationId: adminCambiarActivacionOportunidad
+      summary: Activar/desactivar oportunidad (admin)
+      description: |
+        Cambia `activo`. **Importante**: el valor se lee con `(bool)`; si el cliente omite
+        `activo` o envía la cadena `"false"`, PHP lo interpreta como `true`. Envíe siempre
+        booleano nativo. La desactivación conserva el registro.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivacionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — reportes y contrataciones
+  # ---------------------------------------------------------------
+  /api/admin/reportes:
+    get:
+      tags: [Admin]
+      operationId: adminReportes
+      summary: Reportes de efectividad (JSON)
+      description: |
+        Combina el dashboard municipal (`indicadores`) con el detalle de contrataciones
+        del rango (`contrataciones`, tope fijo 300). `desde`/`hasta` se validan
+        (formato `AAAA-MM-DD` y orden correcto; si no, 422).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: Reportes de efectividad.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Reportes de efectividad.
+                  data:
+                    type: object
+                    required: [indicadores, contrataciones]
+                    properties:
+                      indicadores:
+                        $ref: '#/components/schemas/DashboardAdmin'
+                      contrataciones:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ContratacionFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/reportes/csv:
+    get:
+      tags: [Admin]
+      operationId: adminReportesCsv
+      summary: Exportar reporte CSV
+      description: |
+        Respuesta NO JSON: `text/csv; charset=UTF-8` con BOM UTF-8, separador `;`,
+        `Content-Disposition: attachment; filename="reporte-empleo.csv"`. La validación de
+        rango es la misma que en el dashboard. El archivo incluye 11 filas de resumen y el
+        detalle de contrataciones del periodo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: Archivo CSV del reporte.
+          content:
+            text/csv:
+              schema:
+                type: string
+              example: |
+                "Reporte de efectividad - Sistema de Empleo MDJLO";""
+                "Periodo";"2026-09-01 a 2026-09-08"
+                "Empresas activas";"1"
+                ...
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/reportes/excel:
+    get:
+      tags: [Admin]
+      operationId: adminReportesExcel
+      summary: Exportar reporte Excel (.xlsx)
+      description: |
+        Respuesta NO JSON: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+        con `Content-Disposition: attachment; filename="reporte-empleo[-desde_hasta].xlsx"`.
+        Libro de 5 hojas: Resumen, Actividad mensual, Ofertas por estado, Postulaciones por
+        estado y Contrataciones. Reutiliza los indicadores del dashboard; la validación del
+        rango es la misma (`DashboardService::validarRango`, 422 si es inválido).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: Archivo XLSX del reporte.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/contrataciones:
+    get:
+      tags: [Admin]
+      operationId: adminListarContrataciones
+      summary: Listar contrataciones (admin)
+      description: |
+        Consulta global con filtros opcionales `desde`/`hasta`. **Hallazgo**: aquí los
+        rangos NO se validan en formato (a diferencia de dashboard/reportes); un formato
+        inválido puede producir error 500. Orden `fecha_contratacion DESC`, tope fijo 300.
+        No existe endpoint de detalle.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: Contrataciones registradas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Contrataciones registradas.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContratacionFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # EMPRESA — perfil y dashboard
+  # ---------------------------------------------------------------
+  /api/empresa/perfil:
+    get:
+      tags: [Empresa]
+      operationId: empresaPerfil
+      summary: Datos de la empresa propia
+      description: |
+        Devuelve la fila `empresas.*` asociada a la cuenta de la sesión (sin join al
+        usuario). 404 si la cuenta no tiene empresa: "No se encontró la empresa asociada a
+        su cuenta."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Datos de su empresa.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Datos de su empresa.
+                  data:
+                    $ref: '#/components/schemas/Empresa'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    put:
+      tags: [Empresa]
+      operationId: empresaActualizarPerfil
+      summary: Actualizar datos de contacto de la empresa
+      description: |
+        La empresa solo puede editar su propio `nombre_comercial`, `direccion`, `telefono`,
+        `email` y `representante`. No puede editar RUC, razón social, `info_adicional`,
+        `evaluacion_presencial` ni estado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpresaPerfilBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/dashboard:
+    get:
+      tags: [Empresa]
+      operationId: empresaDashboard
+      summary: Indicadores de la empresa
+      description: |
+        Conteos de ofertas y postulaciones de la empresa (solo `activo = 1`) y hasta 10
+        postulaciones pendientes recientes.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Indicadores de su empresa.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Indicadores de su empresa.
+                  data:
+                    $ref: '#/components/schemas/DashboardEmpresa'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # EMPRESA — ofertas
+  # ---------------------------------------------------------------
+  /api/empresa/ofertas:
+    get:
+      tags: [Empresa]
+      operationId: empresaListarOfertas
+      summary: Mis ofertas laborales
+      description: |
+        Lista las ofertas de la empresa de la sesión (sin filtro por estado), ordenadas por
+        `updated_at DESC`. Cada fila incluye `habilidades`. No incluye
+        `cantidad_postulaciones`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Mis ofertas laborales.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Mis ofertas laborales.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OfertaFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Empresa]
+      operationId: empresaCrearOferta
+      summary: Crear oferta (borrador)
+      description: |
+        La oferta nace en estado `borrador` (requiere validación municipal). `vacantes` se
+        exige manualmente (≥ 1); `habilidades` puede ser un arreglo de cadenas o una cadena
+        CSV separada por comas. Los campos `categoria_id`, `fecha_cierre`, `tipo_empleo`,
+        `remuneracion` etc. son opcionales según las reglas descritas.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfertaBody'
+      responses:
+        '201':
+          description: Oferta guardada en borrador.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Oferta guardada en borrador.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/ofertas/{id}:
+    get:
+      tags: [Empresa]
+      operationId: empresaVerOferta
+      summary: Detalle de oferta propia
+      description: |
+        Detalle con `habilidades` y `cantidad_postulaciones`. Si la oferta pertenece a otra
+        empresa responde 404 (mismo mensaje que inexistente). Visible para cualquier estado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle de la oferta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Detalle de la oferta.
+                  data:
+                    $ref: '#/components/schemas/OfertaDetalle'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    put:
+      tags: [Empresa]
+      operationId: empresaActualizarOferta
+      summary: Actualizar oferta propia
+      description: |
+        Solo se permite editar ofertas en estado `borrador` o `rechazada` (si no, 409
+        "Solo puede editar ofertas en borrador o rechazadas."). Editar una oferta rechazada
+        la regresa a `borrador` y limpia el `motivo_rechazo`. Mismos campos que la creación.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfertaBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/ofertas/{id}/cerrar:
+    put:
+      tags: [Empresa]
+      operationId: empresaCerrarOferta
+      summary: Cerrar oferta publicada
+      description: |
+        Transición `publicada → cerrada`. Solo ofertas publicadas (si no, 409 "Solo puede
+        cerrar una oferta publicada."). No existe cierre automático por vencimiento de
+        `fecha_cierre`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # EMPRESA — postulaciones
+  # ---------------------------------------------------------------
+  /api/empresa/postulaciones:
+    get:
+      tags: [Empresa]
+      operationId: empresaListarPostulaciones
+      summary: Postulaciones recibidas
+      description: |
+        Filtros opcionales combinables: `estado` (validado contra los 6 estados; 422 si no
+        válido) y `oferta_id` (solo las postulaciones de esa oferta de la empresa; 422 si
+        no es numérico). Incluye postulaciones activas e inactivas (mezcladas), orden:
+        pendientes primero y luego `fecha_postulacion DESC`. Tope fijo 300.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          description: Estado de la postulación (validado en el controlador).
+          schema:
+            type: string
+            enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+        - name: oferta_id
+          in: query
+          description: Filtra por la oferta laboral indicada (opcional).
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Postulaciones recibidas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Postulaciones recibidas.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostulacionEmpresaFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    # ---------------------------------------------------------------
+    # EMPRESA — contrataciones
+    # ---------------------------------------------------------------
+  /api/empresa/contrataciones:
+    get:
+      tags: [Empresa]
+      operationId: empresaListarContrataciones
+      summary: Contrataciones de la empresa
+      description: |
+        Contrataciones de la empresa de la sesión, orden `fecha_contratacion DESC`, sin
+        límite. No existe endpoint de detalle individual.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Contrataciones registradas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Contrataciones registradas.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContratacionFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Empresa]
+      operationId: empresaRegistrarContratacion
+      summary: Registrar contratación
+      description: |
+        Registra la contratación de un candidato. Solo permite postulaciones propias en
+        estado `seleccionado`. **Hallazgo**: no verifica `activo` de la postulación (una
+        postulación retirada/desactivada también puede contratarse por aquí, aunque el
+        listado de opciones sí exige `activo = 1`). Una postulación admite una sola
+        contratación (409 si ya existe). Desnormaliza `empresa_id`, `oferta_id` y
+        `postulante_id` desde la postulación.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContratacionCrearBody'
+      responses:
+        '201':
+          description: Contratación registrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Contratación registrada. El resultado alimenta los reportes municipales.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/contrataciones/opciones:
+    get:
+      tags: [Empresa]
+      operationId: empresaOpcionesContratacion
+      summary: Candidatos seleccionados sin contratación
+      description: |
+        Postulaciones de la empresa en estado `seleccionado` y `activo = 1` que aún no
+        tienen contratación registrada. Sirve de opciones para el alta de contratación.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Postulaciones seleccionadas sin contratación.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Postulaciones seleccionadas sin contratación.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OpcionContratacion'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/contrataciones/{id}:
+    put:
+      tags: [Empresa]
+      operationId: empresaActualizarContratacion
+      summary: Actualizar contratación propia
+      description: |
+        Actualiza los datos de una contratación propia (404 si es de otra empresa). En el
+        cuerpo, `postulacion_id` se ignora (el registro conserva la postulación original).
+        No puede cambiar la postulación asociada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContratacionActualizarBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # POSTULANTE — perfil
+  # ---------------------------------------------------------------
+  /api/postulante/perfil:
+    get:
+      tags: [Postulante]
+      operationId: postulantePerfil
+      summary: Perfil laboral completo
+      description: |
+        Devuelve los datos del postulante de la sesión más `username`, `email`,
+        `user_telefono`, el `cv` activo (o `null`) y `completitud` (requisitos para
+        postular: `datos_basicos`, `tiene_cv`, `faltantes` y `completo`). Incluye el
+        `object_key` interno del CV (información interna de bajo riesgo). 404 si no
+        existe perfil.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil laboral completo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Perfil laboral completo.
+                  data:
+                    $ref: '#/components/schemas/PerfilPostulante'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    put:
+      tags: [Postulante]
+      operationId: postulanteActualizarPerfil
+      summary: Actualizar datos básicos del perfil
+      description: |
+        Actualiza en dos tablas (`postulantes` y `users`) sin transacción. No valida
+        unicidad de `email`: si el correo ya pertenece a otro usuario puede producirse un
+        error de BD (500). `fecha_nacimiento` con formato `AAAA-MM-DD`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostulantePerfilBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/postulante/dashboard:
+    get:
+      tags: [Postulante]
+      operationId: postulanteDashboard
+      summary: Indicadores del perfil
+      description: |
+        Conteos de postulaciones propias (`activo = 1`), total y si tiene CV activo.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Indicadores de su perfil.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Indicadores de su perfil.
+                  data:
+                    $ref: '#/components/schemas/DashboardPostulante'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # POSTULANTE — secciones del perfil
+  # ---------------------------------------------------------------
+  /api/postulante/cv:
+    get:
+      tags: [Postulante]
+      operationId: postulanteCvIndex
+      summary: CV vigente e historial
+      description: |
+        `vigente` trae el CV activo (o `null`); `historial` lista todas las versiones
+        (`version DESC`). Nota: en `historial`, `activo` es booleano y la fecha se llama
+        `fecha`; en `vigente` el campo se llama `actualizado` (mismo origen: `updated_at`).
+
+        `limite_mensual` informa el consumo del límite de **4 CV por mes calendario**:
+        `{ limite, usados, restantes }`. El conteo se hace en el backend sobre
+        `cvs.created_at`, por lo que no puede evadirse desde el frontend.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CV del postulante.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: CV del postulante.
+                  data:
+                    type: object
+                    required: [vigente, historial, limite_mensual]
+                    properties:
+                      vigente:
+                        $ref: '#/components/schemas/CvVigente'
+                      historial:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CvHistorialItem'
+                      limite_mensual:
+                        $ref: '#/components/schemas/LimiteMensualCv'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Postulante]
+      operationId: postulanteCvSubir
+      summary: Subir CV (multipart)
+      description: |
+        Sube una nueva versión del CV. **Tipo de contenido: `multipart/form-data`**; el
+        archivo debe ir en el campo `cv`. Restricciones reales: extensiones `pdf`, `doc`,
+        `docx`; MIME `application/pdf`, `application/msword` o
+        `application/vnd.openxmlformats-officedocument.wordprocessingml.document`; tamaño
+        máximo 5 MB. El nombre del objeto lo genera el servidor. Primero almacena el
+        archivo y luego desactiva los CV anteriores (transacción). Respuesta HTTP 201.
+
+        **Límite mensual**: máximo **4 CV por mes calendario** por postulante. El backend
+        cuenta las filas de `cvs` con `created_at` del mes en curso; al llegar a 4 responde
+        `409` con "Ha alcanzado el límite de 4 CV este mes. Podrá actualizar su CV el
+        próximo mes." y no se sube nada. La respuesta incluye `limite_mensual` con el
+        consumo actualizado.
+
+        **Rate limit (token bucket)**: 10 tokens por IP con recarga de 1 token cada 360 s
+        (`throttle:10,3600`). Tras la ráfaga de 10 responde `429` con `Retry-After` y luego
+        habilita 1 solicitud cada 6 min. Este límite de ráfaga es independiente del tope
+        mensual de 4 CV.
+
+        `message` de éxito: "CV cargado correctamente." en la primera carga y
+        "CV actualizado correctamente." si ya existía un CV vigente.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [cv]
+              properties:
+                cv:
+                  type: string
+                  format: binary
+                  description: Archivo PDF/DOC/DOCX de hasta 5 MB.
+      responses:
+        '201':
+          description: CV cargado correctamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: CV cargado correctamente.
+                  data:
+                    type: object
+                    required: [id, version, nombre_original, tamano, limite_mensual]
+                    properties:
+                      id:
+                        type: integer
+                      version:
+                        type: integer
+                      nombre_original:
+                        type: string
+                      tamano:
+                        type: integer
+                      limite_mensual:
+                        $ref: '#/components/schemas/LimiteMensualCv'
+        '400':
+          description: El archivo no se recibió correctamente o no se pudo almacenar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          description: |
+            Se alcanzó el límite mensual de CV. Mensaje real: "Ha alcanzado el límite de
+            4 CV este mes. Podrá actualizar su CV el próximo mes.".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+              example:
+                success: false
+                message: Ha alcanzado el límite de 4 CV este mes. Podrá actualizar su CV el próximo mes.
+                errors: []
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '429':
+          $ref: '#/components/responses/DemasiadasSolicitudes'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/postulante/cv/descargar:
+    get:
+      tags: [Postulante]
+      operationId: postulanteCvDescargar
+      summary: URL de descarga del CV propio
+      description: |
+        Genera la URL de descarga del CV vigente:
+        * Driver `supabase` (configuración de producción): URL firmada (presigned GET,
+          válida 30 min) al bucket privado.
+        * Driver `local`: URL interna protegida `.../api/postulante/cv/archivo/{clave}`.
+        `data` = `{ "url": string }`. 404 "Aún no ha cargado un CV." si no existe CV activo.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: URL de descarga generada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: URL de descarga generada.
+                  data:
+                    type: object
+                    required: [url]
+                    properties:
+                      url:
+                        type: string
+                        format: url
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/postulante/cv/archivo/{archivo}:
+    get:
+      tags: [Postulante]
+      operationId: postulanteCvArchivo
+      summary: Descargar CV (driver local)
+      description: |
+        Sirve el archivo en binario cuando el driver es `local`. `{archivo}` es el
+        `object_key` codificado en base64url sin padding. Solo el propietario puede
+        descargar. **Con driver `supabase` (producción) este endpoint responde 404**
+        (`rutaLocal` es `null`); en ese modo use la URL firmada de `/cv/descargar`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: archivo
+          in: path
+          required: true
+          description: Clave del objeto en base64url (sin padding).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Archivo binario (PDF/DOC/DOCX). Header `Content-Disposition: attachment`."
+          headers:
+            Content-Disposition:
+              description: attachment; filename="<nombre original>"
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/msword:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # POSTULANTE — búsqueda de empleo (ofertas publicadas)
+  # ---------------------------------------------------------------
+  /api/postulante/ofertas:
+    get:
+      tags: [Postulante]
+      operationId: postulanteBuscarOfertas
+      summary: Buscar ofertas publicadas
+      description: |
+        Solo ofertas en estado `publicada` y vigentes (`fecha_cierre` nula o >= hoy).
+        Filtros opcionales por texto, categoría, ubicación, formación y experiencia
+        (comparaciones `LIKE`). Orden `fecha_publicacion DESC`, tope fijo 200. Cada fila
+        incluye `categoria_nombre`, `ruc` y `razon_social`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda en `puesto` o `razon_social`.
+          schema:
+            type: string
+        - name: categoria_id
+          in: query
+          description: Filtro por categoría.
+          schema:
+            type: integer
+        - name: ubicacion
+          in: query
+          description: Búsqueda en `ubicacion` (LIKE).
+          schema:
+            type: string
+        - name: formacion
+          in: query
+          description: Búsqueda en `formacion_requerida` (LIKE).
+          schema:
+            type: string
+        - name: experiencia
+          in: query
+          description: Búsqueda en `experiencia_requerida` (LIKE).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ofertas disponibles.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Ofertas disponibles.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OfertaFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/postulante/ofertas/{id}:
+    get:
+      tags: [Postulante]
+      operationId: postulanteVerOferta
+      summary: Detalle de oferta publicada
+      description: |
+        Solo devuelve ofertas en estado `publicada` (si no, 404 "La oferta no está
+        disponible."). **Hallazgo**: no valida vigencia, por lo que una oferta vencida no
+        aparece en la búsqueda pero sí es accesible por su URL directa. Incluye
+        `habilidades`, `cantidad_postulaciones` y `ya_postule` (si el postulante tiene
+        perfil y ya postuló activamente).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle de la oferta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Detalle de la oferta.
+                  data:
+                    $ref: '#/components/schemas/OfertaDetalle'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # POSTULANTE — postulaciones
+  # ---------------------------------------------------------------
+  /api/postulante/postulaciones:
+    get:
+      tags: [Postulante]
+      operationId: postulanteListarPostulaciones
+      summary: Mis postulaciones
+      description: |
+        Lista las postulaciones del postulante de la sesión, orden `fecha_postulacion
+        DESC`. Incluye tanto activas como retiradas (no filtra por `activo`). Incluye datos
+        de la oferta y de la empresa/categoría.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Mis postulaciones.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Mis postulaciones.
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostulacionPostulanteFila'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+    post:
+      tags: [Postulante]
+      operationId: postulantePostular
+      summary: Postular a una oferta
+      description: |
+        Registra una postulación (`estado = pendiente`, `activo = 1`) si la oferta está
+        publicada y vigente y no existe otra postulación activa del postulante a la misma
+        oferta (409). Crea la fila de historial inicial. No requiere CV para postular.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oferta_id]
+              properties:
+                oferta_id:
+                  type: integer
+                  description: Id de la oferta publicada.
+      responses:
+        '201':
+          description: Postulación registrada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Postulación registrada. La empresa la revisará próximamente.
+                  data:
+                    type: object
+                    required: [id]
+                    properties:
+                      id:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/postulante/postulaciones/{id}/retirar:
+    put:
+      tags: [Postulante]
+      operationId: postulanteRetirarPostulacion
+      summary: Retirar postulación
+      description: |
+        Retira (desactiva, `activo = 0`) la postulación propia; nunca se elimina. 409 si ya
+        está retirada. Después de retirar se permite volver a postular a la misma oferta
+        (queda una postulación nueva y la anterior inactiva). HTTP 200 con `data: null`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # EMPRESA — detalle de postulación y CV (declarado tras las rutas
+  # genéricas de contrataciones para respetar el orden del archivo de rutas)
+  # ---------------------------------------------------------------
+  /api/empresa/postulaciones/{id}:
+    get:
+      tags: [Empresa]
+      operationId: empresaVerPostulacion
+      summary: Detalle de postulación
+      description: |
+        Detalle de una postulación de la empresa: datos de la postulación, un resumen de la
+        oferta y el **perfil completo del postulante** (incluye su CV). 404 si la
+        postulación no pertenece a la empresa.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle de la postulación.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Detalle de la postulación.
+                  data:
+                    $ref: '#/components/schemas/PostulacionDetalleEmpresa'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/postulaciones/{id}/estado:
+    put:
+      tags: [Empresa]
+      operationId: empresaCambiarEstadoPostulacion
+      summary: Cambiar estado de postulación
+      description: |
+        Cambia el estado según la máquina de transiciones de la empresa:
+        `pendiente → en_revision | no_seleccionado`; `en_revision → preseleccionado |
+        contactado | no_seleccionado`; `preseleccionado → contactado | seleccionado |
+        no_seleccionado`; `contactado → seleccionado | no_seleccionado`;
+        `no_seleccionado → en_revision`; `seleccionado` es terminal. 409 si la transición
+        no es válida o la postulación está inactiva. Registra en `postulacion_historial`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstadoPostulacionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/postulaciones/{id}/activacion:
+    put:
+      tags: [Empresa]
+      operationId: empresaCambiarActivacionPostulacion
+      summary: Activar/desactivar postulación
+      description: |
+        Activa/desactiva la postulación (vista "retirar" desde la empresa) sin cambiar su
+        estado. **Importante**: `(bool)` en PHP; envíe booleano nativo (la cadena "false"
+        sería interpretada como `true`). No-op si el valor coincide.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivacionBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/postulaciones/{id}/cv:
+    get:
+      tags: [Empresa]
+      operationId: empresaPostulacionCvUrl
+      summary: URL de descarga del CV del postulante
+      description: |
+        Genera la URL (firmada en Supabase o interna en driver local) del CV activo del
+        postulante de una postulación propia. 404 si la postulación no es de la empresa o
+        el postulante no tiene CV activo ("El postulante aún no ha cargado un CV.").
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: URL de descarga del CV.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: URL de descarga del CV.
+                  data:
+                    type: object
+                    required: [url]
+                    properties:
+                      url:
+                        type: string
+                        format: url
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/postulaciones/{id}/cv/archivo/{archivo}:
+    get:
+      tags: [Empresa]
+      operationId: empresaPostulacionCvArchivo
+      summary: Descargar CV del postulante (driver local)
+      description: |
+        Sirve el CV en binario (solo driver `local`; con Supabase responde 404 y la
+        descarga usa la URL firmada de `/cv`). Valida que la postulación sea de la empresa
+        y que la clave base64url corresponda al `object_key` del CV del postulante.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+        - name: archivo
+          in: path
+          required: true
+          description: Clave del objeto en base64url (sin padding).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Archivo binario (PDF/DOC/DOCX). Header `Content-Disposition: attachment`."
+          headers:
+            Content-Disposition:
+              description: attachment; filename="<nombre original>"
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/msword:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # BOLSA PÚBLICA — ofertas publicadas (sin sesión)
+  # ---------------------------------------------------------------
+  /api/ofertas:
+    get:
+      tags: [Bolsa pública]
+      operationId: ofertasPublicasListar
+      summary: Buscar ofertas publicadas (público)
+      description: |
+        Lista las ofertas en estado `publicada` y vigentes, sin autenticación. Acepta los
+        mismos filtros de búsqueda (`q`, `categoria_id`, `ubicacion`, `formacion`,
+        `experiencia`). Para postularse se requiere sesión de postulante.
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - name: categoria_id
+          in: query
+          schema:
+            type: integer
+        - name: ubicacion
+          in: query
+          schema:
+            type: string
+        - name: formacion
+          in: query
+          schema:
+            type: string
+        - name: experiencia
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de ofertas publicadas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/ofertas/{id}:
+    get:
+      tags: [Bolsa pública]
+      operationId: ofertasPublicasDetalle
+      summary: Detalle de oferta publicada (público)
+      description: |
+        Detalle público de la oferta. Si la petición incluye un token válido de un
+        postulante activo, la respuesta agrega `ya_postule`.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle de la oferta.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # AUTENTICACIÓN — ingreso con Google (postulantes)
+  # ---------------------------------------------------------------
+  /api/auth/google:
+    post:
+      tags: [Autenticación]
+      operationId: authGoogle
+      summary: Ingreso o registro de postulante con Google
+      description: |
+        Verifica el `id_token` de Google contra sus certificados públicos (requiere
+        `google.clientId` en el backend). Si el correo no tiene cuenta, crea una de
+        postulante con `proveedor=google` (sin DNI); en ambos casos inicia sesión.
+
+        **Rate limit (token bucket)**: 10 tokens por IP con recarga de 1 token cada 30 s
+        (`throttle:10,300`). Tras la ráfaga de 10 responde `429` con `Retry-After` y luego
+        habilita 1 solicitud cada 30 s.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_token]
+              properties:
+                id_token:
+                  type: string
+                  description: Credencial JWT de Google Sign-In.
+      responses:
+        '200':
+          description: Sesión iniciada (mismo contrato que el login).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '429':
+          $ref: '#/components/responses/DemasiadasSolicitudes'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # REGISTRO Y ACTIVACIÓN DE EMPRESAS (público)
+  # ---------------------------------------------------------------
+  /api/verificar-ruc:
+    post:
+      tags: [Registro y activación de empresas]
+      operationId: verificarRuc
+      summary: Verificar RUC en SUNAT
+      description: |
+        Consulta el RUC en SUNAT (token `sunat.token`) y autocompleta `razon_social`,
+        `nombre_comercial` y `direccion` para el formulario de solicitud.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ruc]
+              properties:
+                ruc:
+                  type: string
+                  description: RUC de 11 dígitos.
+      responses:
+        '200':
+          description: RUC verificado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      razon_social:
+                        type: string
+                      nombre_comercial:
+                        type: string
+                        nullable: true
+                      direccion:
+                        type: string
+                        nullable: true
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/solicitudes-empresa:
+    post:
+      tags: [Registro y activación de empresas]
+      operationId: solicitudEmpresaCrear
+      summary: Enviar solicitud de registro de empresa
+      description: |
+        Crea la solicitud en estado `pendiente` previa verificación del RUC (SUNAT).
+        409 si el RUC ya tiene empresa registrada o una solicitud pendiente/aprobada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ruc, email, telefono, representante]
+              properties:
+                ruc:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                  description: Correo corporativo; será el usuario de login al activar.
+                telefono:
+                  type: string
+                  pattern: '^(?:\d{9}|\d{11})$'
+                  description: Teléfono de contacto (9 u 11 dígitos). Requerido.
+                representante:
+                  type: string
+      responses:
+        '201':
+          description: Solicitud enviada (queda pendiente de aprobación municipal).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      estado:
+                        type: string
+                        example: pendiente
+        '400':
+          $ref: '#/components/responses/PeticionInvalida'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/activar-cuenta/{token}:
+    get:
+      tags: [Registro y activación de empresas]
+      operationId: activacionVer
+      summary: Validar enlace de activación
+      description: |
+        Valida el token de un solo uso (vigencia `activacion.expiraDias`). Devuelve
+        `razon_social` y `email` para mostrar el formulario de contraseña.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: El enlace es válido.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+    post:
+      tags: [Registro y activación de empresas]
+      operationId: activacionActivar
+      summary: Activar la cuenta de la empresa
+      description: |
+        Define la contraseña, activa el usuario y la empresa y deja el enlace inservible
+        (un solo uso). Con `email.host` configurado se notifica por correo al aprobar.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, password2]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                password2:
+                  type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN — bandeja de solicitudes de empresas
+  # ---------------------------------------------------------------
+  /api/admin/solicitudes-empresa:
+    get:
+      tags: [Admin]
+      operationId: adminSolicitudesListar
+      summary: Listar solicitudes de registro de empresa
+      description: |
+        Bandeja municipal. Filtros `estado` (`pendiente`, `aprobada`, `rechazada`) y `q`.
+        Respuesta paginada: `data.data` (filas) y `data.total`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [pendiente, aprobada, rechazada]
+        - $ref: '#/components/parameters/Limite'
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de solicitudes.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                      total:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/admin/solicitudes-empresa/{id}:
+    get:
+      tags: [Admin]
+      operationId: adminSolicitudDetalle
+      summary: Detalle de una solicitud
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Detalle de la solicitud.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/admin/solicitudes-empresa/{id}/aprobar:
+    post:
+      tags: [Admin]
+      operationId: adminSolicitudAprobar
+      summary: Aprobar solicitud y crear la cuenta de la empresa
+      description: |
+        Crea el usuario (estado `inactivo`, login con el correo corporativo) y la empresa
+        con `evaluacion_presencial=1`, genera el enlace de activación y notifica por correo
+        (best-effort). Devuelve el enlace como respaldo interno.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Solicitud aprobada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      link:
+                        type: string
+                        description: Enlace de activación (para reenvío interno).
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/admin/solicitudes-empresa/{id}/rechazar:
+    post:
+      tags: [Admin]
+      operationId: adminSolicitudRechazar
+      summary: Rechazar solicitud con motivo
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties:
+                motivo:
+                  type: string
+                  description: Motivo del rechazo (se notifica a la empresa).
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/admin/solicitudes-empresa/{id}/enlace:
+    get:
+      tags: [Admin]
+      operationId: adminSolicitudEnlace
+      summary: Obtener o regenerar el enlace de activación
+      description: |
+        Solo para solicitudes aprobadas. Regenera el token (invalida el anterior) y
+        devuelve el enlace completo hacia el frontend (`app.frontendUrl`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Enlace generado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      link:
+                        type: string
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  # ---------------------------------------------------------------
+  # ADMIN / EMPRESA — flujo de ofertas actualizado
+  # ---------------------------------------------------------------
+  /api/admin/ofertas/{id}/cerrar:
+    put:
+      tags: [Admin]
+      operationId: adminOfertaCerrar
+      summary: Cerrar una oferta publicada (supervisión)
+      description: |
+        El admin solo supervisa: cierra una oferta en estado `publicada`. La publicación
+        directa la hace la empresa (`PUT /api/empresa/ofertas/{id}/publicar`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+  /api/empresa/ofertas/{id}/publicar:
+    put:
+      tags: [Empresa]
+      operationId: empresaOfertaPublicar
+      summary: Publicar oferta directamente (sin validación municipal)
+      description: |
+        Transición `borrador → publicada` (RF-24 ajustado: publicación directa por la
+        empresa; el admin solo supervisa). Solo ofertas propias en `borrador`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+components:
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Identificador numérico (ruta `(:num)`).
+      schema:
+        type: integer
+        minimum: 1
+      name: seccion
+      in: path
+      required: true
+      description: Sección del perfil. Valores admitidos (otro valor responde 400).
+      schema:
+        type: string
+        enum: [formacion, experiencia, habilidades, cursos]
+    Q:
+      name: q
+      in: query
+      description: Búsqueda por texto (LIKE).
+      schema:
+        type: string
+    Limite:
+      name: limite
+      in: query
+      description: Cantidad de filas (por defecto 100; se castea a entero, sin tope máximo).
+      schema:
+        type: integer
+        default: 100
+    Offset:
+      name: offset
+      in: query
+      description: Desplazamiento para paginar (por defecto 0).
+      schema:
+        type: integer
+        default: 0
+    Desde:
+      name: desde
+      in: query
+      description: Fecha inicial del rango (`AAAA-MM-DD`). En dashboard/reportes se valida el formato.
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+    Hasta:
+      name: hasta
+      in: query
+      description: Fecha final del rango (`AAAA-MM-DD`).
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+    UsuarioRol:
+      name: rol
+      in: query
+      description: Filtro por rol (sin validación del valor).
+      schema:
+        type: string
+        enum: [admin, empresa, postulante]
+    EstadoCuenta:
+      name: estado
+      in: query
+      description: Filtro por estado de la cuenta (sin validación del valor).
+      schema:
+        type: string
+        enum: [activo, inactivo]
+    EstadoEmpresa:
+      name: estado
+      in: query
+      description: Filtro por estado de la empresa (sin validación del valor).
+      schema:
+        type: string
+        enum: [activo, inactivo]
+    EstadoOferta:
+      name: estado
+      in: query
+      description: Filtro por estado de la oferta. Se valida (valor inválido responde 422).
+      schema:
+        type: string
+        enum: [borrador, publicada, cerrada]
+    EstadoActividad:
+      name: estado
+      in: query
+      description: Filtro por estado de la actividad (sin validación del valor).
+      schema:
+        type: string
+        enum: [programado, en_curso, finalizado, cancelado]
+    TipoActividad:
+      name: tipo
+      in: query
+      description: Filtro por tipo de actividad (sin validación del valor).
+      schema:
+        type: string
+        enum: [feria_empleo, evento, taller, capacitacion]
+      name: tipo
+      in: query
+      description: Filtro por tipo de atención (sin validación del valor).
+      schema:
+        type: string
+        enum: [orientacion_laboral, asesoria_cv, preparacion_entrevista, orientacion_vocacional, formacion_empleo, emprendimiento, autoempleo, derivacion_trabajo_social]
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token JWT firmado HS256 (expiración por defecto 120 min). Debe enviarse el
+        header `Authorization: Bearer <token>`. El rol y el estado se recargan de MySQL en
+        cada petición. El refresh token se obtiene en `POST /api/auth/login` o
+        `POST /api/auth/refresh` (no es un JWT; es una cadena de 64 caracteres hex).
+
+  schemas:
+    # ----------------------- Envoltorios -----------------------
+    EnvelopeError:
+      type: object
+      required: [success, message, errors]
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Hay errores en los datos enviados.
+        errors:
+          type: array
+          items:
+            type: string
+          example: ['El campo Dni es obligatorio.']
+
+    RespuestaDataNull:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operación exitosa.
+        data:
+          type: object
+          nullable: true
+          example: null
+          description: Siempre null en estas respuestas (HTTP 200, el backend no usa 204).
+
+    RespuestaSistema:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: API del Sistema de Empleo — Municipalidad Distrital de José Leonardo Ortiz.
+        data:
+          type: object
+          nullable: true
+
+    # ----------------------- Autenticación -----------------------
+    LoginBody:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: Nombre de usuario. Para empresas y postulantes es el RUC o DNI.
+        password:
+          type: string
+          format: password
+
+    RefreshBody:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          description: Refresh token vigente (64 caracteres hex) emitido en login/refresh.
+
+    RegistroPostulanteBody:
+      type: object
+      required: [dni, nombres, apellidos, password, password2]
+      properties:
+        dni:
+          type: string
+          pattern: '^\d{8}$'
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password2:
+          type: string
+          format: password
+          description: Debe coincidir con `password`.
+
+    CambiarContrasenaBody:
+      type: object
+      required: [password_actual, password, password2]
+      properties:
+        password_actual:
+          type: string
+          format: password
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password2:
+          type: string
+          format: password
+
+    UsuarioPublico:
+      type: object
+      required: [id, username, rol, nombres, apellidos, email]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        rol:
+          type: string
+          enum: [admin, empresa, postulante]
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        email:
+          type: string
+          nullable: true
+
+    Sesion:
+      type: object
+      required: [access_token, refresh_token, token_type, expira_en, usuario]
+      properties:
+        access_token:
+          type: string
+          description: JWT HS256 de acceso.
+        refresh_token:
+          type: string
+          description: Refresh token (64 hex). Rota en cada renovación.
+        token_type:
+          type: string
+          example: Bearer
+        expira_en:
+          type: integer
+          description: Segundos de validez del access token (por defecto 7200).
+          example: 7200
+        usuario:
+          $ref: '#/components/schemas/UsuarioPublico'
+
+    # ----------------------- Usuarios (admin) -----------------------
+    UsuarioDetalle:
+      type: object
+      required: [id, username, rol, nombres, apellidos, estado, ultimo_acceso]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        rol:
+          type: string
+          enum: [admin, empresa, postulante]
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        email:
+          type: string
+          nullable: true
+        telefono:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          enum: [activo, inactivo]
+        ultimo_acceso:
+          type: string
+          nullable: true
+          description: 'Formato: YYYY-MM-DD HH:MM:SS o null.'
+
+    UsuarioAdminFila:
+      type: object
+      description: |
+        Fila del listado `GET /api/admin/usuarios`. Columnas explícitas de `users` (sin
+        `password_hash`) más las columnas de los LEFT JOIN. El hash de contraseña nunca
+        forma parte de la respuesta.
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        rol:
+          type: string
+          enum: [admin, empresa, postulante]
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        email:
+          type: string
+          nullable: true
+        telefono:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          enum: [activo, inactivo]
+        ultimo_acceso:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+        empresa_id:
+          type: integer
+          nullable: true
+          description: Id de la empresa asociada (si el rol es empresa).
+        razon_social:
+          type: string
+          nullable: true
+        empresa_estado:
+          type: string
+          nullable: true
+          enum: [activo, inactivo]
+        postulante_id:
+          type: integer
+          nullable: true
+          description: Id del postulante asociado (si el rol es postulante).
+
+    UsuarioCrearBody:
+      type: object
+      required: [username, nombres, apellidos, password]
+      properties:
+        username:
+          type: string
+          maxLength: 60
+          pattern: '^[a-zA-Z0-9._-]+$'
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: El rol siempre es `admin` (no se recibe del cuerpo).
+
+    UsuarioActualizarBody:
+      type: object
+      required: [nombres, apellidos]
+      properties:
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+
+    EstadoBody:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          type: string
+          enum: [activo, inactivo]
+
+    NuevaPasswordBody:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 8
+
+    # ----------------------- Empresas -----------------------
+    Empresa:
+      type: object
+      description: Columnas de la tabla `empresas`.
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        ruc:
+          type: string
+          description: 11 dígitos.
+        razon_social:
+          type: string
+        nombre_comercial:
+          type: string
+          nullable: true
+        direccion:
+          type: string
+          nullable: true
+        telefono:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        representante:
+          type: string
+          nullable: true
+        info_adicional:
+          type: string
+          nullable: true
+        evaluacion_presencial:
+          type: integer
+          enum: [0, 1]
+        estado:
+          type: string
+          enum: [activo, inactivo]
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    EmpresaFila:
+      type: object
+      description: Fila del listado admin (empresas + datos del usuario).
+      allOf:
+        - $ref: '#/components/schemas/Empresa'
+        - type: object
+          properties:
+            username:
+              type: string
+            user_estado:
+              type: string
+              enum: [activo, inactivo]
+            user_email:
+              type: string
+              nullable: true
+
+    EmpresaDetalle:
+      type: object
+      description: Detalle admin de empresa (fila + cantidad de ofertas).
+      allOf:
+        - $ref: '#/components/schemas/EmpresaFila'
+        - type: object
+          properties:
+            cantidad_ofertas:
+              type: integer
+              description: Total de ofertas de la empresa (sin filtrar por estado).
+
+    EmpresaCrearBody:
+      type: object
+      required: [ruc, razon_social, password]
+      properties:
+        ruc:
+          type: string
+          pattern: '^\d{11}$'
+        razon_social:
+          type: string
+          maxLength: 200
+        nombre_comercial:
+          type: string
+          maxLength: 150
+        direccion:
+          type: string
+          maxLength: 255
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        representante:
+          type: string
+          maxLength: 150
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Contraseña inicial creada por el administrador.
+        evaluacion_presencial:
+          type: boolean
+          description: 'Truthy: cuenta/empresa nacen activas. Sin validación de regla.'
+        info_adicional:
+          type: string
+          description: Sin regla de validación.
+
+    EmpresaActualizarBody:
+      type: object
+      required: [razon_social]
+      properties:
+        razon_social:
+          type: string
+          maxLength: 200
+        nombre_comercial:
+          type: string
+          maxLength: 150
+        direccion:
+          type: string
+          maxLength: 255
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        representante:
+          type: string
+          maxLength: 150
+        info_adicional:
+          type: string
+          description: Sin regla de validación; solo editable por admin.
+
+    EmpresaPerfilBody:
+      type: object
+      properties:
+        nombre_comercial:
+          type: string
+          maxLength: 150
+        direccion:
+          type: string
+          maxLength: 255
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        representante:
+          type: string
+          maxLength: 150
+
+    # ----------------------- Ofertas -----------------------
+    Oferta:
+      type: object
+      description: Columnas de la tabla `ofertas` (más `empresa_id`/`categoria_id` referenciales).
+      properties:
+        id:
+          type: integer
+        empresa_id:
+          type: integer
+        categoria_id:
+          type: integer
+          nullable: true
+        puesto:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        funciones:
+          type: string
+          nullable: true
+        requisitos:
+          type: string
+          nullable: true
+        formacion_requerida:
+          type: string
+          nullable: true
+        experiencia_requerida:
+          type: string
+          nullable: true
+        tipo_empleo:
+          type: string
+          nullable: true
+          enum: [tiempo_completo, medio_tiempo, por_horas, practicas, freelance, remoto]
+        ubicacion:
+          type: string
+          nullable: true
+        remuneracion:
+          type: string
+          nullable: true
+          description: 'DECIMAL(10,2). MySQL lo entrega como cadena (p. ej. "1130.00").'
+        vacantes:
+          type: integer
+        fecha_publicacion:
+          type: string
+          nullable: true
+          format: date
+        fecha_cierre:
+          type: string
+          nullable: true
+          format: date
+        estado:
+          type: string
+          enum: [borrador, publicada, cerrada]
+        motivo_rechazo:
+          type: string
+          nullable: true
+        validado_por:
+          type: integer
+          nullable: true
+        fecha_validacion:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    OfertaFila:
+      type: object
+      description: Oferta con empresa y categoría (JOIN). No incluye habilidades ni cantidad de postulaciones.
+      allOf:
+        - $ref: '#/components/schemas/Oferta'
+        - type: object
+          properties:
+            categoria_nombre:
+              type: string
+              nullable: true
+            ruc:
+              type: string
+              nullable: true
+            razon_social:
+              type: string
+              nullable: true
+
+    OfertaDetalle:
+      type: object
+      description: Detalle de oferta (listados de admin/empresa/ver oferta postulante).
+      allOf:
+        - $ref: '#/components/schemas/OfertaFila'
+        - type: object
+          properties:
+            habilidades:
+              type: array
+              description: Habilidades ordenadas alfabéticamente.
+              items:
+                type: string
+            cantidad_postulaciones:
+              type: integer
+              description: Postulaciones activas a la oferta.
+            ya_postule:
+              type: boolean
+              description: 'Solo presente en el detalle público del postulante con perfil: si ya tiene postulación activa.'
+
+    OfertaBody:
+      type: object
+      required: [puesto, vacantes]
+      properties:
+        puesto:
+          type: string
+          maxLength: 150
+        descripcion:
+          type: string
+          maxLength: 10000
+        funciones:
+          type: string
+          maxLength: 10000
+        requisitos:
+          type: string
+          maxLength: 10000
+        formacion_requerida:
+          type: string
+          maxLength: 200
+        experiencia_requerida:
+          type: string
+          maxLength: 200
+        tipo_empleo:
+          type: string
+          enum: [tiempo_completo, medio_tiempo, por_horas, practicas, freelance, remoto]
+        ubicacion:
+          type: string
+          maxLength: 150
+        remuneracion:
+          type: string
+          pattern: '^\d{1,10}(\.\d{1,2})?$'
+          description: Envío como cadena o número; se valida contra el patrón.
+        vacantes:
+          type: integer
+          minimum: 1
+          description: Exigido manualmente (≥ 1); vacío o menor a 1 responde 422.
+        fecha_cierre:
+          type: string
+          format: date
+          description: No puede ser anterior a hoy (se compara en UTC).
+        categoria_id:
+          type: integer
+          description: Debe existir en `categorias` si se envía.
+        habilidades:
+          oneOf:
+            - type: array
+              items:
+                type: string
+            - type: string
+              description: Cadena CSV separada por comas (alternativa soportada).
+          description: Habilidades de la oferta.
+
+      type: object
+      required: [motivo]
+      properties:
+        motivo:
+          type: string
+          minLength: 5
+          maxLength: 255
+          description: Motivo del rechazo (se exigen al menos 5 caracteres; se trunca a 255).
+
+    # ----------------------- Categorías -----------------------
+    Categoria:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        activo:
+          type: integer
+          enum: [0, 1]
+
+    # ----------------------- Actividades -----------------------
+    Actividad:
+      type: object
+      description: Fila de la tabla `actividades`.
+      properties:
+        id:
+          type: integer
+        tipo:
+          type: string
+          enum: [feria_empleo, evento, taller, capacitacion]
+        nombre:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        fecha_inicio:
+          type: string
+          description: 'Datetime. Con fecha sola se persiste con hora 08:00:00.'
+        fecha_fin:
+          type: string
+          nullable: true
+        lugar:
+          type: string
+          nullable: true
+        modalidad:
+          type: string
+          nullable: true
+          enum: [presencial, virtual, mixta]
+        organizador:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          enum: [programado, en_curso, finalizado, cancelado]
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    ActividadBody:
+      type: object
+      required: [tipo, nombre, fecha_inicio]
+      properties:
+        tipo:
+          type: string
+          enum: [feria_empleo, evento, taller, capacitacion]
+        nombre:
+          type: string
+          maxLength: 200
+        descripcion:
+          type: string
+          maxLength: 10000
+        lugar:
+          type: string
+          maxLength: 150
+        organizador:
+          type: string
+          maxLength: 150
+        modalidad:
+          type: string
+          enum: [presencial, virtual, mixta]
+        fecha_inicio:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$'
+          description: Fecha u datetime; solo fecha se guarda con hora 08:00:00.
+        fecha_fin:
+          type: string
+          nullable: true
+          pattern: '^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$'
+          description: No puede ser anterior a `fecha_inicio`.
+
+    EstadoActividadBody:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          type: string
+          enum: [programado, en_curso, finalizado, cancelado]
+
+    # ----------------------- Oportunidades -----------------------
+    Oportunidad:
+      type: object
+      description: Fila de `oportunidades`; en listados incluye `razon_social` (y `ruc` en el listado admin).
+      properties:
+        id:
+          type: integer
+        fuente:
+          type: string
+          enum: [empleos_peru, mype_local, otro]
+        empresa_id:
+          type: integer
+          nullable: true
+        titulo:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        enlace:
+          type: string
+          nullable: true
+        fecha_publicacion:
+          type: string
+          nullable: true
+          format: date
+        activo:
+          type: integer
+          enum: [0, 1]
+        razon_social:
+          type: string
+          nullable: true
+        ruc:
+          type: string
+          nullable: true
+          description: Solo presente en el listado admin.
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    OportunidadBody:
+      type: object
+      required: [fuente, titulo]
+      properties:
+        fuente:
+          type: string
+          enum: [empleos_peru, mype_local, otro]
+        titulo:
+          type: string
+          maxLength: 200
+        descripcion:
+          type: string
+          maxLength: 10000
+        enlace:
+          type: string
+          maxLength: 300
+          description: Debe ser una URL válida (FILTER_VALIDATE_URL) si se envía.
+        fecha_publicacion:
+          type: string
+          format: date
+          description: 'Por defecto la fecha actual si se omite.'
+        empresa_id:
+          type: integer
+          description: Debe existir en `empresas` si se envía. Opcional.
+        # Nota: `activo` NO se lee del cuerpo (siempre se fija en 1).
+
+    ActivacionBody:
+      type: object
+      required: [activo]
+      properties:
+        activo:
+          type: boolean
+          description: 'Envíe booleano nativo. En PHP `(bool)"false" === true`.'
+
+
+    ContratacionFila:
+      type: object
+      description: Fila de `contrataciones` con postulante, oferta y empresa (JOIN).
+      properties:
+        id:
+          type: integer
+        postulacion_id:
+          type: integer
+        empresa_id:
+          type: integer
+        oferta_id:
+          type: integer
+        postulante_id:
+          type: integer
+        fecha_contratacion:
+          type: string
+          format: date
+        cargo:
+          type: string
+        modalidad:
+          type: string
+          nullable: true
+        remuneracion:
+          type: string
+          nullable: true
+        observaciones:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        dni:
+          type: string
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        puesto:
+          type: string
+        razon_social:
+          type: string
+        ruc:
+          type: string
+
+    ContratacionCrearBody:
+      type: object
+      required: [postulacion_id, fecha_contratacion, cargo]
+      properties:
+        postulacion_id:
+          type: integer
+          description: Debe ser una postulación propia en estado `seleccionado`.
+        fecha_contratacion:
+          type: string
+          format: date
+        cargo:
+          type: string
+          maxLength: 150
+        modalidad:
+          type: string
+          maxLength: 60
+        remuneracion:
+          type: string
+          pattern: '^\d{1,10}(\.\d{1,2})?$'
+        observaciones:
+          type: string
+          maxLength: 10000
+
+    ContratacionActualizarBody:
+      type: object
+      required: [fecha_contratacion, cargo]
+      description: Mismos campos que la creación salvo `postulacion_id` (que se ignora).
+      properties:
+        fecha_contratacion:
+          type: string
+          format: date
+        cargo:
+          type: string
+          maxLength: 150
+        modalidad:
+          type: string
+          maxLength: 60
+        remuneracion:
+          type: string
+          pattern: '^\d{1,10}(\.\d{1,2})?$'
+        observaciones:
+          type: string
+          maxLength: 10000
+
+    OpcionContratacion:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Id de la postulación.
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        dni:
+          type: string
+        puesto:
+          type: string
+        fecha_postulacion:
+          type: string
+
+    # ----------------------- Postulaciones -----------------------
+    PostulacionPostulanteFila:
+      type: object
+      description: Fila de "mis postulaciones" (postulante).
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+        activo:
+          type: integer
+          enum: [0, 1]
+        fecha_postulacion:
+          type: string
+        oferta_id:
+          type: integer
+        puesto:
+          type: string
+        ubicacion:
+          type: string
+          nullable: true
+        remuneracion:
+          type: string
+          nullable: true
+        fecha_cierre:
+          type: string
+          nullable: true
+          format: date
+        razon_social:
+          type: string
+        ruc:
+          type: string
+        categoria_nombre:
+          type: string
+          nullable: true
+
+    PostulacionEmpresaFila:
+      type: object
+      description: Fila de la bandeja de la empresa.
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+        activo:
+          type: integer
+          enum: [0, 1]
+        fecha_postulacion:
+          type: string
+        oferta_id:
+          type: integer
+        puesto:
+          type: string
+        ubicacion:
+          type: string
+          nullable: true
+        oferta_estado:
+          type: string
+          description: Estado de la oferta asociada.
+        fecha_cierre:
+          type: string
+          nullable: true
+          format: date
+        postulante_id:
+          type: integer
+        dni:
+          type: string
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        telefono:
+          type: string
+          nullable: true
+
+    PostulacionDetalleEmpresa:
+      type: object
+      required: [id, fecha_postulacion, estado, activo, oferta, postulante]
+      properties:
+        id:
+          type: integer
+        fecha_postulacion:
+          type: string
+        estado:
+          type: string
+          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+        activo:
+          type: integer
+          enum: [0, 1]
+        oferta:
+          type: object
+          properties:
+            id:
+              type: integer
+            puesto:
+              type: string
+            ubicacion:
+              type: string
+              nullable: true
+            remuneracion:
+              type: string
+              nullable: true
+            fecha_cierre:
+              type: string
+              nullable: true
+              format: date
+        postulante:
+          $ref: '#/components/schemas/PerfilPostulante'
+
+    EstadoPostulacionBody:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          type: string
+          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+          description: Debe ser una transición válida desde el estado actual.
+
+    # ----------------------- Perfil postulante -----------------------
+    PerfilPostulante:
+      type: object
+      description: |
+        Datos del postulante (tabla `postulantes`) con datos de la cuenta (`users`) y su CV
+        vigente. Corresponde a `PostulanteRepository::perfilCompleto`.
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        dni:
+          type: string
+        nombres:
+          type: string
+        apellidos:
+          type: string
+        fecha_nacimiento:
+          type: string
+          nullable: true
+          format: date
+        direccion:
+          type: string
+          nullable: true
+        distrito:
+          type: string
+          nullable: true
+        telefono:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+        username:
+          type: string
+        email:
+          type: string
+          nullable: true
+        user_telefono:
+          type: string
+          nullable: true
+          description: Teléfono de la cuenta `users`.
+        cv:
+          $ref: '#/components/schemas/CvFilaCruda'
+
+      type: object
+      properties:
+        id:
+          type: integer
+        postulante_id:
+          type: integer
+        nivel:
+          type: string
+        institucion:
+          type: string
+          nullable: true
+        titulo:
+          type: string
+          nullable: true
+        fecha_inicio:
+          type: string
+          nullable: true
+          format: date
+        fecha_fin:
+          type: string
+          nullable: true
+          format: date
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+      type: object
+      properties:
+        id:
+          type: integer
+        postulante_id:
+          type: integer
+        empresa:
+          type: string
+        cargo:
+          type: string
+        funciones:
+          type: string
+          nullable: true
+        fecha_inicio:
+          type: string
+          nullable: true
+          format: date
+        fecha_fin:
+          type: string
+          nullable: true
+          format: date
+          description: 'Null = empleo actual.'
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+      type: object
+      properties:
+        id:
+          type: integer
+        postulante_id:
+          type: integer
+        nombre:
+          type: string
+
+      type: object
+      properties:
+        id:
+          type: integer
+        postulante_id:
+          type: integer
+        tipo:
+          type: string
+          enum: [curso, certificacion]
+        nombre:
+          type: string
+        institucion:
+          type: string
+          nullable: true
+        anio:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    CvFilaCruda:
+      type: object
+      nullable: true
+      description: Fila cruda de `cvs` (CV activo dentro del perfil). Incluye `object_key` (información interna).
+      properties:
+        id:
+          type: integer
+        postulante_id:
+          type: integer
+        object_key:
+          type: string
+        nombre_original:
+          type: string
+        mime:
+          type: string
+        tamano:
+          type: integer
+        version:
+          type: integer
+        activo:
+          type: integer
+          enum: [0, 1]
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    # ----------------------- CV (endpoints de CV) -----------------------
+    CvVigente:
+      type: object
+      nullable: true
+      description: CV activo (o null). No expone `object_key`.
+      properties:
+        id:
+          type: integer
+        nombre_original:
+          type: string
+        mime:
+          type: string
+        tamano:
+          type: integer
+        version:
+          type: integer
+        actualizado:
+          type: string
+          nullable: true
+          description: 'updated_at con formato YYYY-MM-DD HH:MM:SS.'
+
+    CvHistorialItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        version:
+          type: integer
+        nombre_original:
+          type: string
+        tamano:
+          type: integer
+        activo:
+          type: boolean
+          description: 'Booleano (proviene de la entidad Cv).'
+        fecha:
+          type: string
+          nullable: true
+          description: 'updated_at con formato YYYY-MM-DD HH:MM:SS.'
+
+    LimiteMensualCv:
+      type: object
+      description: Consumo del límite de CV del mes calendario en curso (máximo 4).
+      required: [limite, usados, restantes]
+      properties:
+        limite:
+          type: integer
+          example: 4
+        usados:
+          type: integer
+          example: 1
+        restantes:
+          type: integer
+          example: 3
+
+    PostulantePerfilBody:
+      type: object
+      required: [nombres, apellidos]
+      properties:
+        nombres:
+          type: string
+          maxLength: 100
+        apellidos:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+          description: 'Se escribe en `users`. Sin validación de unicidad (riesgo de error 500 si ya existe).'
+        telefono:
+          type: string
+          maxLength: 30
+          pattern: '^(?:\d{9}|\d{11})$'
+          description: Teléfono (9 u 11 dígitos).
+        direccion:
+          type: string
+          maxLength: 255
+        distrito:
+          type: string
+          maxLength: 100
+        fecha_nacimiento:
+          type: string
+          format: date
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+
+    # ----------------------- Dashboards -----------------------
+    DashboardAdmin:
+      type: object
+      description: Indicadores del dashboard municipal (mismas claves usadas por reportes).
+      properties:
+        empresas:
+          type: object
+          required: [total, activas]
+          properties:
+            total:
+              type: integer
+            activas:
+              type: integer
+        postulantes_activos:
+          type: integer
+        ofertas:
+          $ref: '#/components/schemas/ContadorOfertas'
+        postulaciones:
+          $ref: '#/components/schemas/ContadorPostulaciones'
+        contrataciones:
+          type: integer
+        empresas_con_procesos:
+          type: integer
+        seleccionados:
+          type: integer
+        tasa_seleccion:
+          type: number
+          description: Porcentaje redondeado a 1 decimal (0 si no hay postulaciones).
+        tasa_contratacion:
+          type: number
+          description: Porcentaje redondeado a 1 decimal (0 si no hay seleccionados).
+        tiempo_promedio_contacto_dias:
+          type: number
+          nullable: true
+          description: Null si no hay datos.
+        tiempo_promedio_seleccion_dias:
+          type: number
+          nullable: true
+
+    ContadorOfertas:
+      type: object
+      properties:
+        borrador:
+          type: integer
+        pendiente:
+          type: integer
+        publicada:
+          type: integer
+        cerrada:
+          type: integer
+        rechazada:
+          type: integer
+
+    ContadorPostulaciones:
+      type: object
+      properties:
+        pendiente:
+          type: integer
+        en_revision:
+          type: integer
+        preseleccionado:
+          type: integer
+        contactado:
+          type: integer
+        seleccionado:
+          type: integer
+        no_seleccionado:
+          type: integer
+
+    DashboardEmpresa:
+      type: object
+      description: Indicadores de la empresa.
+      properties:
+        ofertas:
+          $ref: '#/components/schemas/ContadorOfertas'
+        postulaciones:
+          $ref: '#/components/schemas/ContadorPostulaciones'
+        pendientes_recientes:
+          type: array
+          description: Hasta 10 postulaciones pendientes más recientes.
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              estado:
+                type: string
+              fecha_postulacion:
+                type: string
+              puesto:
+                type: string
+              dni:
+                type: string
+              nombres:
+                type: string
+              apellidos:
+                type: string
+
+    DashboardPostulante:
+      type: object
+      description: Indicadores del postulante.
+      properties:
+        postulaciones:
+          $ref: '#/components/schemas/ContadorPostulaciones'
+        total_postulaciones:
+          type: integer
+        con_cv:
+          type: boolean
+
+  responses:
+    OkVacio200:
+      description: |
+        Operación exitosa. El backend responde HTTP 200 (no 204) con `data: null`
+        (helper `sinContenido()`). El `message` varía según la operación.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RespuestaDataNull'
+          example:
+            success: true
+            message: Operación exitosa.
+            data: null
+
+    NoAutorizado:
+      description: |
+        No autenticado. Mensajes reales posibles: "Debe iniciar sesión para acceder a este
+        recurso." (header faltante), "Su sesión expiró. Inicie sesión nuevamente." (token
+        inválido/expirado) o "La cuenta ya no existe en el sistema."
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+          example:
+            success: false
+            message: Debe iniciar sesión para acceder a este recurso.
+            errors: []
+
+    Prohibido:
+      description: |
+        Sin permisos. Mensajes reales: "No tiene permisos para realizar esta operación."
+        (rol no permitido por el filtro) o "Su cuenta está inactiva. Contacte a la
+        Municipalidad." (usuario desactivado).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+          example:
+            success: false
+            message: No tiene permisos para realizar esta operación.
+            errors: []
+
+    NoEncontrado:
+      description: |
+        Recurso inexistente o (por diseño anti-enumeración) recurso ajeno al contexto de la
+        sesión. Mensaje típico: "El recurso solicitado no existe.".
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+          example:
+            success: false
+            message: El recurso solicitado no existe.
+            errors: []
+
+    Conflicto:
+      description: Conflicto de estado o de regla de negocio (transición no permitida, duplicado, etc.).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+
+    PeticionInvalida:
+      description: Solicitud mal formada (400).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+
+    Validacion:
+      description: |
+        Error de validación (422). Mensaje típico del Validador: "Hay errores en los datos
+        enviados." con `errors` como lista de mensajes por campo. Algunos endpoints usan
+        mensajes propios con `errors` de un solo elemento.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+          example:
+            success: false
+            message: Hay errores en los datos enviados.
+            errors: ['El campo Dni es obligatorio.']
+
+    DemasiadasSolicitudes:
+      description: |
+        Se excedió el límite de solicitudes (429). El backend usa un **token bucket**
+        (Throttler de CI4): ráfaga inicial = capacidad y luego 1 token cada
+        `segundos / capacidad`. Aplica a:
+        `POST /api/auth/login` (capacidad 5, 1 token/60 s por IP+usuario; solo fallos),
+        `POST /api/auth/refresh`, `POST /api/auth/google` y `POST /api/registro/postulante`
+        (capacidad 10, 1 token/30 s por IP) y `POST /api/postulante/cv`
+        (capacidad 10, 1 token/360 s por IP). Incluye la cabecera `Retry-After` con los
+        segundos hasta el siguiente token disponible (≈ 60 s en login).
+      headers:
+        Retry-After:
+          description: Segundos hasta que se permita un nuevo intento.
+          schema:
+            type: integer
+            example: 59
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+          example:
+            success: false
+            message: Demasiados intentos de inicio de sesión. Intente nuevamente en 59 segundos.
+            errors: []
+
+    ErrorInterno:
+      description: |
+        Error no controlado (500). `ApiExceptionHandler` responde siempre un mensaje
+        genérico ("Ocurrió un error inesperado. Intente nuevamente.") sin exponer SQL,
+        rutas, stack traces ni detalles de excepción; el detalle se registra solo en el
+        log del backend.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EnvelopeError'
+          example:
+            success: false
+            message: Ocurrió un error inesperado. Intente nuevamente.
+            errors: []
