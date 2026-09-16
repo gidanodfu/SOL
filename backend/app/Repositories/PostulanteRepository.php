@@ -99,4 +99,15 @@ class PostulanteRepository
             'completo'      => $faltantesBasicos === [] && $tieneCv,
         ];
     }
+
+    /**
+     * Id de usuario (`users.id`) del postulante. El historial de postulación y la
+     * auditoría referencian `users`, no `postulantes` (son secuencias distintas).
+     */
+    public function usuarioIdDe(int $postulanteId): ?int
+    {
+        $fila = $this->db->table('postulantes')->select('user_id')->where('id', $postulanteId)->get()->getRowArray();
+
+        return $fila === null ? null : (int) $fila['user_id'];
+    }
 }

@@ -17,8 +17,8 @@ TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d 
 
 echo "== 1. buscar ofertas publicadas =="
 curl -s "$B/api/postulante/ofertas" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;[print(" -",o["id"],o["puesto"],o["razon_social"]) for o in json.load(sys.stdin)["data"]]'
-echo "== 1b. filtro q=Operario =="
-curl -s "$B/api/postulante/ofertas?q=Operario" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)["data"]),"resultado(s)")'
+echo "== 1b. filtro por ubicación =="
+curl -s "$B/api/postulante/ofertas?ubicacion=Chiclayo" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)["data"]),"resultado(s)")'
 
 echo "== 2. detalle oferta 1 (seed ya tiene postulación activa) =="
 curl -s "$B/api/postulante/ofertas/1" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("puesto:",d["puesto"],"ya_postule:",d["ya_postule"])'

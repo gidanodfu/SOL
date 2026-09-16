@@ -79,6 +79,9 @@ class ContratacionService
         }
 
         $postulacion = $this->postulacionDeEmpresa((int) $datos['postulacion_id'], $empresaId);
+        if ((int) $postulacion['activo'] !== 1) {
+            throw ApiException::conflicto('La postulación ya no está activa.');
+        }
         if ($postulacion['estado'] !== 'seleccionado') {
             throw ApiException::conflicto('Solo puede registrar la contratación de un candidato seleccionado.');
         }
@@ -131,7 +134,7 @@ class ContratacionService
     private function postulacionDeEmpresa(int $postulacionId, int $empresaId): array
     {
         $fila = $this->contrataciones->db->table('postulaciones')
-            ->select('id, oferta_id, postulante_id, estado')
+            ->select('id, oferta_id, postulante_id, estado, activo')
             ->where('id', $postulacionId)
             ->where('empresa_id', $empresaId)
             ->get()

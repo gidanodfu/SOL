@@ -50,7 +50,7 @@ class OfertaRepository
 
     /**
      * Ofertas publicadas y vigentes para los postulantes (RF-27/RF-28).
-     * Criterios: texto (puesto/empresa), categoría, ubicación, formación y experiencia.
+     * Criterios: categoría, ubicación, formación y experiencia.
      *
      * @param array<string, mixed> $filtros
      *
@@ -67,12 +67,6 @@ class OfertaRepository
             ->orderBy('ofertas.fecha_publicacion', 'DESC')
             ->orderBy('ofertas.created_at', 'DESC');
 
-        if (! empty($filtros['q'])) {
-            $builder->groupStart()
-                ->like('ofertas.puesto', $filtros['q'])
-                ->orLike('empresas.razon_social', $filtros['q'])
-                ->groupEnd();
-        }
         if (! empty($filtros['categoria_id'])) {
             $builder->where('ofertas.categoria_id', (int) $filtros['categoria_id']);
         }

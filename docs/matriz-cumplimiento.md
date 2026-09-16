@@ -14,7 +14,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-04 Rol desde BD, no elegible | ✔ | columna `users.rol`; no editable por frontend |
 | RF-05 Control de acceso | ✔ | filtros `jwt` + `rol:...` por ruta |
 | RF-06 Cuentas activo/inactivo | ✔ | login bloqueado; admin activa/desactiva (`UsuariosController`, `EmpresasController`) |
-| RF-07 Administración de usuarios | ✔ | `api/admin/usuarios*` · Usuarios (admin) |
+| RF-07 Administración de usuarios | ✔ | `api/admin/usuarios*` · Usuarios (admin); un admin **no puede desactivar su propia cuenta** (`UsuarioService::cambiarEstado`, 403) |
 | RF-08 Empresas se registran por solicitud pública + aprobación municipal | ✔ | `POST /api/solicitudes-empresa` · `api/admin/solicitudes-empresa*` (auto-registro con verificación de RUC) |
 | RF-09 Evaluación presencial | ⬤ | asumida en la aprobación de la solicitud (`evaluacion_presencial=1`) |
 | RF-10 Perfil de empresa | ✔ | CRUD admin + auto-edición de la empresa (`empresa/perfil`) |
@@ -32,7 +32,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-23 Estados de oferta | ✔ | borrador → publicada → cerrada (los estados heredados `pendiente/rechazada` se normalizaron con migración) |
 | RF-24 Publicación directa por la empresa (sin validación municipal) | ✔ | `PUT /api/empresa/ofertas/{id}/publicar` |
 | RF-25/26 El admin supervisa y puede cerrar ofertas | ✔ | Ofertas (admin); `PUT /api/admin/ofertas/{id}/cerrar` |
-| RF-27/28 Consulta + búsqueda públicas (sin sesión) | ✔ | `GET /api/ofertas` con filtros · "Buscar empleo" |
+| RF-27/28 Consulta + búsqueda públicas (sin sesión) | ✔ | `GET /api/ofertas` con filtros (categoría, ubicación, formación, experiencia) · "Buscar empleo". El filtro "Puesto o empresa" (`q`) se retiró el 2026-09-15 |
 | RF-29 Detalle de oferta público | ✔ | `GET /api/ofertas/{id}` (incluye "ya postulé" si hay sesión) |
 | RF-30 Registro individual de postulación | ✔ | `POST /api/postulante/postulaciones` (empresa denormalizada) |
 | RF-31 Postulación única activa | ✔ | columna generada única `postulacion_unica` (RN-14) + chequeo en servicio |
@@ -79,6 +79,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RN-18 | ✔ | selección/contratación solo por la empresa |
 | RN-19 | ✔ | solo las ofertas `publicada` reciben postulaciones; publicación directa por la empresa (`borrador → publicada`) |
 | RN-20 | ✔ | historiales y auditoría |
+| RN-21 | ✔ | un administrador no puede desactivar su propia cuenta (`UsuarioService::cambiarEstado` → 403); la UI no ofrece la acción |
 
 ## Arquitectura y código (RT)
 
@@ -120,6 +121,19 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | Metadescripciones por ruta | ✔ | `frontend/src/components/SeoMeta.jsx` + `index.html` |
 | Conexión MySQL | ✔ | gestión nativa de CI4 (una conexión por request); sin pool personalizado |
 
+## Saneamiento funcional y técnico (2026-09-15)
+
+| Aspecto | Estado | Ubicación |
+|---|---|---|
+| Bloqueo de autodesactivación del admin | ✔ | `UsuarioService::cambiarEstado` (403) + UI de Usuarios sin la acción sobre la cuenta propia |
+| Filtro "Puesto o empresa" eliminado | ✔ | sin `q` en `GET /api/ofertas` y `GET /api/postulante/ofertas`; UI/OpenAPI/tests actualizados |
+| Historial de postulación con `users.id` real | ✔ | `PostulacionService::postular` + `PostulanteRepository::usuarioIdDe` |
+| Contratación solo sobre postulación activa | ✔ | `ContratacionService::registrar` exige `activo=1` |
+| `total` de empresas respeta `q` | ✔ | `EmpresaRepository::contar` |
+| Transacciones en escrituras multi-tabla | ✔ | `PostulanteService::actualizarBasico`, `UsuarioService::cambiarEstado`, `EmpresaService::cambiarEstado` |
+| Tope de paginación admin | ✔ | `limite` 1–200 y `offset` >= 0 en usuarios, empresas y solicitudes |
+| Dependencias dev sin uso retiradas | ✔ | `fakerphp/faker`, `mikey179/vfsstream` |
+
 ## Pendientes / recomendados
 
 - **Configuración en .env antes de producción**: SMTP (`email.*`) para las notificaciones de aprobación/rechazo, token de SUNAT (`sunat.token`) para verificar RUC y Google (`google.clientId` + `VITE_GOOGLE_CLIENT_ID`).
@@ -129,3 +143,9 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 - Roles secundarios del personal municipal (hoy un único rol `admin`).
 - Integración de oficinas descentralizadas (matriz de la Resolución).
 - Difusión hacia empresas (ver ferias/oportunidades desde la cuenta empresa).
+- **Tablas en desuso** (`formacion_academica`, `experiencia_laboral`, `habilidades`,
+  `cursos_certificaciones`, `atenciones`): no se eliminan hasta confirmar que ningún
+  entorno tiene datos reales; el borrado se haría con una migración nueva.
+- **Hallazgos menores de la auditoría** (`backend/docs/auditoria-backend.md`, sección F):
+  dueño único de `users.estado`/`empresas.estado`, auditoría ampliada, N+1 en listados,
+  zona horaria Perú y validación calendárica quedan para una fase posterior.

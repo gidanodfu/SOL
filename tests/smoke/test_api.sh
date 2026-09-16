@@ -85,5 +85,14 @@ ID=$(curl -s "$B/api/admin/usuarios?q=municipal1" -H "Authorization: Bearer $AT"
 curl -s -o /dev/null -w "desactivar http:%{http_code}\n" -X PUT "$B/api/admin/usuarios/$ID/estado" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"estado":"inactivo"}'
 curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"municipal1","password":"Segura123!"}' | js | head -c 200; echo
 
+paso "13b. admin NO puede desactivarse a sí mismo"
+ADMIN_ID=$(curl -s "$B/api/auth/me" -H "Authorization: Bearer $AT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+curl -s -o /dev/null -w "autodesactivar http:%{http_code} (esperado 403)\n" -X PUT "$B/api/admin/usuarios/$ADMIN_ID/estado" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"estado":"inactivo"}'
+curl -s -o /dev/null -w "admin sigue operativo http:%{http_code} (esperado 200)\n" "$B/api/auth/me" -H "Authorization: Bearer $AT"
+
+paso "13c. reactivar municipal1 => login OK"
+curl -s -o /dev/null -w "reactivar http:%{http_code}\n" -X PUT "$B/api/admin/usuarios/$ID/estado" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"estado":"activo"}'
+curl -s -o /dev/null -w "login municipal reactivado http:%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"municipal1","password":"Segura123!"}'
+
 echo
 echo "FIN pruebas"

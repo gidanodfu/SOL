@@ -66,7 +66,7 @@ curl -s "$B/api/empresa/ofertas/$OID" -H "Authorization: Bearer $TE" | python3 -
 
 echo "== 14. bolsa pública SIN sesión: listar y detalle =="
 curl -s -o /dev/null -w "GET /api/ofertas sin token http:%{http_code}\n" "$B/api/ofertas"
-curl -s "$B/api/ofertas?q=Analista" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("públicas:",len(d),"| publicada visible:", any(o["puesto"]=="Analista contable" for o in d))'
+curl -s "$B/api/ofertas" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("públicas:",len(d),"| publicada visible:", any(o["puesto"]=="Analista contable" for o in d))'
 curl -s "$B/api/ofertas/1" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("detalle público id1:",d["puesto"])'
 
 echo "== 15. admin supervisa y cierra la oferta publicada =="

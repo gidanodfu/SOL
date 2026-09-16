@@ -96,6 +96,8 @@ class PostulacionService
         }
 
         $ahora = date('Y-m-d H:i:s');
+        // El historial referencia users.id (no postulantes.id).
+        $usuarioId = $this->perfiles->usuarioIdDe($postulanteId) ?? $postulanteId;
 
         $this->postulaciones->db->transStart();
         $this->postulaciones->insert([
@@ -112,7 +114,7 @@ class PostulacionService
             'postulacion_id'  => $id,
             'estado_anterior' => null,
             'estado_nuevo'    => 'pendiente',
-            'usuario_id'      => $postulanteId,
+            'usuario_id'      => $usuarioId,
             'created_at'      => $ahora,
         ]);
         $this->postulaciones->db->transComplete();

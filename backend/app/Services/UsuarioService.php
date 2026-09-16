@@ -124,6 +124,12 @@ class UsuarioService
 
     public function cambiarEstado(int $adminId, int $id, string $estado): void
     {
+        // Un administrador no puede desactivar su propia cuenta: evita dejar el
+        // sistema sin acceso administrativo (autoridad en backend, RF-06/RN-09).
+        if ($adminId === $id && $estado === 'inactivo') {
+            throw ApiException::prohibido('No puede desactivar su propia cuenta.');
+        }
+
         $usuario = $this->exigirExistente($id);
 
         Validador::validar(['estado' => $estado], [
@@ -134,12 +140,20 @@ class UsuarioService
             return;
         }
 
+        // Usuario y empresa asociada se actualizan juntos: un fallo parcial dejaría
+        // el estado de bloqueo desincronizado (RF-16/RN-11).
+        $this->users->db->transStart();
         $this->users->update($id, ['estado' => $estado]);
 
-        // Sincroniza el estado de la empresa asociada (RF-16/RN-11): una empresa
-        // inactiva tampoco puede operar.
+        // Sincroniza el estado de la empresa asociada: una empresa inactiva tampoco
+        // puede operar.
         if ($usuario->rol === 'empresa') {
             $this->empresas->where('user_id', $id)->set('estado', $estado)->update();
+        }
+        $this->users->db->transComplete();
+
+        if (! $this->users->db->transStatus()) {
+            throw ApiException::conflicto('No se pudo actualizar el estado del usuario.');
         }
 
         $this->auditoria->registrar($adminId, $estado === 'activo' ? 'activar_usuario' : 'desactivar_usuario', 'user', $id);

@@ -1,94 +1,108 @@
 # Requerimientos del Sistema de Empleo — MDJLO
 
 Documento de especificación que rige el desarrollo. Los códigos (RF-XX, RN-XX, RT-XX,
-RNF-XX, RT-CV-XX) se referencian en código y migraciones para trazabilidad.
+RNF-XX, RT-CV-XX) se referencian en código y migraciones para trazabilidad. Los cambios de
+modelo aprobados con posterioridad se documentan en los anexos (§17, §18, §19) y el cuerpo
+principal describe el **comportamiento vigente**.
 
 ## 1. Propósito
 
 Sistema de intermediación laboral de la Municipalidad Distrital de José Leonardo Ortiz
 para la Unidad Funcional del Empleo: postulantes, empresas afiliadas, ofertas,
-postulaciones, atención/orientación, capacitación, ferias, difusión y reportes.
-Funciones según Resolución de Gerencia Municipal N.° 000197-2025-MDJLO-GM.
+postulaciones, ferias/talleres, difusión de oportunidades y reportes. Funciones según
+Resolución de Gerencia Municipal N.° 000197-2025-MDJLO-GM.
 
 ## 2. Objetivo
 
-Gestionar y supervisar la intermediación laboral entre empresas y ciudadanos: publicación
-de oportunidades, perfiles laborales, postulaciones y seguimiento de resultados; además de
-actividades de orientación, capacitación, ferias de empleo, emprendimiento y autoempleo.
+Gestionar y supervisar la intermediación laboral entre empresas y ciudadanos: afiliación de
+empresas, publicación de oportunidades, perfiles laborales con CV, postulaciones y
+seguimiento de resultados; además de ferias, capacitaciones, difusión y reportes.
 
 ## 3. Procesos en alcance
 
 1. Gestión de usuarios y roles.
-2. Registro y administración municipal de empresas.
+2. Auto-registro de empresas (solicitud pública) y aprobación/administración municipal.
 3. Gestión de postulantes.
 4. Gestión de perfiles laborales y CV.
-5. Gestión y validación de ofertas laborales.
+5. Gestión y publicación de ofertas laborales.
 6. Búsqueda de oportunidades laborales.
 7. Gestión de postulaciones.
-8. Seguimiento del proceso de selección.
-9. Registro de atención y orientación laboral.
-10. Gestión de ferias, talleres y capacitaciones.
-11. Difusión de oportunidades laborales.
-12. Gestión de información de empresas y MYPE locales.
-13. Generación de estadísticas y reportes.
-14. Control de estados y conservación del historial.
+8. Seguimiento del proceso de selección (a cargo de la empresa).
+9. Gestión de ferias, talleres y capacitaciones.
+10. Difusión de oportunidades laborales (Empleos Perú, MYPE y otras fuentes).
+11. Generación de estadísticas y reportes.
+12. Control de estados y conservación del historial.
+
+> El registro de atenciones/asesorías individuales (RF-41/42/43) se retiró del producto; ver §17.
 
 ## 4. Actores
 
 - **Administrador municipal** (personal municipal autorizado): administra usuarios y
-  empresas, crea usuarios empresariales, activa/desactiva cuentas, revisa y valida ofertas,
-  gestiona publicaciones, consulta postulaciones, registra atenciones, gestiona
-  actividades/eventos, consulta indicadores y reportes.
-- **Empresa** (registrada por la Municipalidad): gestiona su información, registra ofertas,
-  consulta postulaciones, revisa perfiles/CV, actualiza estados de postulación y registra el
-  resultado de selección.
-- **Postulante** (ciudadano): crea su cuenta, gestiona perfil laboral (formación,
-  experiencia, habilidades, cursos, certificaciones, CV), busca ofertas, postula y consulta
-  el estado de sus postulaciones.
+  empresas, aprueba o rechaza solicitudes de afiliación, activa/desactiva cuentas, supervisa
+  y cierra ofertas, gestiona actividades (ferias/talleres), difusión y contrataciones, y
+  consulta indicadores y reportes. **No revisa ni selecciona postulaciones**: la selección
+  la realiza la empresa (RN-18). Un administrador **no puede desactivar su propia cuenta**
+  (RN-21).
+- **Empresa** (afiliada por auto-registro con aprobación municipal): gestiona su
+  información y datos de contacto, registra ofertas en borrador y las **publica
+  directamente**, consulta las postulaciones recibidas, revisa perfiles/CV autorizados,
+  actualiza estados de postulación y registra la contratación.
+- **Postulante** (ciudadano): crea su cuenta (DNI o Google), completa sus datos de contacto
+  y **CV**, busca ofertas publicadas, postula y consulta el estado de sus postulaciones. La
+  formación, experiencia, habilidades y cursos son opcionales y se retiraron del producto
+  (§17).
 
 ## 5. Requerimientos funcionales (RF)
 
 ### 5.1 Gestión de usuarios y autenticación
-- **RF-01** Login con nombre de usuario y contraseña.
+- **RF-01** Login con nombre de usuario (RUC/DNI) o correo y contraseña.
 - **RF-02** Autenticación procesada por el backend CI4 contra MySQL.
 - **RF-03** MySQL es la fuente de verdad de identidad, rol, estado y relaciones.
 - **RF-04** El rol se identifica automáticamente desde la BD; el usuario no puede elegirlo.
 - **RF-05** El backend verifica rol y permisos antes de cada operación.
 - **RF-06** Estados de cuenta: Activo / Inactivo; inactivos no inician sesión.
-- **RF-07** El admin crea, consulta, modifica, activa y desactiva usuarios.
+- **RF-07** El admin crea, consulta, modifica, activa y desactiva usuarios; **no puede
+  desactivar su propia cuenta** (validado en backend y reflejado en la UI).
 
 ### 5.2 Registro y administración de empresas
-- **RF-08** Solo la Municipalidad registra empresas (nunca auto-registro).
-- **RF-09** Evaluación presencial previa al registro.
+- **RF-08** La empresa envía una **solicitud pública de afiliación** (auto-registro) con RUC
+  verificado en SUNAT; el admin la aprueba o rechaza desde una bandeja.
+- **RF-09** Evaluación presencial asumida en la aprobación de la solicitud.
 - **RF-10** Perfil de empresa: RUC, razón social, nombre comercial, dirección, teléfono,
   correo, representante, información adicional.
-- **RF-11** El admin crea el usuario empresarial.
-- **RF-12** El RUC es el nombre de usuario por defecto.
-- **RF-13** La contraseña inicial la crea el admin.
+- **RF-11** Al aprobar la solicitud se crea el usuario empresarial.
+- **RF-12** El RUC es el nombre de usuario por defecto; el login acepta el correo
+  corporativo o el RUC.
+- **RF-13** La empresa define su contraseña al activar la cuenta con un enlace de un solo
+  uso (`/activar-cuenta`).
 - **RF-14** Hash seguro; nunca texto plano.
-- **RF-15** La Municipalidad entrega las credenciales a la empresa.
+- **RF-15** Notificación por correo con el enlace de activación (el admin también puede
+  entregarlo desde la bandeja).
 - **RF-16** Activar/desactivar empresas; inactiva no accede ni opera.
 - **RF-17** La desactivación no elimina información ni historial.
 
 ### 5.3 Gestión de postulantes
-- **RF-18** Registro de ciudadanos como postulantes.
-- **RF-19** Perfil laboral: datos personales, formación, experiencia, habilidades, cursos,
-  certificaciones, CV.
+- **RF-18** Registro de ciudadanos como postulantes (manual con DNI o con Google).
+- **RF-19** Perfil laboral vigente: datos personales y de contacto + **CV**. El requisito
+  para postular es contacto completo y CV vigente; formación, experiencia, habilidades y
+  cursos se retiraron del producto (§17).
 - **RF-20** Actualización del perfil.
-- **RF-21** Carga y consulta del CV.
+- **RF-21** Carga y consulta del CV, con **máximo 4 cargas por mes calendario** y versiones
+  anteriores conservadas.
 
 ### 5.4 Gestión de ofertas laborales
 - **RF-22** Registro de ofertas: puesto, descripción, funciones, requisitos, formación,
   experiencia, habilidades, tipo de empleo, lugar, remuneración, vacantes, fechas de
   publicación y cierre.
-- **RF-23** Estados: Borrador, Pendiente de revisión, Publicada, Cerrada, Rechazada.
-- **RF-24** Validación municipal antes de publicar.
-- **RF-25** El admin supervisa las ofertas.
-- **RF-26** El admin aprueba o rechaza.
+- **RF-23** Estados vigentes: Borrador, Publicada, Cerrada. El ENUM conserva los valores
+  históricos `pendiente`/`rechazada` (normalizados por migración), que ya no se generan.
+- **RF-24** La empresa **publica directamente** sus ofertas (sin validación municipal previa).
+- **RF-25** El admin supervisa las ofertas (listado) y puede cerrarlas.
+- **RF-26** El flujo municipal de aprobar/rechazar ofertas fue retirado (§17).
 
 ### 5.5 Búsqueda de oportunidades
-- **RF-27** Consulta de ofertas disponibles.
-- **RF-28** Búsqueda por puesto, empresa, ubicación, categoría, formación, experiencia.
+- **RF-27** Consulta de ofertas disponibles (bolsa pública, sin sesión).
+- **RF-28** Búsqueda por categoría, ubicación, formación y experiencia.
 - **RF-29** Detalle de oferta antes de postular.
 
 ### 5.6 Gestión de postulaciones
@@ -98,20 +112,17 @@ actividades de orientación, capacitación, ferias de empleo, emprendimiento y a
 - **RF-32** Registro automático en la bandeja de la empresa responsable.
 - **RF-33** Bandeja "Postulaciones" de la empresa.
 - **RF-34** Priorizar pendientes; dentro de cada estado, más recientes primero.
-- **RF-35** Detalle: postulante, formación, experiencia, habilidades, cursos, CV, oferta,
-  fecha y estado.
+- **RF-35** Detalle: postulante, CV, oferta, fecha y estado.
 - **RF-36** Estados de postulación: Pendiente, En revisión, Preseleccionado, Contactado,
   Seleccionado, No seleccionado.
 - **RF-37** Activar/desactivar postulación.
 - **RF-38** Sin eliminación física; la desactivación solo cambia su activación.
-- **RF-39** Conservar historial de estados.
-- **RF-40** La empresa selecciona candidatos; la Municipalidad gestiona y supervisa.
+- **RF-39** Conservar historial de estados (el historial referencia `users.id`).
+- **RF-40** La empresa selecciona candidatos; la Municipalidad supervisa y reporta.
 
-### 5.7 Atención y orientación laboral
-- **RF-41** Registro de atenciones a ciudadanos.
-- **RF-42** Tipos: orientación laboral, asesoría CV, preparación de entrevistas, orientación
-  vocacional, formación para el empleo, emprendimiento, autoempleo, derivación a trabajo social.
-- **RF-43** Resultado y seguimiento.
+### 5.7 Atención y orientación laboral — RETIRADO
+- **RF-41/42/43** El registro y seguimiento de atenciones se retiró de la API y el frontend
+  (§17). La tabla `atenciones` queda sin uso.
 
 ### 5.8 Ferias, eventos y capacitaciones
 - **RF-44** Ferias de empleo. **RF-45** Eventos. **RF-46** Talleres.
@@ -128,25 +139,24 @@ actividades de orientación, capacitación, ferias de empleo, emprendimiento y a
 - **RF-53** Empresas registradas y activas.
 - **RF-54** Ofertas por estado.
 - **RF-55** Cantidad y estado de postulaciones.
-- **RF-56** Personas atendidas.
+- **RF-56** Personas atendidas — RETIRADO (eliminado del dashboard y reportes, §17).
 - **RF-57** Candidatos seleccionados y empresas con procesos.
-- **RF-58** Contrataciones registradas.
-- **RF-59** Tiempo postulación → contacto/atención.
+- **RF-58** Contrataciones registradas (empresa y supervisión admin).
+- **RF-59** Tiempo postulación → contacto/selección.
 - **RF-60** Filtros por rango de fechas.
 
 ### 5.11 Auditoría y trazabilidad
 - **RF-61** Registro de acciones relevantes.
-- **RF-62** Historial de usuarios, empresas, ofertas, postulaciones, estados, atenciones,
-  resultados.
+- **RF-62** Historial de usuarios, empresas, ofertas, postulaciones y estados.
 - **RF-63** Usuario responsable y fecha en acciones administrativas.
 
 ## 6. Reglas de negocio (RN)
 
-- **RN-01** Empresas solo registradas por la Municipalidad.
-- **RN-02** Registro tras evaluación presencial.
-- **RN-03** El admin crea perfil y usuario de la empresa.
-- **RN-04** RUC = usuario por defecto.
-- **RN-05** Contraseña inicial creada por el admin.
+- **RN-01** Las empresas se afilian por solicitud pública aprobada por la Municipalidad.
+- **RN-02** La aprobación asume la evaluación presencial.
+- **RN-03** Al aprobar la solicitud se crea el perfil y el usuario de la empresa.
+- **RN-04** RUC = usuario por defecto (el login también acepta el correo corporativo).
+- **RN-05** La contraseña la define la empresa al activar la cuenta.
 - **RN-06** Hash seguro de contraseñas.
 - **RN-07** Rol determinado por el backend desde la BD.
 - **RN-08** El usuario no elige su rol.
@@ -160,14 +170,16 @@ actividades de orientación, capacitación, ferias de empleo, emprendimiento y a
 - **RN-16** Pendientes primero.
 - **RN-17** Postulaciones activables/desactivables, nunca eliminadas.
 - **RN-18** La empresa selecciona a sus candidatos.
-- **RN-19** Ofertas validadas por la Municipalidad antes de publicar.
+- **RN-19** La empresa publica directamente sus ofertas; el admin supervisa y puede cerrar.
 - **RN-20** Conservación del historial.
+- **RN-21** Un administrador no puede desactivar su propia cuenta (backend como autoridad).
 
 ## 7. Requerimientos no funcionales (RNF)
 
 - **RNF-01** Arquitectura desacoplada React → API REST → CI4 → MySQL.
 - **RNF-02/03/04** Backend PHP/CI4, frontend React, datos en MySQL.
-- **RNF-05** Seguridad: hash, sesiones, permisos, rutas, validación, acceso no autorizado.
+- **RNF-05** Seguridad: hash, sesiones, permisos, rutas, validación, rate limiting, acceso
+  no autorizado.
 - **RNF-06** Integridad referencial.
 - **RNF-07** Disponibilidad y recuperación de errores.
 - **RNF-08** Usabilidad para ciudadanos, empresas y personal municipal.
@@ -176,31 +188,36 @@ actividades de orientación, capacitación, ferias de empleo, emprendimiento y a
 - **RNF-11** Operaciones administrativas rastreables.
 - **RNF-12** Protección de información personal y empresarial.
 
-## 8. Matriz Resolución → funcionalidad
+## 8. Matriz Resolución → funcionalidad (estado real)
 
-| Función normativa | Implementación |
-|---|---|
-| Apoyo a población vulnerable | Registro de postulantes, atención y orientación |
-| Asesoría laboral | Módulo de atención |
-| Ferias de empleo | Módulo de ferias y eventos |
-| Orientación vocacional | Registro de atenciones |
-| Coordinación con empresas | Gestión municipal de empresas |
-| CV y entrevistas | Perfil laboral, CV y asesoría |
-| Monitoreo de vacantes | Gestión y supervisión de ofertas |
-| Trabajo social | Derivaciones/atenciones |
-| Emprendimiento | Talleres y actividades |
-| Informes de efectividad | Dashboard y reportes |
-| Empleos Perú | Sección de difusión |
-| MYPE locales | Oportunidades MYPE |
-| Oficinas descentralizadas | Registro/integración de información |
+Estados: **IMPLEMENTADO**, **PARCIAL**, **PENDIENTE**, **FUERA DE ALCANCE**, **RETIRADO**.
 
-## 9. Resultado esperado (flujo)
+| Función normativa | Estado | Implementación real |
+|---|---|---|
+| Apoyo a población vulnerable | PARCIAL | Registro de postulantes y bolsa pública; sin módulo específico de vulnerabilidad |
+| Asesoría laboral | RETIRADO | El registro de atenciones se retiró del producto |
+| Ferias de empleo | IMPLEMENTADO | `api/admin/actividades*` (tipo `feria_empleo`) y difusión pública |
+| Orientación vocacional | RETIRADO | Se eliminó con el módulo de atenciones |
+| Formación para el empleo | IMPLEMENTADO | Actividades tipo `capacitacion`/`taller` |
+| Coordinación con empresas | IMPLEMENTADO | Afiliación de empresas + gestión de ofertas |
+| Asesoría para CV | PARCIAL | Carga/actualización de CV (sin asesoría guiada) |
+| Preparación para entrevistas | RETIRADO | Se eliminó con el módulo de atenciones |
+| Monitoreo de vacantes | IMPLEMENTADO | Supervisión municipal de ofertas y reportes |
+| Trabajo social | FUERA DE ALCANCE | Requeriría un módulo de derivaciones no previsto |
+| Emprendimiento y autoempleo | PARCIAL | Difusión de oportunidades; sin módulo de emprendimiento |
+| Informes de efectividad | IMPLEMENTADO | Dashboard admin y reportes con export CSV/Excel |
+| Empleos Perú | IMPLEMENTADO | Fuente `empleos_peru` en oportunidades |
+| Oportunidades MYPE | IMPLEMENTADO | Fuente `mype_local` y empresas afiliadas |
+| Oficinas descentralizadas | FUERA DE ALCANCE | No hay integración con oficinas descentralizadas |
 
-Evaluación presencial → registro municipal de empresa → creación de usuario → RUC=usuario →
-contraseña por admin → empresa habilitada → registro de oferta → validación municipal →
-publicación → postulante consulta → postula → registro de postulación → empresa recibe →
-pendientes primero → abrir postulación → revisar perfil/CV → cambiar estado →
-seleccionar/no seleccionar → seguimiento → resultado/contratación → reporte municipal.
+## 9. Resultado esperado (flujo vigente)
+
+Solicitud pública de afiliación (RUC verificado) → aprobación municipal → enlace de
+activación → la empresa define su contraseña → empresa habilitada → registra oferta →
+la publica directamente → el postulante consulta la bolsa pública → completa contacto + CV
+→ postula → la postulación aparece en la bandeja de la empresa → la empresa revisa el
+perfil/CV → cambia estados → contacta/selecciona → registra la contratación → el municipio
+supervisa y reporta.
 
 ## 10. CV y almacenamiento externo (RT-CV)
 
@@ -213,6 +230,7 @@ seleccionar/no seleccionar → seguimiento → resultado/contratación → repor
 - **RT-CV-06** Validar extensión, MIME y tamaño antes de almacenar.
 - **RT-CV-07** Nombres generados por el sistema.
 - **RT-CV-08** Historial/versiones del CV cuando sea necesario.
+- **RT-CV-09** Máximo 4 cargas por mes calendario (control en backend).
 
 Decisión: MySQL = datos y referencias; Supabase Storage = archivos; CI4 controla permisos;
 React solo interfaz. `frontend/public/` únicamente recursos públicos (logos, iconos).
@@ -244,10 +262,11 @@ backend/  app/{Config,Controllers,Models,Services,Repositories,Entities,Filters,
 ## 12. API REST (RT-07/RT-08)
 
 - **RT-07** Endpoints REST: ej. `GET /api/ofertas`, `GET /api/ofertas/{id}`,
-  `POST /api/postulaciones`; protegidos con validación de auth y permisos.
+  `POST /api/postulante/postulaciones`; protegidos con validación de auth y permisos.
 - **RT-08** Respuestas consistentes:
   - OK: `{ "success": true, "message": "...", "data": {} }`
   - Error: `{ "success": false, "message": "...", "errors": [] }`
+  - Códigos: `400/401/403/404/409/422/429/500`; los `500` no exponen detalles internos.
 
 ## 13. SOLID y estilo (RT-09..RT-17)
 
@@ -258,7 +277,8 @@ backend/  app/{Config,Controllers,Models,Services,Repositories,Entities,Filters,
 - **RT-11** Comentarios solo si aportan (reglas de negocio o decisiones no evidentes).
 - **RT-12** Doc de métodos no evidentes: propósito, parámetros, resultado, errores.
 - **RT-13** Comentar reglas de negocio con riesgo de modificación accidental (no eliminar
-  postulaciones; empresa solo gestiona sus ofertas; RUC es usuario inicial; rol desde BD).
+  postulaciones; empresa solo gestiona sus ofertas; RUC es usuario inicial; rol desde BD;
+  un admin no puede autodesactivarse).
 - **RT-14/15** Nombres uniformes y descriptivos en español (p. ej. `obtenerPostulacionesPendientes()`).
 - **RT-16** Métodos pequeños. **RT-17** Evitar duplicación, centralizar lógica reutilizable.
 
@@ -269,6 +289,9 @@ backend/  app/{Config,Controllers,Models,Services,Repositories,Entities,Filters,
 - **RT-21** Endpoints privados/administrativos protegidos (p. ej. `/api/admin/empresas`,
   `/api/admin/usuarios`, `/api/empresa/postulaciones`).
 - **RT-22** Re-validar en CI4 todo lo recibido de React.
+- **RT-23** Rate limiting (token bucket de CI4) en login, refresh/Google/registro y subida
+  de CV; respuesta `429` con `Retry-After`.
+- **RT-24** Ninguna respuesta de usuario expone `password_hash`.
 
 ## 15. Regla arquitectónica principal
 
@@ -281,8 +304,8 @@ backend/  app/{Config,Controllers,Models,Services,Repositories,Entities,Filters,
 ## 16. Resultados de selección y tiempo de atención
 
 Indicadores de efectividad (no solo usuarios/CV): empresas, ofertas, postulaciones,
-selección, contratación (RF-58) y tiempos postulación→contacto/atención (RF-59), filtrables
-por rango de fechas (RF-60).
+selección y contratación (RF-58) y tiempos postulación→contacto/selección (RF-59),
+filtrables por rango de fechas (RF-60).
 
 ## 17. Anexo — cambios de modelo (2026-09)
 
@@ -356,3 +379,26 @@ Cambios aplicados sin modificar el esquema de base de datos ni añadir variables
   request vía `db_connect()`); no se implementó un pool personalizado.
 - **Metadescripciones por ruta** en el frontend (`SeoMeta`) con descripciones propias por
   página y `<meta name="description">` por defecto en `index.html`.
+
+## 19. Anexo — saneamiento funcional y técnico (2026-09-15)
+
+- **Protección del administrador (RN-21)**: un administrador no puede desactivar su propia
+  cuenta. La regla vive en `UsuarioService::cambiarEstado` (responde `403`) y la UI de
+  Usuarios no ofrece la acción sobre la cuenta propia. No se identifica al admin por email.
+- **Filtro "Puesto o empresa" retirado**: la búsqueda de `/postulante/buscar` ya no filtra
+  por texto libre. Se eliminó el parámetro `q` de `GET /api/ofertas` y
+  `GET /api/postulante/ofertas`, la constante `OPCIONES_PUESTO`, el estado `sel.puesto` y
+  el pill de la UI, además de su documentación OpenAPI. Los `q` administrativos (usuarios,
+  empresas, solicitudes) se conservan.
+- **Integridad**:
+  - El historial inicial de postulación registra el `users.id` real (`usuario_id`), no el
+    `postulantes.id`.
+  - No se puede registrar una contratación sobre una postulación inactiva.
+  - El `total` paginado de empresas respeta el filtro `q`.
+  - Las actualizaciones que tocan dos tablas (perfil↔cuenta, usuario↔empresa,
+    empresa↔usuario) se ejecutan en transacción.
+  - Los listados admin acotan `limite` a 200 y `offset` a >= 0.
+- **Dependencias**: se retiraron `fakerphp/faker` y `mikey179/vfsstream` (sin uso).
+- **Pendiente decidido**: las tablas en desuso (`formacion_academica`, `experiencia_laboral`,
+  `habilidades`, `cursos_certificaciones`, `atenciones`) **no** se eliminan en esta pasada;
+  requieren confirmación de que ningún entorno tiene datos reales.

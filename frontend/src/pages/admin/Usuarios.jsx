@@ -7,11 +7,13 @@ import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjet
 import { ETIQUETA_ROL } from '../../constants';
 import { errorApi, fechaHora, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import { useAuth } from '../../context/AuthContext';
 
 const estadosUsuarios = { activo: 'activo', inactivo: 'inactivo' };
 
 export default function Usuarios() {
   const queryClient = useQueryClient();
+  const { usuario: usuarioActual } = useAuth();
   const [filtros, setFiltros] = useState({ rol: '', estado: '', q: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const { ejecutar, enviando, error, setError } = useAccion(async (fn) => fn());
@@ -88,9 +90,12 @@ export default function Usuarios() {
                 <td>{fechaHora(u.ultimo_acceso)}</td>
                 <td>
                   <div className="acciones">
-                    <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
-                      {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                    </Boton>
+                    {/* Un administrador no puede desactivar su propia cuenta (el backend también lo impide). */}
+                    {u.id !== usuarioActual?.id && (
+                      <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
+                        {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                      </Boton>
+                    )}
                     <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
                   </div>
                 </td>

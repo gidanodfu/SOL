@@ -68,6 +68,9 @@ class PostulanteService
             'fecha_nacimiento' => ['regex:/^\d{4}-\d{2}-\d{2}$/'],
         ]);
 
+        // Perfil y cuenta se actualizan juntos: un fallo parcial dejaría datos
+        // de contacto divergentes entre `postulantes` y `users`.
+        $this->postulantes->db->transStart();
         $this->postulantes->update((int) $postulante->id, [
             'nombres'          => $datos['nombres'],
             'apellidos'        => $datos['apellidos'],
@@ -82,5 +85,10 @@ class PostulanteService
             'email'     => $datos['email'] ?? null,
             'telefono'  => $datos['telefono'] ?? null,
         ]);
+        $this->postulantes->db->transComplete();
+
+        if (! $this->postulantes->db->transStatus()) {
+            throw ApiException::conflicto('No se pudo actualizar el perfil. Intente nuevamente.');
+        }
     }
 }

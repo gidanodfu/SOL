@@ -32,7 +32,8 @@ MySQL es la fuente de verdad.
 
 - **Roles**: `admin` (municipal), `empresa`, `postulante`. El rol vive en `users.rol`
   (ENUM); no existe tabla de roles. Auth JWT + refresh, filtros `jwt` y `rol:` por ruta;
-  bloqueo inmediato al desactivar la cuenta.
+  bloqueo inmediato al desactivar la cuenta. Un administrador **no puede desactivar su
+  propia cuenta** (validado en backend y reflejado en la UI).
 - **Auto-registro de empresas**: solicitud pública con RUC verificado en SUNAT
   (`sunat.token`); el admin aprueba/rechaza desde una bandeja y la cuenta se activa con un
   enlace de un solo uso (`/activar-cuenta`). El login usa el correo corporativo (el RUC
@@ -406,7 +407,8 @@ en [`tests/README.md`](tests/README.md).
 | 9 | Auto-registro y activación de empresas, publicación directa de ofertas, bolsa pública, Google Sign-In | `b60281c` |
 | 10 | Ajustes finales: retiro de secciones del perfil y del módulo de atenciones, "Demandante" → "Postulante" | `655b42c`, `6cfdd0f` |
 | 11 | Endurecimiento: rate limiting, límite de 4 CV/mes, validación de teléfono, `password_hash` fuera de respuestas, errores saneados | `647c1f8`, `eb4664a` |
-| 12 | Estabilización: logout único, admin inicial `MDJLO-SOL` vía `.env`, seeds idempotentes y separación de fixtures, README/MySQLi | — |
+| 12 | Estabilización: logout único, admin inicial `MDJLO-SOL` vía `.env`, seeds idempotentes y separación de fixtures, README/MySQLi | `0a04284` |
+| 13 | Saneamiento integral: protección de autodesactivación del admin, retiro del filtro "Puesto o empresa", integridad (historial de postulación, contratación activa, total con `q`, transacciones), limpieza de dependencias y documentación sincronizada | — |
 
 Cada RF/RN/RT con su estado y ubicación está trazado en
 [`docs/matriz-cumplimiento.md`](docs/matriz-cumplimiento.md). Pruebas en

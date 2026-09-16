@@ -69,6 +69,15 @@ administrador inicial `MDJLO-SOL` provisionado por `.env` (`INITIAL_ADMIN_*`) y
 `SystemSeeder` idempotente (solo admin + categorías); los datos y credenciales de prueba se
 aislaron en `DatosPruebaSeeder`/`DatosMasivosSeeder`. Resuelve **S2**.
 
+**Saneamiento 2026-09-15**: se corrigieron **E2** (historial de postulación con `users.id`
+real), **E4** (contratación solo sobre postulación activa), **E6** (`total` de empresas con
+`q`), **S11** (tope de `limite` en listados admin) y tres flujos de **E5** (transacciones
+en perfil↔cuenta, usuario↔empresa y empresa↔usuario; queda pendiente oferta+habilidades).
+Se agregó la regla de negocio **RN-21** (un admin no puede autodesactivarse) y se retiró el
+filtro "Puesto o empresa" de la bolsa pública (`q` en `/api/ofertas` y
+`/api/postulante/ofertas`). Se retiraron las dev-dependencies sin uso `fakerphp/faker` y
+`mikey179/vfsstream`.
+
 ---
 
 ## A. Resumen general
@@ -198,11 +207,11 @@ Se documentan **74 operaciones bajo `/api`** + la raíz `GET /` (75 en total). R
 | # | Problema | Severidad | Evidencia | Impacto | Recomendación |
 |---|---|---|---|---|---|
 | E1 | **RESUELTO (2026-09-10)** — **`password_hash` expuesto en listado de usuarios** | CRÍTICO | `app/Repositories/UsuarioRepository.php:49-50` (`select('users.*')` + `getResultArray`) → `GET /api/admin/usuarios` | Hashes bcrypt de todos los usuarios salen en JSON (admin-only, pero no deben salir jamás; quedan en logs/red). El detalle (`UsuarioService::detallado`, `:173-186`) sí hace whitelist. | Seleccionar columnas explícitas sin `password_hash` (o recorrer con whitelist) en `UsuarioRepository::base()`/`listar()`. |
-| E2 | **`postulacion_historial.usuario_id` guarda `postulantes.id` (clave de otro dominio)** | ALTO | `app/Services/PostulacionService.php:105` escribe `usuario_id => $postulanteId`; la FK apunta a `users.id` (`Migrations/2026-09-03-100003…:112`). En cambio el historial de la empresa sí guarda el `users.id` real (`:188`). | La trazabilidad inicial de toda postulación queda corrupta: puede apuntar a un usuario equivocado o violar la FK (fallo de transacción → 409). `postulantes.id` y `users.id` son secuencias independientes. | Guardar el `user_id` real del postulante (resolver vía `postulantes.user_id`) en el insert de historial. |
+| E2 | **RESUELTO (2026-09-15)** — **`postulacion_historial.usuario_id` guarda `postulantes.id` (clave de otro dominio)** | ALTO | `app/Services/PostulacionService.php:105` escribe `usuario_id => $postulanteId`; la FK apunta a `users.id` (`Migrations/2026-09-03-100003…:112`). En cambio el historial de la empresa sí guarda el `users.id` real (`:188`). | La trazabilidad inicial de toda postulación queda corrupta: puede apuntar a un usuario equivocado o violar la FK (fallo de transacción → 409). `postulantes.id` y `users.id` son secuencias independientes. | Guardar el `user_id` real del postulante (resolver vía `postulantes.user_id`) en el insert de historial. |
 | E3 | **Aprobar oferta no revalida `fecha_cierre`** | ALTO | `app/Services/OfertaService.php:210-223` (no chequea vigencia) vs `OfertaRepository::publicadas` (`:64-66` excluye vencidas) | Una oferta pendiente aprobada con fecha de cierre vencida queda `publicada` pero invisible/no postulable: estado de BD y vigencia divergen. | Al aprobar, validar `fecha_cierre >= hoy` (o rechazar/avisar). |
-| E4 | **Contratación registrable sobre postulación inactiva** | ALTO | `app/Services/ContratacionService.php:81-84,131-145` valida solo `estado = seleccionado`; no exige `activo`. `opcionesDeEmpresa` sí exige `activo=1` (`:48`). | Se puede contratar a un candidato cuya postulación fue retirada/desactivada; inconsistencia entre "opciones" y el alta directa. | Exigir `activo = 1` en `postulacionDeEmpresa()`/`registrar()`. |
-| E5 | **Escrituras multi-tabla sin transacción** | ALTO | `PostulanteService::actualizarBasico` (`:67-80`, postulantes+users), `EmpresaService::cambiarEstado` (`:184-185`), `UsuarioService::cambiarEstado` (`:137-142`), `OfertaService::crear/actualizar` (oferta + habilidades, `:105-157`) | Fallo a mitad de camino deja datos divergentes (perfil vs cuenta, users vs empresas, oferta sin habilidades). | Envolver en `transStart/transComplete` + `transStatus`. |
-| E6 | **`total` de paginación de empresas ignora `q`** | ALTO | `EmpresaRepository::contar` (`:47-56`) no aplica el filtro `q` (a diferencia de `UsuarioRepository::contar`, `:39-45` que sí aplica todos) | El frontend paginando con búsqueda ve `total` mayor a la cantidad real de filas. | Aplicar los mismos filtros en `contar()` (o paginar de una sola consulta). |
+| E4 | **RESUELTO (2026-09-15)** — **Contratación registrable sobre postulación inactiva** | ALTO | `app/Services/ContratacionService.php:81-84,131-145` valida solo `estado = seleccionado`; no exige `activo`. `opcionesDeEmpresa` sí exige `activo=1` (`:48`). | Se puede contratar a un candidato cuya postulación fue retirada/desactivada; inconsistencia entre "opciones" y el alta directa. | Exigir `activo = 1` en `postulacionDeEmpresa()`/`registrar()`. |
+| E5 | **PARCIAL (2026-09-15)** — **Escrituras multi-tabla sin transacción** | ALTO | `PostulanteService::actualizarBasico` (`:67-80`, postulantes+users), `EmpresaService::cambiarEstado` (`:184-185`), `UsuarioService::cambiarEstado` (`:137-142`), `OfertaService::crear/actualizar` (oferta + habilidades, `:105-157`) | Fallo a mitad de camino deja datos divergentes (perfil vs cuenta, users vs empresas, oferta sin habilidades). | Envolver en `transStart/transComplete` + `transStatus`. |
+| E6 | **RESUELTO (2026-09-15)** — **`total` de paginación de empresas ignora `q`** | ALTO | `EmpresaRepository::contar` (`:47-56`) no aplica el filtro `q` (a diferencia de `UsuarioRepository::contar`, `:39-45` que sí aplica todos) | El frontend paginando con búsqueda ve `total` mayor a la cantidad real de filas. | Aplicar los mismos filtros en `contar()` (o paginar de una sola consulta). |
 
 ---
 
@@ -245,7 +254,7 @@ Se documentan **74 operaciones bajo `/api`** + la raíz `GET /` (75 en total). R
 | S8 | RECOMENDACIÓN | MIME de CV confiado al cliente (sin magic bytes) | `CvService.php:129-141` | Contenido-hostil improbable (se sirve como attachment); endurecer con `%PDF` etc. |
 | S9 | RECOMENDACIÓN | `object_key` interno del CV en respuestas JSON | `PostulanteRepository.php:44-55`, `PostulacionService.php:157` | Bajo riesgo; filtrar. |
 | S10 | RECOMENDACIÓN | Enumeración por mensajes en registro público | `AuthService.php:132-137` | Mensaje genérico. |
-| S11 | RECOMENDACIÓN | `limite` sin tope en listados admin | `UsuariosController.php:21-22`, `EmpresasController.php:21-22` | Acotar. |
+| S11 | **RESUELTO (2026-09-15)** | `limite` sin tope en listados admin | `UsuariosController.php`, `EmpresasController.php`, `SolicitudesEmpresaController.php` | Acotado a 1–200 con `offset` >= 0. |
 | S12 | **RESUELTO (2026-09-10)** | Trazas en errores no controlados si el entorno es `development` y sin HTTPS forzado | `.env` local (`CI_ENVIRONMENT=development`, `forceGlobalSecureRequests=false`), `Config/Exceptions.php:102-109` | `ApiExceptionHandler` responde mensaje genérico en `500` y registra el detalle solo en el log; confirmar igualmente HTTPS/entorno en despliegue (`env.production.example`). |
 | S13 | RECOMENDACIÓN | CORS default de desarrollo | `Config/Cors.php:52` (`http://localhost:5173`) | Confirmar `cors.allowedOrigins` en producción. |
 | S14 | RECOMENDACIÓN | IP auditada tras proxy | `AuditoriaService.php:26-29`, `App.php:183` (`proxyIPs=[]`) | Configurar `proxyIPs`. |

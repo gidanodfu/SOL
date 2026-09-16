@@ -2416,17 +2416,12 @@ paths:
       summary: Buscar ofertas publicadas
       description: |
         Solo ofertas en estado `publicada` y vigentes (`fecha_cierre` nula o >= hoy).
-        Filtros opcionales por texto, categoría, ubicación, formación y experiencia
+        Filtros opcionales por categoría, ubicación, formación y experiencia
         (comparaciones `LIKE`). Orden `fecha_publicacion DESC`, tope fijo 200. Cada fila
         incluye `categoria_nombre`, `ruc` y `razon_social`.
       security:
         - bearerAuth: []
       parameters:
-        - name: q
-          in: query
-          description: Búsqueda en `puesto` o `razon_social`.
-          schema:
-            type: string
         - name: categoria_id
           in: query
           description: Filtro por categoría.
@@ -2851,10 +2846,9 @@ paths:
       summary: Buscar ofertas publicadas (público)
       description: |
         Lista las ofertas en estado `publicada` y vigentes, sin autenticación. Acepta los
-        mismos filtros de búsqueda (`q`, `categoria_id`, `ubicacion`, `formacion`,
-        `experiencia`). Para postularse se requiere sesión de postulante.
+        filtros `categoria_id`, `ubicacion`, `formacion` y `experiencia`. Para postularse
+        se requiere sesión de postulante.
       parameters:
-        - $ref: '#/components/parameters/Q'
         - name: categoria_id
           in: query
           schema:

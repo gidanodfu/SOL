@@ -181,8 +181,15 @@ class EmpresaService
             return;
         }
 
+        // Empresa y usuario asociado se actualizan juntos (RF-16/RN-11).
+        $this->empresas->db->transStart();
         $this->empresas->update($id, ['estado' => $estado]);
         $this->users->update((int) $empresa['user_id'], ['estado' => $estado]);
+        $this->empresas->db->transComplete();
+
+        if (! $this->empresas->db->transStatus()) {
+            throw ApiException::conflicto('No se pudo actualizar el estado de la empresa.');
+        }
 
         $this->auditoria->registrar($adminId, $estado === 'activo' ? 'activar_empresa' : 'desactivar_empresa', 'empresa', $id);
     }

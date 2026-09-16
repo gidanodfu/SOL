@@ -18,8 +18,9 @@ class UsuariosController extends BaseApiController
             'q'      => $this->request->getGet('q'),
         ], static fn ($v) => $v !== null && $v !== '');
 
-        $limite  = (int) ($this->request->getGet('limite') ?: 100);
-        $offset  = (int) ($this->request->getGet('offset') ?: 0);
+        // Tope de paginación: evita listados desmedidos desde el cliente.
+        $limite  = min(200, max(1, (int) ($this->request->getGet('limite') ?: 100)));
+        $offset  = max(0, (int) ($this->request->getGet('offset') ?: 0));
 
         return $this->ok((new UsuarioService())->listar($filtros, $limite, $offset), 'Lista de usuarios.');
     }

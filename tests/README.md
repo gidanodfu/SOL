@@ -42,6 +42,11 @@ cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark d
 
 Notas:
 
+- `test_api.sh` incluye la verificación de que un administrador **no puede desactivar su
+  propia cuenta** (403) y que la reactivación de otros usuarios sigue funcionando.
+- La búsqueda pública (`/postulante/buscar`) ya **no** filtra por "Puesto o empresa"; los
+  filtros vigentes son categoría, ubicación, formación y experiencia.
+
 - `test_desarrollo_nuevo.sh` verifica un RUC real contra SUNAT: requiere `sunat.token` en
   `backend/.env` (si el token no está o el RUC no es resoluble, los pasos 1-2 fallan; el
   resto del flujo se puede probar con el enlace interno del admin).

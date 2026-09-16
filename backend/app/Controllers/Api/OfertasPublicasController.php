@@ -16,7 +16,6 @@ class OfertasPublicasController extends BaseApiController
     public function index()
     {
         $filtros = array_filter([
-            'q'            => $this->request->getGet('q'),
             'categoria_id' => $this->request->getGet('categoria_id'),
             'ubicacion'    => $this->request->getGet('ubicacion'),
             'formacion'    => $this->request->getGet('formacion'),

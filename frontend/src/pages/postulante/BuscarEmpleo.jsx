@@ -10,7 +10,6 @@ import { errorApi } from '../../utils';
 import { useClickFuera } from '../../hooks/useClickFuera';
 import { useAccion } from '../../hooks/useAccion';
 
-const OPCIONES_PUESTO = ['Operario', 'Supervisor', 'Administrativo', 'Técnico', 'Chofer'];
 const OPCIONES_UBICACION = ['Chiclayo', 'José Leonardo Ortiz', 'La Victoria', 'Pimentel', 'Lambayeque'];
 const OPCIONES_FORMACION = OPCIONES_FORMACION_REQUERIDA;
 const OPCIONES_EXPERIENCIA = OPCIONES_EXPERIENCIA_REQUERIDA;
@@ -86,7 +85,6 @@ export default function BuscarEmpleo() {
 
   const queryFiltros = useMemo(() => {
     const f = {};
-    if (sel.puesto?.valor) f.q = sel.puesto.valor;
     if (sel.categoria?.valor) f.categoria_id = sel.categoria.valor;
     if (sel.ubicacion?.valor) f.ubicacion = sel.ubicacion.valor;
     if (sel.formacion?.valor) f.formacion = sel.formacion.valor;
@@ -187,16 +185,6 @@ export default function BuscarEmpleo() {
           
         />
        
-        <FiltroPill
-          icono="ti ti-briefcase"
-          titulo="Puesto o empresa"
-          opciones={comoOpciones(OPCIONES_PUESTO)}
-          valor={sel.puesto?.valor}
-          abierto={abierto === 'puesto'}
-          onToggle={toggler('puesto')}
-          onCerrar={() => setAbierto(null)}
-          onElegir={elegir('puesto')}
-        />
         <FiltroPill
           icono="ti ti-category"
           titulo="Categoría"

@@ -51,6 +51,14 @@ class EmpresaRepository
         if (! empty($filtros['estado'])) {
             $builder->where('empresas.estado', $filtros['estado']);
         }
+        // Mismos filtros que listar(): el total debe corresponder a la búsqueda.
+        if (! empty($filtros['q'])) {
+            $builder->groupStart()
+                ->like('empresas.ruc', $filtros['q'])
+                ->orLike('empresas.razon_social', $filtros['q'])
+                ->orLike('empresas.nombre_comercial', $filtros['q'])
+                ->groupEnd();
+        }
 
         return (int) $builder->countAllResults();
     }
