@@ -111,6 +111,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/RespuestaSistema'
 
+  /health:
+    get:
+      tags: [Sistema]
+      operationId: healthCheck
+      summary: Disponibilidad de la API (health check)
+      description: |
+        Endpoint público de disponibilidad (fuera de `/api`). No requiere autenticación,
+        no consulta la base de datos ni servicios externos y no expone datos internos.
+        La API de negocio permanece bajo `/api` (sin versionar).
+      responses:
+        '200':
+          description: Servicio disponible.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Servicio disponible.
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status:
+                        type: string
+                        example: ok
+
   /api/auth/login:
     post:
       tags: [Autenticación]
