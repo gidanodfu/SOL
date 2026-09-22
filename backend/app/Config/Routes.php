@@ -15,6 +15,18 @@ $routes->get('/', static function () {
         ], JSON_UNESCAPED_UNICODE));
 });
 
+// Health check público de disponibilidad: sin autenticación, sin BD ni servicios
+// externos, y sin datos internos. La API de negocio sigue bajo /api (sin versionar).
+$routes->get('health', static function () {
+    return service('response')
+        ->setContentType('application/json', 'UTF-8')
+        ->setBody(json_encode([
+            'success' => true,
+            'message' => 'Servicio disponible.',
+            'data'    => ['status' => 'ok'],
+        ], JSON_UNESCAPED_UNICODE));
+});
+
 /*
  * API REST (RT-07). Frontend y backend son proyectos independientes; la
  * comunicación se hace solo por estos endpoints. Todas las rutas bajo /api

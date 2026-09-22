@@ -15,6 +15,10 @@ paso() { printf '\n== %s ==\n' "$1"; }
 
 js() { python3 -c 'import sys,json;d=json.load(sys.stdin);print(d)' ; }
 
+paso "0. health check público"
+curl -s -o /dev/null -w "GET /health http:%{http_code} (200)\n" "$B/health"
+curl -s "$B/health" | python3 -c 'import sys,json;d=json.load(sys.stdin);print("health status:",d["data"]["status"])'
+
 paso "1. login admin"
 R=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}')
 echo "$R" | js | head -c 400; echo

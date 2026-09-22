@@ -219,6 +219,42 @@ php spark serve              # API en http://localhost:8080 (puerto por defecto 
 El puerto se controla con `php spark serve --port <puerto>`; si se cambia, ajustar
 `app.baseURL` en `backend/.env` y `VITE_API_URL` en `frontend/.env`.
 
+### Estructura pública de la API
+
+- **API REST: `/api`** (sin versionado; no existe `/api/v1`). Agrupa los endpoints de
+  negocio descritos en la especificación OpenAPI: públicos, autenticados (`jwt`), y los
+  grupos `admin`, `empresa` y `postulante` con autorización por rol.
+- **`GET /`**: mensaje institucional (JSON, sin auth).
+- **`GET /health`**: health check (JSON, sin auth).
+
+### Health check
+
+```bash
+curl -i http://localhost:8080/health
+```
+
+- Público, sin autenticación, sin base de datos ni servicios externos.
+- Responde `200` con un JSON mínimo:
+
+```json
+{ "success": true, "message": "Servicio disponible.", "data": { "status": "ok" } }
+```
+
+### Public API URL
+
+**Public API URL: pendiente de deployment.** El repositorio no configura ni documenta
+(con datos reales) un dominio público: `backend/env.production.example` es una plantilla y
+su dominio de ejemplo no resuelve. Para exponerla públicamente falta:
+
+1. Hosting del backend CI4 (docroot en `backend/public/`, p. ej. VPS con Nginx + PHP-FPM).
+2. Dominio real y registros DNS (A/AAAA o CNAME) apuntando al host.
+3. Reverse proxy con TLS (Nginx/Caddy/Cloudflare) hacia el backend.
+4. `backend/.env` de producción con `CI_ENVIRONMENT=production`, `app.baseURL`,
+   `cors.allowedOrigins` y `app.frontendUrl` con el dominio real.
+5. Frontend publicado con `VITE_API_URL` apuntando a la API pública.
+
+Una vez desplegada, la URL pública del health check será `<dominio-real>/health`.
+
 ## 11. Ejecución frontend
 
 ```bash
