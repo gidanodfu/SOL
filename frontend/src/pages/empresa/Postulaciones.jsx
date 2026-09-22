@@ -9,7 +9,7 @@ import { EstadoCarga, Boton, Estado, Mensaje, Selecto } from '../../components/U
 import PageHeader from '../../components/PageHeader';
 import { ETIQUETA_ESTADO_POSTULACION, TRANSICIONES_POSTULACION } from '../../constants';
 import { listarOfertasEmpresa } from '../../services/ofertas';
-import { descargarUrl, errorApi, fecha, fechaHora } from '../../utils';
+import { descargarUrl, errorApi, fechaCalendario, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const FILTROS = [
@@ -225,7 +225,7 @@ function DetallePostulante({ detalle }) {
   return (
     <div>
       <h3>
-        {p.nombres} {p.apellidos} <span style={{ color: 'var(--text-2)', fontWeight: 400, fontSize: '0.85rem' }}>· DNI {p.dni} · {fecha(p.fecha_nacimiento)}</span>
+        {p.nombres} {p.apellidos} <span style={{ color: 'var(--text-2)', fontWeight: 400, fontSize: '0.85rem' }}>· DNI {p.dni} · {fechaCalendario(p.fecha_nacimiento)}</span>
       </h3>
       <div className="descripcion">
         <div><b>Distrito</b>{p.distrito || '—'}</div>

@@ -9,7 +9,7 @@ import { listarCategorias } from '../../services/categorias';
 import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, TIPOS_EMPLEO } from '../../constants';
-import { errorApi, fecha } from '../../utils';
+import { errorApi, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const FORM_VACIO = {
@@ -119,7 +119,7 @@ function OfertaFila({ oferta, alAccion, alEditar }) {
         <span><b>{oferta.vacantes}</b> vacante(s)</span>
       </div>
       <div className="oferta-cierre" style={{ marginTop: '4px' }}>
-        Cierre: {oferta.fecha_cierre ? fecha(oferta.fecha_cierre) : 'sin fecha'}
+        Cierre: {oferta.fecha_cierre ? fechaCalendario(oferta.fecha_cierre) : 'sin fecha'}
       </div>
       {oferta.motivo_rechazo && <div className="oferta-motivo">Motivo de rechazo: {oferta.motivo_rechazo}</div>}
       <Mensaje>{error}</Mensaje>

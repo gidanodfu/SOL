@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cerrarOfertaAdmin, listarOfertasAdmin } from '../../services/ofertas';
 import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO } from '../../constants';
-import { errorApi, fecha, fechaHora } from '../../utils';
+import { errorApi, fechaCalendario, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 export default function Ofertas() {
@@ -84,7 +84,7 @@ function Fila({ oferta, alCambio }) {
         <td>{oferta.razon_social}</td>
         <td>{oferta.ruc}</td>
         <td>{oferta.vacantes}</td>
-        <td>{oferta.fecha_cierre ? fecha(oferta.fecha_cierre) : '—'}</td>
+        <td>{oferta.fecha_cierre ? fechaCalendario(oferta.fecha_cierre) : '—'}</td>
         <td>{fechaHora(oferta.created_at)}</td>
         <td>
           <div className="acciones">
