@@ -70,17 +70,26 @@
 .app-postulante .nav-text-full { display: inline; }
 .app-postulante .nav-text-short { display: none; }
 
+.app-postulante .user-menu {
+  position: relative;
+  flex-shrink: 0;
+}
 .app-postulante .user-block {
   display: flex;
   align-items: center;
   gap: 14px;
-  position: relative;
   cursor: pointer;
   flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
 }
-.app-postulante .user-info { text-align: right; user-select: none; }
-.app-postulante .user-info .who { color: #fff; font-size: 13px; font-weight: 600; line-height: 1.2; }
-.app-postulante .user-info .role { color: var(--text-3); font-size: 11.5px; line-height: 1.2; }
+.app-postulante .user-chevron { display: inline-flex; align-items: center; color: #C7D6E8; }
+.app-postulante .user-info { display: block; text-align: right; user-select: none; }
+.app-postulante .user-info .who { display: block; color: #fff; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.app-postulante .user-info .role { display: block; color: var(--text-3); font-size: 11.5px; line-height: 1.2; }
 .app-postulante .avatar {
   width: 36px;
   height: 36px;
@@ -131,9 +140,11 @@
 }
 .app-postulante .user-dropdown a:hover, .app-postulante .user-dropdown button:hover { background: var(--sky); }
 .app-postulante .user-dropdown i { font-size: 17px; color: var(--text-2); width: 20px; text-align: center; }
+.app-postulante .user-dropdown svg { color: var(--text-2); width: 20px; flex-shrink: 0; }
 .app-postulante .user-dropdown .divider { height: 1px; background: var(--line); margin: 4px 12px; }
 .app-postulante .user-dropdown .logout-item { color: var(--red-tx); }
 .app-postulante .user-dropdown .logout-item i { color: var(--red-tx); }
+.app-postulante .user-dropdown .logout-item svg { color: var(--red-tx); }
 .app-postulante .user-dropdown .logout-item:hover { background: var(--red-bg); }
 
 /* ---------- Layout ---------- */

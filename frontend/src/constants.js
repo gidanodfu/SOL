@@ -46,6 +46,16 @@ export const ETIQUETA_ESTADO_POSTULACION = {
   no_seleccionado: 'No seleccionado',
 };
 
+/** Estados de postulación con su color para el gráfico de dona (fuente única). */
+export const DONA_ESTADO_POSTULACION = [
+  { estado: 'pendiente', color: 'var(--amber)' },
+  { estado: 'en_revision', color: 'var(--blue-c)' },
+  { estado: 'preseleccionado', color: 'var(--blue-tx)' },
+  { estado: 'contactado', color: 'var(--blue-dark)' },
+  { estado: 'seleccionado', color: 'var(--green)' },
+  { estado: 'no_seleccionado', color: 'var(--gray-c)' },
+].map((item) => ({ ...item, etiqueta: ETIQUETA_ESTADO_POSTULACION[item.estado] }));
+
 export const ETIQUETA_ROL = {
   admin: 'Municipalidad',
   empresa: 'Empresa',
