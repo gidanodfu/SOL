@@ -10,7 +10,9 @@ export const resetPasswordEmpresa = (id, password) => api.put(`/admin/empresas/$
 
 export const perfilEmpresa = () => api.get('/empresa/perfil').then((r) => r.data.data);
 export const actualizarPerfilEmpresa = (datos) => api.put('/empresa/perfil', datos).then((r) => r.data.data);
-export const dashboardEmpresa = () => api.get('/empresa/dashboard').then((r) => r.data.data);
+export const dashboardEmpresa = (params = {}) => api.get('/empresa/dashboard', { params }).then((r) => r.data.data);
+export const exportarReporteEmpresa = (params = {}) =>
+  api.get('/empresa/reportes/excel', { params, responseType: 'blob' }).then((r) => r.data);
 
 /* Bandeja de postulaciones (RF-33..RF-40) */
 export const listarPostulacionesEmpresa = (params = {}) => api.get('/empresa/postulaciones', { params }).then((r) => r.data.data);

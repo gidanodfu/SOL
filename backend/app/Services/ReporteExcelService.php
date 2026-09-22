@@ -4,6 +4,8 @@
 
 namespace App\Services;
 
+use App\Repositories\DashboardRepository;
+use App\Repositories\OfertaRepository;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -223,5 +225,157 @@ class ReporteExcelService
         $fila = $cantidadFilas + 1;
         $ultimaCol = $hoja->getHighestColumn();
         $hoja->getStyle("A{$fila}:{$ultimaCol}{$fila}")->getFont()->setBold(true);
+    }
+
+    /**
+     * Reporte Excel de la empresa autenticada (solo SUS datos). El alcance lo fija
+     * el backend con el `empresa_id` de la sesión; los filtros de fecha usan la
+     * misma semántica que el dashboard de empresa.
+     *
+     * @param array<string, mixed> $empresa fila de `empresas` de la sesión
+     */
+    public function generarEmpresa(array $empresa, ?string $desde, ?string $hasta): string
+    {
+        [$desde, $hasta] = (new DashboardService())->validarRango($desde, $hasta);
+
+        $empresaId      = (int) $empresa['id'];
+        $indicadores    = (new DashboardRepository())->empresa($empresaId, $desde, $hasta);
+        $postulaciones  = (new PostulacionService())->listarDeEmpresa($empresaId, null, null, $desde, $hasta);
+        $contrataciones = (new ContratacionService())->listarDeEmpresa($empresaId, $desde, $hasta);
+        $ofertas        = (new OfertaRepository())->porEmpresa($empresaId, $desde, $hasta);
+
+        $libro = new Spreadsheet();
+        $libro->getActiveSheet()->setTitle('Resumen');
+        $this->hojaResumenEmpresa($libro->getActiveSheet(), $empresa, $indicadores, $desde, $hasta);
+        $this->hojaPostulacionesEmpresa($libro->createSheet()->setTitle('Postulaciones'), $postulaciones);
+        $this->hojaContratacionesEmpresa($libro->createSheet()->setTitle('Contrataciones'), $contrataciones);
+        $this->hojaOfertasEmpresa($libro->createSheet()->setTitle('Ofertas'), $ofertas);
+
+        $ruta = tempnam(sys_get_temp_dir(), 'reporte-empresa');
+        if ($ruta === false) {
+            throw new \RuntimeException('No se pudo crear el archivo temporal del reporte.');
+        }
+
+        try {
+            (new Xlsx($libro))->save($ruta);
+            $bytes = (string) file_get_contents($ruta);
+        } finally {
+            $libro->disconnectWorksheets();
+            unlink($ruta);
+        }
+
+        return $bytes;
+    }
+
+    /**
+     * @param array<string, mixed> $empresa
+     * @param array<string, mixed> $indicadores
+     */
+    private function hojaResumenEmpresa(Worksheet $hoja, array $empresa, array $indicadores, ?string $desde, ?string $hasta): void
+    {
+        $hoja->getColumnDimension('A')->setWidth(46);
+        $hoja->getColumnDimension('B')->setWidth(22);
+
+        $hoja->setCellValue('A1', 'Reporte de actividad — ' . ($empresa['razon_social'] ?? 'Empresa'));
+        $hoja->getStyle('A1')->getFont()->setBold(true)->setSize(16)->getColor()->setARGB('FF' . self::COLOR_TITULO);
+
+        $periodo = ($desde ?? 'Inicio') . ' a ' . ($hasta ?? 'Hoy');
+        $hoja->setCellValue('A2', 'RUC: ' . ($empresa['ruc'] ?? '—') . '   ·   Periodo: ' . $periodo . '   ·   Generado: ' . date('d/m/Y H:i'));
+        $hoja->getStyle('A2')->getFont()->setColor(new Color('FF6B7A8A'));
+
+        $ofertas = $indicadores['ofertas'];
+        $postulaciones = $indicadores['postulaciones'];
+
+        $metricas = [
+            'Ofertas publicadas'                => $ofertas['publicada'],
+            'Ofertas en borrador'               => $ofertas['borrador'],
+            'Ofertas cerradas'                  => $ofertas['cerrada'],
+            'Postulaciones recibidas (periodo)' => array_sum($postulaciones),
+            'Pendientes por revisar'            => $postulaciones['pendiente'],
+            'Seleccionados'                     => $postulaciones['seleccionado'],
+            'No seleccionados'                  => $postulaciones['no_seleccionado'],
+        ];
+
+        $fila = 4;
+        foreach ($metricas as $etiqueta => $valor) {
+            $hoja->setCellValue("A{$fila}", $etiqueta);
+            $hoja->setCellValue("B{$fila}", $valor);
+            ++$fila;
+        }
+
+        $ultima = $fila - 1;
+        $hoja->getStyle("A4:B{$ultima}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_HAIR);
+        $hoja->getStyle('B4:B' . $ultima)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $postulaciones
+     */
+    private function hojaPostulacionesEmpresa(Worksheet $hoja, array $postulaciones): void
+    {
+        $filas = [];
+        foreach ($postulaciones as $p) {
+            $filas[] = [
+                isset($p['fecha_postulacion']) ? date('d/m/Y H:i', strtotime((string) $p['fecha_postulacion'])) : '',
+                $p['puesto'] ?? '',
+                $p['ubicacion'] ?? '',
+                trim(($p['nombres'] ?? '') . ' ' . ($p['apellidos'] ?? '')),
+                $p['dni'] ?? '',
+                $p['telefono'] ?? '',
+                self::ETIQUETA_ESTADO_POSTULACION[$p['estado']] ?? (string) $p['estado'],
+                ((int) ($p['activo'] ?? 0)) === 1 ? 'Activa' : 'Retirada',
+            ];
+        }
+
+        $this->encabezarTabla($hoja, ['Fecha', 'Oferta', 'Ubicación', 'Postulante', 'DNI', 'Teléfono', 'Estado', 'Situación'], 36);
+        $this->escribirTabla($hoja, $filas);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $contrataciones
+     */
+    private function hojaContratacionesEmpresa(Worksheet $hoja, array $contrataciones): void
+    {
+        $filas = [];
+        foreach ($contrataciones as $c) {
+            $remuneracion = isset($c['remuneracion']) && is_numeric($c['remuneracion']) ? (float) $c['remuneracion'] : '';
+            $filas[] = [
+                isset($c['fecha_contratacion']) ? date('d/m/Y', strtotime((string) $c['fecha_contratacion'])) : '',
+                $c['puesto'] ?? '',
+                trim(($c['nombres'] ?? '') . ' ' . ($c['apellidos'] ?? '')),
+                $c['dni'] ?? '',
+                $c['cargo'] ?? '',
+                $c['modalidad'] ?? '',
+                $remuneracion,
+            ];
+        }
+
+        $this->encabezarTabla($hoja, ['Fecha', 'Oferta', 'Contratado', 'DNI', 'Cargo', 'Modalidad', 'Remuneración (S/)'], 30);
+        $this->escribirTabla($hoja, $filas);
+        if ($filas !== []) {
+            $hoja->getStyle('G2:G' . (count($filas) + 1))->getNumberFormat()->setFormatCode('#,##0.00');
+        }
+    }
+
+    /**
+     * @param list<array<string, mixed>> $ofertas
+     */
+    private function hojaOfertasEmpresa(Worksheet $hoja, array $ofertas): void
+    {
+        $filas = [];
+        foreach ($ofertas as $o) {
+            $filas[] = [
+                $o['puesto'] ?? '',
+                self::ETIQUETA_ESTADO_OFERTA[$o['estado']] ?? (string) ($o['estado'] ?? ''),
+                ! empty($o['fecha_publicacion']) ? date('d/m/Y', strtotime((string) $o['fecha_publicacion'])) : '',
+                ! empty($o['fecha_cierre']) ? date('d/m/Y', strtotime((string) $o['fecha_cierre'])) : '',
+                (int) ($o['vacantes'] ?? 0),
+                $o['ubicacion'] ?? '',
+                ! empty($o['created_at']) ? date('d/m/Y', strtotime((string) $o['created_at'])) : '',
+            ];
+        }
+
+        $this->encabezarTabla($hoja, ['Puesto', 'Estado', 'Publicación', 'Cierre', 'Vacantes', 'Ubicación', 'Creada'], 34);
+        $this->escribirTabla($hoja, $filas);
     }
 }

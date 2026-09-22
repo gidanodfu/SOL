@@ -166,9 +166,12 @@ class DashboardRepository
     }
 
     /**
+     * Indicadores de una empresa. Las ofertas reflejan su estado actual (como en
+     * el dashboard municipal) y las postulaciones se acotan al periodo opcional.
+     *
      * @return array<string, mixed>
      */
-    public function empresa(int $empresaId): array
+    public function empresa(int $empresaId, ?string $desde = null, ?string $hasta = null): array
     {
         $ofertas = array_fill_keys(['borrador', 'publicada', 'cerrada'], 0);
         foreach ($this->db->table('ofertas')->where('empresa_id', $empresaId)
@@ -177,20 +180,32 @@ class DashboardRepository
         }
 
         $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'], 0);
-        foreach ($this->db->table('postulaciones')->where('empresa_id', $empresaId)->where('activo', 1)
-            ->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
+        $builder = $this->db->table('postulaciones')->where('empresa_id', $empresaId)->where('activo', 1);
+        if ($desde) {
+            $builder->where('fecha_postulacion >=', $desde . ' 00:00:00');
+        }
+        if ($hasta) {
+            $builder->where('fecha_postulacion <=', $hasta . ' 23:59:59');
+        }
+        foreach ($builder->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
             $postulaciones[$fila['estado']] = (int) $fila['n'];
         }
 
-        $pendientesRecientes = $this->db->table('postulaciones p')
+        $pendientes = $this->db->table('postulaciones p')
             ->select('p.id, p.estado, p.fecha_postulacion, of.puesto,
                       po.dni, po.nombres, po.apellidos')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->join('postulantes po', 'po.id = p.postulante_id')
             ->where('p.empresa_id', $empresaId)
             ->where('p.estado', 'pendiente')
-            ->where('p.activo', 1)
-            ->orderBy('p.fecha_postulacion', 'DESC')
+            ->where('p.activo', 1);
+        if ($desde) {
+            $pendientes->where('p.fecha_postulacion >=', $desde . ' 00:00:00');
+        }
+        if ($hasta) {
+            $pendientes->where('p.fecha_postulacion <=', $hasta . ' 23:59:59');
+        }
+        $pendientesRecientes = $pendientes->orderBy('p.fecha_postulacion', 'DESC')
             ->limit(10)
             ->get()
             ->getResultArray();

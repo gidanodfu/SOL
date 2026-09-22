@@ -39,7 +39,7 @@ class PostulacionRepository
     /**
      * @return list<array<string, mixed>>
      */
-    public function deEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null): array
+    public function deEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null): array
     {
         $builder = $this->db->table('postulaciones p')
             ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
@@ -58,6 +58,13 @@ class PostulacionRepository
 
         if ($ofertaId !== null) {
             $builder->where('p.oferta_id', $ofertaId);
+        }
+
+        if ($desde !== null) {
+            $builder->where('p.fecha_postulacion >=', $desde . ' 00:00:00');
+        }
+        if ($hasta !== null) {
+            $builder->where('p.fecha_postulacion <=', $hasta . ' 23:59:59');
         }
 
         return $builder->limit(300)->get()->getResultArray();

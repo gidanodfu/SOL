@@ -8,6 +8,7 @@ use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
 use App\Repositories\EmpresaRepository;
 use App\Services\ContratacionService;
+use App\Services\DashboardService;
 
 /**
  * Contrataciones de la empresa como resultado del proceso de selección (RF-58).
@@ -32,7 +33,13 @@ class ContratacionesController extends BaseApiController
 
     public function index()
     {
-        return $this->ok($this->servicio->listarDeEmpresa($this->empresaId), 'Contrataciones registradas.');
+        // Rango opcional con la misma semántica que el dashboard y el reporte.
+        [$desde, $hasta] = (new DashboardService())->validarRango(
+            $this->request->getGet('desde') ?: null,
+            $this->request->getGet('hasta') ?: null,
+        );
+
+        return $this->ok($this->servicio->listarDeEmpresa($this->empresaId, $desde, $hasta), 'Contrataciones registradas.');
     }
 
     public function opciones()

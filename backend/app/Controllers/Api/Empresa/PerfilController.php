@@ -32,8 +32,11 @@ class PerfilController extends BaseApiController
 
     public function dashboard()
     {
+        $desde = $this->request->getGet('desde') ?: null;
+        $hasta = $this->request->getGet('hasta') ?: null;
+
         return $this->ok(
-            (new DashboardService())->empresa(service('guard')->id()),
+            (new DashboardService())->empresa(service('guard')->id(), $desde, $hasta),
             'Indicadores de su empresa.',
         );
     }

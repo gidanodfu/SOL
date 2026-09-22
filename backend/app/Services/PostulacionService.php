@@ -144,9 +144,9 @@ class PostulacionService
 
     /* ---------------------- Bandeja de la empresa (RF-33..RF-40) ---------------------- */
 
-    public function listarDeEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null): array
+    public function listarDeEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null): array
     {
-        return $this->repository->deEmpresa($empresaId, $estado, $ofertaId);
+        return $this->repository->deEmpresa($empresaId, $estado, $ofertaId, $desde, $hasta);
     }
 
     /**

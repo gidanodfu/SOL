@@ -23,11 +23,17 @@ class OfertaRepository
     /**
      * @return list<array<string, mixed>>
      */
-    public function porEmpresa(int $empresaId): array
+    public function porEmpresa(int $empresaId, ?string $desde = null, ?string $hasta = null): array
     {
-        return $this->base()
-            ->where('ofertas.empresa_id', $empresaId)
-            ->orderBy('ofertas.updated_at', 'DESC')
+        $builder = $this->base()->where('ofertas.empresa_id', $empresaId);
+        if ($desde !== null) {
+            $builder->where('ofertas.created_at >=', $desde . ' 00:00:00');
+        }
+        if ($hasta !== null) {
+            $builder->where('ofertas.created_at <=', $hasta . ' 23:59:59');
+        }
+
+        return $builder->orderBy('ofertas.updated_at', 'DESC')
             ->get()
             ->getResultArray();
     }

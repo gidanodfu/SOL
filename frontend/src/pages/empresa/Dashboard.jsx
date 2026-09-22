@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardEmpresa } from '../../services/empresas';
+import { dashboardEmpresa, exportarReporteEmpresa } from '../../services/empresas';
 import { listarContratacionesEmpresa } from '../../services/contrataciones';
 import { Mensaje, EstadoCarga } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
+import FiltroPeriodo from '../../components/FiltroPeriodo';
 import { errorApi, fechaHora } from '../../utils';
 
 const OFERTAS_DONA = [
@@ -33,13 +35,6 @@ function iniciales(nombre = '') {
   return (siglas || '—').toUpperCase();
 }
 
-function esEsteMes(fecha) {
-  if (!fecha) return false;
-  const ahora = new Date();
-  const mes = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
-  return String(fecha).slice(0, 7) === mes;
-}
-
 function donutGradiente(datos, items) {
   const total = items.reduce((suma, it) => suma + (datos[it.estado] || 0), 0);
   if (total === 0) return 'conic-gradient(#E9EEF5 0% 100%)';
@@ -58,13 +53,68 @@ function donutGradiente(datos, items) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data, isLoading, error } = useQuery({ queryKey: ['dashboard-empresa'], queryFn: dashboardEmpresa });
-  const { data: contratos } = useQuery({ queryKey: ['contrataciones-empresa'], queryFn: listarContratacionesEmpresa });
+  const [form, setForm] = useState({ desde: '', hasta: '' });
+  const [filtro, setFiltro] = useState({ desde: '', hasta: '' });
+  const [descargando, setDescargando] = useState(false);
+  const [errorExportar, setErrorExportar] = useState(null);
+  const [mensajeExito, setMensajeExito] = useState(null);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['dashboard-empresa', filtro.desde, filtro.hasta],
+    queryFn: () => dashboardEmpresa({
+      desde: filtro.desde || undefined,
+      hasta: filtro.hasta || undefined,
+    }),
+  });
+  const { data: contratos } = useQuery({
+    queryKey: ['contrataciones-empresa', filtro.desde, filtro.hasta],
+    queryFn: () => listarContratacionesEmpresa({
+      desde: filtro.desde || undefined,
+      hasta: filtro.hasta || undefined,
+    }),
+  });
 
   const postulaciones = data?.postulaciones || {};
   const totalPostulaciones = Object.values(postulaciones).reduce((suma, n) => suma + n, 0);
-  const contratosMes = (contratos || []).filter((c) => esEsteMes(c.fecha_contratacion)).length;
+  const contratosPeriodo = (contratos || []).length;
   const pendientes = data?.pendientes_recientes || [];
+
+  const aplicar = () => {
+    setMensajeExito(null);
+    setFiltro({ ...form });
+  };
+
+  const limpiar = () => {
+    setForm({ desde: '', hasta: '' });
+    setFiltro({ desde: '', hasta: '' });
+    setMensajeExito(null);
+    setErrorExportar(null);
+  };
+
+  const exportar = async () => {
+    setDescargando(true);
+    setErrorExportar(null);
+    setMensajeExito(null);
+    try {
+      const blob = await exportarReporteEmpresa({
+        desde: filtro.desde || undefined,
+        hasta: filtro.hasta || undefined,
+      });
+      const sufijo = [filtro.desde, filtro.hasta].filter(Boolean).join('_');
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = `reporte-empresa-${sufijo || new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      URL.revokeObjectURL(enlace.href);
+      setMensajeExito('Reporte generado. Revise su descarga.');
+    } catch {
+      setErrorExportar('No se pudo generar el reporte Excel. Intente nuevamente.');
+    } finally {
+      setDescargando(false);
+    }
+  };
 
   return (
     <div>
@@ -79,6 +129,17 @@ export default function Dashboard() {
         )}
       />
 
+      <FiltroPeriodo
+        form={form}
+        onCambiar={setForm}
+        onAplicar={aplicar}
+        onLimpiar={limpiar}
+        onExportar={exportar}
+        exportando={descargando}
+        errorExportar={errorExportar}
+        mensajeExito={mensajeExito}
+      />
+
       {error && <Mensaje>{errorApi(error)}</Mensaje>}
       {isLoading && !data && <EstadoCarga />}
 
@@ -88,8 +149,12 @@ export default function Dashboard() {
             <StatCard color="blue" icono={<i className="ti ti-briefcase" />} valor={data.ofertas.publicada} etiqueta="Ofertas publicadas" />
             <StatCard color="blue" icono={<i className="ti ti-users" />} valor={totalPostulaciones} etiqueta="Postulaciones recibidas" />
             <StatCard color="amber" icono={<i className="ti ti-clock" />} valor={postulaciones.pendiente} etiqueta="Pendientes por revisar" />
-            <StatCard color="green" icono={<i className="ti ti-check" />} valor={contratosMes} etiqueta="Contrataciones este mes" />
+            <StatCard color="green" icono={<i className="ti ti-check" />} valor={contratosPeriodo} etiqueta="Contrataciones del periodo" />
           </div>
+
+          {totalPostulaciones === 0 && contratosPeriodo === 0 && (filtro.desde || filtro.hasta) && (
+            <p className="vacio">Sin actividad registrada en el periodo seleccionado.</p>
+          )}
 
           <div className="dash-grid">
             <section className="list-card">

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import {
   Briefcase,
   Building2,
@@ -12,9 +12,10 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import BotonSalir from '../components/BotonSalir';
+import Sidebar from '../components/Sidebar';
+import { useSidebarColapsado } from '../hooks/useSidebarColapsado';
 
-const MENU = [
+const GRUPOS = [
   {
     titulo: 'Principal',
     items: [
@@ -36,6 +37,13 @@ const MENU = [
   },
 ];
 
+const MARCA = {
+  to: '/admin/dashboard',
+  iniciales: 'AD',
+  nombre: 'Empleo MDJLO',
+  tag: 'Sistema de intermediación laboral',
+};
+
 const TITULO_POR_RUTA = {
   '/admin/dashboard': ['Dashboard', 'Resumen general de la gestión de empleo'],
   '/admin/ofertas': ['Ofertas', 'Supervisión de ofertas laborales'],
@@ -48,19 +56,10 @@ const TITULO_POR_RUTA = {
   '/cuenta': ['Mi cuenta', 'Tu cuenta y contraseña'],
 };
 
-function iniciales(nombre = '') {
-  const siglas = (nombre || '')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((palabra) => palabra[0] || '')
-    .join('');
-  return (siglas || 'AD').toUpperCase();
-}
-
 export function LayoutAdmin() {
   const { usuario } = useAuth();
   const { pathname } = useLocation();
+  const { colapsado, alternar } = useSidebarColapsado();
 
   const ruta = Object.keys(TITULO_POR_RUTA)
     .sort((a, b) => b.length - a.length)
@@ -70,42 +69,14 @@ export function LayoutAdmin() {
   const nombre = `${usuario?.nombres || ''} ${usuario?.apellidos || ''}`.trim() || 'Administrador';
 
   return (
-    <div className="app-admin">
-      <aside className="sidebar">
-        <div className="brand">
-          <h1>Empleo MDJLO</h1>
-          <span>Sistema de intermediación laboral</span>
-        </div>
-
-        <nav className="menu">
-          {MENU.map((grupo) => (
-            <div key={grupo.titulo} style={{ marginBottom: 20 }}>
-              <div className="menu-title">{grupo.titulo}</div>
-              {grupo.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) => `menu-item${isActive ? ' active' : ''}`}
-                >
-                  <item.icono size={18} strokeWidth={2} />
-                  <span>{item.texto}</span>
-                </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="user-box">
-            <div className="avatar">{iniciales(nombre)}</div>
-            <div className="user-info">
-              <strong>{nombre}</strong>
-              <span>Municipalidad</span>
-            </div>
-          </div>
-          <BotonSalir />
-        </div>
-      </aside>
+    <div className={`app-admin${colapsado ? ' colapsado' : ''}`}>
+      <Sidebar
+        marca={MARCA}
+        grupos={GRUPOS}
+        usuario={{ nombre, rol: 'Municipalidad', respaldo: 'AD' }}
+        colapsado={colapsado}
+        onToggle={alternar}
+      />
 
       <main className="main">
         <header className="topbar">
@@ -113,7 +84,6 @@ export function LayoutAdmin() {
             <h2>{titulo}</h2>
             <p>{subtitulo}</p>
           </div>
-
         </header>
 
         <section className="content">
