@@ -42,16 +42,21 @@ class DashboardService
     }
 
     /**
+     * Indicadores de la empresa autenticada, opcionalmente acotados a un periodo
+     * (misma semántica de fechas que el reporte Excel).
+     *
      * @return array<string, mixed>
      */
-    public function empresa(int $usuarioId): array
+    public function empresa(int $usuarioId, ?string $desde = null, ?string $hasta = null): array
     {
         $empresa = $this->empresas->porUserId($usuarioId);
         if ($empresa === null) {
             throw ApiException::noEncontrado('No se encontró la empresa asociada a su cuenta.');
         }
 
-        return $this->repositorio->empresa((int) $empresa['id']);
+        [$desde, $hasta] = $this->validarRango($desde, $hasta);
+
+        return $this->repositorio->empresa((int) $empresa['id'], $desde, $hasta);
     }
 
     /**
@@ -68,9 +73,12 @@ class DashboardService
     }
 
     /**
+     * Valida un rango de fechas (formato AAAA-MM-DD y desde <= hasta).
+     * Reutilizable por los reportes (misma semántica para dashboard y Excel).
+     *
      * @return array{?string, ?string}
      */
-    private function validarRango(?string $desde, ?string $hasta): array
+    public function validarRango(?string $desde, ?string $hasta): array
     {
         foreach ([$desde, $hasta] as $fecha) {
             if ($fecha !== null && $fecha !== '' && ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {

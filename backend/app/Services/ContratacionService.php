@@ -25,10 +25,17 @@ class ContratacionService
     /**
      * @return list<array<string, mixed>>
      */
-    public function listarDeEmpresa(int $empresaId): array
+    public function listarDeEmpresa(int $empresaId, ?string $desde = null, ?string $hasta = null): array
     {
-        return $this->base()->where('c.empresa_id', $empresaId)
-            ->orderBy('c.fecha_contratacion', 'DESC')
+        $builder = $this->base()->where('c.empresa_id', $empresaId);
+        if ($desde !== null) {
+            $builder->where('c.fecha_contratacion >=', $desde);
+        }
+        if ($hasta !== null) {
+            $builder->where('c.fecha_contratacion <=', $hasta);
+        }
+
+        return $builder->orderBy('c.fecha_contratacion', 'DESC')
             ->get()
             ->getResultArray();
     }

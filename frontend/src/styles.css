@@ -750,3 +750,250 @@ input:disabled, select:disabled, textarea:disabled { background: var(--gray-bg);
 .tarjeta-auth h1 { margin: 0 0 0.2rem; font-size: 1.4rem; color: var(--blue); }
 .tarjeta-auth p.sub { color: var(--text-2); margin-top: 0; font-size: 0.9rem; }
 .tarjeta-auth a { color: var(--blue); }
+
+/* =====================================================================
+   Sidebar compartido (admin y empresa) — fuente única.
+   La estructura la genera components/Sidebar.jsx; cada módulo define solo
+   su posicionamiento y el ancho disponible del contenido.
+   ===================================================================== */
+:root {
+  --sidebar-w: 245px;
+  --sidebar-w-colapsado: 76px;
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--navy);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: width 0.18s ease;
+}
+
+.side-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 82px;
+  padding: 18px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: inherit;
+  text-decoration: none;
+}
+
+.side-brand .brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-ctl);
+  background: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  flex: none;
+}
+
+.side-brand .brand-text { min-width: 0; }
+.side-brand .name { display: block; color: #fff; font-weight: 600; font-size: 15px; line-height: 1.2; }
+.side-brand .tag { display: block; color: var(--text-3); font-size: 11px; line-height: 1.3; }
+
+.side-nav { flex: 1; padding: 18px 12px; }
+.side-group { margin-bottom: 18px; }
+
+.side-group-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 0 12px;
+  margin-bottom: 9px;
+}
+
+.side-link {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 13px;
+  margin-bottom: 4px;
+  border-radius: 9px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.side-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.side-link.active { background: var(--blue); color: #fff; font-weight: 600; }
+
+.side-foot { margin-top: auto; padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+
+.side-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.side-toggle:hover { background: rgba(255, 255, 255, 0.08); }
+
+.side-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; }
+
+.side-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex: none;
+}
+
+.side-user-info { min-width: 0; }
+.side-user-info strong {
+  display: block;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-user-info small { color: var(--text-3); font-size: 11px; line-height: 1.2; }
+
+/* Logout dentro del sidebar (BotonSalir) */
+.sidebar .logout {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sidebar .logout:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* Estado contraído */
+.sidebar.colapsado { width: var(--sidebar-w-colapsado); }
+.sidebar.colapsado .brand-text,
+.sidebar.colapsado .side-group-title,
+.sidebar.colapsado .side-link-text,
+.sidebar.colapsado .side-user-info,
+.sidebar.colapsado .side-toggle-text { display: none; }
+.sidebar.colapsado .side-brand { justify-content: center; padding: 18px 0; }
+.sidebar.colapsado .side-nav { padding: 18px 10px; }
+.sidebar.colapsado .side-link { justify-content: center; padding: 11px; }
+.sidebar.colapsado .side-foot { padding: 12px 10px; }
+.sidebar.colapsado .side-user { justify-content: center; padding: 4px 0 12px; }
+.sidebar.colapsado .side-toggle { padding: 8px; }
+
+/* =====================================================================
+   Filtros por periodo (dashboards admin y empresa) — componentes compartidos
+   ===================================================================== */
+.filters {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 17px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+}
+
+.filters-acciones {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filters-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.filter-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-1);
+  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-field { display: flex; flex-direction: column; gap: 5px; }
+.date-field label { font-size: 11px; color: var(--text-2); }
+.date-field input { width: 155px; }
+
+.filter-button {
+  height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-ctl);
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.filter-button:hover { background: var(--blue-dark); }
+
+.filter-button.exportar {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.filter-button.exportar:hover { background: var(--sky); border-color: var(--blue); }
+.filter-button.exportar:disabled { opacity: 0.6; cursor: default; }
+
+.filter-button.limpiar {
+  background: var(--white);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+.filter-button.limpiar:hover { background: var(--gray-bg); border-color: var(--text-3); }
+
+@media (min-width: 681px) and (max-width: 1280px) {
+  .filters-left { flex: 1 1 auto; }
+  .filters-left .date-field { flex: 1 1 150px; }
+  .date-field input { width: 100%; }
+}
+
+@media (max-width: 680px) {
+  .filters { flex-direction: column; align-items: stretch; }
+  .filters-left { flex-direction: column; align-items: stretch; gap: 8px; }
+  .filters-left .date-field { width: 100%; }
+  .date-field input { width: 100%; }
+  .filters-acciones { flex-direction: column; align-items: stretch; }
+  .filter-button { width: 100%; justify-content: center; }
+}

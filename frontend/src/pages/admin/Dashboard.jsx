@@ -6,8 +6,6 @@ import {
   Briefcase,
   Building2,
   Clock3,
-  Download,
-  Filter,
   Percent,
   Timer,
   UserCheck,
@@ -15,6 +13,7 @@ import {
 } from 'lucide-react';
 import { dashboardAdmin, exportarReporteAdmin } from '../../services/dashboard';
 import { Mensaje, EstadoCarga } from '../../components/UI';
+import FiltroPeriodo from '../../components/FiltroPeriodo';
 import StatCard from '../../components/StatCard';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION } from '../../constants';
 import { errorApi } from '../../utils';
@@ -62,32 +61,15 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="filters">
-        <div className="filters-left">
-          <span className="filter-title">
-            <Filter size={15} />
-            Periodo
-          </span>
-          <div className="date-field">
-            <label>Desde</label>
-            <input type="date" value={form.desde} onChange={(e) => setForm({ ...form, desde: e.target.value })} />
-          </div>
-          <div className="date-field">
-            <label>Hasta</label>
-            <input type="date" value={form.hasta} onChange={(e) => setForm({ ...form, hasta: e.target.value })} />
-          </div>
-        </div>
-        <div className="filters-acciones">
-          <button className="filter-button" type="button" onClick={aplicar}>Aplicar filtros</button>
-          <button className="filter-button limpiar" type="button" onClick={limpiar}>Limpiar filtros</button>
-          <button className="filter-button exportar" type="button" onClick={exportar} disabled={descargando}>
-            <Download size={16} />
-            {descargando ? 'Generando…' : 'Exportar Excel'}
-          </button>
-        </div>
-      </div>
-
-      {errorExportar && <Mensaje>{errorExportar}</Mensaje>}
+      <FiltroPeriodo
+        form={form}
+        onCambiar={setForm}
+        onAplicar={aplicar}
+        onLimpiar={limpiar}
+        onExportar={exportar}
+        exportando={descargando}
+        errorExportar={errorExportar}
+      />
 
       {isLoading && <EstadoCarga texto="Cargando indicadores…" />}
       {error && <Mensaje>{errorApi(error)}</Mensaje>}

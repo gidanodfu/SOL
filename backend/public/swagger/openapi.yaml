@@ -1644,9 +1644,25 @@ paths:
       summary: Indicadores de la empresa
       description: |
         Conteos de ofertas y postulaciones de la empresa (solo `activo = 1`) y hasta 10
-        postulaciones pendientes recientes.
+        postulaciones pendientes recientes. Acepta un periodo opcional `desde`/`hasta`
+        (AAAA-MM-DD) con la misma semántica que el reporte Excel.
       security:
         - bearerAuth: []
+      parameters:
+        - name: desde
+          in: query
+          description: Fecha inicial inclusive (postulaciones del periodo).
+          schema:
+            type: string
+            format: date
+            example: '2026-01-01'
+        - name: hasta
+          in: query
+          description: Fecha final inclusive (postulaciones del periodo).
+          schema:
+            type: string
+            format: date
+            example: '2026-12-31'
       responses:
         '200':
           description: Indicadores de su empresa.
@@ -1931,9 +1947,24 @@ paths:
       summary: Contrataciones de la empresa
       description: |
         Contrataciones de la empresa de la sesión, orden `fecha_contratacion DESC`, sin
-        límite. No existe endpoint de detalle individual.
+        límite. Acepta un periodo opcional `desde`/`hasta` (AAAA-MM-DD) con la misma
+        semántica que el dashboard y el reporte Excel. No existe endpoint de detalle
+        individual.
       security:
         - bearerAuth: []
+      parameters:
+        - name: desde
+          in: query
+          description: Fecha inicial inclusive.
+          schema:
+            type: string
+            format: date
+        - name: hasta
+          in: query
+          description: Fecha final inclusive.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Contrataciones registradas.
@@ -2075,6 +2106,55 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/reportes/excel:
+    get:
+      tags: [Empresa]
+      operationId: empresaReporteExcel
+      summary: Reporte Excel de la propia empresa
+      description: |
+        Genera un libro `.xlsx` con la actividad de la empresa **autenticada**
+        (hojas Resumen, Postulaciones, Contrataciones y Ofertas). El alcance lo fija
+        el backend con la empresa de la sesión: no se acepta ningún identificador de
+        empresa por parámetro. Filtros opcionales `desde`/`hasta` (AAAA-MM-DD,
+        inclusivos); un rango inválido responde `422`. Respuesta binaria con
+        `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+        y `Content-Disposition: attachment`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: desde
+          in: query
+          description: Fecha inicial inclusive.
+          schema:
+            type: string
+            format: date
+            example: '2026-01-01'
+        - name: hasta
+          in: query
+          description: Fecha final inclusive.
+          schema:
+            type: string
+            format: date
+            example: '2026-12-31'
+      responses:
+        '200':
+          description: Archivo XLSX del reporte de la empresa.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
         '401':
           $ref: '#/components/responses/NoAutorizado'
         '403':

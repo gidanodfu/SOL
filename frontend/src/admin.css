@@ -12,128 +12,32 @@
   color: var(--ink);
 }
 
-/* ---------------- BARRA LATERAL ---------------- */
+/* ---------------- BARRA LATERAL (visual común en styles.css) ---------------- */
 .app-admin .sidebar {
-  width: 245px;
-  background: var(--navy);
-  color: #fff;
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
   z-index: 100;
-}
-
-.app-admin .brand {
-  height: 82px;
-  padding: 18px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  box-sizing: border-box;
-}
-
-.app-admin .brand h1 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-}
-
-.app-admin .brand span {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.app-admin .menu {
-  padding: 18px 12px;
-  flex: 1;
 }
 
 .pdefin {
   white-space: pre-wrap;
 }
 
-.app-admin .menu-title {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-  padding: 0 12px;
-  margin-bottom: 9px;
-  letter-spacing: 1px;
-}
-
-.app-admin .menu-item {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  padding: 11px 13px;
-  margin-bottom: 4px;
-  color: rgba(255, 255, 255, 0.85);
-  text-decoration: none;
-  border-radius: 9px;
-  font-size: 14px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.app-admin .menu-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.app-admin .menu-item.active {
-  background: var(--blue);
-  color: #fff;
-  font-weight: 600;
-}
-
-.app-admin .sidebar-footer {
-  padding: 15px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.app-admin .user-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.app-admin .avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--sky);
-  color: var(--blue-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
-  flex: none;
-}
-
-.app-admin .user-info strong {
-  display: block;
-  font-size: 13px;
-}
-
-.app-admin .user-info span {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
 /* ---------------- CONTENIDO / BARRA SUPERIOR ---------------- */
 .app-admin .main {
-  margin-left: 245px;
-  width: calc(100% - 245px);
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.18s ease, width 0.18s ease;
+}
+
+.app-admin.colapsado .main {
+  margin-left: var(--sidebar-w-colapsado);
+  width: calc(100% - var(--sidebar-w-colapsado));
 }
 
 .app-admin .topbar {
@@ -165,28 +69,6 @@
   font-size: 13px;
 }
 
-.app-admin .sidebar-footer .logout {
-  width: 100%;
-  margin-top: 10px;
-  padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 9px;
-  background: transparent;
-  color: #fff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.app-admin .sidebar-footer .logout:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
 .app-admin .content {
   padding: 32px 35px 50px;
   max-width: 1600px;
@@ -197,104 +79,6 @@
 /* Tablas anchas: el scroll queda dentro de la tarjeta, nunca rompe el layout */
 .app-admin .tarjeta { min-width: 0; }
 .app-admin .tarjeta > table { display: block; overflow-x: auto; }
-
-/* ---------------- FILTROS (período) ---------------- */
-.app-admin .filters {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 17px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 25px;
-  flex-wrap: wrap;
-}
-
-.app-admin .filters-acciones {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.app-admin .filters-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.app-admin .filter-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-1);
-  margin-right: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.app-admin .date-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.app-admin .date-field label {
-  font-size: 11px;
-  color: var(--text-2);
-}
-
-.app-admin .date-field input {
-  width: 155px;
-}.app-admin .filter-button {
-  height: 38px;
-  padding: 0 16px;
-  border: none;
-  border-radius: var(--radius-ctl);
-  background: var(--blue);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.app-admin .filter-button:hover {
-  background: var(--blue-dark);
-}
-
-.app-admin .filter-button.exportar {
-  background: var(--white);
-  border: 1px solid var(--line);
-  color: var(--blue);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.app-admin .filter-button.exportar:hover {
-  background: var(--sky);
-  border-color: var(--blue);
-}
-
-.app-admin .filter-button.exportar:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.app-admin .filter-button.limpiar {
-  background: var(--white);
-  border: 1px solid var(--line);
-  color: var(--text-2);
-}
-
-.app-admin .filter-button.limpiar:hover {
-  background: var(--gray-bg);
-  border-color: var(--text-3);
-}
 
 /* ---------------- KPI (grid; las tarjetas son StatCard global) ---------------- */
 .app-admin .kpi-grid {
@@ -470,25 +254,7 @@
   .app-admin .bottom-grid { grid-template-columns: 1fr 1fr; }
 }
 
-@media (min-width: 681px) and (max-width: 1280px) {
-  .app-admin .filters-left { flex: 1 1 auto; }
-  .app-admin .filters-left .date-field { flex: 1 1 150px; }
-  .app-admin .date-field input { width: 100%; }
-}
-
 @media (max-width: 900px) {
-  .app-admin .sidebar { width: 72px; }
-  .app-admin .brand { padding: 20px 0; text-align: center; }
-  .app-admin .brand h1,
-  .app-admin .brand span,
-  .app-admin .menu-title,
-  .app-admin .menu-item span,
-  .app-admin .user-info {
-    display: none;
-  }
-  .app-admin .menu { padding: 14px 8px; }
-  .app-admin .menu-item { justify-content: center; padding: 11px; }
-  .app-admin .main { margin-left: 72px; width: calc(100% - 72px); }
   .app-admin .analytics { grid-template-columns: 1fr; }
 }
 
@@ -497,12 +263,6 @@
   .app-admin .content { padding: 20px 15px; }
   .app-admin .kpi-grid,
   .app-admin .bottom-grid { grid-template-columns: 1fr; }
-  .app-admin .filters { flex-direction: column; align-items: stretch; }
-  .app-admin .filters-left { flex-direction: column; align-items: stretch; gap: 8px; }
-  .app-admin .filters-left .date-field { width: 100%; }
-  .app-admin .date-field input { width: 100%; }
-  .app-admin .filters-acciones { flex-direction: column; align-items: stretch; }
-  .app-admin .filter-button { width: 100%; justify-content: center; }
   .app-admin .page-title p { display: none; }
   .app-admin .status-row { grid-template-columns: 90px 1fr 36px; }
 }

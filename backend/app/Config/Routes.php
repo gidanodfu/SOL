@@ -136,6 +136,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('contrataciones/opciones', 'ContratacionesController::opciones');
         $routes->post('contrataciones', 'ContratacionesController::store');
         $routes->put('contrataciones/(:num)', 'ContratacionesController::update/$1');
+
+        // Reporte Excel de la propia empresa (alcance por sesión, no por parámetros).
+        $routes->get('reportes/excel', 'ReportesController::excel');
     });
 
     // Rol postulante: perfil, CV, búsqueda de empleo y postulaciones.

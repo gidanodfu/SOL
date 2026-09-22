@@ -1,66 +1,55 @@
 // SPDX-License-Identifier: MIT
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Briefcase,
+  Building2,
+  ClipboardCheck,
+  FileCheck2,
+  LayoutDashboard,
+  UserCircle,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import BotonSalir from '../components/BotonSalir';
+import Sidebar from '../components/Sidebar';
+import { useSidebarColapsado } from '../hooks/useSidebarColapsado';
 import { perfilEmpresa } from '../services/empresas';
 
-const ENLACES = [
-  { to: '/empresa/dashboard', icono: 'ti ti-layout-grid', texto: 'Panel' },
-  { to: '/empresa/ofertas', icono: 'ti ti-briefcase', texto: 'Ofertas' },
-  { to: '/empresa/postulaciones', icono: 'ti ti-file-check', texto: 'Postulaciones' },
-  { to: '/empresa/contrataciones', icono: 'ti ti-checklist', texto: 'Contrataciones' },
-  { to: '/empresa/perfil', icono: 'ti ti-building', texto: 'Mi empresa' },
-  { to: '/empresa/cuenta', icono: 'ti ti-user-circle', texto: 'Mi cuenta' },
+const GRUPOS = [
+  {
+    titulo: 'Empresa',
+    items: [
+      { to: '/empresa/dashboard', icono: LayoutDashboard, texto: 'Panel' },
+      { to: '/empresa/ofertas', icono: Briefcase, texto: 'Ofertas' },
+      { to: '/empresa/postulaciones', icono: FileCheck2, texto: 'Postulaciones' },
+      { to: '/empresa/contrataciones', icono: ClipboardCheck, texto: 'Contrataciones' },
+      { to: '/empresa/perfil', icono: Building2, texto: 'Mi empresa' },
+      { to: '/empresa/cuenta', icono: UserCircle, texto: 'Mi cuenta' },
+    ],
+  },
 ];
 
-function iniciales(nombre = '') {
-  const siglas = (nombre || '')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((palabra) => palabra[0] || '')
-    .join('');
-  return (siglas || 'EM').toUpperCase();
-}
+const MARCA = {
+  to: '/empresa/dashboard',
+  iniciales: 'EM',
+  nombre: 'Empleo MDJLO',
+  tag: 'Sistema de intermediación laboral',
+};
 
 export function LayoutEmpresa() {
   const { usuario } = useAuth();
   const { data: perfil } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa });
+  const { colapsado, alternar } = useSidebarColapsado();
   const nombre = perfil?.nombre_comercial || perfil?.razon_social || usuario?.nombres || 'Empresa';
 
   return (
-    <div className="app-empresa">
-      <aside className="sidebar">
-        <Link to="/empresa/dashboard" className="brand">
-          <div className="brand-mark">EM</div>
-          <div className="brand-text">
-            <div className="name">Empleo MDJLO</div>
-            <div className="tag">Sistema de intermediación laboral</div>
-          </div>
-        </Link>
-
-        <div className="nav-label">Empresa</div>
-        <nav>
-          {ENLACES.map((enlace) => (
-            <NavLink key={enlace.to} to={enlace.to} className={({ isActive }) => (isActive ? 'active' : '')}>
-              <i className={enlace.icono} />
-              {enlace.texto}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="sidebar-foot">
-          <div className="side-user">
-            <div className="avatar">{iniciales(nombre)}</div>
-            <div>
-              <div className="who">{nombre}</div>
-              <div className="role">Empresa</div>
-            </div>
-          </div>
-          <BotonSalir />
-        </div>
-      </aside>
+    <div className={`app-empresa${colapsado ? ' colapsado' : ''}`}>
+      <Sidebar
+        marca={MARCA}
+        grupos={GRUPOS}
+        usuario={{ nombre, rol: 'Empresa', respaldo: 'EM' }}
+        colapsado={colapsado}
+        onToggle={alternar}
+      />
 
       <main className="content">
         <Outlet />
