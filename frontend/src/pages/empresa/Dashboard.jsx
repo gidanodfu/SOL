@@ -8,21 +8,14 @@ import { Mensaje, EstadoCarga } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import FiltroPeriodo from '../../components/FiltroPeriodo';
+import DonutCard from '../../components/DonutCard';
+import { DONA_ESTADO_POSTULACION } from '../../constants';
 import { errorApi, fechaHora } from '../../utils';
 
 const OFERTAS_DONA = [
   { estado: 'publicada', etiqueta: 'Publicada', color: 'var(--green)' },
   { estado: 'borrador', etiqueta: 'Borrador', color: 'var(--blue-c)' },
   { estado: 'cerrada', etiqueta: 'Cerrada', color: 'var(--gray-c)' },
-];
-
-const POSTULACIONES_DONA = [
-  { estado: 'pendiente', etiqueta: 'Pendiente', color: 'var(--amber)' },
-  { estado: 'en_revision', etiqueta: 'En revisión', color: 'var(--blue-c)' },
-  { estado: 'preseleccionado', etiqueta: 'Preseleccionado', color: 'var(--blue-tx)' },
-  { estado: 'contactado', etiqueta: 'Contactado', color: 'var(--blue-dark)' },
-  { estado: 'seleccionado', etiqueta: 'Seleccionado', color: 'var(--green)' },
-  { estado: 'no_seleccionado', etiqueta: 'No seleccionado', color: 'var(--gray-c)' },
 ];
 
 function iniciales(nombre = '') {
@@ -33,22 +26,6 @@ function iniciales(nombre = '') {
     .map((palabra) => palabra[0] || '')
     .join('');
   return (siglas || '—').toUpperCase();
-}
-
-function donutGradiente(datos, items) {
-  const total = items.reduce((suma, it) => suma + (datos[it.estado] || 0), 0);
-  if (total === 0) return 'conic-gradient(#E9EEF5 0% 100%)';
-  let acumulado = 0;
-  const partes = items
-    .map((it) => {
-      const n = datos[it.estado] || 0;
-      if (n === 0) return null;
-      const desde = acumulado;
-      acumulado += (n / total) * 100;
-      return `${it.color} ${desde}% ${acumulado}%`;
-    })
-    .filter(Boolean);
-  return `conic-gradient(${partes.join(', ')})`;
 }
 
 export default function Dashboard() {
@@ -193,43 +170,11 @@ export default function Dashboard() {
 
             <aside className="dash-aside">
               <DonutCard titulo="Mis ofertas" descripcion="Estado actual de tus ofertas" datos={data.ofertas} items={OFERTAS_DONA} />
-              <DonutCard titulo="Postulaciones" descripcion="En qué etapa están tus candidatos" datos={postulaciones} items={POSTULACIONES_DONA} />
+              <DonutCard titulo="Postulaciones" descripcion="En qué etapa están tus candidatos" datos={postulaciones} items={DONA_ESTADO_POSTULACION} />
             </aside>
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function DonutCard({ titulo, descripcion, datos, items }) {
-  const total = items.reduce((suma, it) => suma + (datos[it.estado] || 0), 0);
-
-  return (
-    <div className="chart-card">
-      <div className="chart-card-head">
-        <h2>{titulo}</h2>
-        <p>{descripcion}</p>
-      </div>
-      <div className="chart-body">
-        <div className="donut" style={{ background: donutGradiente(datos, items) }}>
-          <div className="donut-hole">
-            <b>{total}</b>
-            <span>total</span>
-          </div>
-        </div>
-        <div className="legend">
-          {items.map((it) => (
-            <div key={it.estado} className={`legend-row${(datos[it.estado] || 0) === 0 ? ' zero' : ''}`}>
-              <div className="legend-left">
-                <span className="legend-dot" style={{ background: it.color }} />
-                <span className="legend-name">{it.etiqueta}</span>
-              </div>
-              <span className="legend-count">{datos[it.estado] || 0}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

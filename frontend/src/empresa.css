@@ -43,49 +43,6 @@
 .app-empresa .dash-grid > * { margin-bottom: 0; }
 .app-empresa .dash-aside { display: grid; gap: 22px; }
 
-/* ---------- Tarjetas de gráfico (donas) ---------- */
-.app-empresa .chart-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 22px;
-  box-shadow: var(--sombra-tarjeta);
-}
-.app-empresa .chart-card-head { margin-bottom: 18px; }
-.app-empresa .chart-card-head h2 { font-size: 15px; font-weight: 600; margin: 0 0 3px; color: var(--ink); }
-.app-empresa .chart-card-head p { margin: 0; font-size: 12.5px; color: var(--text-3); }
-
-.app-empresa .chart-body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.app-empresa .donut {
-  width: 112px;
-  height: 112px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.app-empresa .donut-hole {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--white);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.app-empresa .donut-hole b { font-size: 19px; color: var(--ink); line-height: 1; }
-.app-empresa .donut-hole span { font-size: 10px; color: var(--text-3); margin-top: 2px; }
-
-.app-empresa .legend { flex: 1; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
-.app-empresa .legend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.app-empresa .legend-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.app-empresa .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.app-empresa .legend-name { font-size: 13px; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.app-empresa .legend-count { font-size: 13px; font-weight: 600; color: var(--text-1); flex-shrink: 0; }
-.app-empresa .legend-row.zero .legend-name, .app-empresa .legend-row.zero .legend-count { color: var(--text-3); }
-
 /* ---------- Filas de actividad (app-*) ---------- */
 .app-empresa .app-row {
   display: flex;
@@ -190,8 +147,6 @@
 @media (max-width: 560px) {
   .app-empresa .page-head h1 { font-size: 20px; }
   .app-empresa .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .app-empresa .chart-body { flex-direction: column; align-items: flex-start; }
-  .app-empresa .legend { width: 100%; }
   .app-empresa .app-row { align-items: flex-start; }
   .app-empresa .app-meta { text-align: left; }
 }
