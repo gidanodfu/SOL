@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarOportunidad, cambiarActivacionOportunidad, crearOportunidad, listarOportunidadesAdmin } from '../../services/divulgacion';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import { ETIQUETA_FUENTE_OPORTUNIDAD, FUENTES_OPORTUNIDAD } from '../../constants';
-import { errorApi, fecha } from '../../utils';
+import { errorApi, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const VACIO = { fuente: 'empleos_peru', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '' };
@@ -79,7 +79,7 @@ function FilaOportunidad({ o, alCambio, alEditar }) {
         <div>
           <strong>{o.titulo}</strong>
           <div style={{ color: 'var(--gris)', fontSize: '0.85rem' }}>
-            {ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente]}{o.razon_social ? ` · ${o.razon_social}` : ''} · publicada el {fecha(o.fecha_publicacion)}
+            {ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente]}{o.razon_social ? ` · ${o.razon_social}` : ''} · publicada el {fechaCalendario(o.fecha_publicacion)}
           </div>
           {o.enlace && <a className="enlace" href={o.enlace} target="_blank" rel="noreferrer">Ver convocatoria original →</a>}
         </div>

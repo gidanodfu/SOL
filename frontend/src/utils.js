@@ -18,6 +18,16 @@ export const esTelefonoValido = (v) => v == null || v === '' || /^(?:\d{9}|\d{11
 export const fechaHora = (v) => (v ? new Date(v).toLocaleString('es-PE') : '—');
 export const fecha = (v) => (v ? new Date(v).toLocaleDateString('es-PE') : '—');
 
+/**
+ * Fecha calendario (columnas MySQL DATE: `YYYY-MM-DD`). Se formatea por texto,
+ * sin `new Date(...)`, para que la zona horaria del navegador no desplace el día.
+ * También acepta `YYYY-MM-DD HH:MM:SS` (toma solo la fecha).
+ */
+export const fechaCalendario = (v) => {
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? ''));
+  return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : '—';
+};
+
 export const iniciar = (nombre) => (nombre ? nombre.split(' ').slice(0, 2).join(' ') : '');
 
 /**

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarContratacion, listarContratacionesEmpresa, opcionesContratacionEmpresa, registrarContratacion } from '../../services/contrataciones';
 import { EstadoCarga, Boton, Campo, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
-import { errorApi, fecha } from '../../utils';
+import { errorApi, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const VACIO = { postulacion_id: '', fecha_contratacion: '', cargo: '', modalidad: '', remuneracion: '', observaciones: '' };
@@ -81,7 +81,7 @@ export default function Contrataciones() {
             <tbody>
               {contratos.map((c) => (
                 <tr key={c.id}>
-                  <td>{fecha(c.fecha_contratacion)}</td>
+                  <td>{fechaCalendario(c.fecha_contratacion)}</td>
                   <td>{c.nombres} {c.apellidos}</td>
                   <td>{c.puesto}</td>
                   <td>{c.cargo}</td>

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
 import { ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD } from '../../constants';
-import { errorApi, fecha, fechaHora } from '../../utils';
+import { errorApi, fechaCalendario, fechaHora } from '../../utils';
 
 const CLASE_ESTADO_ACTIVIDAD = {
   programado: 'badge-amber',
@@ -76,7 +76,7 @@ export default function Oportunidades() {
                 <h3 style={{ margin: '8px 0 6px', fontSize: '15px', color: 'var(--ink)' }}>{o.titulo}</h3>
                 {o.descripcion && <p style={{ fontSize: '0.9rem', margin: '0 0 8px' }}>{o.descripcion}</p>}
                 <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', margin: 0 }}>
-                  {o.razon_social ? `${o.razon_social} · ` : ''}Difundida el {fecha(o.fecha_publicacion)}
+                  {o.razon_social ? `${o.razon_social} · ` : ''}Difundida el {fechaCalendario(o.fecha_publicacion)}
                 </p>
                 {o.enlace && (
                   <a className="btn btn-gris" style={{ marginTop: '0.7rem' }} href={o.enlace} target="_blank" rel="noreferrer">

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listarContratacionesAdmin } from '../../services/contrataciones';
 import { EstadoCarga, Campo, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
-import { errorApi, fecha } from '../../utils';
+import { errorApi, fechaCalendario } from '../../utils';
 
 export default function Contrataciones() {
   const [rango, setRango] = useState({ desde: '', hasta: '' });
@@ -41,7 +41,7 @@ export default function Contrataciones() {
           <tbody>
             {data.map((c) => (
               <tr key={c.id}>
-                <td>{fecha(c.fecha_contratacion)}</td>
+                <td>{fechaCalendario(c.fecha_contratacion)}</td>
                 <td>{c.razon_social}<br /><small style={{ color: 'var(--gris)' }}>RUC {c.ruc}</small></td>
                 <td>{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>DNI {c.dni}</small></td>
                 <td>{c.puesto}<br /><small style={{ color: 'var(--gris)' }}>{c.cargo}</small></td>

@@ -7,7 +7,7 @@ import { listarCategorias } from '../../services/categorias';
 import { useAuth } from '../../context/AuthContext';
 import { Mensaje } from '../../components/UI';
 import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES } from '../../constants';
-import { errorApi } from '../../utils';
+import { errorApi, fechaCalendario } from '../../utils';
 import { useClickFuera } from '../../hooks/useClickFuera';
 import { useAccion } from '../../hooks/useAccion';
 
@@ -463,7 +463,7 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
         {detalle && (
           <div className="job-detalle">
             <div className="descripcion">
-              <div><b>Cierre de postulaciones</b>{detalle.fecha_cierre ? new Date(detalle.fecha_cierre).toLocaleDateString('es-PE') : 'Sin fecha'}</div>
+              <div><b>Cierre de postulaciones</b>{detalle.fecha_cierre ? fechaCalendario(detalle.fecha_cierre) : 'Sin fecha'}</div>
               <div><b>Formación requerida</b>{detalle.formacion_requerida || '—'}</div>
               <div><b>Experiencia requerida</b>{detalle.experiencia_requerida || '—'}</div>
               <div><b>Habilidades</b>{(detalle.habilidades || []).join(', ') || '—'}</div>
