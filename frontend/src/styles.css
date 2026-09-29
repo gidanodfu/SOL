@@ -14,7 +14,7 @@
   --texto: #0A0E17;
   --text-1: #0A0E17;
   --text-2: #5C6779;
-  --text-3: #8C97A6;
+  --text-3: #6A7688;
   --gris: #5C6779;
   --fondo: #F3F6FA;
   --line: #E4EAF2;
@@ -40,11 +40,13 @@
   --green: #5FA23A;  --green-bg: #EBF4E1; --green-tx: #3B6D11;
   --gray-c: #AEB4BF; --gray-bg: #EFF1F4; --gray-tx: #5C6779;
   --red-c: #D2554F;  --red-bg: #FCEBEB;   --red-tx: #A32D2D;
+  --purple-bg: #EDE9FE; --purple-tx: #6D28D9;
 
-  /* ---- Geometría ---- */
+  /* ---- Geometría y sombras ---- */
   --radius: 16px;
   --radius-ctl: 10px;
   --sombra-tarjeta: 0 1px 2px rgba(11, 37, 66, 0.05);
+  --sombra-hover: 0 8px 25px rgba(11, 37, 66, 0.08);
 }
 
 /* ==========================================================================
@@ -66,7 +68,7 @@
   --texto: #E8EEF6;
   --text-1: #E8EEF6;
   --text-2: #A6B3C4;
-  --text-3: #7E8CA0;
+  --text-3: #9AA7B8;
   --gris: #A6B3C4;
   --fondo: #0E1622;
   --line: #26344A;
@@ -87,8 +89,10 @@
   --green: #3F7A28;  --green-bg: #17301B; --green-tx: #A8D98C;
   --gray-c: #55627A; --gray-bg: #1D2736; --gray-tx: #A6B3C4;
   --red-c: #B2463F;  --red-bg: #3A1D1D;   --red-tx: #F0A6A2;
+  --purple-bg: #2B2440; --purple-tx: #C4B5FD;
 
   --sombra-tarjeta: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sombra-hover: 0 8px 25px rgba(0, 0, 0, 0.5);
 }
 
 /* Scrollbar */
@@ -99,9 +103,6 @@
 /* Alertas: el borde claro hardcodeado no funciona sobre fondos oscuros */
 [data-theme="dark"] .alerta-error { border-color: rgba(240, 166, 162, 0.35); }
 [data-theme="dark"] .alerta-exito { border-color: rgba(168, 217, 140, 0.35); }
-
-/* KPI morado (dashboard admin) */
-[data-theme="dark"] .stat-purple .stat-icon { background: #2B2440; color: #C4B5FD; }
 
 /* Cabecera genérica (fallback sin rol conocido) */
 [data-theme="dark"] .nav a.activo { color: var(--navy); }
@@ -254,6 +255,10 @@ body {
 .tarjeta-sub { margin: -0.6rem 0 1rem; font-size: 0.85rem; color: var(--text-2); }
 h3 { margin: 1.2rem 0 0.5rem; font-size: 1rem; color: var(--ink); }
 
+/* Tablas anchas: el scroll horizontal vive dentro de la tarjeta/lista, nunca
+   desborda la página. Mismo tratamiento para admin y empresa. */
+.tarjeta > table, .list-card > table { display: block; overflow-x: auto; }
+
 /* Tarjeta de listas (filas) */
 .list-card {
   background: var(--white);
@@ -324,21 +329,21 @@ h3 { margin: 1.2rem 0 0.5rem; font-size: 1rem; color: var(--ink); }
 
 /* Panel ampliado (admin: nombre, descripción, tendencia) */
 .stat-panel { display: block; transition: box-shadow 0.2s; }
-.stat-panel:hover { box-shadow: 0 8px 25px rgba(11, 37, 66, 0.08); }
+.stat-panel:hover { box-shadow: var(--sombra-hover); }
 .stat-panel .stat-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .stat-panel .stat-name { font-size: 13px; color: var(--text-2); margin-bottom: 8px; }
 .stat-panel .stat-icon { width: 42px; height: 42px; font-size: 18px; }
 .stat-panel .stat-num { font-size: 29px; }
 .stat-panel .stat-desc { font-size: 11px; color: var(--text-3); margin-top: 6px; }
 .stat-panel .stat-trend { margin-top: 13px; font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-2); }
-.stat-panel .stat-trend.up { color: var(--green); }
+.stat-panel .stat-trend.up { color: var(--green-tx); }
 
 /* Colores semánticos del icono */
 .stat-blue .stat-icon { background: var(--blue-bg2); color: var(--blue-tx); }
 .stat-green .stat-icon { background: var(--green-bg); color: var(--green-tx); }
 .stat-amber .stat-icon, .stat-yellow .stat-icon { background: var(--amber-bg); color: var(--amber-tx); }
 .stat-red .stat-icon { background: var(--red-bg); color: var(--red-tx); }
-.stat-purple .stat-icon { background: #ede9fe; color: #6d28d9; }
+.stat-purple .stat-icon { background: var(--purple-bg); color: var(--purple-tx); }
 
 @media (max-width: 560px) {
   .stat-card { padding: 14px 16px; }
@@ -429,6 +434,7 @@ input:focus, select:focus, textarea:focus {
   border-color: transparent;
 }
 input:disabled, select:disabled, textarea:disabled { background: var(--gray-bg); color: var(--text-2); }
+input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .form-malla { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 1rem; }
 .form-fila { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
 
@@ -545,7 +551,7 @@ input:disabled, select:disabled, textarea:disabled { background: var(--gray-bg);
   margin-top: 16px;
 }
 .cv-actual-det { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.cv-actual-det > i { font-size: 20px; color: var(--green); flex: none; }
+.cv-actual-det > i { font-size: 20px; color: var(--green-tx); flex: none; }
 .cv-actual-det b { font-weight: 600; color: var(--green-tx); }
 .cv-actual-det span { color: var(--green-tx); font-size: 12.5px; opacity: 0.85; }
 .cv-historial { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
