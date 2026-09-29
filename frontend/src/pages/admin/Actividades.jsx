@@ -1,14 +1,22 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarActividad, cambiarEstadoActividad, crearActividad, listarActividadesAdmin } from '../../services/divulgacion';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
+import TarjetaRegistro from '../../components/TarjetaRegistro';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
+import { CalendarDays, Pencil } from 'lucide-react';
 import {
   ESTADOS_ACTIVIDAD, ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD, TIPOS_ACTIVIDAD,
 } from '../../constants';
-import { errorApi, fechaHora } from '../../utils';
+import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+
+// El editor (TiPTap) se carga solo cuando se abre el formulario de actividad.
+const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
 
 const aLocal = (v) => (v ? String(v).slice(0, 16).replace(' ', 'T') : '');
 const VACIO = { tipo: 'taller', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: 'presencial', organizador: '' };
@@ -17,6 +25,7 @@ export default function Actividades() {
   const queryClient = useQueryClient();
   const [filtros, setFiltros] = useState({ tipo: '', estado: '' });
   const [editor, setEditor] = useState(null);
+  const [seleccionada, setSeleccionada] = useState(null);
   const [nota, setNota] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -59,25 +68,56 @@ export default function Actividades() {
       )}
 
       {data && data.length > 0 && (
-        <Tarjeta>
+        <div className="list-card">
+          <div className="list-card-head">
+            <h2>Actividades registradas</h2>
+          </div>
           {data.map((a) => (
-            <FilaActividad key={a.id} actividad={a} alCambio={refrescar} alEditar={() => setEditor({ id: a.id, fila: a })} />
+            <TarjetaRegistro
+              key={a.id}
+              icono={CalendarDays}
+              titulo={a.nombre}
+              badge={<Estado valor={a.estado} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />}
+              onClick={() => setSeleccionada(a)}
+              meta={(
+                <>
+                  <span>{ETIQUETA_TIPO_ACTIVIDAD[a.tipo]}</span>
+                  <span>{fechaHora(a.fecha_inicio)}</span>
+                  {a.lugar && <span>{a.lugar}</span>}
+                  <span>{a.organizador || 'MDJLO'}</span>
+                </>
+              )}
+            >
+              {a.descripcion && (
+                <ContenidoEnriquecido className="contenido-resumen">{a.descripcion}</ContenidoEnriquecido>
+              )}
+            </TarjetaRegistro>
           ))}
-        </Tarjeta>
+        </div>
       )}
+
+      <DetalleActividad
+        actividad={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alEditar={(actividad) => { setSeleccionada(null); setEditor({ id: actividad.id, fila: actividad }); }}
+      />
     </div>
   );
 }
 
-function FilaActividad({ actividad, alCambio, alEditar }) {
+function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
+
+  if (!actividad) return null;
 
   const cambiar = async (estado) => {
     try {
       await ejecutar(() => cambiarEstadoActividad(actividad.id, estado));
       setError(null);
-      alCambio();
+      alCambio(`Actividad marcada como "${ETIQUETA_ESTADO_ACTIVIDAD[estado]}".`);
+      alCerrar();
     } catch (e) {
       setError(errorApi(e));
     }
@@ -91,27 +131,54 @@ function FilaActividad({ actividad, alCambio, alEditar }) {
   }[actividad.estado] || [];
 
   return (
-    <div style={{ border: '1px solid var(--borde)', borderRadius: 8, padding: '0.8rem 1rem', marginBottom: '0.7rem' }}>
-      <div className="form-fila" style={{ justifyContent: 'space-between' }}>
-        <div>
-          <strong>{actividad.nombre}</strong>
-          <div style={{ color: 'var(--gris)', fontSize: '0.85rem' }}>
-            {ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo]} · {fechaHora(actividad.fecha_inicio)}
-            {actividad.lugar ? ` · ${actividad.lugar}` : ''} · {actividad.organizador || 'MDJLO'}
-          </div>
-        </div>
+    <Modal
+      abierto
+      titulo={actividad.nombre}
+      subtitulo={ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo]}
+      alCerrar={alCerrar}
+      tamano="ancho"
+      acciones={(
+        <>
+          <Boton variante="gris" onClick={() => alEditar(actividad)}>
+            <Pencil size={16} aria-hidden="true" />Editar
+          </Boton>
+          {proximos.map((s) => (
+            <Boton
+              key={s}
+              variante={s === 'cancelado' ? 'peligro' : s === 'finalizado' ? 'gris' : 'primario'}
+              cargando={enviando}
+              onClick={() => cambiar(s)}
+            >
+              {s === 'finalizado' ? 'Finalizar' : s === 'cancelado' ? 'Cancelar' : ETIQUETA_ESTADO_ACTIVIDAD[s]}
+            </Boton>
+          ))}
+        </>
+      )}
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <Estado valor={actividad.estado} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />
       </div>
+
       <Mensaje>{error}</Mensaje>
-      <div className="acciones">
-        <Boton variante="gris" onClick={alEditar}>Editar</Boton>
-        {proximos.map((s) => (
-          <Boton key={s} variante={s === 'cancelado' ? 'peligro' : s === 'finalizado' ? 'gris' : 'primario'} cargando={enviando} onClick={() => cambiar(s)}>
-            {s === 'finalizado' ? 'Finalizar' : s === 'cancelado' ? 'Cancelar' : ETIQUETA_ESTADO_ACTIVIDAD[s]}
-          </Boton>
-        ))}
-      </div>
-    </div>
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'Tipo', valor: ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo] },
+          { etiqueta: 'Inicio', valor: fechaHora(actividad.fecha_inicio) },
+          { etiqueta: 'Fin', valor: actividad.fecha_fin ? fechaHora(actividad.fecha_fin) : null },
+          { etiqueta: 'Lugar', valor: actividad.lugar },
+          { etiqueta: 'Modalidad', valor: actividad.modalidad },
+          { etiqueta: 'Organizador', valor: actividad.organizador || 'MDJLO' },
+        ]}
+      />
+
+      {actividad.descripcion && (
+        <div className="modal-seccion">
+          <h3>Descripción</h3>
+          <ContenidoEnriquecido>{actividad.descripcion}</ContenidoEnriquecido>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -131,6 +198,11 @@ function EditorActividad({ inicial, alGuardar }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const guardar = async () => {
+    // Mismo límite que el backend: 10.000 caracteres de TEXTO visible.
+    if (excedeLimiteTexto(form.descripcion)) {
+      setError(`La descripción supera el límite de ${TEXTO_MAX} caracteres.`);
+      return;
+    }
     try {
       await ejecutar();
       alGuardar();
@@ -156,7 +228,14 @@ function EditorActividad({ inicial, alGuardar }) {
         </Selecto>
         <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
       </div>
-      <label className="campo"><span>Descripción</span><textarea rows="2" value={form.descripcion} onChange={set('descripcion')} /></label>
+      <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
+        <EditorTextoEnriquecido
+          etiqueta="Descripción"
+          valor={form.descripcion}
+          onChange={(html) => setForm((previo) => ({ ...previo, descripcion: html }))}
+          placeholder="Detalla la actividad: agenda, público objetivo, requisitos…"
+        />
+      </Suspense>
       <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar</Boton>
     </Tarjeta>
   );

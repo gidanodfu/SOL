@@ -5,6 +5,9 @@ import {
   cambiarEstadoUsuario, crearUsuario, listarUsuarios, resetPasswordUsuario,
 } from '../../services/usuarios';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import { Eye, KeyRound, Power } from 'lucide-react';
 import { ETIQUETA_ROL } from '../../constants';
 import { errorApi, fechaHora, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
@@ -17,6 +20,7 @@ export default function Usuarios() {
   const { usuario: usuarioActual } = useAuth();
   const [filtros, setFiltros] = useState({ rol: '', estado: '', q: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
+  const [seleccionado, setSeleccionado] = useState(null);
   const { ejecutar, enviando, error, setError } = useAccion(async (fn) => fn());
 
   const { data, isLoading } = useQuery({
@@ -24,7 +28,10 @@ export default function Usuarios() {
     queryFn: () => listarUsuarios(Object.fromEntries(Object.entries(filtros).filter(([, v]) => v))),
   });
 
-  const refrescar = () => queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+  const refrescar = () => {
+    queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    queryClient.invalidateQueries({ queryKey: ['usuario-admin-detalle'] });
+  };
 
   const accionEstado = async (u) => {
     await ejecutar(() => cambiarEstadoUsuario(u.id, u.estado === 'activo' ? 'inactivo' : 'activo'));
@@ -91,6 +98,9 @@ export default function Usuarios() {
                 <td>{fechaHora(u.ultimo_acceso)}</td>
                 <td>
                   <div className="acciones">
+                    <Boton variante="gris" onClick={() => setSeleccionado(u)}>
+                      <Eye size={16} aria-hidden="true" />Ver
+                    </Boton>
                     {/* Un administrador no puede desactivar su propia cuenta (el backend también lo impide). */}
                     {u.id !== usuarioActual?.id && (
                       <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
@@ -108,7 +118,85 @@ export default function Usuarios() {
       <p style={{ color: 'var(--gris)', fontSize: '0.85rem' }}>
         {data?.total ?? 0} usuario(s). Las cuentas desactivadas se conservan y no pueden iniciar sesión (RF-06).
       </p>
+
+      <DetalleUsuario
+        usuario={seleccionado}
+        propio={seleccionado?.id === usuarioActual?.id}
+        alCerrar={() => setSeleccionado(null)}
+        alCambio={(mensaje) => { setError(null); if (mensaje) window.alert(mensaje); refrescar(); }}
+      />
     </Tarjeta>
+  );
+}
+
+function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
+  const [error, setError] = useState(null);
+  const { ejecutar, enviando } = useAccion(async (fn) => fn());
+
+  if (!usuario) return null;
+
+  const alternar = async () => {
+    try {
+      await ejecutar(() => cambiarEstadoUsuario(usuario.id, usuario.estado === 'activo' ? 'inactivo' : 'activo'));
+      setError(null);
+      alCambio(usuario.estado === 'activo' ? 'Usuario desactivado.' : 'Usuario activado.');
+    } catch (e) {
+      setError(errorApi(e));
+    }
+  };
+
+  const resetPassword = async () => {
+    const password = window.prompt(`Nueva contraseña para ${usuario.username} (mínimo 8 caracteres):`);
+    if (!password) return;
+    try {
+      await ejecutar(() => resetPasswordUsuario(usuario.id, password));
+      setError(null);
+      window.alert('Contraseña restablecida. Entréguela de forma segura al usuario.');
+    } catch (e) {
+      setError(errorApi(e));
+    }
+  };
+
+  return (
+    <Modal
+      abierto
+      titulo={`${usuario.nombres} ${usuario.apellidos}`}
+      subtitulo={`Usuario ${usuario.username} · ${ETIQUETA_ROL[usuario.rol] || usuario.rol}`}
+      alCerrar={alCerrar}
+      tamano="ancho"
+      acciones={(
+        <>
+          {!propio && (
+            <Boton variante={usuario.estado === 'activo' ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
+              <Power size={16} aria-hidden="true" />{usuario.estado === 'activo' ? 'Desactivar' : 'Activar'}
+            </Boton>
+          )}
+          <Boton variante="gris" cargando={enviando} onClick={resetPassword}>
+            <KeyRound size={16} aria-hidden="true" />Cambiar clave
+          </Boton>
+        </>
+      )}
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={usuario.rol} diccionario={ETIQUETA_ROL} />
+        <Estado valor={usuario.estado} diccionario={estadosUsuarios} />
+        {propio && <span style={{ color: 'var(--text-3)', fontSize: '0.82rem' }}>Es tu propia cuenta: no puede desactivarse.</span>}
+      </div>
+
+      <Mensaje>{error}</Mensaje>
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'Usuario', valor: usuario.username },
+          { etiqueta: 'Correo', valor: usuario.email },
+          { etiqueta: 'Teléfono', valor: usuario.telefono },
+          { etiqueta: 'Proveedor de acceso', valor: usuario.proveedor === 'google' ? 'Google' : 'Local' },
+          { etiqueta: 'Empresa vinculada', valor: usuario.razon_social },
+          { etiqueta: 'Último acceso', valor: fechaHora(usuario.ultimo_acceso) },
+          { etiqueta: 'Registro', valor: fechaHora(usuario.created_at) },
+        ]}
+      />
+    </Modal>
   );
 }
 

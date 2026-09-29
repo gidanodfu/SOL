@@ -4239,12 +4239,19 @@ components:
         descripcion:
           type: string
           maxLength: 10000
+          description: |
+            HTML enriquecido saneado en backend (p, br, strong, b, em, i, u, ul,
+            ol, li, a; enlaces solo http/https con rel seguro). El límite de
+            10000 aplica al TEXTO visible, sin contar etiquetas. Se aceptan datos
+            antiguos en texto plano.
         funciones:
           type: string
           maxLength: 10000
+          description: Igual que `descripcion` (HTML saneado, límite por texto visible).
         requisitos:
           type: string
           maxLength: 10000
+          description: Igual que `descripcion` (HTML saneado, límite por texto visible).
         formacion_requerida:
           type: string
           maxLength: 200
@@ -4356,6 +4363,10 @@ components:
         descripcion:
           type: string
           maxLength: 10000
+          description: |
+            HTML enriquecido saneado en backend (p, br, strong, b, em, i, u, ul,
+            ol, li, a; enlaces solo http/https con rel seguro). El límite de
+            10000 aplica al TEXTO visible, sin contar etiquetas.
         lugar:
           type: string
           maxLength: 150

@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
+import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD } from '../../constants';
 import { errorApi, esEnlaceSeguro, fechaCalendario, fechaHora } from '../../utils';
 
@@ -52,7 +53,7 @@ export default function Oportunidades() {
                   {a.lugar ? <><br />Lugar: {a.lugar}</> : null}
                   {a.modalidad ? <><br />Modalidad: {a.modalidad}</> : null}
                 </p>
-                {a.descripcion && <p style={{ fontSize: '0.9rem', margin: '0 0 8px' }}>{a.descripcion}</p>}
+                {a.descripcion && <ContenidoEnriquecido className="oportunidad-texto">{a.descripcion}</ContenidoEnriquecido>}
               </div>
             ))}
           </div>

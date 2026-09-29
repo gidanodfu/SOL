@@ -3,6 +3,10 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarOportunidad, cambiarActivacionOportunidad, crearOportunidad, listarOportunidadesAdmin } from '../../services/divulgacion';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
+import TarjetaRegistro from '../../components/TarjetaRegistro';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import { ExternalLink, EyeOff, Megaphone, Pencil, Upload } from 'lucide-react';
 import { ETIQUETA_FUENTE_OPORTUNIDAD, FUENTES_OPORTUNIDAD } from '../../constants';
 import { errorApi, esEnlaceSeguro, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
@@ -13,6 +17,7 @@ export default function Oportunidades() {
   const queryClient = useQueryClient();
   const [filtros, setFiltros] = useState({ fuente: '' });
   const [editor, setEditor] = useState(null);
+  const [seleccionada, setSeleccionada] = useState(null);
   const [nota, setNota] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -49,50 +54,109 @@ export default function Oportunidades() {
       )}
 
       {data && data.length > 0 && (
-        <Tarjeta>
+        <div className="list-card">
+          <div className="list-card-head">
+            <h2>Oportunidades difundidas</h2>
+          </div>
           {data.map((o) => (
-            <FilaOportunidad key={o.id} o={o} alCambio={refrescar} alEditar={() => setEditor({ id: o.id, fila: o })} />
+            <TarjetaRegistro
+              key={o.id}
+              icono={Megaphone}
+              titulo={o.titulo}
+              badge={<Estado valor={o.activo ? 'activo1' : 'inactivo'} diccionario={{ activo1: 'Visible', inactivo: 'Oculta' }} />}
+              onClick={() => setSeleccionada(o)}
+              meta={(
+                <>
+                  <span>{ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente]}</span>
+                  {o.razon_social && <span>{o.razon_social}</span>}
+                  <span>Publicada el {fechaCalendario(o.fecha_publicacion)}</span>
+                </>
+              )}
+            >
+              {o.descripcion && (
+                <p style={{ margin: 0, color: 'var(--text-2)', fontSize: '0.88rem' }}>{o.descripcion}</p>
+              )}
+            </TarjetaRegistro>
           ))}
-        </Tarjeta>
+        </div>
       )}
+
+      <DetalleOportunidad
+        oportunidad={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alEditar={(o) => { setSeleccionada(null); setEditor({ id: o.id, fila: o }); }}
+      />
     </div>
   );
 }
 
-function FilaOportunidad({ o, alCambio, alEditar }) {
+function DetalleOportunidad({ oportunidad, alCerrar, alCambio, alEditar }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
+  if (!oportunidad) return null;
+
   const alternar = async () => {
     try {
-      await ejecutar(() => cambiarActivacionOportunidad(o.id, !o.activo));
+      await ejecutar(() => cambiarActivacionOportunidad(oportunidad.id, !oportunidad.activo));
       setError(null);
-      alCambio();
+      alCambio(oportunidad.activo ? 'Oportunidad ocultada.' : 'Oportunidad publicada.');
+      alCerrar();
     } catch (e) {
       setError(errorApi(e));
     }
   };
 
   return (
-    <div style={{ border: '1px solid var(--borde)', borderRadius: 8, padding: '0.8rem 1rem', marginBottom: '0.7rem' }}>
-      <div className="form-fila" style={{ justifyContent: 'space-between' }}>
-        <div>
-          <strong>{o.titulo}</strong>
-          <div style={{ color: 'var(--gris)', fontSize: '0.85rem' }}>
-            {ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente]}{o.razon_social ? ` · ${o.razon_social}` : ''} · publicada el {fechaCalendario(o.fecha_publicacion)}
-          </div>
-          {o.enlace && esEnlaceSeguro(o.enlace) && <a className="enlace" href={o.enlace} target="_blank" rel="noopener noreferrer">Ver convocatoria original →</a>}
-        </div>
-        <Estado valor={o.activo ? 'activo1' : 'inactivo'} diccionario={{ activo1: 'Visible', inactivo: 'Oculta' }} />
+    <Modal
+      abierto
+      titulo={oportunidad.titulo}
+      subtitulo={ETIQUETA_FUENTE_OPORTUNIDAD[oportunidad.fuente]}
+      alCerrar={alCerrar}
+      tamano="ancho"
+      acciones={(
+        <>
+          <Boton variante="gris" onClick={() => alEditar(oportunidad)}>
+            <Pencil size={16} aria-hidden="true" />Editar
+          </Boton>
+          <Boton variante={oportunidad.activo ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
+            {oportunidad.activo
+              ? <><EyeOff size={16} aria-hidden="true" />Ocultar</>
+              : <><Upload size={16} aria-hidden="true" />Publicar</>}
+          </Boton>
+        </>
+      )}
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={oportunidad.activo ? 'activo1' : 'inactivo'} diccionario={{ activo1: 'Visible', inactivo: 'Oculta' }} />
       </div>
+
       <Mensaje>{error}</Mensaje>
-      <div className="acciones">
-        <Boton variante="gris" onClick={alEditar}>Editar</Boton>
-        <Boton variante={o.activo ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
-          {o.activo ? 'Ocultar' : 'Publicar'}
-        </Boton>
-      </div>
-    </div>
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'Fuente', valor: ETIQUETA_FUENTE_OPORTUNIDAD[oportunidad.fuente] },
+          { etiqueta: 'Empresa', valor: oportunidad.razon_social },
+          { etiqueta: 'Fecha de publicación', valor: fechaCalendario(oportunidad.fecha_publicacion) },
+          {
+            etiqueta: 'Enlace',
+            valor: oportunidad.enlace && esEnlaceSeguro(oportunidad.enlace) ? (
+              <a className="enlace" href={oportunidad.enlace} target="_blank" rel="noopener noreferrer">
+                Ver convocatoria original <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            ) : null,
+          },
+        ]}
+      />
+
+      {oportunidad.descripcion && (
+        <div className="modal-seccion">
+          <h3>Descripción</h3>
+          <p className="modal-texto">{oportunidad.descripcion}</p>
+        </div>
+      )}
+    </Modal>
   );
 }
 

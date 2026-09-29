@@ -27,6 +27,27 @@ final class Validador
     }
 
     /**
+     * Texto visible de un contenido (HTML sanitizado o texto plano): sin
+     * etiquetas, con entidades decodificadas y espacios duros normalizados.
+     * Es la definición canónica compartida con el contador del frontend.
+     */
+    public static function textoVisible(string $html): string
+    {
+        $texto = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return str_replace("\u{00A0}", ' ', $texto);
+    }
+
+    /**
+     * Longitud en caracteres (code points Unicode) del texto visible, no del
+     * HTML. `"Hola <strong>mundo</strong>"` cuenta 10, nunca las etiquetas.
+     */
+    public static function longitudTexto(string $html): int
+    {
+        return mb_strlen(self::textoVisible($html));
+    }
+
+    /**
      * Fecha y hora calendárica; admite `AAAA-MM-DD` y `AAAA-MM-DD HH:MM[:SS]`.
      */
     public static function esFechaHora(string $valor): bool
@@ -98,6 +119,11 @@ final class Validador
 
                     case str_starts_with($regla, 'max:') && mb_strlen((string) $valor) > (int) substr($regla, 4):
                         $errores[$campo] = "El campo {$etiqueta} no debe superar " . substr($regla, 4) . ' caracteres.';
+                        break 2;
+
+                    // Longitud del texto visible (RTE): no cuenta etiquetas HTML.
+                    case str_starts_with($regla, 'texto_max:') && self::longitudTexto((string) $valor) > (int) substr($regla, 10):
+                        $errores[$campo] = "El campo {$etiqueta} no debe superar " . substr($regla, 10) . ' caracteres de texto.';
                         break 2;
 
                     case str_starts_with($regla, 'regex:'):

@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  actualizarOferta, cerrarOferta, crearOferta, enviarOfertaARevision, listarOfertasEmpresa,
+  actualizarOferta, cerrarOferta, crearOferta, detalleOfertaEmpresa, enviarOfertaARevision, listarOfertasEmpresa,
 } from '../../services/ofertas';
 import { listarCategorias } from '../../services/categorias';
 import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import TarjetaRegistro from '../../components/TarjetaRegistro';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
+import { Briefcase, Lock, Pencil, Plus, Send, X } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, TIPOS_EMPLEO } from '../../constants';
-import { errorApi, fechaCalendario } from '../../utils';
+import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+
+// El editor (TiPTap) se carga solo cuando se abre el formulario de oferta.
+const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
 
 const FORM_VACIO = {
   puesto: '', categoria_id: '', tipo_empleo: 'tiempo_completo', descripcion: '', funciones: '',
@@ -24,10 +32,12 @@ export default function Ofertas() {
   const { data: ofertas, isLoading } = useQuery({ queryKey: ['ofertas-empresa'], queryFn: listarOfertasEmpresa });
   const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias });
   const [editor, setEditor] = useState(() => (location.state?.nueva ? {} : null));
+  const [seleccionada, setSeleccionada] = useState(null);
   const [nota, setNota] = useState(null);
 
   const refrescar = () => {
     queryClient.invalidateQueries({ queryKey: ['ofertas-empresa'] });
+    queryClient.invalidateQueries({ queryKey: ['oferta-empresa-detalle'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-empresa'] });
   };
 
@@ -38,11 +48,11 @@ export default function Ofertas() {
         descripcion="Registra tus ofertas; la Municipalidad las revisa antes de publicarlas en la bolsa de empleo."
         accion={editor ? (
           <Boton variante="gris" onClick={() => setEditor(null)}>
-            <i className="ti ti-x" />Cancelar
+            <X size={16} aria-hidden="true" />Cancelar
           </Boton>
         ) : (
           <button className="btn btn-primario" type="button" onClick={() => setEditor({})}>
-            <i className="ti ti-plus" /><span>Nueva oferta</span>
+            <Plus size={16} aria-hidden="true" /><span>Nueva oferta</span>
           </button>
         )}
       />
@@ -68,12 +78,24 @@ export default function Ofertas() {
             <h2>Mis ofertas laborales</h2>
           </div>
           {ofertas.map((o) => (
-            <OfertaFila
+            <TarjetaRegistro
               key={o.id}
-              oferta={o}
-              alAccion={() => { setNota(null); refrescar(); }}
-              alEditar={() => setEditor({ id: o.id })}
-            />
+              icono={Briefcase}
+              titulo={o.puesto}
+              badge={<Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />}
+              onClick={() => setSeleccionada(o)}
+              meta={(
+                <>
+                  {o.categoria_nombre && <span>{o.categoria_nombre}</span>}
+                  {o.tipo_empleo && <span>{ETIQUETA_TIPO_EMPLEO[o.tipo_empleo]}</span>}
+                  <span>{o.ubicacion || 'Ubicación no indicada'}</span>
+                  <span><b>{o.vacantes}</b> vacante(s)</span>
+                  <span>Cierre: {o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : 'sin fecha'}</span>
+                </>
+              )}
+            >
+              {o.motivo_rechazo && <div className="oferta-motivo">Motivo de rechazo: {o.motivo_rechazo}</div>}
+            </TarjetaRegistro>
           ))}
         </div>
       )}
@@ -86,74 +108,128 @@ export default function Ofertas() {
           </div>
         </div>
       )}
+
+      <DetalleOferta
+        oferta={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={(mensaje) => { setNota(mensaje); setSeleccionada(null); refrescar(); }}
+        alEditar={(oferta) => { setSeleccionada(null); setEditor({ id: oferta.id }); }}
+      />
     </div>
   );
 }
 
-function OfertaFila({ oferta, alAccion, alEditar }) {
+function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
+  const { data: detalle, isLoading } = useQuery({
+    queryKey: ['oferta-empresa-detalle', oferta?.id],
+    queryFn: () => detalleOfertaEmpresa(oferta.id),
+    enabled: Boolean(oferta?.id),
+  });
 
-  const actuar = async (fn, okMsg) => {
+  if (!oferta) return null;
+  const o = detalle || oferta;
+
+  const actuar = async (fn, mensaje) => {
     try {
       await ejecutar(fn);
-      alAccion();
-      if (okMsg) window.alert(okMsg);
+      setError(null);
+      alCambio(mensaje);
     } catch (e) {
       setError(errorApi(e));
     }
   };
 
+  const acciones = {
+    borrador: (
+      <>
+        <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta enviada a revisión municipal.')}>
+          <Send size={16} aria-hidden="true" />Enviar a revisión
+        </Boton>
+        <Boton variante="gris" onClick={() => alEditar(oferta)}><Pencil size={16} aria-hidden="true" />Editar</Boton>
+      </>
+    ),
+    pendiente: (
+      <Boton variante="gris" onClick={() => alEditar(oferta)}><Pencil size={16} aria-hidden="true" />Editar</Boton>
+    ),
+    rechazada: (
+      <>
+        <Boton variante="gris" onClick={() => alEditar(oferta)}><Pencil size={16} aria-hidden="true" />Editar</Boton>
+        <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta reenviada a revisión municipal.')}>
+          <Send size={16} aria-hidden="true" />Reenviar a revisión
+        </Boton>
+      </>
+    ),
+    publicada: (
+      <>
+        <Boton variante="gris" onClick={() => alEditar(oferta)}><Pencil size={16} aria-hidden="true" />Editar</Boton>
+        <Boton variante="peligro" cargando={enviando} onClick={() => actuar(() => cerrarOferta(oferta.id), 'Oferta cerrada.')}>
+          <Lock size={16} aria-hidden="true" />Cerrar oferta
+        </Boton>
+      </>
+    ),
+    cerrada: null,
+  }[o.estado] || null;
+
   return (
-    <div className="oferta-item">
-      <div className="oferta-cabeza">
-        <div className="oferta-titulo">
-          <h3>{oferta.puesto}</h3>
-          <Estado valor={oferta.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
-        </div>
+    <Modal
+      abierto={Boolean(oferta)}
+      titulo={o.puesto}
+      subtitulo="Detalle de tu oferta laboral"
+      alCerrar={alCerrar}
+      acciones={acciones}
+      tamano="ancho"
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
+        {o.estado === 'pendiente' && <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>En revisión municipal: aún no es visible para los postulantes.</span>}
+        {o.estado === 'publicada' && <span style={{ color: 'var(--green-tx)', fontSize: '0.85rem' }}>Publicada: visible para los postulantes.</span>}
       </div>
-      <div className="oferta-meta">
-        {oferta.categoria_nombre && <span>{oferta.categoria_nombre}</span>}
-        {oferta.tipo_empleo && <span>{ETIQUETA_TIPO_EMPLEO[oferta.tipo_empleo]}</span>}
-        <span>{oferta.ubicacion || 'Ubicación no indicada'}</span>
-        <span><b>{oferta.vacantes}</b> vacante(s)</span>
-      </div>
-      <div className="oferta-cierre" style={{ marginTop: '4px' }}>
-        Cierre: {oferta.fecha_cierre ? fechaCalendario(oferta.fecha_cierre) : 'sin fecha'}
-      </div>
-      {oferta.motivo_rechazo && <div className="oferta-motivo">Motivo de rechazo: {oferta.motivo_rechazo}</div>}
+
       <Mensaje>{error}</Mensaje>
-      <div className="oferta-acciones" style={{ marginTop: '12px' }}>
-        {oferta.estado === 'borrador' && (
-          <>
-            <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta enviada a revisión municipal.')}>Enviar a revisión</Boton>
-            <Boton variante="gris" onClick={alEditar}>Editar</Boton>
-          </>
-        )}
-        {oferta.estado === 'pendiente' && (
-          <>
-            <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem', fontWeight: 600 }}>En revisión municipal: aún no es visible para los postulantes.</span>
-            <Boton variante="gris" onClick={alEditar}>Editar</Boton>
-          </>
-        )}
-        {oferta.estado === 'rechazada' && (
-          <>
-            <Boton variante="gris" onClick={alEditar}>Editar</Boton>
-            <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta reenviada a revisión municipal.')}>Reenviar a revisión</Boton>
-          </>
-        )}
-        {oferta.estado === 'publicada' && (
-          <>
-            <span style={{ color: 'var(--green-tx)', fontSize: '0.85rem', fontWeight: 600 }}>Publicada: visible para los postulantes.</span>
-            <Boton variante="gris" onClick={alEditar}>Editar</Boton>
-            <Boton variante="peligro" cargando={enviando} onClick={() => actuar(() => cerrarOferta(oferta.id), 'Oferta cerrada.')}>Cerrar oferta</Boton>
-          </>
-        )}
-        {oferta.estado === 'cerrada' && (
-          <span style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>Oferta finalizada.</span>
-        )}
-      </div>
-    </div>
+      {isLoading && !detalle && <p className="vacio">Cargando detalle…</p>}
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'Categoría', valor: o.categoria_nombre },
+          { etiqueta: 'Tipo de empleo', valor: o.tipo_empleo ? ETIQUETA_TIPO_EMPLEO[o.tipo_empleo] : null },
+          { etiqueta: 'Ubicación', valor: o.ubicacion },
+          { etiqueta: 'Vacantes', valor: o.vacantes },
+          { etiqueta: 'Remuneración', valor: o.remuneracion ? `S/ ${o.remuneracion}` : null },
+          { etiqueta: 'Fecha de cierre', valor: o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : null },
+          { etiqueta: 'Formación requerida', valor: o.formacion_requerida },
+          { etiqueta: 'Experiencia requerida', valor: o.experiencia_requerida },
+          { etiqueta: 'Habilidades', valor: o.habilidades?.length ? o.habilidades.join(', ') : null },
+          { etiqueta: 'Postulaciones', valor: o.cantidad_postulaciones },
+        ]}
+      />
+
+      {o.motivo_rechazo && (
+        <div className="modal-seccion">
+          <h3>Motivo de rechazo</h3>
+          <p className="modal-texto" style={{ color: 'var(--red-tx)' }}>{o.motivo_rechazo}</p>
+        </div>
+      )}
+      {o.descripcion && (
+        <div className="modal-seccion">
+          <h3>Descripción del puesto</h3>
+          <ContenidoEnriquecido>{o.descripcion}</ContenidoEnriquecido>
+        </div>
+      )}
+      {o.funciones && (
+        <div className="modal-seccion">
+          <h3>Funciones</h3>
+          <ContenidoEnriquecido>{o.funciones}</ContenidoEnriquecido>
+        </div>
+      )}
+      {o.requisitos && (
+        <div className="modal-seccion">
+          <h3>Requisitos</h3>
+          <ContenidoEnriquecido>{o.requisitos}</ContenidoEnriquecido>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -182,6 +258,18 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
   const experiencias = lista(OPCIONES_EXPERIENCIA_REQUERIDA, form.experiencia_requerida);
 
   const guardar = async () => {
+    // Mismo límite que el backend: 10.000 caracteres de TEXTO visible.
+    const excedidos = [
+      ['Descripción', form.descripcion],
+      ['Funciones', form.funciones],
+      ['Requisitos', form.requisitos],
+    ].filter(([, texto]) => excedeLimiteTexto(texto));
+
+    if (excedidos.length > 0) {
+      setError(`El texto de ${excedidos.map(([nombre]) => nombre).join(', ')} supera el límite de ${TEXTO_MAX} caracteres.`);
+      return;
+    }
+
     try {
       await ejecutar();
       alGuardar(esNueva ? 'Oferta guardada y enviada a revisión municipal.' : 'Cambios guardados.');
@@ -191,11 +279,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
     }
   };
 
-
-  const autoResize = (e) => {
-  e.target.style.height = 'auto';
-  e.target.style.height = `${e.target.scrollHeight}px`;
-};
+  const setRte = (campo) => (html) => setForm((previo) => ({ ...previo, [campo]: html }));
 
   return (
     <div className="list-card">
@@ -226,18 +310,26 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
         <Campo etiqueta="Fecha de cierre" type="date" value={form.fecha_cierre} onChange={set('fecha_cierre')} />
         <Campo etiqueta="Habilidades (separadas por coma)" value={form.habilidades} onChange={set('habilidades')} />
       </div>
-      <label className="campo"><span>Descripción del puesto</span><textarea rows="3" value={form.descripcion} onChange={(e) => {
-      set('descripcion')(e);
-      autoResize(e);
-    }} /></label>
-      <label className="campo"><span>Funciones</span><textarea rows="3" value={form.funciones} onChange={(e) => {
-      set('funciones')(e);
-      autoResize(e);
-    }} /></label>
-      <label className="campo"><span>Requisitos</span><textarea rows="3" value={form.requisitos} onChange={(e) => {
-      set('requisitos')(e);
-      autoResize(e);
-    }} /></label>
+      <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
+        <EditorTextoEnriquecido
+          etiqueta="Descripción del puesto"
+          valor={form.descripcion}
+          onChange={setRte('descripcion')}
+          placeholder="Describe el puesto, el equipo y el contexto del trabajo…"
+        />
+        <EditorTextoEnriquecido
+          etiqueta="Funciones"
+          valor={form.funciones}
+          onChange={setRte('funciones')}
+          placeholder="Enumera las funciones del puesto (puedes usar viñetas)…"
+        />
+        <EditorTextoEnriquecido
+          etiqueta="Requisitos"
+          valor={form.requisitos}
+          onChange={setRte('requisitos')}
+          placeholder="Enumera los requisitos (puedes usar viñetas)…"
+        />
+      </Suspense>
       <div className="form-fila">
         <Boton variante="primario" cargando={enviando} onClick={guardar}>{esNueva ? 'Enviar a revisión' : 'Guardar cambios'}</Boton>
         {!esNueva && inicial.estado === 'publicada' && <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>Al guardar, la oferta volverá a revisión municipal.</span>}

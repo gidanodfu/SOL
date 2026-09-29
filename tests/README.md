@@ -34,6 +34,10 @@ cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark d
 ./tests/smoke/test_fase6.sh            # contrataciones y reportes
 ./tests/smoke/test_seguridad.sh        # booleanos estrictos, fechas calendáricas, enlaces
                                        # http(s), rate limit público y cabeceras
+./tests/smoke/test_rte.sh              # texto enriquecido: saneado backend (script/
+                                       # iframe/svg/eventos/javascript:), enlaces http(s)
+                                       # con rel, texto plano heredado y límite 10.000
+                                       # caracteres de texto visible
 ./tests/smoke/test_reporte_empresa.sh  # reporte Excel de empresa: rol, aislamiento A/B,
                                        # filtros de fecha y columnas del XLSX
 ./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación

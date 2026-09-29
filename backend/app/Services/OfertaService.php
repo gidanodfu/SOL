@@ -38,16 +38,20 @@ class OfertaService
 
     private AuditoriaService $auditoria;
 
+    private HtmlSanitizer $html;
+
     public function __construct(
         ?OfertaModel $ofertas = null,
         ?OfertaHabilidadModel $habilidades = null,
         ?OfertaRepository $repository = null,
         ?AuditoriaService $auditoria = null,
+        ?HtmlSanitizer $html = null,
     ) {
         $this->ofertas     = $ofertas ?? model(OfertaModel::class);
         $this->habilidades = $habilidades ?? model(OfertaHabilidadModel::class);
         $this->repository  = $repository ?? new OfertaRepository();
         $this->auditoria   = $auditoria ?? new AuditoriaService();
+        $this->html        = $html ?? new HtmlSanitizer();
     }
 
     /* ----------------------- Búsqueda de postulantes ---------------------- */
@@ -346,11 +350,17 @@ class OfertaService
      */
     private function validar(array $datos): array
     {
+        // Campos con editor enriquecido: se sanea el HTML antes de validar y su
+        // límite de 10.000 se aplica al TEXTO VISIBLE, no a las etiquetas.
+        $datos['descripcion'] = $this->html->limpiar($datos['descripcion'] ?? null);
+        $datos['funciones']   = $this->html->limpiar($datos['funciones'] ?? null);
+        $datos['requisitos']  = $this->html->limpiar($datos['requisitos'] ?? null);
+
         Validador::validar($datos, [
             'puesto'                 => ['required', 'max:150'],
-            'descripcion'            => ['max:10000'],
-            'funciones'              => ['max:10000'],
-            'requisitos'             => ['max:10000'],
+            'descripcion'            => ['texto_max:10000'],
+            'funciones'              => ['texto_max:10000'],
+            'requisitos'             => ['texto_max:10000'],
             'formacion_requerida'    => ['max:200'],
             'experiencia_requerida'  => ['max:200'],
             'ubicacion'              => ['max:150'],

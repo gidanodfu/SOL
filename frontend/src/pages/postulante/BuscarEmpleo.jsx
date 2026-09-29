@@ -6,6 +6,7 @@ import { detalleOferta, listarOfertas, perfilPostulante, postular } from '../../
 import { listarCategorias } from '../../services/categorias';
 import { useAuth } from '../../context/AuthContext';
 import { Mensaje } from '../../components/UI';
+import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES } from '../../constants';
 import { errorApi, fechaCalendario } from '../../utils';
 import { useClickFuera } from '../../hooks/useClickFuera';
@@ -468,9 +469,24 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
               <div><b>Experiencia requerida</b>{detalle.experiencia_requerida || '—'}</div>
               <div><b>Habilidades</b>{(detalle.habilidades || []).join(', ') || '—'}</div>
             </div>
-            {detalle.descripcion && <p className="texto-con-formato"><b>Descripción:</b>{'\n'} {detalle.descripcion}</p>}
-            {detalle.funciones && <p className="texto-con-formato"><b>Funciones:</b>{'\n'} {detalle.funciones}</p>}
-            {detalle.requisitos && <p className="texto-con-formato"><b>Requisitos:</b>{'\n'} {detalle.requisitos}</p>}
+            {detalle.descripcion && (
+              <div className="bloque-rte">
+                <b>Descripción</b>
+                <ContenidoEnriquecido>{detalle.descripcion}</ContenidoEnriquecido>
+              </div>
+            )}
+            {detalle.funciones && (
+              <div className="bloque-rte">
+                <b>Funciones</b>
+                <ContenidoEnriquecido>{detalle.funciones}</ContenidoEnriquecido>
+              </div>
+            )}
+            {detalle.requisitos && (
+              <div className="bloque-rte">
+                <b>Requisitos</b>
+                <ContenidoEnriquecido>{detalle.requisitos}</ContenidoEnriquecido>
+              </div>
+            )}
           </div>
         )}
       </div>
