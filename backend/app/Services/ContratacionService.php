@@ -162,7 +162,7 @@ class ContratacionService
     private function validar(array $datos): array
     {
         Validador::validar($datos, [
-            'fecha_contratacion' => ['required', 'regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'fecha_contratacion' => ['required', 'fecha'],
             'cargo'              => ['required', 'max:150'],
             'modalidad'          => ['max:60'],
             'remuneracion'       => ['regex:/^\d{1,10}(\.\d{1,2})?$/'],

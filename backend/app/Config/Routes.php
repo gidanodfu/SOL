@@ -46,11 +46,13 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->post('registro/postulante', 'AuthController::registroPostulante', ['filter' => 'throttle:10,300']);
 
     // Solicitud de registro de empresa (auto-registro) y activación de cuenta
-    // mediante el enlace que recibe la empresa tras la aprobación.
-    $routes->post('verificar-ruc', 'SolicitudesEmpresaController::verificarRuc');
-    $routes->post('solicitudes-empresa', 'SolicitudesEmpresaController::solicitar');
-    $routes->get('activar-cuenta/(:segment)', 'SolicitudesEmpresaController::verActivacion/$1');
-    $routes->post('activar-cuenta/(:segment)', 'SolicitudesEmpresaController::activarCuenta/$1');
+    // mediante el enlace que recibe la empresa tras la aprobación. Estas rutas
+    // son públicas y consumen un servicio externo (SUNAT), por eso llevan
+    // rate limiting por IP.
+    $routes->post('verificar-ruc', 'SolicitudesEmpresaController::verificarRuc', ['filter' => 'throttle:5,300']);
+    $routes->post('solicitudes-empresa', 'SolicitudesEmpresaController::solicitar', ['filter' => 'throttle:5,300']);
+    $routes->get('activar-cuenta/(:segment)', 'SolicitudesEmpresaController::verActivacion/$1', ['filter' => 'throttle:10,300']);
+    $routes->post('activar-cuenta/(:segment)', 'SolicitudesEmpresaController::activarCuenta/$1', ['filter' => 'throttle:10,300']);
 
     // Bolsa de empleo y difusión públicas (sin autenticación). Ver el detalle de
     // una oferta requiere estar publicada; si hay sesión se informa "ya_postule".
@@ -94,6 +96,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
 
         $routes->get('ofertas', 'OfertasController::index');
         $routes->get('ofertas/(:num)', 'OfertasController::show/$1');
+        // Revisión municipal: aprobar publica; rechazar deja la oferta no visible.
+        $routes->put('ofertas/(:num)/aprobar', 'OfertasController::aprobar/$1');
+        $routes->put('ofertas/(:num)/rechazar', 'OfertasController::rechazar/$1');
         $routes->put('ofertas/(:num)/cerrar', 'OfertasController::cerrar/$1');
 
         $routes->get('actividades', 'ActividadesController::index');
@@ -122,7 +127,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('ofertas/(:num)', 'OfertasController::show/$1');
         $routes->post('ofertas', 'OfertasController::store');
         $routes->put('ofertas/(:num)', 'OfertasController::update/$1');
-        $routes->put('ofertas/(:num)/publicar', 'OfertasController::publicar/$1');
+        // La empresa no publica: envía a revisión y la Municipalidad aprueba.
+        $routes->put('ofertas/(:num)/enviar-revision', 'OfertasController::enviarRevision/$1');
         $routes->put('ofertas/(:num)/cerrar', 'OfertasController::cerrar/$1');
 
         $routes->get('postulaciones', 'PostulacionesController::index');

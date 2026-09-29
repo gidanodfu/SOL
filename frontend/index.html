@@ -12,6 +12,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&display=swap" rel="stylesheet">
+    <script>
+      // Tema antes del primer pintado (evita el destello claro al recargar).
+      // La preferencia se guarda como claro|oscuro; el DOM usa light|dark.
+      (function () {
+        try {
+          var t = localStorage.getItem('sol-tema');
+          var modo = (t === 'oscuro') ? 'dark' : 'light';
+          document.documentElement.dataset.theme = modo;
+          document.documentElement.style.colorScheme = modo;
+        } catch (e) { /* sin persistencia */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

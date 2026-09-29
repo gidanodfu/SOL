@@ -69,6 +69,8 @@ class OportunidadService
     public function crear(array $datos): int
     {
         $datos = $this->validar($datos);
+        // Una oportunidad nueva nace activa; la activación se gestiona aparte.
+        $datos['activo'] = 1;
         $this->oportunidades->insert($datos);
 
         return (int) $this->oportunidades->getInsertID();
@@ -79,6 +81,8 @@ class OportunidadService
      */
     public function actualizar(int $id, array $datos): void
     {
+        // Editar no cambia la activación: una oportunidad desactivada sigue
+        // desactivada hasta que se active explícitamente (no se republica sola).
         $this->exigir($id);
         $this->oportunidades->update($id, $this->validar($datos));
     }
@@ -99,13 +103,18 @@ class OportunidadService
             'titulo'     => ['required', 'max:200'],
             'descripcion' => ['max:10000'],
             'enlace'     => ['max:300'],
-            'fecha_publicacion' => ['regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'fecha_publicacion' => ['fecha'],
             'empresa_id' => ['regex:/^\d+$/'],
         ]);
 
+        // El enlace se renderiza como href en el portal público: solo http(s).
+        // FILTER_VALIDATE_URL por sí solo acepta esquemas peligrosos (javascript:).
         $enlace = $datos['enlace'] ?? null;
-        if ($enlace !== null && $enlace !== '' && ! filter_var($enlace, FILTER_VALIDATE_URL)) {
-            throw ApiException::validacion('El enlace debe ser una URL válida (https://…).', ['El enlace debe ser una URL válida (https://…).']);
+        if ($enlace !== null && $enlace !== '') {
+            $esquema = strtolower((string) parse_url((string) $enlace, PHP_URL_SCHEME));
+            if (! in_array($esquema, ['http', 'https'], true) || ! filter_var($enlace, FILTER_VALIDATE_URL)) {
+                throw ApiException::validacion('El enlace debe ser una URL http(s) válida.', ['El enlace debe ser una URL http(s) válida.']);
+            }
         }
 
         $empresaId = $datos['empresa_id'] ?? null;
@@ -122,8 +131,8 @@ class OportunidadService
             'titulo'            => $datos['titulo'],
             'descripcion'       => $datos['descripcion'] ?? null,
             'enlace'            => $enlace ?: null,
-            'fecha_publicacion' => $datos['fecha_publicacion'] ?? date('Y-m-d'),
-            'activo'            => 1,
+            // La fecha vacía no debe guardarse: usa la fecha de hoy.
+            'fecha_publicacion' => ($datos['fecha_publicacion'] ?? '') !== '' ? $datos['fecha_publicacion'] : date('Y-m-d'),
         ];
     }
 

@@ -24,15 +24,20 @@ scripts). `SystemSeeder` requiere `INITIAL_ADMIN_*` en `backend/.env`.
 docker compose up -d mysql
 cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark db:seed DatosPruebaSeeder && cd ..
 ./tests/smoke/test_api.sh              # auth por rol, alta admin de empresas, CV
-./tests/smoke/test_ofertas.sh          # ciclo de ofertas: publicación directa y cierre
+./tests/smoke/test_ofertas.sh          # ciclo de ofertas: revisión municipal, reenvío y cierre
+./tests/smoke/test_aprobacion_ofertas.sh # crear→pendiente, aprobar/rechazar, visibilidad,
+                                         # permisos (empresa/postulante no aprueban) y
+                                         # mass assignment de estado
 ./tests/smoke/test_fase3.sh            # bolsa/búsqueda, postulaciones y perfil (contacto + CV)
 ./tests/smoke/test_fase4.sh            # bandeja empresa, estados, CV autorizado
 ./tests/smoke/test_fase5.sh            # actividades, difusión y permisos por rol
 ./tests/smoke/test_fase6.sh            # contrataciones y reportes
+./tests/smoke/test_seguridad.sh        # booleanos estrictos, fechas calendáricas, enlaces
+                                       # http(s), rate limit público y cabeceras
 ./tests/smoke/test_reporte_empresa.sh  # reporte Excel de empresa: rol, aislamiento A/B,
                                        # filtros de fecha y columnas del XLSX
 ./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación
-                                        # admin, enlace de activación, publicación directa
+                                        # admin, enlace de activación, revisión municipal
                                         # de ofertas, bolsa pública sin sesión
 ```
 

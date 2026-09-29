@@ -29,9 +29,9 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-19/20 Perfil laboral + actualización | ✔ | datos personales/contacto + CV; **para postular solo se exige contacto completo + CV vigente** (las secciones de formación/experiencia/habilidades/cursos se retiraron del producto) |
 | RF-21 CV cargar/consultar | ✔ | `POST/GET /api/postulante/cv*` · "Mi perfil y CV"; máximo **4 CV/mes** (ver RT-CV y endurecimiento 2026-09) |
 | RF-22 Registro de ofertas | ✔ | `api/empresa/ofertas*` · Ofertas (empresa) |
-| RF-23 Estados de oferta | ✔ | borrador → publicada → cerrada (los estados heredados `pendiente/rechazada` se normalizaron con migración) |
-| RF-24 Publicación directa por la empresa (sin validación municipal) | ✔ | `PUT /api/empresa/ofertas/{id}/publicar` |
-| RF-25/26 El admin supervisa y puede cerrar ofertas | ✔ | Ofertas (admin); `PUT /api/admin/ofertas/{id}/cerrar` |
+| RF-23 Estados de oferta | ✔ | pendiente → publicada / rechazada → cerrada; `borrador` solo heredado |
+| RF-24 La empresa envía a revisión; no publica por sí misma | ✔ | `PUT /api/empresa/ofertas/{id}/enviar-revision`; el `POST` nace `pendiente` |
+| RF-25/26 Aprobación y rechazo municipal (+ cierre) | ✔ | `PUT /api/admin/ofertas/{id}/aprobar|rechazar|cerrar` (solo `rol:admin`) |
 | RF-27/28 Consulta + búsqueda públicas (sin sesión) | ✔ | `GET /api/ofertas` con filtros (categoría, ubicación, formación, experiencia) · "Buscar empleo". El filtro "Puesto o empresa" (`q`) se retiró el 2026-09-15 |
 | RF-29 Detalle de oferta público | ✔ | `GET /api/ofertas/{id}` (incluye "ya postulé" si hay sesión) |
 | RF-30 Registro individual de postulación | ✔ | `POST /api/postulante/postulaciones` (empresa denormalizada) |
@@ -77,7 +77,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RN-16 | ✔ | pendientes primero en bandeja |
 | RN-17 | ✔ | activar/desactivar, sin borrado físico |
 | RN-18 | ✔ | selección/contratación solo por la empresa |
-| RN-19 | ✔ | solo las ofertas `publicada` reciben postulaciones; publicación directa por la empresa (`borrador → publicada`) |
+| RN-19 | ✔ | solo las ofertas `publicada` reciben postulaciones; la aprobación municipal es obligatoria y editar una publicada la devuelve a revisión |
 | RN-20 | ✔ | historiales y auditoría |
 | RN-21 | ✔ | un administrador no puede desactivar su propia cuenta (`UsuarioService::cambiarEstado` → 403); la UI no ofrece la acción |
 
@@ -120,6 +120,13 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | Errores saneados | ✔ | `ApiExceptionHandler` responde JSON uniforme; `500` genérico con log interno; `429` con `Retry-After` |
 | Metadescripciones por ruta | ✔ | `frontend/src/components/SeoMeta.jsx` + `index.html` |
 | Conexión MySQL | ✔ | gestión nativa de CI4 (una conexión por request); sin pool personalizado |
+| Booleanos de activación estrictos | ✔ | `BaseApiController::booleanoEstricto`; `"false"` desactiva (antes el cast lo activaba) |
+| Fechas calendáricas | ✔ | reglas `fecha`/`fecha_hora` en `Validador` (rechaza `2026-13-01`) |
+| Enlaces de usuario solo `http(s)` | ✔ | `OportunidadService::validar` + `utils.esEnlaceSeguro` |
+| Rate limit en auto-registro público | ✔ | `throttle:5,300` en `verificar-ruc`/`solicitudes-empresa`; `10,300` en `activar-cuenta` |
+| Cabeceras de seguridad | ✔ | filtro `secureheaders` global (nosniff, X-Frame-Options, Referrer-Policy) |
+| `jwt.secret` obligatorio | ✔ | `JwtService` falla explícitamente sin secreto |
+| Editar oportunidad no la republica | ✔ | `OportunidadService::crear` fija `activo=1`; editar lo preserva |
 
 ## Saneamiento funcional y técnico (2026-09-15)
 

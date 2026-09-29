@@ -59,4 +59,32 @@ abstract class BaseApiController extends BaseController
     {
         return array_intersect_key($datos, array_flip($permitidos));
     }
+
+    /**
+     * Booleano estricto para acciones de activación. En PHP `(bool) "false"`
+     * es `true`; aquí "false" desactiva y cualquier valor ambiguo usa el
+     * defecto, nunca se interpreta como verdadero.
+     *
+     * @param mixed $valor
+     */
+    protected function booleanoEstricto($valor, bool $defecto = false): bool
+    {
+        if (is_bool($valor)) {
+            return $valor;
+        }
+        if (is_int($valor)) {
+            return $valor === 1;
+        }
+        if (is_string($valor)) {
+            $normalizado = strtolower(trim($valor));
+            if (in_array($normalizado, ['1', 'true'], true)) {
+                return true;
+            }
+            if (in_array($normalizado, ['0', 'false', ''], true)) {
+                return false;
+            }
+        }
+
+        return $defecto;
+    }
 }

@@ -8,6 +8,7 @@ use App\Exceptions\ApiException;
 use App\Models\PostulanteModel;
 use App\Repositories\DashboardRepository;
 use App\Repositories\EmpresaRepository;
+use App\Validation\Validador;
 
 /**
  * Indicadores de los dashboards (RF-52..RF-60). Filtros por rango de fechas con
@@ -81,7 +82,7 @@ class DashboardService
     public function validarRango(?string $desde, ?string $hasta): array
     {
         foreach ([$desde, $hasta] as $fecha) {
-            if ($fecha !== null && $fecha !== '' && ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+            if ($fecha !== null && $fecha !== '' && ! Validador::esFecha($fecha)) {
                 throw ApiException::validacion('El rango de fechas debe usar el formato AAAA-MM-DD.', ['El rango de fechas debe usar el formato AAAA-MM-DD.']);
             }
         }

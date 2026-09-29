@@ -57,7 +57,7 @@
   height: 38px;
   border-radius: 50%;
   background: var(--sky-2);
-  color: var(--blue-dark);
+  color: var(--enlace);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +84,7 @@
   cursor: pointer;
   transition: all 0.15s;
 }
-.app-empresa .chip:hover { border-color: var(--blue); color: var(--blue-dark); }
+.app-empresa .chip:hover { border-color: var(--blue); color: var(--enlace); }
 .app-empresa .chip.activo { background: var(--blue); border-color: var(--blue); color: #fff; }
 
 /* ---------- Ofertas ---------- */
@@ -118,7 +118,7 @@
 .app-empresa .btn-ver {
   background: var(--sky-2);
   border: 0;
-  color: var(--blue-dark);
+  color: var(--enlace);
   font-size: 12.5px;
   font-weight: 600;
   padding: 8px 14px;
@@ -130,7 +130,7 @@
   flex-shrink: 0;
   transition: background 0.15s;
 }
-.app-empresa .btn-ver:hover { background: #d3e4f5; }
+.app-empresa .btn-ver:hover { background: var(--sky-2); }
 .app-empresa .post-detalle { background: var(--sky); border-radius: var(--radius-ctl); padding: 16px; margin: 0 4px 16px; }
 .app-empresa .post-detalle h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; color: var(--ink); }
 .app-empresa .post-detalle .descripcion { margin-bottom: 0.6rem; }
@@ -142,6 +142,8 @@
   .app-empresa .dash-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
+  /* Panel móvil superpuesto (reglas generales en styles.css). */
+  .app-empresa .sidebar { position: fixed; }
   .app-empresa .content { padding: 24px 20px 50px; }
 }
 @media (max-width: 560px) {

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
+import BotonTema from '../components/BotonTema';
 import { ROLES } from '../constants';
 import { Cargando } from '../routes/Guardas';
 import { LayoutPostulante } from './LayoutPostulante';
@@ -57,6 +58,8 @@ function CabeceroPublico({ usuario }) {
             </NavLink>
           ))}
         </nav>
+
+        <BotonTema variante="header" />
 
         {usuario ? (
           <div className="guest-actions">

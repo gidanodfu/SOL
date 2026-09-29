@@ -82,7 +82,10 @@ class Filters extends BaseFilters
         ],
         'after' => [
             // 'honeypot',
-            // 'secureheaders',
+            // Cabeceras de seguridad en todas las respuestas (X-Frame-Options,
+            // X-Content-Type-Options, Referrer-Policy, X-Permitted-Cross-Domain-
+            // Policies, X-Download-Options). Ver nota sobre CSP en README §19.
+            'secureheaders',
         ],
     ];
 

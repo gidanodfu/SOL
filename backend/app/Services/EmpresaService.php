@@ -95,7 +95,8 @@ class EmpresaService
         }
 
         // La evaluación presencial (RF-09/RN-02) debe constar antes de habilitar.
-        $evaluada = ! empty($datos['evaluacion_presencial']);
+        // Parseo estricto: el texto "false" no debe habilitar la empresa.
+        $evaluada = filter_var($datos['evaluacion_presencial'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         $this->users->db->transStart();
 

@@ -12,17 +12,23 @@ use App\Validation\Validador;
 
 /**
  * Reglas de negocio de ofertas laborales (RF-22..RF-26, RN-19).
- * La empresa gestiona SOLO sus propias ofertas (RT-05) y las publica
- * directamente sin validación municipal; el admin solo supervisa.
+ * La empresa gestiona SOLO sus propias ofertas (RT-05). Toda oferta nueva queda
+ * pendiente de revisión municipal; la Municipalidad aprueba (publicada) o
+ * rechaza (rechazada), y solo la aprobación la hace visible a los postulantes.
  * Transiciones:
- *   borrador → publicada ; publicada → cerrada.
- * Una oferta publicada sigue siendo editable (se mantiene publicada).
+ *   pendiente → publicada (aprobar) ; pendiente → rechazada (rechazar)
+ *   borrador/rechazada → pendiente (enviar a revisión)
+ *   publicada → pendiente (al editarla, vuelve a revisión)
+ *   publicada → cerrada.
  */
 class OfertaService
 {
     public const TIPOS_EMPLEO = ['tiempo_completo', 'medio_tiempo', 'por_horas', 'practicas', 'freelance', 'remoto'];
 
-    private const EDITABLE = ['borrador', 'publicada'];
+    private const ESTADOS_ADMIN = ['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada'];
+
+    /** Estados editables por la empresa: cualquiera que no esté cerrado. */
+    private const EDITABLE = ['borrador', 'pendiente', 'publicada', 'rechazada'];
 
     private OfertaModel $ofertas;
 
@@ -119,9 +125,9 @@ class OfertaService
             'remuneracion'          => $datos['remuneracion'] ?? null,
             'vacantes'              => $datos['vacantes'],
             'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
-            // Las ofertas nacen en borrador y la empresa las publica con el
-            // botón "Publicar" (sin pasar por revisión municipal).
-            'estado'                => 'borrador',
+            // Toda oferta nueva queda pendiente de revisión municipal; no es
+            // visible para los postulantes hasta que la Municipalidad la apruebe.
+            'estado'                => 'pendiente',
         ]);
         $id = $this->ofertas->getInsertID();
         $this->habilidades->reemplazar($id, $datos['habilidades'] ?? []);
@@ -141,6 +147,12 @@ class OfertaService
         }
 
         $datos = $this->validar($datos);
+
+        // Control del flujo: editar una oferta ya aprobada la devuelve a revisión
+        // municipal, para que el contenido publicado no pueda alterarse sin
+        // una nueva aprobación.
+        $vuelveARevision = $oferta['estado'] === 'publicada';
+
         $this->ofertas->update($id, [
             'categoria_id'          => $datos['categoria_id'] ?? null,
             'puesto'                => $datos['puesto'],
@@ -154,32 +166,36 @@ class OfertaService
             'remuneracion'          => $datos['remuneracion'] ?? null,
             'vacantes'              => $datos['vacantes'],
             'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
-            'estado'                => $oferta['estado'],
-            'motivo_rechazo'        => null,
+            'estado'                => $vuelveARevision ? 'pendiente' : $oferta['estado'],
+            'fecha_publicacion'     => $vuelveARevision ? null : $oferta['fecha_publicacion'],
+            'motivo_rechazo'        => $vuelveARevision ? null : $oferta['motivo_rechazo'],
+            'validado_por'          => $vuelveARevision ? null : $oferta['validado_por'],
+            'fecha_validacion'      => $vuelveARevision ? null : $oferta['fecha_validacion'],
         ]);
         $this->habilidades->reemplazar($id, $datos['habilidades'] ?? []);
     }
 
     /**
-     * Publicación directa por la empresa: borrador → publicada (RN-19 ajustado:
-     * la oferta no requiere validación municipal previa).
+     * Envío a revisión municipal de un borrador o de una oferta rechazada
+     * (RN-19). No publica: solo la aprobación municipal hace visible la oferta.
      */
-    public function publicar(int $empresaId, int $id): void
+    public function enviarARevision(int $empresaId, int $id): void
     {
         $oferta = $this->exigirPropia($empresaId, $id);
 
-        if ($oferta['estado'] !== 'borrador') {
-            throw ApiException::conflicto('Solo puede publicar ofertas en borrador.');
+        if (! in_array($oferta['estado'], ['borrador', 'rechazada'], true)) {
+            throw ApiException::conflicto('La oferta ya está en revisión o publicada.');
         }
 
         $this->ofertas->update($id, [
-            'estado'            => 'publicada',
-            'motivo_rechazo'    => null,
-            'fecha_publicacion' => $oferta['fecha_publicacion'] ?? date('Y-m-d'),
+            'estado'           => 'pendiente',
+            'motivo_rechazo'   => null,
+            'validado_por'     => null,
+            'fecha_validacion' => null,
         ]);
         $this->auditoria->registrar(
             $this->usuarioDeEmpresa($empresaId),
-            'publicar_oferta',
+            'enviar_revision_oferta',
             'oferta',
             $id,
             ['puesto' => $oferta['puesto']],
@@ -219,12 +235,67 @@ class OfertaService
 
     public function listarAdmin(?string $estado = null): array
     {
-        $estados = ['borrador', 'publicada', 'cerrada'];
-        if ($estado !== null && ! in_array($estado, $estados, true)) {
+        if ($estado !== null && ! in_array($estado, self::ESTADOS_ADMIN, true)) {
             throw ApiException::validacion('Estado de oferta no válido.');
         }
 
         return $this->repository->paraAdmin($estado);
+    }
+
+    /**
+     * Aprobación municipal (RF-24/RN-19): pendiente → publicada. Revalida la
+     * vigencia para no publicar ofertas con fecha de cierre vencida.
+     */
+    public function aprobar(int $adminId, int $id): void
+    {
+        $oferta = $this->repository->detalle($id);
+        if ($oferta === null) {
+            throw ApiException::noEncontrado('La oferta no existe.');
+        }
+        if ($oferta['estado'] !== 'pendiente') {
+            throw ApiException::conflicto('Solo puede aprobar ofertas pendientes de revisión.');
+        }
+        if ($oferta['fecha_cierre'] !== null && strtotime((string) $oferta['fecha_cierre']) < strtotime(date('Y-m-d'))) {
+            throw ApiException::conflicto('La oferta tiene fecha de cierre vencida; la empresa debe actualizarla antes de aprobarla.');
+        }
+
+        $this->ofertas->update($id, [
+            'estado'            => 'publicada',
+            'fecha_publicacion' => date('Y-m-d'),
+            'motivo_rechazo'    => null,
+            'validado_por'      => $adminId,
+            'fecha_validacion'  => date('Y-m-d H:i:s'),
+        ]);
+        $this->auditoria->registrar($adminId, 'aprobar_oferta', 'oferta', $id, ['puesto' => $oferta['puesto']]);
+    }
+
+    /**
+     * Rechazo municipal (pendiente → rechazada). El motivo queda visible para la
+     * empresa, que puede corregir y reenviar a revisión.
+     *
+     * @param array<string, mixed> $datos
+     */
+    public function rechazar(int $adminId, int $id, array $datos): void
+    {
+        Validador::validar($datos, [
+            'motivo' => ['required', 'max:255'],
+        ]);
+
+        $oferta = $this->repository->detalle($id);
+        if ($oferta === null) {
+            throw ApiException::noEncontrado('La oferta no existe.');
+        }
+        if ($oferta['estado'] !== 'pendiente') {
+            throw ApiException::conflicto('Solo puede rechazar ofertas pendientes de revisión.');
+        }
+
+        $this->ofertas->update($id, [
+            'estado'           => 'rechazada',
+            'motivo_rechazo'   => mb_substr((string) $datos['motivo'], 0, 255),
+            'validado_por'     => $adminId,
+            'fecha_validacion' => date('Y-m-d H:i:s'),
+        ]);
+        $this->auditoria->registrar($adminId, 'rechazar_oferta', 'oferta', $id, ['puesto' => $oferta['puesto']]);
     }
 
     /**
@@ -285,7 +356,7 @@ class OfertaService
             'ubicacion'              => ['max:150'],
             'tipo_empleo'            => ['enum:' . implode(',', self::TIPOS_EMPLEO)],
             'remuneracion'           => ['regex:/^\d{1,10}(\.\d{1,2})?$/'],
-            'fecha_cierre'           => ['regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'fecha_cierre'           => ['fecha'],
             'categoria_id'           => ['regex:/^\d+$/'],
         ]);
 

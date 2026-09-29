@@ -31,10 +31,10 @@ info:
       `data: null`. No existe ningún `204` en esta API.
     * **Acciones de estado**: la API no usa PATCH ni DELETE para estados; las
       transiciones se realizan con `PUT` sobre sub-rutas (`/estado`, `/password`,
-      `/publicar`, `/cerrar`, `/activacion`, `/retirar`).
-    * **Booleano**: algunos endpoints castean con `(bool) $cuerpo['activo']`, donde en
-      PHP `(bool)"false" === true`. Envíe siempre booleanos nativos (`true`/`false`),
-      no las cadenas `"true"`/`"false"`.
+      `/enviar-revision`, `/aprobar`, `/rechazar`, `/cerrar`, `/activacion`, `/retirar`).
+    * **Booleano estricto**: los endpoints de activación aceptan `true`/`false`,
+      `1`/`0` o las cadenas `"true"`/`"false"`; cualquier otro valor usa el defecto
+      (no se interpreta `"false"` como verdadero).
     * **Preflight CORS**: `OPTIONS /api/*` responde `204` sin cuerpo y no requiere
       autenticación (no se documenta como operación).
     * **Identidad**: en los módulos empresa y postulante la identidad se resuelve
@@ -1734,12 +1734,13 @@ paths:
     post:
       tags: [Empresa]
       operationId: empresaCrearOferta
-      summary: Crear oferta (borrador)
+      summary: Crear oferta (queda pendiente de revisión municipal)
       description: |
-        La oferta nace en estado `borrador` (requiere validación municipal). `vacantes` se
-        exige manualmente (≥ 1); `habilidades` puede ser un arreglo de cadenas o una cadena
-        CSV separada por comas. Los campos `categoria_id`, `fecha_cierre`, `tipo_empleo`,
-        `remuneracion` etc. son opcionales según las reglas descritas.
+        La oferta nace en estado `pendiente` y NO es visible para los postulantes hasta que
+        la Municipalidad la apruebe (`publicada`). `vacantes` se exige manualmente (≥ 1);
+        `habilidades` puede ser un arreglo de cadenas o una cadena CSV separada por comas.
+        Los campos `categoria_id`, `fecha_cierre`, `tipo_empleo`, `remuneracion` etc. son
+        opcionales según las reglas descritas.
       security:
         - bearerAuth: []
       requestBody:
@@ -1750,7 +1751,7 @@ paths:
               $ref: '#/components/schemas/OfertaBody'
       responses:
         '201':
-          description: Oferta guardada en borrador.
+          description: Oferta enviada a revisión municipal.
           content:
             application/json:
               schema:
@@ -1762,7 +1763,7 @@ paths:
                     example: true
                   message:
                     type: string
-                    example: Oferta guardada en borrador.
+                    example: Oferta enviada a revisión municipal.
                   data:
                     type: object
                     required: [id]
@@ -1823,9 +1824,10 @@ paths:
       operationId: empresaActualizarOferta
       summary: Actualizar oferta propia
       description: |
-        Solo se permite editar ofertas en estado `borrador` o `rechazada` (si no, 409
-        "Solo puede editar ofertas en borrador o rechazadas."). Editar una oferta rechazada
-        la regresa a `borrador` y limpia el `motivo_rechazo`. Mismos campos que la creación.
+        Se pueden editar ofertas que no estén `cerrada`. Editar una oferta `publicada`
+        la devuelve a `pendiente` (revisión municipal) y limpia la validación; editar una
+        `rechazada` conserva el motivo y su estado hasta reenviarla con
+        `PUT /api/empresa/ofertas/{id}/enviar-revision`. Mismos campos que la creación.
       security:
         - bearerAuth: []
       parameters:
@@ -3434,8 +3436,8 @@ paths:
       operationId: adminOfertaCerrar
       summary: Cerrar una oferta publicada (supervisión)
       description: |
-        El admin solo supervisa: cierra una oferta en estado `publicada`. La publicación
-        directa la hace la empresa (`PUT /api/empresa/ofertas/{id}/publicar`).
+        El admin supervisa y cierra una oferta en estado `publicada`. La publicación solo
+        ocurre tras la aprobación municipal (`PUT /api/admin/ofertas/{id}/aprobar`).
       security:
         - bearerAuth: []
       parameters:
@@ -3453,14 +3455,15 @@ paths:
           $ref: '#/components/responses/Conflicto'
         '500':
           $ref: '#/components/responses/ErrorInterno'
-  /api/empresa/ofertas/{id}/publicar:
+  /api/empresa/ofertas/{id}/enviar-revision:
     put:
       tags: [Empresa]
-      operationId: empresaOfertaPublicar
-      summary: Publicar oferta directamente (sin validación municipal)
+      operationId: empresaOfertaEnviarRevision
+      summary: Enviar a revisión municipal (borrador o rechazada)
       description: |
-        Transición `borrador → publicada` (RF-24 ajustado: publicación directa por la
-        empresa; el admin solo supervisa). Solo ofertas propias en `borrador`.
+        Transición `borrador|rechazada → pendiente`. La empresa NO publica: la visibilidad
+        pública depende de la aprobación municipal. Solo ofertas propias; si ya está en
+        revisión o publicada responde 409.
       security:
         - bearerAuth: []
       parameters:
@@ -3476,6 +3479,73 @@ paths:
           $ref: '#/components/responses/NoEncontrado'
         '409':
           $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/ofertas/{id}/aprobar:
+    put:
+      tags: [Admin]
+      operationId: adminOfertaAprobar
+      summary: Aprobar y publicar una oferta pendiente
+      description: |
+        Transición `pendiente → publicada` (RF-24/RN-19). Registra `validado_por` y
+        `fecha_validacion` con el admin de la sesión. Rechaza con 409 si la oferta no está
+        pendiente o si su `fecha_cierre` ya venció. Solo rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/ofertas/{id}/rechazar:
+    put:
+      tags: [Admin]
+      operationId: adminOfertaRechazar
+      summary: Rechazar una oferta pendiente
+      description: |
+        Transición `pendiente → rechazada`. El `motivo` es obligatorio (máx. 255) y queda
+        visible para la empresa, que puede corregir y reenviar a revisión. Solo rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties:
+                motivo:
+                  type: string
+                  maxLength: 255
+                  example: Información incompleta
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
         '500':
           $ref: '#/components/responses/ErrorInterno'
 
@@ -3557,7 +3627,7 @@ components:
       description: Filtro por estado de la oferta. Se valida (valor inválido responde 422).
       schema:
         type: string
-        enum: [borrador, publicada, cerrada]
+        enum: [borrador, pendiente, publicada, rechazada, cerrada]
     EstadoActividad:
       name: estado
       in: query
@@ -4106,7 +4176,7 @@ components:
           format: date
         estado:
           type: string
-          enum: [borrador, publicada, cerrada]
+          enum: [borrador, pendiente, publicada, rechazada, cerrada]
         motivo_rechazo:
           type: string
           nullable: true

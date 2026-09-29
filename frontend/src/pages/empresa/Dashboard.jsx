@@ -14,6 +14,8 @@ import { errorApi, fechaHora } from '../../utils';
 
 const OFERTAS_DONA = [
   { estado: 'publicada', etiqueta: 'Publicada', color: 'var(--green)' },
+  { estado: 'pendiente', etiqueta: 'Pendiente de revisión', color: 'var(--amber)' },
+  { estado: 'rechazada', etiqueta: 'Rechazada', color: 'var(--red-c)' },
   { estado: 'borrador', etiqueta: 'Borrador', color: 'var(--blue-c)' },
   { estado: 'cerrada', etiqueta: 'Cerrada', color: 'var(--gray-c)' },
 ];
@@ -101,7 +103,7 @@ export default function Dashboard() {
         accion={(
           <button className="btn btn-primario" type="button" onClick={() => navigate('/empresa/ofertas', { state: { nueva: true } })}>
             <i className="ti ti-plus" />
-            <span>Publicar oferta</span>
+            <span>Nueva oferta</span>
           </button>
         )}
       />
@@ -124,6 +126,7 @@ export default function Dashboard() {
         <>
           <div className="kpi-row">
             <StatCard color="blue" icono={<i className="ti ti-briefcase" />} valor={data.ofertas.publicada} etiqueta="Ofertas publicadas" />
+            <StatCard color="amber" icono={<i className="ti ti-clock" />} valor={data.ofertas.pendiente} etiqueta="Ofertas en revisión" />
             <StatCard color="blue" icono={<i className="ti ti-users" />} valor={totalPostulaciones} etiqueta="Postulaciones recibidas" />
             <StatCard color="amber" icono={<i className="ti ti-clock" />} valor={postulaciones.pendiente} etiqueta="Pendientes por revisar" />
             <StatCard color="green" icono={<i className="ti ti-check" />} valor={contratosPeriodo} etiqueta="Contrataciones del periodo" />

@@ -38,15 +38,16 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 ## 4. Actores
 
 - **Administrador municipal** (personal municipal autorizado): administra usuarios y
-  empresas, aprueba o rechaza solicitudes de afiliación, activa/desactiva cuentas, supervisa
-  y cierra ofertas, gestiona actividades (ferias/talleres), difusión y contrataciones, y
+  empresas, aprueba o rechaza solicitudes de afiliación, activa/desactiva cuentas,
+  **revisa las ofertas pendientes y las aprueba (publica) o rechaza**, supervisa y cierra
+  ofertas publicadas, gestiona actividades (ferias/talleres), difusión y contrataciones, y
   consulta indicadores y reportes. **No revisa ni selecciona postulaciones**: la selección
   la realiza la empresa (RN-18). Un administrador **no puede desactivar su propia cuenta**
   (RN-21).
 - **Empresa** (afiliada por auto-registro con aprobación municipal): gestiona su
-  información y datos de contacto, registra ofertas en borrador y las **publica
-  directamente**, consulta las postulaciones recibidas, revisa perfiles/CV autorizados,
-  actualiza estados de postulación y registra la contratación.
+  información y datos de contacto, registra ofertas y las **envía a revisión municipal**
+  (no las publica por sí misma), consulta las postulaciones recibidas, revisa perfiles/CV
+  autorizados, actualiza estados de postulación y registra la contratación.
 - **Postulante** (ciudadano): crea su cuenta (DNI o Google), completa sus datos de contacto
   y **CV**, busca ofertas publicadas, postula y consulta el estado de sus postulaciones. La
   formación, experiencia, habilidades y cursos son opcionales y se retiraron del producto
@@ -94,11 +95,15 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-22** Registro de ofertas: puesto, descripción, funciones, requisitos, formación,
   experiencia, habilidades, tipo de empleo, lugar, remuneración, vacantes, fechas de
   publicación y cierre.
-- **RF-23** Estados vigentes: Borrador, Publicada, Cerrada. El ENUM conserva los valores
-  históricos `pendiente`/`rechazada` (normalizados por migración), que ya no se generan.
-- **RF-24** La empresa **publica directamente** sus ofertas (sin validación municipal previa).
-- **RF-25** El admin supervisa las ofertas (listado) y puede cerrarlas.
-- **RF-26** El flujo municipal de aprobar/rechazar ofertas fue retirado (§17).
+- **RF-23** Estados vigentes: **Pendiente de revisión** (`pendiente`), **Publicada**
+  (`publicada`), **Rechazada** (`rechazada`) y **Cerrada** (`cerrada`); `borrador` se
+  conserva solo para ofertas heredadas. Toda oferta nueva nace `pendiente`.
+- **RF-24** La empresa registra y **envía a revisión** sus ofertas; **no puede publicarlas
+  por sí misma** (la publicación depende de la aprobación municipal, §20).
+- **RF-25** El admin revisa la bandeja de ofertas pendientes, las **aprueba** (pasan a
+  `publicada`) o **rechaza** con motivo (`rechazada`), y puede cerrar ofertas publicadas.
+- **RF-26** La aprobación/rechazo municipal es obligatoria y solo la puede realizar el rol
+  `admin`; editar una oferta publicada la devuelve a revisión (§20).
 
 ### 5.5 Búsqueda de oportunidades
 - **RF-27** Consulta de ofertas disponibles (bolsa pública, sin sesión).
@@ -170,7 +175,9 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RN-16** Pendientes primero.
 - **RN-17** Postulaciones activables/desactivables, nunca eliminadas.
 - **RN-18** La empresa selecciona a sus candidatos.
-- **RN-19** La empresa publica directamente sus ofertas; el admin supervisa y puede cerrar.
+- **RN-19** Toda oferta requiere aprobación municipal para publicarse: la empresa envía a
+  revisión, el admin aprueba o rechaza, y solo las `publicada` pueden recibir
+  postulaciones. Editar una publicada la devuelve a revisión.
 - **RN-20** Conservación del historial.
 - **RN-21** Un administrador no puede desactivar su propia cuenta (backend como autoridad).
 
@@ -214,7 +221,8 @@ Estados: **IMPLEMENTADO**, **PARCIAL**, **PENDIENTE**, **FUERA DE ALCANCE**, **R
 
 Solicitud pública de afiliación (RUC verificado) → aprobación municipal → enlace de
 activación → la empresa define su contraseña → empresa habilitada → registra oferta →
-la publica directamente → el postulante consulta la bolsa pública → completa contacto + CV
+la envía a revisión municipal → la Municipalidad la aprueba (se publica) o la rechaza →
+el postulante consulta la bolsa pública (solo ofertas aprobadas) → completa contacto + CV
 → postula → la postulación aparece en la bandeja de la empresa → la empresa revisa el
 perfil/CV → cambia estados → contacta/selecciona → registra la contratación → el municipio
 supervisa y reporta.
@@ -319,6 +327,8 @@ Ajustes al flujo original aprobados posteriormente:
 - **Publicación directa de ofertas (sustituye RF-24 validación municipal previa)**: la
   empresa guarda la oferta en borrador y la publica con un botón; el admin solo supervisa
   (listado y cierre). Editar una oferta publicada la mantiene publicada.
+  *Decisión revertida en el §20 (2026-09-29): la aprobación municipal vuelve a ser
+  obligatoria.*
 - **Bolsa de empleo pública (RF-27/28/29)**: `/postulante/buscar` y
   `/postulante/oportunidades` y sus endpoints (`GET /api/ofertas`, `/oportunidades`) se
   consultan sin sesión; para postularse hay que iniciar sesión como postulante.
@@ -352,6 +362,7 @@ Ajustes al flujo original aprobados posteriormente:
   migración `NormalizarOfertasHeredadas` convierte los datos existentes:
   `pendiente → publicada` y `rechazada → borrador`; el ENUM conserva los valores
   históricos pero el sistema ya no los genera.
+  *Decisión revertida en el §20 (2026-09-29): se restablece la aprobación municipal.*
 
 ## 18. Anexo — endurecimiento de seguridad y errores (2026-09-10)
 
@@ -402,3 +413,49 @@ Cambios aplicados sin modificar el esquema de base de datos ni añadir variables
 - **Pendiente decidido**: las tablas en desuso (`formacion_academica`, `experiencia_laboral`,
   `habilidades`, `cursos_certificaciones`, `atenciones`) **no** se eliminan en esta pasada;
   requieren confirmación de que ningún entorno tiene datos reales.
+
+## 20. Anexo — Revisión municipal de ofertas (2026-09-29)
+
+Se restablece la aprobación municipal previa a la publicación (revierte la "Publicación
+directa" del §17). No cambia el esquema de base de datos: se reutilizan el ENUM y las
+columnas ya existentes (`estado`, `motivo_rechazo`, `validado_por`, `fecha_validacion`).
+
+- **Flujo vigente**: la empresa crea la oferta y esta nace **pendiente de revisión**
+  (`pendiente`), no visible en la bolsa pública. El administrador municipal la revisa y:
+  - **Aprueba** (`pendiente → publicada`): registra `validado_por`/`fecha_validacion`,
+    asigna `fecha_publicacion` y la oferta recién queda visible y postulable. No se
+    aprueba una oferta con `fecha_cierre` vencida.
+  - **Rechaza** (`pendiente → rechazada`) con `motivo` obligatorio; la oferta no es
+    visible y la empresa ve el motivo.
+- **Acciones de la empresa**:
+  - `PUT /api/empresa/ofertas/{id}/enviar-revision`: borrador o rechazada → pendiente
+    (limpia el motivo). Sustituye a `PUT /api/empresa/ofertas/{id}/publicar`, retirado.
+  - Editar una oferta **publicada** la devuelve a `pendiente` (re-revisión), limpia
+    `motivo_rechazo` y `validado_por`; la oferta deja de ser visible hasta la nueva
+    aprobación. Editar una rechazada conserva el motivo hasta reenviarla.
+  - `borrador` se conserva solo para ofertas heredadas (se les ofrece "Enviar a revisión").
+- **Autorización**: solo el rol `admin` accede a `PUT /api/admin/ofertas/{id}/aprobar` y
+  `/rechazar` (filtro `rol:admin`); el aprobador se toma de la sesión, nunca del cuerpo.
+  La empresa no puede aprobar sus ofertas ni modificar ofertas de otra empresa (404).
+- **Visibilidad**: la bolsa pública, el detalle y la postulación ya filtraban
+  `estado = publicada`; se mantiene y se verifica que pendientes/rechazadas no aparezcan.
+- **Auditoría**: se registran `enviar_revision_oferta`, `aprobar_oferta` y `rechazar_oferta`
+  en la tabla `auditoria`; se conserva `cerrar_oferta_admin`.
+
+### Endurecimiento asociado (misma pasada)
+
+- Booleanos de activación con parseo estricto (una cadena `"false"` desactiva; ya no
+  reactiva por el cast `(bool)`), también en `evaluacion_presencial`.
+- Fechas con validación calendárica (`AAAA-MM-DD` real, no solo formato) en ofertas,
+  contrataciones, perfil, actividades, oportunidades y rangos de dashboard/reportes;
+  un mes 13 responde `422` en lugar de `500`.
+- Enlaces de oportunidades solo `http(s)` (rechaza `javascript:`/`data:`); el frontend
+  también verifica el esquema antes de renderizar.
+- Rate limiting en las rutas públicas `verificar-ruc`, `solicitudes-empresa` y
+  `activar-cuenta` (token bucket por IP).
+- `jwt.secret` obligatorio (fail-fast): sin secreto la API no firma tokens.
+- Cabeceras de seguridad en todas las respuestas (`X-Frame-Options`,
+  `X-Content-Type-Options`, `Referrer-Policy`, `X-Permitted-Cross-Domain-Policies`,
+  `X-Download-Options`). La CSP del SPA debe entregarla el hosting del frontend; la API
+  solo sirve JSON (Swagger UI es estático y usa CDN), por eso no se aplica CSP global.
+- Editar una oportunidad desactivada ya no la republica sola (`activo` se preserva).
