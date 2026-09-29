@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  actualizarOferta, cerrarOferta, crearOferta, listarOfertasEmpresa, publicarOferta,
+  actualizarOferta, cerrarOferta, crearOferta, enviarOfertaARevision, listarOfertasEmpresa,
 } from '../../services/ofertas';
 import { listarCategorias } from '../../services/categorias';
 import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
@@ -35,7 +35,7 @@ export default function Ofertas() {
     <div>
       <PageHeader
         titulo="Ofertas laborales"
-        descripcion="Registra tus ofertas y publícalas directamente; no requieren revisión municipal."
+        descripcion="Registra tus ofertas; la Municipalidad las revisa antes de publicarlas en la bolsa de empleo."
         accion={editor ? (
           <Boton variante="gris" onClick={() => setEditor(null)}>
             <i className="ti ti-x" />Cancelar
@@ -54,9 +54,9 @@ export default function Ofertas() {
         <EditorOferta
           categorias={categorias || []}
           inicial={editor.id ? ofertas?.find((o) => o.id === editor.id) : null}
-          alGuardar={() => {
+          alGuardar={(mensaje) => {
             setEditor(null);
-            setNota('Oferta guardada. Cuando esté lista, publíquela desde la lista de ofertas.');
+            setNota(mensaje);
             refrescar();
           }}
         />
@@ -82,7 +82,7 @@ export default function Ofertas() {
         <div className="list-card">
           <div className="empty-card">
             <i className="ti ti-briefcase" />
-            <p>Aún no registra ofertas. Cree una y publíquela para que los postulantes puedan verla.</p>
+            <p>Aún no registra ofertas. Cree una y envíela a revisión municipal.</p>
           </div>
         </div>
       )}
@@ -126,12 +126,25 @@ function OfertaFila({ oferta, alAccion, alEditar }) {
       <div className="oferta-acciones" style={{ marginTop: '12px' }}>
         {oferta.estado === 'borrador' && (
           <>
-            <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => publicarOferta(oferta.id), 'Oferta publicada. Ya está disponible para los postulantes.')}>Publicar</Boton>
+            <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta enviada a revisión municipal.')}>Enviar a revisión</Boton>
             <Boton variante="gris" onClick={alEditar}>Editar</Boton>
+          </>
+        )}
+        {oferta.estado === 'pendiente' && (
+          <>
+            <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem', fontWeight: 600 }}>En revisión municipal: aún no es visible para los postulantes.</span>
+            <Boton variante="gris" onClick={alEditar}>Editar</Boton>
+          </>
+        )}
+        {oferta.estado === 'rechazada' && (
+          <>
+            <Boton variante="gris" onClick={alEditar}>Editar</Boton>
+            <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta reenviada a revisión municipal.')}>Reenviar a revisión</Boton>
           </>
         )}
         {oferta.estado === 'publicada' && (
           <>
+            <span style={{ color: 'var(--green-tx)', fontSize: '0.85rem', fontWeight: 600 }}>Publicada: visible para los postulantes.</span>
             <Boton variante="gris" onClick={alEditar}>Editar</Boton>
             <Boton variante="peligro" cargando={enviando} onClick={() => actuar(() => cerrarOferta(oferta.id), 'Oferta cerrada.')}>Cerrar oferta</Boton>
           </>
@@ -171,7 +184,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
   const guardar = async () => {
     try {
       await ejecutar();
-      alGuardar();
+      alGuardar(esNueva ? 'Oferta guardada y enviada a revisión municipal.' : 'Cambios guardados.');
     } catch (e) {
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
@@ -187,7 +200,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
   return (
     <div className="list-card">
       <div className="list-card-head">
-        <h2>{esNueva ? 'Nueva oferta (se guarda en borrador)' : `Editar oferta: ${inicial.puesto}`}</h2>
+        <h2>{esNueva ? 'Nueva oferta (se envía a revisión municipal)' : `Editar oferta: ${inicial.puesto}`}</h2>
       </div>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
@@ -226,8 +239,8 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
       autoResize(e);
     }} /></label>
       <div className="form-fila">
-        <Boton variante="primario" cargando={enviando} onClick={guardar}>{esNueva ? 'Guardar borrador' : 'Guardar cambios'}</Boton>
-        {!esNueva && inicial.estado === 'publicada' && <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>Al guardar la oferta se mantendrá publicada.</span>}
+        <Boton variante="primario" cargando={enviando} onClick={guardar}>{esNueva ? 'Enviar a revisión' : 'Guardar cambios'}</Boton>
+        {!esNueva && inicial.estado === 'publicada' && <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>Al guardar, la oferta volverá a revisión municipal.</span>}
       </div>
     </div>
   );

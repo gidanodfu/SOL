@@ -67,7 +67,7 @@ class PostulanteService
             'telefono'   => ['telefono'],
             'direccion'  => ['max:255'],
             'distrito'   => ['max:100'],
-            'fecha_nacimiento' => ['regex:/^\d{4}-\d{2}-\d{2}$/'],
+            'fecha_nacimiento' => ['fecha'],
         ]);
 
         // Perfil y cuenta se actualizan juntos: un fallo parcial dejaría datos

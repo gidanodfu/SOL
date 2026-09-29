@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, IdCard, LayoutDashboard, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
+import BotonTema from '../components/BotonTema';
 import { perfilPostulante } from '../services/postulante';
 import { useClickFuera } from '../hooks/useClickFuera';
 
@@ -57,6 +58,8 @@ export function LayoutPostulante() {
             </NavLink>
           ))}
         </nav>
+
+        <BotonTema variante="header" />
 
         <div ref={bloqueRef} className="user-menu">
           <button

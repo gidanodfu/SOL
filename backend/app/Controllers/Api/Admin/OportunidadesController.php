@@ -40,7 +40,7 @@ class OportunidadesController extends BaseApiController
     public function activacion($id)
     {
         $cuerpo = $this->cuerpo();
-        (new OportunidadService())->cambiarActivacion((int) $id, (bool) ($cuerpo['activo'] ?? false));
+        (new OportunidadService())->cambiarActivacion((int) $id, $this->booleanoEstricto($cuerpo['activo'] ?? null));
 
         return $this->sinContenido('Estado de la oportunidad actualizado.');
     }

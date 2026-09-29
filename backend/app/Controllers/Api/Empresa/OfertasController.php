@@ -41,14 +41,14 @@ class OfertasController extends BaseApiController
     {
         $id = (new OfertaService())->crear($this->empresaId, $this->cuerpo());
 
-        return $this->creado(['id' => $id], 'Oferta guardada en borrador.');
+        return $this->creado(['id' => $id], 'Oferta enviada a revisión municipal.');
     }
 
-    public function publicar($id)
+    public function enviarRevision($id)
     {
-        (new OfertaService())->publicar($this->empresaId, (int) $id);
+        (new OfertaService())->enviarARevision($this->empresaId, (int) $id);
 
-        return $this->sinContenido('Oferta publicada. Ya está disponible para los postulantes.');
+        return $this->sinContenido('Oferta enviada a revisión municipal.');
     }
 
     public function update($id)

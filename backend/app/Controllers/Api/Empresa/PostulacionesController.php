@@ -64,7 +64,8 @@ class PostulacionesController extends BaseApiController
     public function activacion($id)
     {
         $cuerpo = $this->cuerpo();
-        $this->servicio->cambiarActivacionDeEmpresa($this->empresaId, (int) $id, (bool) ($cuerpo['activo'] ?? false));
+        // Booleano estricto: `(bool) "false"` sería true y reactivaría la postulación.
+        $this->servicio->cambiarActivacionDeEmpresa($this->empresaId, (int) $id, $this->booleanoEstricto($cuerpo['activo'] ?? null));
 
         return $this->sinContenido('Estado de activación actualizado.');
     }

@@ -7,7 +7,7 @@ export const ROLES = {
   POSTULANTE: 'postulante',
 };
 
-export const ESTADOS_OFERTA = ['borrador', 'publicada', 'cerrada'];
+export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'rechazada', 'cerrada'];
 export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
 
 export const TIPOS_EMPLEO = [
@@ -33,7 +33,9 @@ export const ETIQUETA_TIPO_EMPLEO = {
 
 export const ETIQUETA_ESTADO_OFERTA = {
   borrador: 'Borrador',
+  pendiente: 'Pendiente de revisión',
   publicada: 'Publicada',
+  rechazada: 'Rechazada',
   cerrada: 'Cerrada',
 };
 

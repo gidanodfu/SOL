@@ -35,10 +35,10 @@ curl -s -o /dev/null -w "cv http:%{http_code}\n" -X POST "$B/api/postulante/cv" 
 echo "== 3. duplicado de postulación a oferta 1 => 409 =="
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/postulante/postulaciones" -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d '{"oferta_id":1}'
 
-echo "== 4. empresa crea y publica oferta nueva (flujo vigente) =="
+echo "== 4. empresa crea oferta y el admin la aprueba (revisión municipal) =="
 OID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Digitador","categoria_id":1,"ubicacion":"JLO","vacantes":2,"habilidades":["Word","Excel"]}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
-curl -s -o /dev/null -X PUT "$B/api/empresa/ofertas/$OID/publicar" -H "Authorization: Bearer $TE"
-echo "oferta nueva publicada id=$OID"
+curl -s -o /dev/null -w "aprobar http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$OID/aprobar" -H "Authorization: Bearer $TA"
+echo "oferta nueva aprobada id=$OID"
 
 echo "== 5. postular (ok), duplicar (409), retirar, postular de nuevo (RN-14 solo activa) =="
 P1=$(curl -s -X POST "$B/api/postulante/postulaciones" -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d "{\"oferta_id\":$OID}")

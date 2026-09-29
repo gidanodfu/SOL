@@ -15,6 +15,19 @@ export const errorApi = (e) => {
 export const soloDigitos = (v) => String(v ?? '').replace(/\D/g, '');
 export const esTelefonoValido = (v) => v == null || v === '' || /^(?:\d{9}|\d{11})$/.test(String(v));
 
+/**
+ * Enlaces de usuario: solo http(s). Evita que una URL manipulada (javascript:,
+ * data:) se convierta en un href ejecutable (el backend también lo valida).
+ */
+export const esEnlaceSeguro = (url) => {
+  try {
+    const { protocol } = new URL(String(url));
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 export const fechaHora = (v) => (v ? new Date(v).toLocaleString('es-PE') : '—');
 export const fecha = (v) => (v ? new Date(v).toLocaleDateString('es-PE') : '—');
 

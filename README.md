@@ -38,8 +38,14 @@ MySQL es la fuente de verdad.
   (`sunat.token`); el admin aprueba/rechaza desde una bandeja y la cuenta se activa con un
   enlace de un solo uso (`/activar-cuenta`). El login usa el correo corporativo (el RUC
   también funciona).
-- **Ofertas laborales**: la empresa guarda borradores y las publica directamente; el admin
-  supervisa y puede cerrarlas. Estados: `borrador → publicada → cerrada`.
+- **Ofertas laborales**: toda oferta nace **pendiente de revisión municipal**; el admin la
+  aprueba (pasa a `publicada`, recién visible y postulable) o la rechaza con motivo. La
+  empresa envía a revisión y puede reenviar tras correcciones; editar una oferta publicada
+  la devuelve a revisión. Estados: `pendiente → publicada|rechazada → cerrada`
+  (`borrador` solo para datos heredados).
+- **Modo oscuro**: tema claro/oscuro global (admin, empresa, postulante y público) con una
+  única fuente (`ThemeContext` + variables CSS) y preferencia persistida; botón con iconos
+  Lucide en el sidebar y las cabeceras.
 - **Bolsa de empleo pública**: `/postulante/buscar` y las ofertas se consultan sin sesión;
   postular requiere cuenta de postulante.
 - **Postulantes**: registro manual con auto-login (DNI) o ingreso con Google; perfil =
@@ -391,11 +397,13 @@ lo apaga. Requieren MySQL migrado y con los seeds base:
 docker compose up -d mysql
 cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark db:seed DatosPruebaSeeder && cd ..
 ./tests/smoke/test_api.sh              # auth por rol, alta admin de empresas, CV
-./tests/smoke/test_ofertas.sh          # ciclo de ofertas: publicación directa y cierre
+./tests/smoke/test_ofertas.sh          # ciclo de ofertas: revisión municipal, reenvío y cierre
+./tests/smoke/test_aprobacion_ofertas.sh # aprobación/rechazo, visibilidad y mass assignment
 ./tests/smoke/test_fase3.sh            # bolsa/búsqueda, postulaciones y perfil (contacto + CV)
 ./tests/smoke/test_fase4.sh            # bandeja empresa, estados, CV autorizado
 ./tests/smoke/test_fase5.sh            # actividades, difusión y permisos por rol
 ./tests/smoke/test_fase6.sh            # contrataciones y reportes
+./tests/smoke/test_seguridad.sh        # booleanos, fechas, URLs, rate limit y cabeceras
 ./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación
 ```
 
@@ -419,6 +427,9 @@ en [`tests/README.md`](tests/README.md).
 - Pendiente antes de producción (ver matriz): autorizar en la consola de Google el origen
   del frontend, revisar credenciales Supabase/SMTP/SUNAT y eliminar con una migración las
   tablas de perfil en desuso si ningún entorno tiene datos reales.
+- La API envía cabeceras de seguridad (`secureheaders`) pero no aplica CSP global: sirve
+  JSON y el Swagger UI es estático con CDN. Al desplegar el SPA, configurar la
+  Content-Security-Policy en el hosting del frontend.
 
 ## Convenciones del backend
 
@@ -462,6 +473,7 @@ encabezado de los archivos de código propios.
 | 11 | Endurecimiento: rate limiting, límite de 4 CV/mes, validación de teléfono, `password_hash` fuera de respuestas, errores saneados | `647c1f8`, `eb4664a` |
 | 12 | Estabilización: logout único, admin inicial `MDJLO-SOL` vía `.env`, seeds idempotentes y separación de fixtures, README/MySQLi | `0a04284` |
 | 13 | Saneamiento integral: protección de autodesactivación del admin, retiro del filtro "Puesto o empresa", integridad (historial de postulación, contratación activa, total con `q`, transacciones), limpieza de dependencias y documentación sincronizada | — |
+| 14 | Revisión municipal de ofertas (aprobación/rechazo), modo oscuro global con persistencia, sidebar unificado con panel móvil y endurecimiento (booleanos, fechas, URLs, rate limit, cabeceras) | — |
 
 Cada RF/RN/RT con su estado y ubicación está trazado en
 [`docs/matriz-cumplimiento.md`](docs/matriz-cumplimiento.md). Pruebas en

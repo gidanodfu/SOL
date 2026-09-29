@@ -12,13 +12,13 @@
   color: var(--ink);
 }
 
-/* ---------------- BARRA LATERAL (visual común en styles.css) ---------------- */
+/* ---------------- BARRA LATERAL (visual común en styles.css) ----------------
+   Mismo mecanismo que el panel de empresa: la barra vive en el flujo (sticky)
+   y el contenido se ajusta solo al contraerla, sin saltos ni márgenes fijos. */
 .app-admin .sidebar {
-  position: fixed;
-  left: 0;
+  position: sticky;
   top: 0;
-  bottom: 0;
-  z-index: 100;
+  height: 100vh;
 }
 
 .pdefin {
@@ -27,17 +27,11 @@
 
 /* ---------------- CONTENIDO / BARRA SUPERIOR ---------------- */
 .app-admin .main {
-  margin-left: var(--sidebar-w);
-  width: calc(100% - var(--sidebar-w));
+  flex: 1;
+  min-width: 0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  transition: margin-left 0.18s ease, width 0.18s ease;
-}
-
-.app-admin.colapsado .main {
-  margin-left: var(--sidebar-w-colapsado);
-  width: calc(100% - var(--sidebar-w-colapsado));
 }
 
 .app-admin .topbar {
@@ -256,6 +250,11 @@
 
 @media (max-width: 900px) {
   .app-admin .analytics { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 860px) {
+  /* Panel móvil superpuesto (reglas generales en styles.css). */
+  .app-admin .sidebar { position: fixed; }
 }
 
 @media (max-width: 680px) {

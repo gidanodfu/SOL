@@ -97,8 +97,8 @@ class ActividadService
             'lugar'        => ['max:150'],
             'organizador'  => ['max:150'],
             'modalidad'    => ['enum:' . implode(',', self::MODALIDADES)],
-            'fecha_inicio' => ['required', 'regex:/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$/'],
-            'fecha_fin'    => ['regex:/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?$/'],
+            'fecha_inicio' => ['required', 'fecha_hora'],
+            'fecha_fin'    => ['fecha_hora'],
         ]);
 
         $inicio = $datos['fecha_inicio'];

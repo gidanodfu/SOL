@@ -9,10 +9,41 @@ use App\Exceptions\ApiException;
 /**
  * Validación de datos recibidos desde el frontend. El backend siempre revalida
  * lo que React envía (RT-22). Reglas planas: required, min, max, email, ruc, dni,
- * regex, enum, igual (confirmación de contraseñas).
+ * telefono, fecha, fecha_hora, regex, enum, igual (confirmación de contraseñas).
  */
 final class Validador
 {
+    /**
+     * Fecha calendárica AAAA-MM-DD (rechaza meses/días inexistentes, no solo
+     * el formato). El regex por sí solo acepta 2026-13-01 o 2026-02-31.
+     */
+    public static function esFecha(string $valor): bool
+    {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $valor, $m) !== 1) {
+            return false;
+        }
+
+        return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+    }
+
+    /**
+     * Fecha y hora calendárica; admite `AAAA-MM-DD` y `AAAA-MM-DD HH:MM[:SS]`.
+     */
+    public static function esFechaHora(string $valor): bool
+    {
+        if (self::esFecha($valor)) {
+            return true;
+        }
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/', $valor, $m) !== 1) {
+            return false;
+        }
+
+        return self::esFecha($m[1])
+            && (int) $m[2] <= 23
+            && (int) $m[3] <= 59
+            && (! isset($m[4]) || (int) $m[4] <= 59);
+    }
+
     /**
      * @param array<string, mixed> $datos
      * @param array<string, list<string>> $reglas campo => reglas
@@ -51,6 +82,14 @@ final class Validador
 
                     case $regla === 'telefono' && ! preg_match('/^(?:\d{9}|\d{11})$/', (string) $valor):
                         $errores[$campo] = "El campo {$etiqueta} debe tener 9 u 11 dígitos.";
+                        break 2;
+
+                    case $regla === 'fecha' && ! self::esFecha((string) $valor):
+                        $errores[$campo] = "El campo {$etiqueta} debe ser una fecha válida (AAAA-MM-DD).";
+                        break 2;
+
+                    case $regla === 'fecha_hora' && ! self::esFechaHora((string) $valor):
+                        $errores[$campo] = "El campo {$etiqueta} debe ser una fecha y hora válidas.";
                         break 2;
 
                     case str_starts_with($regla, 'min:') && mb_strlen((string) $valor) < (int) substr($regla, 4):

@@ -19,7 +19,7 @@ import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION } from '../../const
 import { errorApi } from '../../utils';
 
 const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
-const ORDEN_OFERTAS = ['publicada', 'borrador', 'cerrada'];
+const ORDEN_OFERTAS = ['pendiente', 'publicada', 'rechazada', 'borrador', 'cerrada'];
 
 export default function Dashboard() {
   const [form, setForm] = useState({ desde: '', hasta: '' });
@@ -138,6 +138,10 @@ function GrillaKpis({ d }) {
     {
       nombre: 'Postulantes activos', valor: d.postulantes_activos, descripcion: 'ciudadanos con cuenta', color: 'green',
       icono: Users, tendencia: 'Usuarios activos',
+    },
+    {
+      nombre: 'Ofertas por revisar', valor: d.ofertas?.pendiente, descripcion: 'pendientes de revisión', color: 'amber',
+      icono: Briefcase, tendencia: 'esperando aprobación municipal',
     },
     {
       nombre: 'Empresas con procesos', valor: d.empresas_con_procesos, descripcion: 'selección en curso', color: 'amber',

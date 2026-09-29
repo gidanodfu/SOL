@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Smoke de flujos nuevos de desarrollo (Anexo 2026-09):
 # auto-registro de empresas (RUC SUNAT) -> aprobación admin -> enlace ->
-# activación -> login por correo; publicación directa de ofertas + cierre admin;
+# activación -> login por correo; revisión municipal de ofertas + cierre admin;
 # bolsa pública sin sesión; dashboard admin enriquecido.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
@@ -60,9 +60,10 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content
 echo "== 12. enlace reutilizado => 401 =="
 curl -s -o /dev/null -w "%{http_code}\n" "$B/api/activar-cuenta/$TOKEN"
 
-echo "== 13. oferta: crear borrador y PUBLICAR directo (sin admin) =="
+echo "== 13. oferta: crear (queda pendiente) y aprobar por la Municipalidad =="
 OID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Analista contable","categoria_id":2,"ubicacion":"Lima","vacantes":1,"remuneracion":2500,"habilidades":["Excel"]}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
-curl -s -o /dev/null -w "publicar http:%{http_code}\n" -X PUT "$B/api/empresa/ofertas/$OID/publicar" -H "Authorization: Bearer $TE"
+curl -s "$B/api/empresa/ofertas/$OID" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado inicial:",d["estado"])'
+curl -s -o /dev/null -w "aprobar admin http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$OID/aprobar" -H "Authorization: Bearer $TA"
 curl -s "$B/api/empresa/ofertas/$OID" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado:",d["estado"],"| publicado:",d.get("fecha_publicacion"))'
 
 echo "== 14. bolsa pública SIN sesión: listar y detalle =="

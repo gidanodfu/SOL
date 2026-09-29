@@ -39,14 +39,15 @@ class OfertaRepository
     }
 
     /**
-     * Bandeja municipal: pendientes de validación primero y luego publicadas (RF-24/25).
+     * Bandeja municipal: pendientes de revisión primero; dentro de cada estado,
+     * las más recientes (RF-24/25).
      *
      * @return list<array<string, mixed>>
      */
     public function paraAdmin(?string $estado = null): array
     {
         $builder = $this->base()
-            ->orderBy('ofertas.estado', 'ASC')
+            ->orderBy("FIELD(ofertas.estado, 'pendiente', 'rechazada', 'borrador', 'publicada', 'cerrada')", '', false)
             ->orderBy('ofertas.created_at', 'DESC');
 
         if ($estado !== null) {

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Entities\Usuario;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use RuntimeException;
 
 /**
  * Emisión y verificación de tokens de acceso JWT (RF-01/RF-02, RT-18).
@@ -22,6 +23,12 @@ class JwtService
     {
         $this->secreto = (string) env('jwt.secret');
         $this->expiraMinutos = (int) (env('jwt.accessExpiresMinutes') ?: 120);
+
+        // Fail-fast: sin secreto, los tokens serían forjables. Mejor un error
+        // explícito de configuración que arrancar con firma vacía.
+        if (trim($this->secreto) === '') {
+            throw new RuntimeException('Falta jwt.secret en la configuración; no se pueden firmar tokens de sesión.');
+        }
     }
 
     public function crearAccessToken(Usuario $usuario): string
