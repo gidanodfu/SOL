@@ -46,6 +46,12 @@ MySQL es la fuente de verdad.
 - **Modo oscuro**: tema claro/oscuro global (admin, empresa, postulante y público) con una
   única fuente (`ThemeContext` + variables CSS) y preferencia persistida; botón con iconos
   Lucide en el sidebar y las cabeceras.
+- **Texto enriquecido (RTE)**: descripción/funciones/requisitos de oferta y descripción de
+  actividades aceptan formato básico (negrita, cursiva, subrayado, listas, enlaces) con
+  **sanitización en backend** (allow-list; solo enlaces `http(s)`), contador de palabras y
+  de caracteres sobre el **texto visible** (máx. 10.000, aviso desde 9.000). El editor
+  (TiPTap) se carga de forma diferida y el render usa DOMPurify; el texto plano heredado
+  se sigue mostrando y editando sin cambios.
 - **Bolsa de empleo pública**: `/postulante/buscar` y las ofertas se consultan sin sesión;
   postular requiere cuenta de postulante.
 - **Postulantes**: registro manual con auto-login (DNI) o ingreso con Google; perfil =
@@ -404,6 +410,7 @@ cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark d
 ./tests/smoke/test_fase5.sh            # actividades, difusión y permisos por rol
 ./tests/smoke/test_fase6.sh            # contrataciones y reportes
 ./tests/smoke/test_seguridad.sh        # booleanos, fechas, URLs, rate limit y cabeceras
+./tests/smoke/test_rte.sh              # RTE: saneado, enlaces, texto plano y límite 10k
 ./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación
 ```
 

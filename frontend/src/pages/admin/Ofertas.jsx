@@ -9,6 +9,10 @@ import {
   rechazarOfertaAdmin,
 } from '../../services/ofertas';
 import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
+import { Check, Eye, Lock, XCircle } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO } from '../../constants';
 import { errorApi, fechaCalendario, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
@@ -24,6 +28,7 @@ const FILTROS = [
 export default function Ofertas() {
   const queryClient = useQueryClient();
   const [filtro, setFiltro] = useState('');
+  const [seleccionada, setSeleccionada] = useState(null);
   const [nota, setNota] = useState(null);
 
   const { data, isLoading } = useQuery({
@@ -31,10 +36,11 @@ export default function Ofertas() {
     queryFn: () => listarOfertasAdmin({ estado: filtro || undefined }),
   });
 
-  const refrescar = () => {
+  const refrescar = ({ cerrar = false } = {}) => {
     queryClient.invalidateQueries({ queryKey: ['ofertas-admin'] });
     queryClient.invalidateQueries({ queryKey: ['oferta-admin-detalle'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-admin'] });
+    if (cerrar) setSeleccionada(null);
   };
 
   return (
@@ -76,36 +82,47 @@ export default function Ofertas() {
           </thead>
           <tbody>
             {data.map((o) => (
-              <Fila key={o.id} oferta={o} alCambio={setNota} alRefrescar={refrescar} />
+              <tr key={o.id}>
+                <td><Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
+                <td><strong>{o.puesto}</strong></td>
+                <td>{o.razon_social}</td>
+                <td>{o.ruc}</td>
+                <td>{o.vacantes}</td>
+                <td>{o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : '—'}</td>
+                <td>{fechaHora(o.created_at)}</td>
+                <td>
+                  <div className="acciones">
+                    <Boton variante="gris" onClick={() => setSeleccionada(o)}>
+                      <Eye size={16} aria-hidden="true" />Ver
+                    </Boton>
+                  </div>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <DetalleOferta
+        oferta={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={(mensaje) => { setNota(mensaje); refrescar({ cerrar: true }); }}
+      />
     </Tarjeta>
   );
 }
 
-function Fila({ oferta, alCambio, alRefrescar }) {
-  const [abierta, setAbierta] = useState(false);
+function DetalleOferta({ oferta, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
-  const { data: detalle, isLoading: cargandoDetalle } = useQuery({
-    queryKey: ['oferta-admin-detalle', oferta.id],
+  const { data: detalle, isLoading } = useQuery({
+    queryKey: ['oferta-admin-detalle', oferta?.id],
     queryFn: () => detalleOfertaAdmin(oferta.id),
-    enabled: abierta,
+    enabled: Boolean(oferta?.id),
   });
-  const o = detalle || oferta;
 
-  const accion = async (fn, mensaje) => {
-    try {
-      await ejecutar(fn);
-      setError(null);
-      alCambio(mensaje);
-      alRefrescar();
-    } catch (e) {
-      setError(errorApi(e));
-    }
-  };
+  if (!oferta) return null;
+  const o = detalle || oferta;
 
   const aprobar = () => {
     if (!window.confirm(`¿Aprobar y publicar la oferta "${oferta.puesto}"?`)) return;
@@ -118,56 +135,91 @@ function Fila({ oferta, alCambio, alRefrescar }) {
     accion(() => rechazarOfertaAdmin(oferta.id, motivo.trim()), 'Oferta rechazada.');
   };
 
+  const accion = async (fn, mensaje) => {
+    try {
+      await ejecutar(fn);
+      setError(null);
+      alCambio(mensaje);
+    } catch (e) {
+      setError(errorApi(e));
+    }
+  };
+
+  const acciones = {
+    pendiente: (
+      <>
+        <Boton variante="exito" cargando={enviando} onClick={aprobar}>
+          <Check size={16} aria-hidden="true" />Aprobar
+        </Boton>
+        <Boton variante="peligro" cargando={enviando} onClick={rechazar}>
+          <XCircle size={16} aria-hidden="true" />Rechazar
+        </Boton>
+      </>
+    ),
+    publicada: (
+      <Boton variante="peligro" cargando={enviando} onClick={() => accion(() => cerrarOfertaAdmin(oferta.id), 'Oferta cerrada.')}>
+        <Lock size={16} aria-hidden="true" />Cerrar
+      </Boton>
+    ),
+  }[o.estado] || null;
+
   return (
-    <>
-      <tr>
-        <td><Estado valor={oferta.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
-        <td><strong>{oferta.puesto}</strong></td>
-        <td>{oferta.razon_social}</td>
-        <td>{oferta.ruc}</td>
-        <td>{oferta.vacantes}</td>
-        <td>{oferta.fecha_cierre ? fechaCalendario(oferta.fecha_cierre) : '—'}</td>
-        <td>{fechaHora(oferta.created_at)}</td>
-        <td>
-          <div className="acciones">
-            <Boton variante="gris" onClick={() => setAbierta(!abierta)}>{abierta ? 'Ocultar' : 'Ver'}</Boton>
-            {oferta.estado === 'pendiente' && (
-              <>
-                <Boton variante="exito" cargando={enviando} onClick={aprobar}>Aprobar</Boton>
-                <Boton variante="peligro" cargando={enviando} onClick={rechazar}>Rechazar</Boton>
-              </>
-            )}
-            {oferta.estado === 'publicada' && (
-              <Boton variante="peligro" cargando={enviando} onClick={() => accion(() => cerrarOfertaAdmin(oferta.id), 'Oferta cerrada.')}>Cerrar</Boton>
-            )}
-          </div>
-        </td>
-      </tr>
-      {abierta && (
-        <tr>
-          <td colSpan="8">
-            <Mensaje>{error}</Mensaje>
-            {cargandoDetalle && !detalle && <p className="vacio">Cargando detalle…</p>}
-            <div className="descripcion">
-              <div><b>Categoría</b>{o.categoria_nombre || '—'}</div>
-              <div><b>Tipo</b>{o.tipo_empleo ? ETIQUETA_TIPO_EMPLEO[o.tipo_empleo] : '—'}</div>
-              <div><b>Ubicación</b>{o.ubicacion || '—'}</div>
-              <div><b>Remuneración</b>{o.remuneracion ? `S/ ${o.remuneracion}` : 'No indicada'}</div>
-              <div><b>Formación</b>{o.formacion_requerida || '—'}</div>
-              <div><b>Experiencia</b>{o.experiencia_requerida || '—'}</div>
-              <div><b>Habilidades</b>{o.habilidades?.length ? o.habilidades.join(', ') : '—'}</div>
-              <div><b>Postulaciones</b>{o.cantidad_postulaciones ?? '—'}</div>
-              {o.fecha_validacion && (
-                <div><b>Revisada</b>{fechaHora(o.fecha_validacion)}</div>
-              )}
-            </div>
-            <p className='pdefin'><strong>Descripción:</strong>{'\n'} {o.descripcion || '—'}</p>
-            <p className='pdefin'><strong>Funciones:</strong>{'\n'} {o.funciones || '—'}</p>
-            <p className='pdefin'><strong>Requisitos:</strong>{'\n'} {o.requisitos || '—'}</p>
-            {o.motivo_rechazo && <p><strong style={{ color: 'var(--rojo)' }}>Motivo de rechazo:</strong> {o.motivo_rechazo}</p>}
-          </td>
-        </tr>
+    <Modal
+      abierto={Boolean(oferta)}
+      titulo={o.puesto}
+      subtitulo={`${o.razon_social || 'Empresa'} · RUC ${o.ruc || '—'}`}
+      alCerrar={alCerrar}
+      acciones={acciones}
+      tamano="ancho"
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
+        {o.fecha_validacion && <span style={{ color: 'var(--text-3)', fontSize: '0.82rem' }}>Revisada el {fechaHora(o.fecha_validacion)}</span>}
+      </div>
+
+      <Mensaje>{error}</Mensaje>
+      {isLoading && !detalle && <p className="vacio">Cargando detalle…</p>}
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'Categoría', valor: o.categoria_nombre },
+          { etiqueta: 'Tipo de empleo', valor: o.tipo_empleo ? ETIQUETA_TIPO_EMPLEO[o.tipo_empleo] : null },
+          { etiqueta: 'Ubicación', valor: o.ubicacion },
+          { etiqueta: 'Vacantes', valor: o.vacantes },
+          { etiqueta: 'Remuneración', valor: o.remuneracion ? `S/ ${o.remuneracion}` : null },
+          { etiqueta: 'Fecha de cierre', valor: o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : null },
+          { etiqueta: 'Formación requerida', valor: o.formacion_requerida },
+          { etiqueta: 'Experiencia requerida', valor: o.experiencia_requerida },
+          { etiqueta: 'Habilidades', valor: o.habilidades?.length ? o.habilidades.join(', ') : null },
+          { etiqueta: 'Postulaciones', valor: o.cantidad_postulaciones },
+          { etiqueta: 'Enviada', valor: fechaHora(o.created_at) },
+        ]}
+      />
+
+      {o.motivo_rechazo && (
+        <div className="modal-seccion">
+          <h3>Motivo de rechazo</h3>
+          <p className="modal-texto" style={{ color: 'var(--red-tx)' }}>{o.motivo_rechazo}</p>
+        </div>
       )}
-    </>
+      {o.descripcion && (
+        <div className="modal-seccion">
+          <h3>Descripción</h3>
+          <ContenidoEnriquecido>{o.descripcion}</ContenidoEnriquecido>
+        </div>
+      )}
+      {o.funciones && (
+        <div className="modal-seccion">
+          <h3>Funciones</h3>
+          <ContenidoEnriquecido>{o.funciones}</ContenidoEnriquecido>
+        </div>
+      )}
+      {o.requisitos && (
+        <div className="modal-seccion">
+          <h3>Requisitos</h3>
+          <ContenidoEnriquecido>{o.requisitos}</ContenidoEnriquecido>
+        </div>
+      )}
+    </Modal>
   );
 }

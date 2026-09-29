@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cambiarEstadoEmpresa, crearEmpresa, listarEmpresas, resetPasswordEmpresa } from '../../services/empresas';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
-import { errorApi, fecha, soloDigitos } from '../../utils';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import { Check, Eye, KeyRound, Power } from 'lucide-react';
+import { errorApi, fecha, fechaCalendario, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const estadosEmpresa = { activo: 'activo', inactivo: 'inactivo' };
@@ -13,6 +16,7 @@ export default function Empresas() {
   const [filtros, setFiltros] = useState({ estado: '', q: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [nota, setNota] = useState(null);
+  const [seleccionada, setSeleccionada] = useState(null);
   const { ejecutar, enviando, error, setError } = useAccion(async (fn) => fn());
 
   const { data, isLoading } = useQuery({
@@ -20,7 +24,10 @@ export default function Empresas() {
     queryFn: () => listarEmpresas(Object.fromEntries(Object.entries(filtros).filter(([, v]) => v))),
   });
 
-  const refrescar = () => queryClient.invalidateQueries({ queryKey: ['empresas'] });
+  const refrescar = () => {
+    queryClient.invalidateQueries({ queryKey: ['empresas'] });
+    queryClient.invalidateQueries({ queryKey: ['empresa-admin-detalle'] });
+  };
 
   const alternar = async (e) => {
     await ejecutar(() => cambiarEstadoEmpresa(e.id, e.estado === 'activo' ? 'inactivo' : 'activo'));
@@ -98,6 +105,9 @@ export default function Empresas() {
                 <td>{fecha(e.created_at)}</td>
                 <td>
                   <div className="acciones">
+                    <Boton variante="gris" onClick={() => setSeleccionada(e)}>
+                      <Eye size={16} aria-hidden="true" />Ver
+                    </Boton>
                     <Boton variante={e.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => alternar(e)} disabled={enviando}>
                       {e.estado === 'activo' ? 'Desactivar' : 'Activar'}
                     </Boton>
@@ -113,7 +123,93 @@ export default function Empresas() {
         {data?.total ?? 0} empresa(s). La Municipalidad puede registrar empresas tras la evaluación presencial; las
         empresas también pueden solicitar su afiliación desde el portal (ver la pestaña "Solicitudes").
       </p>
+
+      <DetalleEmpresa
+        empresa={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+      />
     </Tarjeta>
+  );
+}
+
+function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
+  const [error, setError] = useState(null);
+  const { ejecutar, enviando } = useAccion(async (fn) => fn());
+
+  if (!empresa) return null;
+
+  const alternar = async () => {
+    try {
+      await ejecutar(() => cambiarEstadoEmpresa(empresa.id, empresa.estado === 'activo' ? 'inactivo' : 'activo'));
+      setError(null);
+      alCambio(empresa.estado === 'activo' ? 'Empresa desactivada.' : 'Empresa activada.');
+    } catch (e) {
+      setError(errorApi(e));
+    }
+  };
+
+  const resetPassword = async () => {
+    const password = window.prompt(`Nueva contraseña para la empresa ${empresa.ruc} (mínimo 8 caracteres):`);
+    if (!password) return;
+    try {
+      await ejecutar(() => resetPasswordEmpresa(empresa.id, password));
+      setError(null);
+      window.alert('Contraseña restablecida. Entréguela de forma segura a la empresa.');
+    } catch (e) {
+      setError(errorApi(e));
+    }
+  };
+
+  return (
+    <Modal
+      abierto
+      titulo={empresa.razon_social}
+      subtitulo={`${empresa.nombre_comercial || 'Empresa afiliada'} · RUC ${empresa.ruc}`}
+      alCerrar={alCerrar}
+      tamano="ancho"
+      acciones={(
+        <>
+          <Boton variante={empresa.estado === 'activo' ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
+            <Power size={16} aria-hidden="true" />{empresa.estado === 'activo' ? 'Desactivar' : 'Activar'}
+          </Boton>
+          <Boton variante="gris" cargando={enviando} onClick={resetPassword}>
+            <KeyRound size={16} aria-hidden="true" />Cambiar clave
+          </Boton>
+        </>
+      )}
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={empresa.estado} diccionario={estadosEmpresa} />
+        {empresa.evaluacion_presencial ? (
+          <span className="badge badge-green"><Check size={13} aria-hidden="true" style={{ marginRight: 4 }} />Evaluada presencialmente</span>
+        ) : null}
+      </div>
+
+      <Mensaje>{error}</Mensaje>
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'RUC', valor: empresa.ruc },
+          { etiqueta: 'Razón social', valor: empresa.razon_social },
+          { etiqueta: 'Nombre comercial', valor: empresa.nombre_comercial },
+          { etiqueta: 'Representante', valor: empresa.representante },
+          { etiqueta: 'Correo', valor: empresa.email },
+          { etiqueta: 'Teléfono', valor: empresa.telefono },
+          { etiqueta: 'Dirección', valor: empresa.direccion },
+          { etiqueta: 'Usuario', valor: empresa.username },
+          { etiqueta: 'Estado del usuario', valor: empresa.user_estado },
+          { etiqueta: 'Registro', valor: fechaCalendario(empresa.created_at) },
+        ]}
+      />
+
+      {empresa.info_adicional && (
+        <div className="modal-seccion">
+          <h3>Información adicional</h3>
+          <p className="modal-texto">{empresa.info_adicional}</p>
+        </div>
+      )}
+    </Modal>
   );
 }
 

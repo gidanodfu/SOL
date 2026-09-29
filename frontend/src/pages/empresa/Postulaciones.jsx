@@ -7,6 +7,10 @@ import {
 } from '../../services/empresas';
 import { EstadoCarga, Boton, Estado, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import TarjetaRegistro from '../../components/TarjetaRegistro';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import { Download, UserCheck, UserRound, UserX } from 'lucide-react';
 import { ETIQUETA_ESTADO_POSTULACION, TRANSICIONES_POSTULACION } from '../../constants';
 import { listarOfertasEmpresa } from '../../services/ofertas';
 import { descargarUrl, errorApi, fechaCalendario, fechaHora } from '../../utils';
@@ -22,22 +26,11 @@ const FILTROS = [
   ['no_seleccionado', 'No seleccionados'],
 ];
 
-function iniciales(nombre = '') {
-  const siglas = (nombre || '')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((palabra) => palabra[0] || '')
-    .join('');
-  return (siglas || '—').toUpperCase();
-}
-
 export default function Postulaciones() {
   const queryClient = useQueryClient();
   const [filtro, setFiltro] = useState('');
   const [ofertaId, setOfertaId] = useState('');
-  const [abiertaId, setAbiertaId] = useState(null);
-  const [nota, setNota] = useState(null);
+  const [seleccionada, setSeleccionada] = useState(null);
 
   const { data: ofertas } = useQuery({ queryKey: ['ofertas-empresa'], queryFn: listarOfertasEmpresa });
 
@@ -82,7 +75,6 @@ export default function Postulaciones() {
         ))}
       </div>
 
-      <Mensaje tipo="exito">{nota}</Mensaje>
       <Mensaje>{error ? errorApi(error) : null}</Mensaje>
       {isLoading && <EstadoCarga />}
       {data && data.length === 0 && (
@@ -100,35 +92,56 @@ export default function Postulaciones() {
             <h2>Postulaciones recibidas</h2>
           </div>
           {data.map((p) => (
-            <div className="post-item" key={p.id}>
-              <PostFila
-                postulacion={p}
-                abierta={abiertaId === p.id}
-                onToggle={() => setAbiertaId(abiertaId === p.id ? null : p.id)}
-                alCambio={() => { setNota(null); refrescar(); }}
-              />
-            </div>
+            <TarjetaRegistro
+              key={p.id}
+              icono={UserRound}
+              titulo={`${p.nombres} ${p.apellidos}`}
+              badge={(
+                <>
+                  <Estado valor={p.estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
+                  {p.activo !== 1 && <span className="badge badge-gray" style={{ marginLeft: 6 }}>Desactivada</span>}
+                </>
+              )}
+              onClick={() => setSeleccionada(p)}
+              meta={(
+                <>
+                  <span><b>{p.puesto}</b>{p.ubicacion ? ` · ${p.ubicacion}` : ''}</span>
+                  <span>DNI {p.dni}</span>
+                  <span>{fechaHora(p.fecha_postulacion)}</span>
+                </>
+              )}
+            />
           ))}
         </div>
       )}
+
+      <DetalleCandidato
+        postulacion={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={refrescar}
+      />
     </div>
   );
 }
 
-function PostFila({ postulacion, abierta, onToggle, alCambio }) {
+function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
-  const { data: detalle } = useQuery({
-    queryKey: ['postulacion-detalle', postulacion.id],
+  const { data: detalle, isLoading } = useQuery({
+    queryKey: ['postulacion-detalle', postulacion?.id],
     queryFn: () => detallePostulacionEmpresa(postulacion.id),
-    enabled: abierta,
+    enabled: Boolean(postulacion?.id),
   });
 
-  const guardar = async (fn, mensaje) => {
+  if (!postulacion) return null;
+  const p = detalle?.postulante || null;
+  const estado = detalle?.estado || postulacion.estado;
+  const activo = detalle ? detalle.activo : postulacion.activo;
+
+  const guardar = async (fn) => {
     try {
       await ejecutar(fn);
       setError(null);
-      if (mensaje) window.alert(mensaje);
       alCambio();
     } catch (e) {
       setError(errorApi(e));
@@ -138,104 +151,86 @@ function PostFila({ postulacion, abierta, onToggle, alCambio }) {
   const verCv = async () => {
     try {
       const { url } = await urlCvPostulacion(postulacion.id);
-      const nombre = detalle?.postulante?.cv?.nombre_original || 'cv.pdf';
-      await descargarUrl(url, nombre);
+      await descargarUrl(url, p?.cv?.nombre_original || 'cv.pdf');
     } catch (e) {
       setError(errorApi(e));
     }
   };
 
-  const opciones = TRANSICIONES_POSTULACION[postulacion.estado] || [];
-  const estadoDetallado = ETIQUETA_ESTADO_POSTULACION[postulacion.estado] || postulacion.estado;
+  const opciones = activo === 1 ? (TRANSICIONES_POSTULACION[estado] || []) : [];
 
   return (
-    <>
-      <div className="post-fila">
-        <div className="app-avatar">{iniciales(`${postulacion.nombres} ${postulacion.apellidos}`)}</div>
-        <div className="app-main">
-          <div className="job">{postulacion.nombres} {postulacion.apellidos}</div>
-          <div className="who">
-            <b>{postulacion.puesto}</b>
-            {postulacion.ubicacion && <> · {postulacion.ubicacion}</>}
-            {' · '}DNI {postulacion.dni}
-          </div>
-        </div>
-        <div className="app-meta">
-          <div className="date">{fechaHora(postulacion.fecha_postulacion)}</div>
-          <Estado valor={postulacion.estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
-          {postulacion.activo !== 1 && (
-            <div className="badge badge-gray" style={{ marginTop: 5 }}>Desactivada</div>
+    <Modal
+      abierto={Boolean(postulacion)}
+      titulo={`${postulacion.nombres} ${postulacion.apellidos}`}
+      subtitulo={`Postulación a ${detalle?.oferta?.puesto || postulacion.puesto}`}
+      alCerrar={alCerrar}
+      tamano="ancho"
+      acciones={(
+        <>
+          <Boton variante="gris" onClick={verCv}><Download size={16} aria-hidden="true" />Ver CV</Boton>
+          {activo === 1 ? (
+            <Boton variante="gris" cargando={enviando} onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, false))}>
+              <UserX size={16} aria-hidden="true" />Desactivar
+            </Boton>
+          ) : (
+            <Boton variante="exito" cargando={enviando} onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, true))}>
+              <UserCheck size={16} aria-hidden="true" />Reactivar
+            </Boton>
           )}
-        </div>
-        <button className="btn-ver" type="button" onClick={onToggle}>
-          <i className={abierta ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} />
-          {abierta ? 'Cerrar' : 'Ver'}
-        </button>
+        </>
+      )}
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
+        {activo !== 1 && <span className="badge badge-gray">Postulación desactivada</span>}
       </div>
 
-      {abierta && (
-        <div className="post-detalle">
-          <Mensaje>{error}</Mensaje>
-          <DetallePostulante detalle={detalle} />
+      <Mensaje>{error}</Mensaje>
+      {isLoading && !detalle && <p className="vacio">Cargando detalle…</p>}
 
-          <div className="post-acciones">
-            {postulacion.activo === 1 && opciones.length > 0 && (
-              <>
-                <span className="avanzar">Avanzar estado:</span>
-                {opciones.map((s) => (
-                  <Boton
-                    key={s}
-                    variante={s === 'seleccionado' ? 'exito' : s === 'no_seleccionado' ? 'peligro' : 'primario'}
-                    cargando={enviando}
-                    onClick={() => guardar(() => cambiarEstadoPostulacion(postulacion.id, s), s === 'seleccionado' ? 'Candidato seleccionado. Registre luego la contratación si corresponde.' : null)}
-                  >
-                    {ETIQUETA_ESTADO_POSTULACION[s]}
-                  </Boton>
-                ))}
-              </>
-            )}
-            <Boton variante="gris" onClick={verCv}>Ver CV</Boton>
-            <Boton
-              variante="gris"
-              onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, postulacion.activo !== 1))}
-            >
-              {postulacion.activo ? 'Desactivar' : 'Reactivar'}
-            </Boton>
+      <FichaDatos
+        items={[
+          { etiqueta: 'DNI', valor: p?.dni || postulacion.dni },
+          { etiqueta: 'Fecha de nacimiento', valor: p?.fecha_nacimiento ? fechaCalendario(p.fecha_nacimiento) : null },
+          { etiqueta: 'Distrito', valor: p?.distrito },
+          { etiqueta: 'Teléfono', valor: p?.telefono || postulacion.telefono },
+          { etiqueta: 'Correo', valor: p?.email },
+          { etiqueta: 'Oferta', valor: detalle?.oferta?.puesto || postulacion.puesto },
+          { etiqueta: 'Ubicación', valor: detalle?.oferta?.ubicacion || postulacion.ubicacion },
+          { etiqueta: 'Fecha de postulación', valor: fechaHora(detalle?.fecha_postulacion || postulacion.fecha_postulacion) },
+        ]}
+      />
+
+      <div className="modal-seccion">
+        <h3>Curriculum vitae</h3>
+        <p className="modal-texto" style={{ color: 'var(--text-2)' }}>
+          {p?.cv ? `${p.cv.nombre_original} (v${p.cv.version})` : 'El postulante aún no ha cargado su CV.'}
+        </p>
+      </div>
+
+      {opciones.length > 0 && (
+        <div className="modal-seccion">
+          <h3>Avanzar estado</h3>
+          <div className="form-fila">
+            {opciones.map((s) => (
+              <Boton
+                key={s}
+                variante={s === 'seleccionado' ? 'exito' : s === 'no_seleccionado' ? 'peligro' : 'primario'}
+                cargando={enviando}
+                onClick={() => guardar(() => cambiarEstadoPostulacion(postulacion.id, s))}
+              >
+                {ETIQUETA_ESTADO_POSTULACION[s]}
+              </Boton>
+            ))}
           </div>
-          {postulacion.activo !== 1 && (
-            <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', marginBottom: 0 }}>
-              Postulación desactivada: no aparece como activa, pero su historial se conserva (RF-38/RN-17).
-            </p>
-          )}
-          {postulacion.activo === 1 && opciones.length === 0 && (
-            <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: 0 }}>
-              Estado final: {estadoDetallado.toLowerCase()}. No hay transiciones disponibles.
-            </p>
-          )}
         </div>
       )}
-    </>
-  );
-}
-
-function DetallePostulante({ detalle }) {
-  if (!detalle) return <p className="vacio">Cargando detalle…</p>;
-  const p = detalle.postulante;
-
-  return (
-    <div>
-      <h3>
-        {p.nombres} {p.apellidos} <span style={{ color: 'var(--text-2)', fontWeight: 400, fontSize: '0.85rem' }}>· DNI {p.dni} · {fechaCalendario(p.fecha_nacimiento)}</span>
-      </h3>
-      <div className="descripcion">
-        <div><b>Distrito</b>{p.distrito || '—'}</div>
-        <div><b>Teléfono</b>{p.telefono || '—'}</div>
-        <div><b>Correo</b>{p.email || '—'}</div>
-        <div><b>Oferta</b>{detalle.oferta.puesto}</div>
-      </div>
-      <p style={{ color: 'var(--text-2)', fontSize: '0.88rem', marginBottom: 0 }}>
-        CV: {p.cv ? `${p.cv.nombre_original} (v${p.cv.version})` : 'El postulante aún no ha cargado su CV.'}
-      </p>
-    </div>
+      {activo === 1 && opciones.length === 0 && (
+        <p style={{ color: 'var(--text-3)', fontSize: '0.85rem', marginBottom: 0 }}>
+          Estado final: {ETIQUETA_ESTADO_POSTULACION[estado]?.toLowerCase()}. No hay transiciones disponibles.
+        </p>
+      )}
+    </Modal>
   );
 }

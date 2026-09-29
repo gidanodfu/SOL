@@ -8,6 +8,9 @@ import {
   rechazarSolicitudEmpresa,
 } from '../../services/solicitudes';
 import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
+import Modal from '../../components/Modal';
+import FichaDatos from '../../components/FichaDatos';
+import { Check, Eye, Link2, XCircle } from 'lucide-react';
 import { errorApi, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
@@ -31,6 +34,7 @@ export default function SolicitudesEmpresa() {
   const [filtro, setFiltro] = useState('');
   const [q, setQ] = useState('');
   const [nota, setNota] = useState(null);
+  const [seleccionada, setSeleccionada] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['solicitudes-empresa', filtro, q],
@@ -76,37 +80,57 @@ export default function SolicitudesEmpresa() {
           </thead>
           <tbody>
             {data.data.map((s) => (
-              <Fila
-                key={s.id}
-                solicitud={s}
-                alCambio={(mensaje) => {
-                  setNota(mensaje);
-                  refrescar();
-                }}
-              />
+              <tr key={s.id}>
+                <td><strong>{s.ruc}</strong></td>
+                <td>
+                  {s.razon_social}
+                  {s.nombre_comercial ? <><br /><small style={{ color: 'var(--gris)' }}>{s.nombre_comercial}</small></> : null}
+                </td>
+                <td>{s.representante}</td>
+                <td>
+                  {s.email}<br />
+                  <small style={{ color: 'var(--gris)' }}>{s.telefono}</small>
+                </td>
+                <td><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
+                <td>{fechaHora(s.created_at)}</td>
+                <td>
+                  <div className="acciones">
+                    <Boton variante="gris" onClick={() => setSeleccionada(s)}>
+                      <Eye size={16} aria-hidden="true" />Ver
+                    </Boton>
+                  </div>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <DetalleSolicitud
+        solicitud={seleccionada}
+        alCerrar={() => setSeleccionada(null)}
+        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+      />
     </Tarjeta>
   );
 }
 
-function Fila({ solicitud: s, alCambio }) {
-  const [abierta, setAbierta] = useState(false);
+function DetalleSolicitud({ solicitud, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
+  if (!solicitud) return null;
+
   const aprobar = async () => {
     try {
-      const resultado = await ejecutar(() => aprobarSolicitudEmpresa(s.id));
+      const resultado = await ejecutar(() => aprobarSolicitudEmpresa(solicitud.id));
       setError(null);
       const enlace = resultado?.link;
-      const mensaje = enlace
+      alCambio(enlace
         ? 'Solicitud aprobada. Se notificó a la empresa por correo. El enlace de activación quedó disponible para copiar.'
-        : 'Solicitud aprobada y notificada a la empresa.';
-      alCambio(mensaje);
+        : 'Solicitud aprobada y notificada a la empresa.');
       if (enlace && !(await copiarTexto(enlace))) window.alert(enlace);
+      alCerrar();
     } catch (e) {
       setError(errorApi(e));
     }
@@ -116,9 +140,10 @@ function Fila({ solicitud: s, alCambio }) {
     const motivo = window.prompt('Motivo del rechazo (se notificará a la empresa):');
     if (!motivo) return;
     try {
-      await ejecutar(() => rechazarSolicitudEmpresa(s.id, motivo));
+      await ejecutar(() => rechazarSolicitudEmpresa(solicitud.id, motivo));
       setError(null);
       alCambio('Solicitud rechazada. Se notificó a la empresa.');
+      alCerrar();
     } catch (e) {
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
@@ -127,66 +152,75 @@ function Fila({ solicitud: s, alCambio }) {
 
   const copiarEnlace = async () => {
     try {
-      const resultado = await ejecutar(() => generarEnlaceSolicitud(s.id));
+      const resultado = await ejecutar(() => generarEnlaceSolicitud(solicitud.id));
       setError(null);
       const ok = resultado?.link && (await copiarTexto(resultado.link));
-      alCambio(
-        ok
-          ? 'Nuevo enlace generado y copiado al portapapeles (el anterior quedó invalidado).'
-          : 'Nuevo enlace generado: ' + (resultado?.link || ''),
-      );
+      alCambio(ok
+        ? 'Nuevo enlace generado y copiado al portapapeles (el anterior quedó invalidado).'
+        : 'Nuevo enlace generado: ' + (resultado?.link || ''));
     } catch (e) {
       setError(errorApi(e));
     }
   };
 
-  const resueltoPor = s.resuelto_por_nombre
-    ? `${s.resuelto_por_nombre} ${s.resuelto_por_apellido || ''}`.trim()
+  const resueltoPor = solicitud.resuelto_por_nombre
+    ? `${solicitud.resuelto_por_nombre} ${solicitud.resuelto_por_apellido || ''}`.trim()
     : null;
 
-  return (
+  const acciones = (
     <>
-      <tr>
-        <td><strong>{s.ruc}</strong></td>
-        <td>
-          {s.razon_social}
-          {s.nombre_comercial ? <br /> : null}
-          {s.nombre_comercial ? <small style={{ color: 'var(--gris)' }}>{s.nombre_comercial}</small> : null}
-        </td>
-        <td>{s.representante}</td>
-        <td>
-          {s.email}<br />
-          <small style={{ color: 'var(--gris)' }}>{s.telefono}</small>
-        </td>
-        <td><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
-        <td>{fechaHora(s.created_at)}</td>
-        <td>
-          <div className="acciones">
-            <Boton variante="gris" onClick={() => setAbierta(!abierta)}>{abierta ? 'Ocultar' : 'Ver'}</Boton>
-            {s.estado === 'pendiente' && (
-              <>
-                <Boton variante="exito" cargando={enviando} onClick={aprobar}>Aprobar</Boton>
-                <Boton variante="peligro" cargando={enviando} onClick={rechazar}>Rechazar</Boton>
-              </>
-            )}
-            {s.estado === 'aprobada' && (
-              <Boton variante="acento" cargando={enviando} onClick={copiarEnlace}>Copiar enlace</Boton>
-            )}
-          </div>
-        </td>
-      </tr>
-      {abierta && (
-        <tr>
-          <td colSpan="7">
-            <Mensaje>{error}</Mensaje>
-            <div className="descripcion">
-              <div><b>Dirección</b>{s.direccion || '—'}</div>
-              <div><b>Resuelta por</b>{resueltoPor ? `${resueltoPor} · ${fechaHora(s.resuelto_en)}` : '—'}</div>
-            </div>
-            {s.motivo_rechazo && <p><strong style={{ color: 'var(--rojo)' }}>Motivo de rechazo:</strong> {s.motivo_rechazo}</p>}
-          </td>
-        </tr>
+      {solicitud.estado === 'pendiente' && (
+        <>
+          <Boton variante="exito" cargando={enviando} onClick={aprobar}>
+            <Check size={16} aria-hidden="true" />Aprobar
+          </Boton>
+          <Boton variante="peligro" cargando={enviando} onClick={rechazar}>
+            <XCircle size={16} aria-hidden="true" />Rechazar
+          </Boton>
+        </>
+      )}
+      {solicitud.estado === 'aprobada' && (
+        <Boton variante="acento" cargando={enviando} onClick={copiarEnlace}>
+          <Link2 size={16} aria-hidden="true" />Copiar enlace
+        </Boton>
       )}
     </>
+  );
+
+  return (
+    <Modal
+      abierto
+      titulo={solicitud.razon_social}
+      subtitulo={`Solicitud de afiliación · RUC ${solicitud.ruc}`}
+      alCerrar={alCerrar}
+      acciones={acciones}
+    >
+      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+        <Estado valor={solicitud.estado} diccionario={estadosSolicitud} />
+      </div>
+
+      <Mensaje>{error}</Mensaje>
+
+      <FichaDatos
+        items={[
+          { etiqueta: 'RUC', valor: solicitud.ruc },
+          { etiqueta: 'Razón social', valor: solicitud.razon_social },
+          { etiqueta: 'Nombre comercial', valor: solicitud.nombre_comercial },
+          { etiqueta: 'Representante', valor: solicitud.representante },
+          { etiqueta: 'Correo', valor: solicitud.email },
+          { etiqueta: 'Teléfono', valor: solicitud.telefono },
+          { etiqueta: 'Dirección', valor: solicitud.direccion },
+          { etiqueta: 'Recibida', valor: fechaHora(solicitud.created_at) },
+          { etiqueta: 'Resuelta por', valor: resueltoPor ? `${resueltoPor} · ${fechaHora(solicitud.resuelto_en)}` : null },
+        ]}
+      />
+
+      {solicitud.motivo_rechazo && (
+        <div className="modal-seccion">
+          <h3>Motivo de rechazo</h3>
+          <p className="modal-texto" style={{ color: 'var(--red-tx)' }}>{solicitud.motivo_rechazo}</p>
+        </div>
+      )}
+    </Modal>
   );
 }

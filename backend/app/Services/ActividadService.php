@@ -28,9 +28,12 @@ class ActividadService
 
     private ActividadModel $actividades;
 
-    public function __construct(?ActividadModel $actividades = null)
+    private HtmlSanitizer $html;
+
+    public function __construct(?ActividadModel $actividades = null, ?HtmlSanitizer $html = null)
     {
         $this->actividades = $actividades ?? model(ActividadModel::class);
+        $this->html        = $html ?? new HtmlSanitizer();
     }
 
     /**
@@ -90,10 +93,14 @@ class ActividadService
      */
     private function validar(array $datos): array
     {
+        // Descripción con editor enriquecido: HTML saneado y límite sobre el
+        // texto visible (10.000), no sobre las etiquetas.
+        $datos['descripcion'] = $this->html->limpiar($datos['descripcion'] ?? null);
+
         Validador::validar($datos, [
             'tipo'         => ['required', 'enum:' . implode(',', self::TIPOS)],
             'nombre'       => ['required', 'max:200'],
-            'descripcion'  => ['max:10000'],
+            'descripcion'  => ['texto_max:10000'],
             'lugar'        => ['max:150'],
             'organizador'  => ['max:150'],
             'modalidad'    => ['enum:' . implode(',', self::MODALIDADES)],

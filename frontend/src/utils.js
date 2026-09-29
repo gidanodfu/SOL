@@ -28,6 +28,41 @@ export const esEnlaceSeguro = (url) => {
   }
 };
 
+/* ---------- Texto enriquecido (RTE) ---------- */
+
+export const TEXTO_MAX = 10000;
+export const TEXTO_AVISO = 9000;
+
+/**
+ * Medición canónica del texto VISIBLE (sin etiquetas HTML), en caracteres
+ * (code points Unicode, igual que PHP mb_strlen) y palabras. Es la misma
+ * definición que aplica el backend (`Validador::longitudTexto`), de modo que
+ * el frontend no permite lo que el backend rechazaría.
+ */
+export const medirTexto = (texto) => {
+  const t = String(texto ?? '');
+  const limpio = t.trim();
+  return {
+    caracteres: [...t].length,
+    palabras: limpio ? limpio.split(/\s+/).length : 0,
+  };
+};
+
+/**
+ * Texto visible de un contenido enriquecido: extrae el texto de las etiquetas
+ * (misma definición conceptual que `Validador::textoVisible` en el backend).
+ */
+export const textoVisible = (html) => {
+  const doc = new DOMParser().parseFromString(String(html ?? ''), 'text/html');
+  return doc.body.textContent || '';
+};
+
+/** Medición de un contenido enriquecido (sobre su texto visible). */
+export const medirTextoEnriquecido = (html) => medirTexto(textoVisible(html));
+
+/** true si el texto visible supera el límite vigente (10.000 por defecto). */
+export const excedeLimiteTexto = (html, max = TEXTO_MAX) => medirTextoEnriquecido(html).caracteres > max;
+
 export const fechaHora = (v) => (v ? new Date(v).toLocaleString('es-PE') : '—');
 export const fecha = (v) => (v ? new Date(v).toLocaleDateString('es-PE') : '—');
 

@@ -13,7 +13,8 @@
         "php": "^8.2",
         "codeigniter4/framework": "^4.7",
         "firebase/php-jwt": "^7.1",
-        "phpoffice/phpspreadsheet": "^5.9"
+        "phpoffice/phpspreadsheet": "^5.9",
+        "symfony/html-sanitizer": "^7.4"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.5.16"
