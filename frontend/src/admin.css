@@ -42,7 +42,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 35px;
+  /* Mismo margen que el contenido centrado: el título queda alineado con las
+     tarjetas en pantallas anchas. */
+  padding-block: 0;
+  padding-inline: calc(35px + max(0px, (100% - 1600px) / 2));
   position: sticky;
   top: 0;
   z-index: 90;
@@ -68,11 +71,11 @@
   max-width: 1600px;
   width: 100%;
   box-sizing: border-box;
+  margin-inline: auto;
 }
 
-/* Tablas anchas: el scroll queda dentro de la tarjeta, nunca rompe el layout */
+/* Tablas anchas: el scroll vive en styles.css (regla compartida .tarjeta/.list-card) */
 .app-admin .tarjeta { min-width: 0; }
-.app-admin .tarjeta > table { display: block; overflow-x: auto; }
 
 /* ---------------- KPI (grid; las tarjetas son StatCard global) ---------------- */
 .app-admin .kpi-grid {

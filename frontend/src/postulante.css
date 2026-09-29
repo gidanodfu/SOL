@@ -112,7 +112,7 @@
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
-  box-shadow: 0 10px 30px rgba(11, 37, 66, 0.15);
+  box-shadow: var(--sombra-hover);
   min-width: 210px;
   padding: 6px 0;
   opacity: 0;
@@ -191,7 +191,7 @@
   transition: color 0.15s;
   line-height: 1;
 }
-.app-postulante .pill-btn .pill-label .clear-btn:hover { color: var(--red-c); }
+.app-postulante .pill-btn .pill-label .clear-btn:hover { color: var(--red-tx); }
 .app-postulante .pill.active .pill-btn .pill-label .clear-btn { display: inline-flex; }
 .app-postulante .pill-btn i { font-size: 16px; color: var(--text-2); transition: transform 0.18s, color 0.15s; }
 .app-postulante .pill-btn:hover { border-color: var(--blue); }
@@ -211,7 +211,7 @@
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
-  box-shadow: 0 10px 30px rgba(11, 37, 66, 0.12);
+  box-shadow: var(--sombra-hover);
   padding: 8px 4px;
   z-index: 999;
   max-height: 320px;
@@ -275,7 +275,7 @@
   margin-bottom: 14px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.app-postulante .job-card:hover { border-color: var(--blue); box-shadow: 0 4px 18px rgba(11, 37, 66, 0.07); }
+.app-postulante .job-card:hover { border-color: var(--blue); box-shadow: var(--sombra-tarjeta); }
 .app-postulante .job-card .job-fila { display: flex; gap: 18px; align-items: flex-start; }
 .app-postulante .job-icon {
   width: 48px;
@@ -496,9 +496,9 @@
   background: var(--white);
 }
 .app-postulante .completitud li.ok { color: var(--green-tx); }
-.app-postulante .completitud li.ok i { color: var(--green); }
+.app-postulante .completitud li.ok i { color: var(--green-tx); }
 .app-postulante .completitud li.falta { color: var(--amber-tx); }
-.app-postulante .completitud li.falta i { color: var(--amber); }
+.app-postulante .completitud li.falta i { color: var(--amber-tx); }
 
 /* ========== Responsive ========== */
 @media (max-width: 1024px) {
@@ -557,7 +557,7 @@
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 4px 18px rgba(11, 37, 66, 0.06);
+  box-shadow: var(--sombra-tarjeta);
   max-height: calc(100vh - 40px);
   overflow: auto;
 }
@@ -653,7 +653,6 @@
   }
   .app-postulante .panel-detalle.abierto .panel-caja {
     animation: subirPanel 0.22s ease-out;
-    margin-top: 150px;
   }
 }
 
