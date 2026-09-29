@@ -186,14 +186,14 @@
 .app-admin .progress {
   height: 8px;
   background: var(--gray-bg);
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .app-admin .progress span {
   display: block;
   height: 100%;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   background: var(--blue);
 }
 
@@ -227,7 +227,7 @@
 .app-admin .attention-icon {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;

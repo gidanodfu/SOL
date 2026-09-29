@@ -42,9 +42,16 @@
   --red-c: #D2554F;  --red-bg: #FCEBEB;   --red-tx: #A32D2D;
   --purple-bg: #EDE9FE; --purple-tx: #6D28D9;
 
-  /* ---- Geometría y sombras ---- */
-  --radius: 16px;
-  --radius-ctl: 10px;
+  /* ---- Radios (design system redondeado) ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+  /* Alias retrocompatibles: mismo valor que los tokens nuevos */
+  --radius: var(--radius-xl);
+  --radius-ctl: var(--radius-md);
   --sombra-tarjeta: 0 1px 2px rgba(11, 37, 66, 0.05);
   --sombra-hover: 0 8px 25px rgba(11, 37, 66, 0.08);
 }
@@ -220,7 +227,7 @@ body {
 .marca strong { font-size: 1.1rem; }
 .marca span { font-size: 0.7rem; opacity: 0.8; }
 .nav { display: flex; gap: 0.4rem; flex-wrap: wrap; flex: 1; }
-.nav a { color: #dce9f3; text-decoration: none; padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.95rem; }
+.nav a { color: #dce9f3; text-decoration: none; padding: 0.45rem 0.8rem; border-radius: var(--radius-md); font-size: 0.95rem; }
 .nav a:hover { background: rgba(255, 255, 255, 0.12); }
 .nav a.activo { background: var(--white); color: var(--navy); font-weight: 600; }
 .usuario { display: flex; align-items: center; gap: 0.8rem; }
@@ -397,7 +404,7 @@ td:last-child, th:last-child { padding-right: 0; }
   font-size: 11.5px;
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   line-height: 1.2;
   background: var(--gray-bg);
   color: var(--gray-tx);
@@ -469,7 +476,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .btn-enlace:hover { text-decoration: underline; }
 
 /* ---------- Alertas ---------- */
-.alerta { padding: 0.7rem 1rem; border-radius: var(--radius-ctl); margin: 0.8rem 0; font-size: 0.88rem; }
+.alerta { padding: 0.7rem 1rem; border-radius: var(--radius-md); margin: 0.8rem 0; font-size: 0.88rem; }
 .alerta-error { background: var(--red-bg); color: var(--red-tx); border: 1px solid #f5c6c2; }
 .alerta-exito { background: var(--green-bg); color: var(--green-tx); border: 1px solid #c8e4b4; }
 
@@ -520,7 +527,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   flex-wrap: wrap;
   padding: 18px;
   border: 1.5px dashed var(--line);
-  border-radius: var(--radius-ctl);
+  border-radius: var(--radius-xl);
   background: var(--sky);
 }
 .cv-zona input[type='file'] { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
@@ -531,7 +538,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   background: var(--white);
   border: 1px solid var(--line);
   padding: 9px 13px;
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   font-size: 13px;
   min-width: 0;
 }
@@ -547,7 +554,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   flex-wrap: wrap;
   padding: 12px 14px;
   background: var(--green-bg);
-  border-radius: var(--radius-ctl);
+  border-radius: var(--radius-xl);
   margin-top: 16px;
 }
 .cv-actual-det { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -620,7 +627,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .login-formulario {
   background: var(--white);
   border: 1px solid #e1eaf3;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   padding: 2.4rem 2.5rem;
   width: 100%;
   max-width: 440px;
@@ -674,7 +681,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   width: 100%;
   padding: 0.8rem 2.7rem 0.8rem 2.6rem;
   border: 1.5px solid #c9d8e6;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
   color: #16283b;
   background: var(--white);
@@ -722,7 +729,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   background: #e8f0fa;
   color: #0055a5;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -753,7 +760,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   padding: 0.6rem 0.8rem;
   border: 1px solid #bfe0bf;
   background: #f0faf0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.84rem;
   color: #166534;
 }
@@ -772,7 +779,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   background: #0055a5;
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 0.98rem;
   font-weight: 600;
   cursor: pointer;
@@ -881,7 +888,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 @media (max-width: 420px) {
   .login-main { padding: 1.6rem 0.9rem 1.2rem; }
   .login-logo { width: 86px; height: 86px; }
-  .login-formulario { padding: 1.6rem 1.15rem; border-radius: 14px; }
+  .login-formulario { padding: 1.6rem 1.15rem; border-radius: var(--radius-lg); }
   .login-formulario-titulo { font-size: 1.32rem; }
   .login-sistema { font-size: 0.82rem; }
   .login-footer { font-size: 0.68rem; }
@@ -893,7 +900,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   background: linear-gradient(135deg, var(--blue) 0%, var(--primario-hover) 100%); padding: 1rem;
 }
 .tarjeta-auth {
-  background: var(--white); border-radius: 14px; padding: 2rem; width: 100%; max-width: 420px;
+  background: var(--white); border-radius: var(--radius-xl); padding: 2rem; width: 100%; max-width: 420px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 .tarjeta-auth h1 { margin: 0 0 0.2rem; font-size: 1.4rem; color: var(--blue); }
@@ -968,7 +975,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   gap: 13px;
   padding: 11px 13px;
   margin-bottom: 4px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
   font-size: 14px;
@@ -989,7 +996,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   padding: 8px 10px;
   margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: #fff;
   font: inherit;
@@ -1037,7 +1044,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   gap: 6px;
   padding: 9px 12px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: #fff;
   font: inherit;
@@ -1073,7 +1080,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
     background: var(--navy-2);
     color: #fff;
     padding: 5px 10px;
-    border-radius: 7px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
@@ -1104,7 +1111,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   height: 44px;
   border: 1px solid var(--line);
   border-left: 0;
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   background: var(--white);
   color: var(--text-2);
   cursor: pointer;
@@ -1318,7 +1325,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--sky);
   color: var(--enlace);
   flex: none;
@@ -1343,7 +1350,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   background: var(--white);
   color: var(--text-1);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-2xl);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   width: 100%;
   max-width: 620px;
@@ -1435,7 +1442,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   width: 32px;
   height: 32px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-2);
   cursor: pointer;

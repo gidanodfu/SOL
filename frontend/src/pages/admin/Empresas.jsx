@@ -233,7 +233,7 @@ function NuevaEmpresa({ alCrear }) {
   };
 
   return (
-    <section style={{ border: '1px solid var(--borde)', borderRadius: 8, padding: '1rem', margin: '1rem 0' }}>
+    <section style={{ border: '1px solid var(--borde)', borderRadius: 'var(--radius-lg)', padding: '1rem', margin: '1rem 0' }}>
       <h3>Registro municipal de empresa (post evaluación presencial)</h3>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
