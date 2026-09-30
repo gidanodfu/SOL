@@ -27,30 +27,32 @@ export default function Contrataciones() {
       {isLoading && <EstadoCarga />}
       {data && data.length === 0 && <ListaVacia texto="Sin contrataciones registradas en el periodo." />}
       {data && data.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Empresa</th>
-              <th>Contratado</th>
-              <th>Oferta / cargo</th>
-              <th>Modalidad</th>
-              <th>Remuneración</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((c) => (
-              <tr key={c.id}>
-                <td>{fechaCalendario(c.fecha_contratacion)}</td>
-                <td>{c.razon_social}<br /><small style={{ color: 'var(--gris)' }}>RUC {c.ruc}</small></td>
-                <td>{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>DNI {c.dni}</small></td>
-                <td>{c.puesto}<br /><small style={{ color: 'var(--gris)' }}>{c.cargo}</small></td>
-                <td>{c.modalidad || '—'}</td>
-                <td>{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
+        <div className="tabla-scroll">
+  <table className="tabla-contrataciones">
+            <thead>
+              <tr>
+                <th className="col-fecha">Fecha</th>
+                <th>Empresa</th>
+                <th>Contratado</th>
+                <th>Oferta / cargo</th>
+                <th>Modalidad</th>
+                <th className="col-monto">Remuneración</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((c) => (
+                <tr key={c.id}>
+                  <td className="col-fecha">{fechaCalendario(c.fecha_contratacion)}</td>
+                  <td>{c.razon_social}<br /><small style={{ color: 'var(--gris)' }}>RUC {c.ruc}</small></td>
+                  <td>{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>DNI {c.dni}</small></td>
+                  <td>{c.puesto}<br /><small style={{ color: 'var(--gris)' }}>{c.cargo}</small></td>
+                  <td>{c.modalidad || '—'}</td>
+                  <td className="col-monto">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </Tarjeta>
   );

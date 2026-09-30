@@ -22,7 +22,7 @@
 }
 
 /* ---------- Contenido ---------- */
-.app-empresa .content { flex: 1; min-width: 0; padding: 32px 40px 60px; max-width: 1600px; margin-inline: auto; }
+.app-empresa .content { flex: 1; min-width: 0; padding: 32px 35px 60px; max-width: 1600px; margin-inline: auto; }
 
 /* ---------- KPI ---------- */
 .app-empresa .kpi-row {

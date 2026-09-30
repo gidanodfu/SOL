@@ -66,32 +66,34 @@ export default function Contrataciones() {
           <div className="list-card-head">
             <h2>{contratos.length} contratación(es) registrada(s)</h2>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Contratado</th>
-                <th>Puesto</th>
-                <th>Cargo</th>
-                <th>Modalidad</th>
-                <th>Remuneración</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {contratos.map((c) => (
-                <tr key={c.id}>
-                  <td>{fechaCalendario(c.fecha_contratacion)}</td>
-                  <td>{c.nombres} {c.apellidos}</td>
-                  <td>{c.puesto}</td>
-                  <td>{c.cargo}</td>
-                  <td>{c.modalidad || '—'}</td>
-                  <td>{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
-                  <td><Boton variante="gris" onClick={() => setEditor({ id: c.id })}>Editar</Boton></td>
+          <div className="tabla-scroll">
+  <table className="tabla-contrataciones-empresa">
+              <thead>
+                <tr>
+                  <th className="col-fecha">Fecha</th>
+                  <th>Contratado</th>
+                  <th>Puesto</th>
+                  <th>Cargo</th>
+                  <th>Modalidad</th>
+                  <th className="col-monto">Remuneración</th>
+                  <th className="col-acciones">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {contratos.map((c) => (
+                  <tr key={c.id}>
+                    <td className="col-fecha">{fechaCalendario(c.fecha_contratacion)}</td>
+                    <td>{c.nombres} {c.apellidos}</td>
+                    <td>{c.puesto}</td>
+                    <td>{c.cargo}</td>
+                    <td>{c.modalidad || '—'}</td>
+                    <td className="col-monto">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
+                    <td className="col-acciones"><Boton variante="gris" onClick={() => setEditor({ id: c.id })}>Editar</Boton></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

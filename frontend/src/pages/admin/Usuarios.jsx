@@ -77,43 +77,45 @@ export default function Usuarios() {
       {data && data.data.length === 0 && <ListaVacia />}
 
       {data && data.data.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Nombre</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              <th>Último acceso</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.data.map((u) => (
-              <tr key={u.id}>
-                <td><strong>{u.username}</strong></td>
-                <td>{u.nombres} {u.apellidos}</td>
-                <td><Estado valor={u.rol} diccionario={ETIQUETA_ROL} /></td>
-                <td><Estado valor={u.estado} diccionario={estadosUsuarios} /></td>
-                <td>{fechaHora(u.ultimo_acceso)}</td>
-                <td>
-                  <div className="acciones">
-                    <Boton variante="gris" onClick={() => setSeleccionado(u)}>
-                      <Eye size={16} aria-hidden="true" />Ver
-                    </Boton>
-                    {/* Un administrador no puede desactivar su propia cuenta (el backend también lo impide). */}
-                    {u.id !== usuarioActual?.id && (
-                      <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
-                        {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                      </Boton>
-                    )}
-                    <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
-                  </div>
-                </td>
+        <div className="tabla-scroll">
+  <table className="tabla-usuarios">
+            <thead>
+              <tr>
+                <th className="col-identificador">Usuario</th>
+                <th>Nombre</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th className="col-fecha">Último acceso</th>
+                <th className="col-acciones">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.data.map((u) => (
+                <tr key={u.id}>
+                  <td className="col-identificador"><strong>{u.username}</strong></td>
+                  <td>{u.nombres} {u.apellidos}</td>
+                  <td><Estado valor={u.rol} diccionario={ETIQUETA_ROL} /></td>
+                  <td><Estado valor={u.estado} diccionario={estadosUsuarios} /></td>
+                  <td className="col-fecha">{fechaHora(u.ultimo_acceso)}</td>
+                  <td className="col-acciones">
+                    <div className="acciones">
+                      <Boton variante="gris" onClick={() => setSeleccionado(u)}>
+                        <Eye size={16} aria-hidden="true" />Ver
+                      </Boton>
+                      {/* Un administrador no puede desactivar su propia cuenta (el backend también lo impide). */}
+                      {u.id !== usuarioActual?.id && (
+                        <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
+                          {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                        </Boton>
+                      )}
+                      <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <p style={{ color: 'var(--gris)', fontSize: '0.85rem' }}>
         {data?.total ?? 0} usuario(s). Las cuentas desactivadas se conservan y no pueden iniciar sesión (RF-06).

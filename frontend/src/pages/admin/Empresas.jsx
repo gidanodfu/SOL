@@ -79,45 +79,47 @@ export default function Empresas() {
       {data && data.data.length === 0 && <ListaVacia />}
 
       {data && data.data.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>RUC</th>
-              <th>Razón social</th>
-              <th>Representante</th>
-              <th>Correo</th>
-              <th>Estado</th>
-              <th>Registro</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.data.map((e) => (
-              <tr key={e.id}>
-                <td><strong>{e.ruc}</strong></td>
-                <td>{e.razon_social}<br /><small style={{ color: 'var(--gris)' }}>{e.nombre_comercial}</small></td>
-                <td>{e.representante}</td>
-                <td>{e.email}</td>
-                <td>
-                  <Estado valor={e.estado} diccionario={estadosEmpresa} />
-                  {e.evaluacion_presencial ? <div><small style={{ color: 'var(--verde)' }}>Evaluada presencialmente</small></div> : null}
-                </td>
-                <td>{fecha(e.created_at)}</td>
-                <td>
-                  <div className="acciones">
-                    <Boton variante="gris" onClick={() => setSeleccionada(e)}>
-                      <Eye size={16} aria-hidden="true" />Ver
-                    </Boton>
-                    <Boton variante={e.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => alternar(e)} disabled={enviando}>
-                      {e.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                    </Boton>
-                    <Boton variante="gris" onClick={() => resetPassword(e)} disabled={enviando}>Cambiar clave</Boton>
-                  </div>
-                </td>
+        <div className="tabla-scroll">
+  <table className="tabla-empresas">
+            <thead>
+              <tr>
+                <th className="col-identificador">RUC</th>
+                <th>Razón social</th>
+                <th>Representante</th>
+                <th className="col-correo">Correo</th>
+                <th>Estado</th>
+                <th className="col-fecha">Registro</th>
+                <th className="col-acciones">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.data.map((e) => (
+                <tr key={e.id}>
+                  <td className="col-identificador"><strong>{e.ruc}</strong></td>
+                  <td>{e.razon_social}<br /><small style={{ color: 'var(--gris)' }}>{e.nombre_comercial}</small></td>
+                  <td>{e.representante}</td>
+                  <td className="col-correo">{e.email}</td>
+                  <td>
+                    <Estado valor={e.estado} diccionario={estadosEmpresa} />
+                    {e.evaluacion_presencial ? <div><small style={{ color: 'var(--verde)' }}>Evaluada presencialmente</small></div> : null}
+                  </td>
+                  <td className="col-fecha">{fecha(e.created_at)}</td>
+                  <td className="col-acciones">
+                    <div className="acciones">
+                      <Boton variante="gris" onClick={() => setSeleccionada(e)}>
+                        <Eye size={16} aria-hidden="true" />Ver
+                      </Boton>
+                      <Boton variante={e.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => alternar(e)} disabled={enviando}>
+                        {e.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                      </Boton>
+                      <Boton variante="gris" onClick={() => resetPassword(e)} disabled={enviando}>Cambiar clave</Boton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       <p style={{ color: 'var(--gris)', fontSize: '0.85rem' }}>
         {data?.total ?? 0} empresa(s). La Municipalidad puede registrar empresas tras la evaluación presencial; las

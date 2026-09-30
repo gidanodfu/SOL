@@ -67,40 +67,42 @@ export default function Ofertas() {
       {data && data.length === 0 && <ListaVacia texto="No hay ofertas en este estado." />}
 
       {data && data.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Estado</th>
-              <th>Puesto</th>
-              <th>Empresa</th>
-              <th>RUC</th>
-              <th>Vac.</th>
-              <th>Cierre</th>
-              <th>Enviada</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((o) => (
-              <tr key={o.id}>
-                <td><Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
-                <td><strong>{o.puesto}</strong></td>
-                <td>{o.razon_social}</td>
-                <td>{o.ruc}</td>
-                <td>{o.vacantes}</td>
-                <td>{o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : '—'}</td>
-                <td>{fechaHora(o.created_at)}</td>
-                <td>
-                  <div className="acciones">
-                    <Boton variante="gris" onClick={() => setSeleccionada(o)}>
-                      <Eye size={16} aria-hidden="true" />Ver
-                    </Boton>
-                  </div>
-                </td>
+        <div className="tabla-scroll">
+  <table className="tabla-ofertas">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Puesto</th>
+                <th>Empresa</th>
+                <th className="col-identificador">RUC</th>
+                <th className="col-monto">Vac.</th>
+                <th className="col-fecha">Cierre</th>
+                <th className="col-fecha">Enviada</th>
+                <th className="col-acciones">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((o) => (
+                <tr key={o.id}>
+                  <td><Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
+                  <td><strong>{o.puesto}</strong></td>
+                  <td>{o.razon_social}</td>
+                  <td className="col-identificador">{o.ruc}</td>
+                  <td className="col-monto">{o.vacantes}</td>
+                  <td className="col-fecha">{o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : '—'}</td>
+                  <td className="col-fecha">{fechaHora(o.created_at)}</td>
+                  <td className="col-acciones">
+                    <div className="acciones">
+                      <Boton variante="gris" onClick={() => setSeleccionada(o)}>
+                        <Eye size={16} aria-hidden="true" />Ver
+                      </Boton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <DetalleOferta

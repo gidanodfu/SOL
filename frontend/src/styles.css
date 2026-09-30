@@ -262,9 +262,10 @@ body {
 .tarjeta-sub { margin: -0.6rem 0 1rem; font-size: 0.85rem; color: var(--text-2); }
 h3 { margin: 1.2rem 0 0.5rem; font-size: 1rem; color: var(--ink); }
 
-/* Tablas anchas: el scroll horizontal vive dentro de la tarjeta/lista, nunca
-   desborda la página. Mismo tratamiento para admin y empresa. */
-.tarjeta > table, .list-card > table { display: block; overflow-x: auto; }
+/* Tablas anchas: el scroll horizontal vive en su propio contenedor, dentro de
+   la tarjeta/lista; la caja de la tabla nunca desborda la página. */
+.tabla-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.tabla-scroll > table { width: 100%; }
 
 /* Tarjeta de listas (filas) */
 .list-card {
@@ -391,11 +392,40 @@ h3 { margin: 1.2rem 0 0.5rem; font-size: 1rem; color: var(--ink); }
 
 /* ---------- Tablas ---------- */
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-th, td { text-align: left; padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th, td { text-align: left; padding: 0.7rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { color: var(--text-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
 td:first-child, th:first-child { padding-left: 0; }
 td:last-child, th:last-child { padding-right: 0; }
 .acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* Columnas semánticas de tablas: la alineación depende del significado de la
+   columna, no de su posición (sin reglas :last-child). */
+.col-identificador { white-space: nowrap; }
+.col-fecha { white-space: nowrap; }
+.col-monto { text-align: right; white-space: nowrap; min-width: 64px; }
+/* Correos largos: permiten wrapping controlado para no forzar scroll de tabla */
+.col-correo { overflow-wrap: anywhere; }
+.col-acciones { text-align: right; white-space: nowrap; }
+.col-acciones .acciones {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+  gap: 0.3rem;
+}
+/* Botones de acciones compactos: permiten que las 3 acciones convivan en una
+   línea en desktop sin forzar scroll de la tabla. */
+.col-acciones .btn { white-space: nowrap; padding: 0.36rem 0.62rem; font-size: 0.8rem; }
+
+/* Ancho mínimo por tabla: solo donde la estructura lo exige (medido con el
+   arnés). El scroll horizontal vive en el contenedor (.tarjeta/.list-card). */
+.tabla-usuarios { min-width: 980px; }
+.tabla-empresas { min-width: 1040px; }
+.tabla-solicitudes { min-width: 960px; }
+.tabla-ofertas { min-width: 1000px; }
+.tabla-contrataciones { min-width: 850px; }
+.tabla-contrataciones-empresa { min-width: 880px; }
 
 /* ---------- Badges ---------- */
 .badge {
@@ -913,8 +943,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
    su posicionamiento y el ancho disponible del contenido.
    ===================================================================== */
 :root {
-  --sidebar-w: 245px;
-  --sidebar-w-colapsado: 76px;
+  --sidebar-w: 280px;
+  --sidebar-w-colapsado: 72px;
 }
 
 .sidebar {
@@ -924,32 +954,41 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   color: #fff;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   transition: width 0.18s ease;
+}
+
+/* Cabecera: marca + nombre/subtítulo + botón de colapsar (icon button) */
+.side-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 82px;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex: 0 0 auto;
 }
 
 .side-brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 82px;
-  padding: 18px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex: 1;
+  min-width: 0;
   color: inherit;
   text-decoration: none;
 }
 
 .side-brand .brand-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-ctl);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
   background: var(--blue);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   flex: none;
 }
 
@@ -957,8 +996,29 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .side-brand .name { display: block; color: #fff; font-weight: 600; font-size: 15px; line-height: 1.2; }
 .side-brand .tag { display: block; color: rgba(255, 255, 255, 0.65); font-size: 11px; line-height: 1.3; }
 
-.side-nav { flex: 1; padding: 18px 12px; }
+/* Icon buttons de la cabecera: colapsar (desktop) y cerrar (drawer móvil) */
+.side-toggle-icono {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.side-toggle-icono:hover { background: rgba(255, 255, 255, 0.08); }
+.side-toggle-icono:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.side-cerrar-movil { display: none; }
+
+.side-nav { flex: 1 1 auto; min-height: 0; padding: 18px 12px; }
 .side-group { margin-bottom: 18px; }
+/* Separador entre grupos: visible sobre todo cuando los títulos se ocultan */
+.side-group + .side-group { padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 
 .side-group-title {
   font-size: 10px;
@@ -973,7 +1033,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   display: flex;
   align-items: center;
   gap: 13px;
-  padding: 11px 13px;
+  padding: 13px 14px;
   margin-bottom: 4px;
   border-radius: var(--radius-md);
   color: rgba(255, 255, 255, 0.85);
@@ -983,17 +1043,17 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 
 .side-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.side-link:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .side-link.active { background: var(--blue); color: #fff; font-weight: 600; }
 
-.side-foot { margin-top: auto; padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.side-foot { margin-top: auto; padding: 15px; border-top: 1px solid rgba(255, 255, 255, 0.12); flex: 0 0 auto; }
 
 .side-toggle {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 10px 12px;
   margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-md);
@@ -1006,11 +1066,42 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 
 .side-toggle:hover { background: rgba(255, 255, 255, 0.08); }
 
-.side-user { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; }
+/* Switch del tema: representación visual del estado de BotonTema (misma acción) */
+.side-toggle-tema::after {
+  content: '';
+  margin-left: auto;
+  flex: none;
+  width: 30px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background-color: var(--gray-bg);
+  background-image: radial-gradient(circle closest-side, #fff 92%, transparent);
+  background-size: 12px 12px;
+  background-position: 2px center;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  transition: background-color 0.15s ease, background-position 0.15s ease;
+}
+.side-toggle-tema[aria-pressed='true']::after {
+  background-color: var(--blue);
+  background-position: calc(100% - 2px) center;
+}
+
+/* Tarjeta de usuario */
+.side-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 2px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+}
 
 .side-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--blue);
   color: #fff;
@@ -1054,19 +1145,45 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 .sidebar .logout:hover { background: rgba(255, 255, 255, 0.08); }
 
-/* Estado contraído */
+/* Estado contraído: carril de iconos de 72px */
 .sidebar.colapsado { width: var(--sidebar-w-colapsado); }
 .sidebar.colapsado .brand-text,
 .sidebar.colapsado .side-group-title,
 .sidebar.colapsado .side-link-text,
 .sidebar.colapsado .side-user-info,
-.sidebar.colapsado .side-toggle-text { display: none; }
-.sidebar.colapsado .side-brand { justify-content: center; padding: 18px 0; }
-.sidebar.colapsado .side-nav { padding: 18px 10px; }
-.sidebar.colapsado .side-link { justify-content: center; padding: 11px; }
-.sidebar.colapsado .side-foot { padding: 12px 10px; }
-.sidebar.colapsado .side-user { justify-content: center; padding: 4px 0 12px; }
-.sidebar.colapsado .side-toggle { padding: 8px; }
+.sidebar.colapsado .side-toggle-text,
+.sidebar.colapsado .side-toggle-tema::after { display: none; }
+.sidebar.colapsado .side-cabecera {
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+}
+.sidebar.colapsado .side-brand { flex: none; justify-content: center; }
+.sidebar.colapsado .brand-mark { width: 44px; height: 44px; font-size: 14px; }
+.sidebar.colapsado .side-nav { padding: 18px 12px; }
+.sidebar.colapsado .side-link { justify-content: center; padding: 13px 0; }
+.sidebar.colapsado .side-foot { padding: 12px; }
+.sidebar.colapsado .side-user {
+  justify-content: center;
+  padding: 6px 0;
+  border-color: transparent;
+  background: transparent;
+}
+.sidebar.colapsado .side-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  margin-inline: auto;
+}
+.sidebar.colapsado .logout {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin-inline: auto;
+}
+.sidebar.colapsado .logout span { display: none; }
 
 /* Tooltip propio del carril contraído (escritorio): identifica cada opción. */
 @media (min-width: 861px) {
@@ -1128,7 +1245,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
     top: 0;
     bottom: 0;
     height: 100vh;
-    width: var(--sidebar-w);
+    width: min(85vw, 320px);
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
     transform: translateX(-105%);
     transition: transform 0.22s ease;
     z-index: 130;
@@ -1141,12 +1259,75 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   .sidebar.colapsado .side-link-text,
   .sidebar.colapsado .side-user-info,
   .sidebar.colapsado .side-toggle-text { display: revert; }
-  .sidebar.colapsado .side-brand { justify-content: flex-start; padding: 18px 18px; }
+  .sidebar.colapsado .side-toggle-tema::after { display: inline-block; }
+  .sidebar.colapsado .side-cabecera {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 14px 14px;
+  }
+  .sidebar.colapsado .side-brand { flex: 1; justify-content: flex-start; }
+  .sidebar.colapsado .brand-mark { width: 48px; height: 48px; font-size: 15px; }
   .sidebar.colapsado .side-nav { padding: 18px 12px; }
-  .sidebar.colapsado .side-link { justify-content: flex-start; padding: 11px 13px; }
+  .sidebar.colapsado .side-link { justify-content: flex-start; padding: 13px 14px; }
   .sidebar.colapsado .side-foot { padding: 15px; }
-  .sidebar.colapsado .side-user { justify-content: flex-start; padding: 4px 6px 12px; }
+  .sidebar.colapsado .side-user {
+    justify-content: flex-start;
+    padding: 10px 12px;
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .sidebar.colapsado .side-toggle {
+    width: 100%;
+    height: auto;
+    padding: 10px 12px;
+    justify-content: flex-start;
+    margin-inline: 0;
+  }
+  .sidebar.colapsado .logout {
+    width: 100%;
+    height: auto;
+    padding: 9px 12px;
+    margin-inline: 0;
+  }
+  .sidebar.colapsado .logout span { display: inline; }
   .side-colapsar { display: none; }
+  .side-cerrar-movil { display: inline-flex; }
+}
+
+/* ---------- Compactación por altura (sin scroll interno) ----------
+   La navegación debe caber completa en 100vh; se reduce solo el aire
+   vertical en pantallas bajas, manteniendo textos, iconos y jerarquía. */
+@media (max-height: 900px) {
+  .side-cabecera { min-height: 76px; padding: 12px; }
+  .side-nav { padding: 14px 12px; }
+  .side-link { padding: 11px 14px; }
+  .side-group { margin-bottom: 14px; }
+  .side-group + .side-group { padding-top: 12px; }
+  .side-foot { padding: 12px; }
+  .side-toggle { padding: 8px 12px; margin-bottom: 8px; }
+  .side-user { padding: 8px 12px; margin: 2px 0 8px; }
+  .sidebar .logout { padding: 8px 12px; }
+  .sidebar.colapsado .side-cabecera { gap: 6px; padding: 10px 0; }
+  .sidebar.colapsado .side-link { padding: 11px 0; }
+  .sidebar.colapsado .side-foot { padding: 10px; }
+  .sidebar.colapsado .side-user { padding: 4px 0; }
+}
+
+@media (max-height: 720px) {
+  .side-cabecera { min-height: 68px; padding: 10px 12px; }
+  .side-nav { padding: 12px 12px; }
+  .side-link { padding: 9px 14px; }
+  .side-group { margin-bottom: 12px; }
+  .side-group + .side-group { padding-top: 10px; }
+  .side-foot { padding: 10px; }
+  .side-toggle { padding: 6px 12px; margin-bottom: 6px; }
+  .side-user { padding: 5px 12px; margin: 2px 0 4px; }
+  .sidebar .logout { padding: 6px 12px; }
+  .sidebar.colapsado .side-cabecera { gap: 4px; padding: 8px 0; }
+  .sidebar.colapsado .side-link { padding: 9px 0; }
+  .sidebar.colapsado .side-foot { padding: 8px; }
+  .sidebar.colapsado .side-user { padding: 2px 0; }
 }
 
 .side-backdrop {

@@ -261,7 +261,7 @@
 }
 
 @media (max-width: 680px) {
-  .app-admin .topbar { padding: 0 18px; }
+  .app-admin .topbar { padding: 0 15px; }
   .app-admin .content { padding: 20px 15px; }
   .app-admin .kpi-grid,
   .app-admin .bottom-grid { grid-template-columns: 1fr; }

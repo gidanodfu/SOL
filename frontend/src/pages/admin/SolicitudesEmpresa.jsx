@@ -66,44 +66,46 @@ export default function SolicitudesEmpresa() {
       {data && data.data.length === 0 && <ListaVacia texto="No hay solicitudes en este estado." />}
 
       {data && data.data.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>RUC</th>
-              <th>Empresa</th>
-              <th>Representante</th>
-              <th>Correo / Teléfono</th>
-              <th>Estado</th>
-              <th>Recibida</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.data.map((s) => (
-              <tr key={s.id}>
-                <td><strong>{s.ruc}</strong></td>
-                <td>
-                  {s.razon_social}
-                  {s.nombre_comercial ? <><br /><small style={{ color: 'var(--gris)' }}>{s.nombre_comercial}</small></> : null}
-                </td>
-                <td>{s.representante}</td>
-                <td>
-                  {s.email}<br />
-                  <small style={{ color: 'var(--gris)' }}>{s.telefono}</small>
-                </td>
-                <td><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
-                <td>{fechaHora(s.created_at)}</td>
-                <td>
-                  <div className="acciones">
-                    <Boton variante="gris" onClick={() => setSeleccionada(s)}>
-                      <Eye size={16} aria-hidden="true" />Ver
-                    </Boton>
-                  </div>
-                </td>
+        <div className="tabla-scroll">
+  <table className="tabla-solicitudes">
+            <thead>
+              <tr>
+                <th className="col-identificador">RUC</th>
+                <th>Empresa</th>
+                <th>Representante</th>
+                <th>Correo / Teléfono</th>
+                <th>Estado</th>
+                <th className="col-fecha">Recibida</th>
+                <th className="col-acciones">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.data.map((s) => (
+                <tr key={s.id}>
+                  <td className="col-identificador"><strong>{s.ruc}</strong></td>
+                  <td>
+                    {s.razon_social}
+                    {s.nombre_comercial ? <><br /><small style={{ color: 'var(--gris)' }}>{s.nombre_comercial}</small></> : null}
+                  </td>
+                  <td>{s.representante}</td>
+                  <td>
+                    {s.email}<br />
+                    <small style={{ color: 'var(--gris)' }}>{s.telefono}</small>
+                  </td>
+                  <td><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
+                  <td className="col-fecha">{fechaHora(s.created_at)}</td>
+                  <td className="col-acciones">
+                    <div className="acciones">
+                      <Boton variante="gris" onClick={() => setSeleccionada(s)}>
+                        <Eye size={16} aria-hidden="true" />Ver
+                      </Boton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <DetalleSolicitud
