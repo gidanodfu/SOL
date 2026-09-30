@@ -318,22 +318,37 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
 
   return (
     <Tarjeta titulo={esNueva ? 'Nueva actividad' : 'Editar actividad'}>
+      <p className="tarjeta-sub">
+        {esNueva
+          ? 'Registra una feria, taller, capacitación o evento; se publicará en el portal.'
+          : 'Actualiza los datos de la actividad.'}
+      </p>
       <Mensaje>{error}</Mensaje>
 
       <div className="form-seccion">
         <span className="form-seccion-titulo">Información básica</span>
-        <div className="form-malla">
+        <div className="form-actividad-basica">
           <Selecto etiqueta="Tipo *" value={form.tipo} onChange={set('tipo')}>
             {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}
           </Selecto>
           <Campo etiqueta="Nombre *" value={form.nombre} onChange={set('nombre')} />
-          <Campo etiqueta="Inicio *" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} />
-          <Campo etiqueta="Fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} />
-          <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
-          <Selecto etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')}>
-            {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
-          </Selecto>
-          <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
+        </div>
+      </div>
+
+      <div className="form-seccion">
+        <span className="form-seccion-titulo">Programación y ubicación</span>
+        <div className="form-actividad-programacion">
+          <div className="form-actividad-fila form-actividad-fila-3">
+            <Campo etiqueta="Inicio *" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} />
+            <Campo etiqueta="Fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} />
+            <Selecto etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')}>
+              {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
+            </Selecto>
+          </div>
+          <div className="form-actividad-fila form-actividad-fila-2">
+            <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
+            <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
+          </div>
         </div>
       </div>
 
@@ -359,7 +374,7 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
         </Suspense>
       </div>
 
-      <div className="form-fila">
+      <div className="form-acciones">
         <Boton variante="primario" cargando={enviando || subiendoImagen} onClick={guardar}>
           {esNueva && idActividad ? 'Guardar cambios' : 'Guardar'}
         </Boton>

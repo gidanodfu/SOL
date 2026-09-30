@@ -479,6 +479,36 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .form-malla { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 1rem; }
 .form-fila { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
 
+/* Layout semántico del formulario de actividades (una sola superficie) */
+.form-actividad-basica {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0 1.2rem;
+}
+.form-actividad-programacion {
+  display: flex;
+  flex-direction: column;
+}
+.form-actividad-fila-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 1.2rem; }
+.form-actividad-fila-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.2rem; }
+.form-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+@media (max-width: 900px) {
+  .form-actividad-fila-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .form-actividad-basica { grid-template-columns: 1fr; }
+  .form-actividad-fila-3,
+  .form-actividad-fila-2 { grid-template-columns: 1fr; }
+  .form-acciones { justify-content: stretch; }
+  .form-acciones .btn { flex: 1 1 auto; justify-content: center; }
+}
+
 /* ---------- Botones ---------- */
 .btn {
   border: 0;
@@ -1809,18 +1839,24 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 /* =====================================================================
    Cargador y presentación de imágenes de actividades
    ===================================================================== */
-.imagen-cargador { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.imagen-cargador {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
 .imagen-preview {
-  width: 180px;
-  height: 120px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  height: auto;
   object-fit: cover;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
   background: var(--sky);
 }
 .imagen-vacia {
-  width: 180px;
-  height: 120px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1832,7 +1868,10 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   background: var(--sky);
   font-size: 0.82rem;
 }
-.imagen-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.imagen-acciones { display: flex; gap: 8px; flex-wrap: wrap; align-content: start; }
+@media (max-width: 560px) {
+  .imagen-cargador { grid-template-columns: 1fr; }
+}
 .btn.deshabilitado { opacity: 0.7; pointer-events: none; }
 .imagen-actividad {
   width: 100%;
