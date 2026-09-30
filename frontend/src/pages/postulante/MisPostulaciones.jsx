@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { listarMisPostulaciones, retirarPostulacion } from '../../services/postulante';
 import { EstadoCarga, Boton, Estado, Mensaje } from '../../components/UI';
+import { useToast, useDialogo } from '../../components/Feedbacks';
 import { ETIQUETA_ESTADO_POSTULACION } from '../../constants';
 import { errorApi, fechaHora } from '../../utils';
 
 export default function MisPostulaciones() {
   const queryClient = useQueryClient();
-  const [nota, setNota] = useState(null);
+  const toast = useToast();
+  const { confirmar } = useDialogo();
   const [error, setError] = useState(null);
 
   const { data, isLoading } = useQuery({ queryKey: ['mis-postulaciones'], queryFn: listarMisPostulaciones });
@@ -20,11 +22,17 @@ export default function MisPostulaciones() {
   };
 
   const retirar = async (id) => {
-    if (!window.confirm('¿Retirar esta postulación? Quedará registrada como inactiva (no se elimina).')) return;
+    const ok = await confirmar({
+      titulo: 'Retirar postulación',
+      mensaje: '¿Retirar esta postulación? Quedará registrada como inactiva (no se elimina).',
+      textoConfirmar: 'Retirar',
+      variante: 'peligro',
+    });
+    if (!ok) return;
     setError(null);
     try {
       await retirarPostulacion(id);
-      setNota('Postulación retirada.');
+      toast.success('Postulación retirada.');
       refrescar();
     } catch (e) {
       setError(errorApi(e));
@@ -38,7 +46,6 @@ export default function MisPostulaciones() {
         <p>Seguimiento de las postulaciones que realizaste a las ofertas de empleo.</p>
       </div>
 
-      <Mensaje tipo="exito">{nota}</Mensaje>
       <Mensaje>{error}</Mensaje>
       {isLoading && <EstadoCarga />}
       {data && data.length === 0 && (

@@ -11,6 +11,7 @@ export const resetPasswordEmpresa = (id, password) => api.put(`/admin/empresas/$
 export const perfilEmpresa = () => api.get('/empresa/perfil').then((r) => r.data.data);
 export const actualizarPerfilEmpresa = (datos) => api.put('/empresa/perfil', datos).then((r) => r.data.data);
 export const dashboardEmpresa = (params = {}) => api.get('/empresa/dashboard', { params }).then((r) => r.data.data);
+export const pendientesEmpresa = () => api.get('/empresa/pendientes').then((r) => r.data.data);
 export const exportarReporteEmpresa = (params = {}) =>
   api.get('/empresa/reportes/excel', { params, responseType: 'blob' }).then((r) => r.data);
 

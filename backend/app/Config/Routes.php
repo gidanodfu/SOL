@@ -60,6 +60,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->get('ofertas/(:num)', 'OfertasPublicasController::show/$1');
     $routes->get('oportunidades', 'DivulgacionController::oportunidades');
     $routes->get('actividades', 'DivulgacionController::actividades');
+    $routes->get('actividades/(:num)/imagen', 'DivulgacionController::imagenActividad/$1');
     $routes->get('categorias', 'CategoriasController::index');
 
     // Cualquier rol autenticado (jwt: valida token + estado activo en BD).
@@ -93,6 +94,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('solicitudes-empresa/(:num)/enlace', 'SolicitudesEmpresaController::enlace/$1');
 
         $routes->get('dashboard', 'DashboardController::index');
+        $routes->get('pendientes', 'DashboardController::pendientes');
 
         $routes->get('ofertas', 'OfertasController::index');
         $routes->get('ofertas/(:num)', 'OfertasController::show/$1');
@@ -105,6 +107,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->post('actividades', 'ActividadesController::store');
         $routes->put('actividades/(:num)', 'ActividadesController::update/$1');
         $routes->put('actividades/(:num)/estado', 'ActividadesController::estado/$1');
+        $routes->post('actividades/(:num)/imagen', 'ActividadesController::subirImagen/$1');
+        $routes->delete('actividades/(:num)/imagen', 'ActividadesController::eliminarImagen/$1');
 
         $routes->get('oportunidades', 'OportunidadesController::index');
         $routes->post('oportunidades', 'OportunidadesController::store');
@@ -122,6 +126,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('perfil', 'PerfilController::index');
         $routes->put('perfil', 'PerfilController::update');
         $routes->get('dashboard', 'PerfilController::dashboard');
+        $routes->get('pendientes', 'PerfilController::pendientes');
 
         $routes->get('ofertas', 'OfertasController::index');
         $routes->get('ofertas/(:num)', 'OfertasController::show/$1');

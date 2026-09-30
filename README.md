@@ -438,6 +438,27 @@ en [`tests/README.md`](tests/README.md).
   JSON y el Swagger UI es estático con CDN. Al desplegar el SPA, configurar la
   Content-Security-Policy en el hosting del frontend.
 
+### Dominios, subdominios y SPA fallback
+
+Variables por entorno (todas configurables; no hay URLs de producción en el código):
+
+| Entorno | `app.baseURL` | `app.frontendUrl` | `cors.allowedOrigins` / `Patterns` | `VITE_API_URL` |
+|---|---|---|---|---|
+| local | `http://localhost:8080/` | `http://localhost:5173` | `http://localhost:5173` | `http://localhost:8080` |
+| staging | `https://staging-api…` | `https://staging…` | el dominio de staging | el dominio de la API de staging |
+| producción | `https://api.midominio.gob.pe/` | `https://empleo.midominio.gob.pe` | el dominio real; usar `Patterns` para subdominios | vacío si el frontend sirve `/api` en el mismo origen, o el dominio de la API |
+
+- `app.frontendUrl` es obligatoria: sin ella no se generan los enlaces de activación.
+- Zona horaria de negocio: `app.appTimezone = America/Lima` (por defecto). Mantener el
+  MySQL de producción en la misma zona o en UTC y convertir en las fronteras.
+- CORS sin cookies (`supportsCredentials=false`): la autenticación es JWT Bearer.
+- **SPA fallback** (React Router con `BrowserRouter`): el hosting del frontend debe
+  devolver `index.html` en cualquier ruta. Ejemplo Nginx:
+
+  ```nginx
+  location / { try_files $uri $uri/ /index.html; }
+  ```
+
 ## Convenciones del backend
 
 - Capas: `Controllers → Services → Repositories → Models/Entities`. Reglas de negocio en

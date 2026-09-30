@@ -5,6 +5,7 @@ import { cambiarEstadoEmpresa, crearEmpresa, listarEmpresas, resetPasswordEmpres
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
+import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, KeyRound, Power } from 'lucide-react';
 import { errorApi, fecha, fechaCalendario, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
@@ -13,6 +14,8 @@ const estadosEmpresa = { activo: 'activo', inactivo: 'inactivo' };
 
 export default function Empresas() {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const { pedirTexto } = useDialogo();
   const [filtros, setFiltros] = useState({ estado: '', q: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [nota, setNota] = useState(null);
@@ -36,12 +39,24 @@ export default function Empresas() {
   };
 
   const resetPassword = async (e) => {
-    const password = window.prompt(`Nueva contraseña para la empresa ${e.ruc} (mínimo 8 caracteres):`);
+    const password = await pedirTexto({
+      titulo: 'Restablecer contraseña',
+      mensaje: `Empresa RUC ${e.ruc}`,
+      etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
+      secreto: true,
+      min: 8,
+      textoConfirmar: 'Restablecer',
+      variante: 'peligro',
+    });
     if (!password) return;
-    await ejecutar(() => resetPasswordEmpresa(e.id, password));
-    setError(null);
-    window.alert('Contraseña restablecida. Entréguela de forma segura a la empresa.');
-    refrescar();
+    try {
+      await ejecutar(() => resetPasswordEmpresa(e.id, password));
+      setError(null);
+      toast.success('Contraseña restablecida. Entréguela de forma segura a la empresa.');
+      refrescar();
+    } catch (err) {
+      setError(errorApi(err));
+    }
   };
 
   return (
@@ -137,6 +152,8 @@ export default function Empresas() {
 
 function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
+  const toast = useToast();
+  const { pedirTexto } = useDialogo();
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
   if (!empresa) return null;
@@ -152,12 +169,20 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
   };
 
   const resetPassword = async () => {
-    const password = window.prompt(`Nueva contraseña para la empresa ${empresa.ruc} (mínimo 8 caracteres):`);
+    const password = await pedirTexto({
+      titulo: 'Restablecer contraseña',
+      mensaje: `Empresa RUC ${empresa.ruc}`,
+      etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
+      secreto: true,
+      min: 8,
+      textoConfirmar: 'Restablecer',
+      variante: 'peligro',
+    });
     if (!password) return;
     try {
       await ejecutar(() => resetPasswordEmpresa(empresa.id, password));
       setError(null);
-      window.alert('Contraseña restablecida. Entréguela de forma segura a la empresa.');
+      toast.success('Contraseña restablecida. Entréguela de forma segura a la empresa.');
     } catch (e) {
       setError(errorApi(e));
     }

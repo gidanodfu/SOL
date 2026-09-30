@@ -72,6 +72,67 @@ class StorageService
     }
 
     /**
+     * Almacena contenido binario ya leído (p. ej. una imagen validada por magic
+     * bytes). Reutiliza el mismo bucket y firma que los CV.
+     */
+    public function almacenarContenido(string $objectKey, string $cuerpo, string $mime): void
+    {
+        if (! $this->esSupabase()) {
+            $ruta = WRITEPATH . 'uploads/' . $objectKey;
+            if (! is_dir(dirname($ruta))) {
+                mkdir(dirname($ruta), 0775, true);
+            }
+            if (file_put_contents($ruta, $cuerpo) === false) {
+                throw ApiException::badRequest('No se pudo guardar el archivo.');
+            }
+
+            return;
+        }
+
+        if ($this->solicitudFirmada('PUT', $this->rutaObjeto($objectKey), $cuerpo, $mime) === null) {
+            throw ApiException::badRequest('No se pudo almacenar el archivo en el almacenamiento externo.');
+        }
+    }
+
+    /**
+     * Elimina un objeto del almacenamiento (best-effort). Sirve para reemplazar
+     * o quitar imágenes de actividades.
+     */
+    public function eliminar(string $objectKey): void
+    {
+        if (! $this->esSupabase()) {
+            $ruta = WRITEPATH . 'uploads/' . $objectKey;
+            if (is_file($ruta)) {
+                @unlink($ruta);
+            }
+
+            return;
+        }
+
+        // DELETE firmado sin cuerpo (sin cabecera content-type).
+        $this->solicitudFirmada('DELETE', $this->rutaObjeto($objectKey), '');
+    }
+
+    /**
+     * Devuelve el contenido binario del objeto (para el proxy público de
+     * imágenes). Null si no existe o no se puede leer.
+     */
+    public function obtenerContenido(string $objectKey): ?string
+    {
+        if (! $this->esSupabase()) {
+            $ruta = $this->rutaLocal($objectKey);
+
+            return $ruta === null ? null : (file_get_contents($ruta) ?: null);
+        }
+
+        $url = $this->urlPresignada('GET', $this->rutaObjeto($objectKey), 120);
+        $ctx = stream_context_create(['http' => ['timeout' => 15]]);
+        $contenido = @file_get_contents($url, false, $ctx);
+
+        return $contenido === false ? null : $contenido;
+    }
+
+    /**
      * URL firmada temporal de descarga (RT-CV-05). En local devuelve la ruta
      * interna de descarga que exige autorización del propietario.
      */
@@ -162,18 +223,21 @@ class StorageService
     /**
      * Firma un PUT y devuelve la respuesta, o null ante error HTTP.
      */
-    private function solicitudFirmada(string $metodo, string $ruta, string $cuerpo, string $mime): ?string
+    private function solicitudFirmada(string $metodo, string $ruta, string $cuerpo, ?string $mime = null): ?string
     {
         $fecha = gmdate('Ymd\THis\Z');
         $payloadHash = hash('sha256', $cuerpo);
 
         $cabeceras = [
-            'content-type'         => $mime,
             'host'                 => $this->host(),
             'x-amz-content-sha256' => $payloadHash,
             'x-amz-date'           => $fecha,
         ];
-        $cabecerasFirmadas = ['content-type', 'host', 'x-amz-content-sha256', 'x-amz-date'];
+        $cabecerasFirmadas = ['host', 'x-amz-content-sha256', 'x-amz-date'];
+        if ($mime !== null) {
+            $cabeceras['content-type'] = $mime;
+            $cabecerasFirmadas = ['content-type', 'host', 'x-amz-content-sha256', 'x-amz-date'];
+        }
 
         $cabeceraCadena = '';
         foreach ($cabecerasFirmadas as $h) {
@@ -194,17 +258,20 @@ class StorageService
             . ', Signature=' . $firma;
 
         $ch = curl_init($this->origen() . $ruta);
+        $cabecerasHttp = [
+            'Authorization: ' . $autorizacion,
+            'x-amz-content-sha256: ' . $payloadHash,
+            'x-amz-date: ' . $fecha,
+        ];
+        if ($mime !== null) {
+            $cabecerasHttp[] = 'Content-Type: ' . $mime;
+        }
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 30,
             CURLOPT_CUSTOMREQUEST  => $metodo,
             CURLOPT_POSTFIELDS     => $cuerpo,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: ' . $autorizacion,
-                'Content-Type: ' . $mime,
-                'x-amz-content-sha256: ' . $payloadHash,
-                'x-amz-date: ' . $fecha,
-            ],
+            CURLOPT_HTTPHEADER     => $cabecerasHttp,
         ]);
 
         $respuesta = curl_exec($ch);

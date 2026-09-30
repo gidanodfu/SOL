@@ -355,7 +355,12 @@ class SolicitudEmpresaService
             'expira_en'  => date('Y-m-d H:i:s', strtotime("+{$dias} days")),
         ]);
 
-        $base = rtrim((string) (env('app.frontendUrl') ?: 'http://localhost:5173'), '/');
+        // Base del frontend obligatoria por entorno: sin ella el enlace no puede
+        // apuntar a un dominio real (no se asume localhost).
+        $base = rtrim((string) env('app.frontendUrl'), '/');
+        if ($base === '') {
+            throw ApiException::badRequest('Falta configurar app.frontendUrl para generar el enlace de activación.');
+        }
 
         return $base . '/activar-cuenta/' . $token;
     }

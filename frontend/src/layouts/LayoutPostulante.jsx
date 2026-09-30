@@ -9,7 +9,8 @@ import BotonTema from '../components/BotonTema';
 import { perfilPostulante } from '../services/postulante';
 import { useClickFuera } from '../hooks/useClickFuera';
 
-const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
+// Logo local de la aplicación (mismo asset del favicon); sin dependencias externas.
+const LOGO_URL = '/favicon.jpeg';
 
 const NAV = [
   { to: '/postulante/buscar', icono: 'ti ti-search', texto: 'Buscar empleo', corto: 'Buscar' },

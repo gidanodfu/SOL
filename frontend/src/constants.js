@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT
-export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '');
+// Base de la API configurable por entorno (VITE_API_URL). Sin valor, se usa el
+// mismo origen del frontend (válido detrás de un reverse proxy o subdominio);
+// no se fija localhost para no romper despliegues.
+const apiConfigurada = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+export const API_URL = apiConfigurada || (typeof window !== 'undefined' ? window.location.origin : '');
 
 export const ROLES = {
   ADMIN: 'admin',

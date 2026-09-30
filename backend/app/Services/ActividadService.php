@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Exceptions\ApiException;
 use App\Models\ActividadModel;
 use App\Validation\Validador;
+use CodeIgniter\HTTP\Files\UploadedFile;
 
 /**
  * Ferias, eventos, talleres y capacitaciones (RF-44..RF-47). Una sola entidad
@@ -19,6 +20,12 @@ class ActividadService
 
     public const MODALIDADES = ['presencial', 'virtual', 'mixta'];
 
+    private const IMAGEN_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+
+    private const IMAGEN_EXTENSIONES = ['jpg', 'jpeg', 'png', 'webp'];
+
+    private const IMAGEN_TAMANO_MAXIMO = 2 * 1024 * 1024;
+
     private const TRANSICIONES = [
         'programado' => ['en_curso', 'finalizado', 'cancelado'],
         'en_curso'   => ['finalizado', 'cancelado'],
@@ -30,10 +37,13 @@ class ActividadService
 
     private HtmlSanitizer $html;
 
-    public function __construct(?ActividadModel $actividades = null, ?HtmlSanitizer $html = null)
+    private StorageService $storage;
+
+    public function __construct(?ActividadModel $actividades = null, ?HtmlSanitizer $html = null, ?StorageService $storage = null)
     {
         $this->actividades = $actividades ?? model(ActividadModel::class);
         $this->html        = $html ?? new HtmlSanitizer();
+        $this->storage     = $storage ?? new StorageService();
     }
 
     /**
@@ -54,7 +64,122 @@ class ActividadService
             $builder->where('estado', $filtros['estado']);
         }
 
-        return $builder->orderBy('fecha_inicio', 'DESC')->limit(200)->get()->getResultArray();
+        $filas = $builder->orderBy('fecha_inicio', 'DESC')->limit(200)->get()->getResultArray();
+
+        return array_map([$this, 'conImagenPublica'], $filas);
+    }
+
+    /**
+     * Expone una URL pública de la imagen (si existe) y oculta la key interna.
+     *
+     * @param array<string, mixed> $fila
+     *
+     * @return array<string, mixed>
+     */
+    private function conImagenPublica(array $fila): array
+    {
+        $tiene = ! empty($fila['imagen_key']);
+        $fila['imagen_url'] = $tiene ? '/api/actividades/' . $fila['id'] . '/imagen' : null;
+        unset($fila['imagen_key']);
+
+        return $fila;
+    }
+
+    /**
+     * Sube (o reemplaza) la imagen de una actividad. Valida tipo real, extensión
+     * y tamaño; el nombre de objeto lo genera el servidor.
+     */
+    public function subirImagen(int $id, UploadedFile $archivo): string
+    {
+        $actividad = $this->exigir($id);
+        $this->validarImagen($archivo);
+
+        $extension = strtolower((string) $archivo->getClientExtension());
+        $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $extension;
+
+        $contenido = (string) file_get_contents($archivo->getTempName());
+        $this->storage->almacenarContenido($objectKey, $contenido, (string) $archivo->getMimeType());
+
+        $anterior = $actividad['imagen_key'] ?? null;
+        $this->actividades->update($id, ['imagen_key' => $objectKey]);
+
+        if ($anterior && $anterior !== $objectKey) {
+            $this->storage->eliminar($anterior);
+        }
+
+        return $objectKey;
+    }
+
+    public function eliminarImagen(int $id): void
+    {
+        $actividad = $this->exigir($id);
+        $key = $actividad['imagen_key'] ?? null;
+        if ($key) {
+            $this->storage->eliminar($key);
+        }
+        $this->actividades->update($id, ['imagen_key' => null]);
+    }
+
+    /**
+     * Contenido de la imagen para el proxy público. Null si la actividad no
+     * tiene imagen o el objeto ya no existe.
+     *
+     * @return array{mime: string, contenido: string}|null
+     */
+    public function imagenContenido(int $id): ?array
+    {
+        $actividad = $this->exigir($id);
+        $key = $actividad['imagen_key'] ?? null;
+        if (! $key) {
+            return null;
+        }
+
+        $contenido = $this->storage->obtenerContenido($key);
+        if ($contenido === null) {
+            return null;
+        }
+
+        return ['mime' => $this->mimeDeImagen($key), 'contenido' => $contenido];
+    }
+
+    private function validarImagen(UploadedFile $archivo): void
+    {
+        if (! $archivo->isValid()) {
+            throw ApiException::badRequest('La imagen no se recibió correctamente.');
+        }
+        if ((int) $archivo->getSize() > self::IMAGEN_TAMANO_MAXIMO) {
+            throw ApiException::validacion('La imagen supera el tamaño máximo de 2 MB.', ['La imagen supera el tamaño máximo de 2 MB.']);
+        }
+
+        $extension = strtolower((string) $archivo->getClientExtension());
+        if (! in_array($extension, self::IMAGEN_EXTENSIONES, true)) {
+            throw ApiException::validacion('Solo se permiten imágenes JPG, PNG o WEBP.', ['Solo se permiten imágenes JPG, PNG o WEBP.']);
+        }
+        // MIME real (finfo) + verificación de bytes mágicos: no se confía en el
+        // nombre ni en el content-type enviados por el cliente.
+        if (! in_array((string) $archivo->getMimeType(), self::IMAGEN_MIMES, true)) {
+            throw ApiException::validacion('El tipo de la imagen no es válido.', ['El tipo de la imagen no es válido.']);
+        }
+        $inicio = (string) @file_get_contents($archivo->getTempName(), false, null, 0, 12);
+        if (! $this->esImagenReal($inicio)) {
+            throw ApiException::validacion('El archivo no es una imagen válida.', ['El archivo no es una imagen válida.']);
+        }
+    }
+
+    private function esImagenReal(string $bytes): bool
+    {
+        return substr($bytes, 0, 3) === "\xFF\xD8\xFF"
+            || substr($bytes, 0, 8) === "\x89PNG\r\n\x1a\n"
+            || (substr($bytes, 0, 4) === 'RIFF' && substr($bytes, 8, 4) === 'WEBP');
+    }
+
+    private function mimeDeImagen(string $key): string
+    {
+        return match (strtolower(pathinfo($key, PATHINFO_EXTENSION))) {
+            'png'  => 'image/png',
+            'webp' => 'image/webp',
+            default => 'image/jpeg',
+        };
     }
 
     /**

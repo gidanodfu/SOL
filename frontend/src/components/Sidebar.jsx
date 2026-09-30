@@ -22,7 +22,7 @@ function iniciales(nombre = '', respaldo = 'US') {
   return (siglas || respaldo).toUpperCase();
 }
 
-export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle }) {
+export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle, indicadores = {} }) {
   const [abiertoMovil, setAbiertoMovil] = useState(false);
   const etiquetaToggle = colapsado ? 'Expandir menú' : 'Contraer menú';
 
@@ -88,6 +88,9 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle })
                 >
                   <item.icono size={18} strokeWidth={2} aria-hidden="true" />
                   <span className="side-link-text">{item.texto}</span>
+                  {indicadores[item.to] ? (
+                    <span className="side-punto" role="status" aria-label={`${item.texto}: tiene pendientes`} />
+                  ) : null}
                 </NavLink>
               ))}
             </div>

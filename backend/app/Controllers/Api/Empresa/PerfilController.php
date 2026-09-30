@@ -40,4 +40,16 @@ class PerfilController extends BaseApiController
             'Indicadores de su empresa.',
         );
     }
+
+    /**
+     * Conteos de pendientes para los indicadores de la sidebar (ofertas
+     * rechazadas y postulaciones por revisar), acotados a la empresa de la sesión.
+     */
+    public function pendientes()
+    {
+        return $this->ok(
+            (new DashboardService())->pendientesEmpresa(service('guard')->id()),
+            'Pendientes de atención.',
+        );
+    }
 }

@@ -23,4 +23,16 @@ class DashboardController extends BaseApiController
             'Indicadores de gestión del empleo.',
         );
     }
+
+    /**
+     * Conteos de pendientes para los indicadores de la sidebar (ofertas por
+     * revisar y solicitudes por resolver).
+     */
+    public function pendientes()
+    {
+        return $this->ok(
+            (new DashboardService())->pendientesAdmin(),
+            'Pendientes de atención.',
+        );
+    }
 }

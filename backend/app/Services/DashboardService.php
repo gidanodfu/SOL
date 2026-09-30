@@ -61,6 +61,32 @@ class DashboardService
     }
 
     /**
+     * Conteos de atención pendiente para la administración (indicadores de UI).
+     *
+     * @return array{ofertas: int, solicitudes: int}
+     */
+    public function pendientesAdmin(): array
+    {
+        return $this->repositorio->pendientesAdmin();
+    }
+
+    /**
+     * Conteos de atención pendiente de la empresa autenticada, acotados por
+     * sesión (no por parámetros).
+     *
+     * @return array{ofertas_rechazadas: int, postulaciones: int}
+     */
+    public function pendientesEmpresa(int $usuarioId): array
+    {
+        $empresa = $this->empresas->porUserId($usuarioId);
+        if ($empresa === null) {
+            throw ApiException::noEncontrado('No se encontró la empresa asociada a su cuenta.');
+        }
+
+        return $this->repositorio->pendientesEmpresa((int) $empresa['id']);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function postulante(int $usuarioId): array

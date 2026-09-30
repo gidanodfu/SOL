@@ -22,4 +22,26 @@ class DivulgacionController extends BaseApiController
     {
         return $this->ok((new OportunidadService())->publicas(), 'Oportunidades de empleo.');
     }
+
+    /**
+     * Proxy público de la imagen de una actividad. El bucket es privado; la API
+     * sirve el contenido (driver local o Supabase) sin exponer credenciales.
+     */
+    public function imagenActividad($id)
+    {
+        $imagen = (new ActividadService())->imagenContenido((int) $id);
+        if ($imagen === null) {
+            return $this->response
+                ->setStatusCode(404)
+                ->setContentType('application/json', 'UTF-8')
+                ->setBody(json_encode(['success' => false, 'message' => 'La actividad no tiene imagen.'], JSON_UNESCAPED_UNICODE));
+        }
+
+        return $this->response
+            ->setStatusCode(200)
+            ->setContentType($imagen['mime'])
+            ->setHeader('Cache-Control', 'public, max-age=3600')
+            ->setHeader('Content-Disposition', 'inline')
+            ->setBody($imagen['contenido']);
+    }
 }

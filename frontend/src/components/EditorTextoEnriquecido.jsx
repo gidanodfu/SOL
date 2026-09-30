@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -44,7 +44,11 @@ export default function EditorTextoEnriquecido({
   max = TEXTO_MAX,
   aviso = TEXTO_AVISO,
 }) {
-  const origenInterno = useRef(false);
+  // El contenido inicial se aplica al CREAR la instancia (ruta no rechazada por
+  // CharacterCount). No se usa setContent posterior: el componente se re-monta
+  // por registro (key) desde los formularios, así que el valor llega siempre al
+  // momento de la creación. Esto evita que un registro largo/heredado se quede
+  // sin cargar por el filtro de transacciones de CharacterCount.
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -63,38 +67,28 @@ export default function EditorTextoEnriquecido({
         },
       }),
       Placeholder.configure({ placeholder }),
-      CharacterCount.configure({ limit: max }),
+      // `limit` bloquea el crecimiento por tecleo/pegado, pero `autoTrim: false`
+      // impide el recorte silencioso del contenido existente. El texto cuenta en
+      // code points (coincide con mb_strlen del backend en texto visible).
+      CharacterCount.configure({
+        limit: max,
+        autoTrim: false,
+        mode: 'textSize',
+        textCounter: (texto) => [...texto].length,
+      }),
     ],
     content: normalizarEntrada(valor),
-    onUpdate: ({ editor: e }) => {
-      origenInterno.current = true;
-      onChange(e.getHTML());
-    },
+    onUpdate: ({ editor: e }) => onChange(e.getHTML()),
   });
-
-  // Sincroniza cuando el valor cambia desde fuera (abrir otro registro).
-  // TipTap puede destruir la instancia (schema = null) entre el commit y este
-  // efecto; llamar a getHTML() sobre una instancia destruida lanza
-  // "Cannot read properties of null (reading 'cached')" desde ProseMirror.
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) {
-      origenInterno.current = false;
-      return;
-    }
-    if (origenInterno.current) {
-      origenInterno.current = false;
-      return;
-    }
-    const siguiente = normalizarEntrada(valor);
-    if (editor.getHTML() !== siguiente) {
-      editor.commands.setContent(siguiente, false);
-    }
-  }, [editor, valor]);
 
   const estado = useEditorState({
     editor,
     selector: ({ editor: e }) => {
       if (!e || e.isDestroyed) return null;
+      // Misma definición que el backend: texto visible sin etiquetas y sin
+      // separadores artificiales entre bloques (doc.textContent).
+      const texto = e.state.doc.textContent || '';
+      const limpio = texto.trim();
       return {
         negrita: e.isActive('bold'),
         cursiva: e.isActive('italic'),
@@ -102,28 +96,39 @@ export default function EditorTextoEnriquecido({
         vinietas: e.isActive('bulletList'),
         numerada: e.isActive('orderedList'),
         enlace: e.isActive('link'),
-        // API pública de CharacterCount: cuenta texto, nunca etiquetas HTML.
-        caracteres: e.storage?.characterCount?.characters?.() ?? 0,
-        palabras: e.storage?.characterCount?.words?.() ?? 0,
+        caracteres: [...texto].length,
+        palabras: limpio ? limpio.split(/\s+/).length : 0,
       };
     },
   });
 
+  // UI propia del editor para insertar/editar enlaces (sin prompt nativo).
+  const [enlaceAbierto, setEnlaceAbierto] = useState(false);
+  const [urlEnlace, setUrlEnlace] = useState('');
+
   if (!editor || editor.isDestroyed || !estado) return <p className="vacio">Cargando editor…</p>;
 
-  const enlace = () => {
+  const abrirEnlace = () => {
     if (!editor || editor.isDestroyed) return;
-    const anterior = editor.getAttributes('link').href || '';
-    const url = window.prompt('URL del enlace (https://…)', anterior);
-    if (url === null) return;
-    if (url.trim() === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    setUrlEnlace(editor.getAttributes('link').href || '');
+    setEnlaceAbierto(true);
+  };
+
+  const quitarEnlace = () => {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    setEnlaceAbierto(false);
+  };
+
+  const aplicarEnlace = () => {
+    const escrita = urlEnlace.trim();
+    if (escrita === '') {
+      quitarEnlace();
       return;
     }
-    const escrita = url.trim();
     const destino = esEnlaceSeguro(escrita) ? escrita : `https://${escrita}`;
     if (!esEnlaceSeguro(destino)) return;
     editor.chain().focus().extendMarkRange('link').setLink({ href: destino }).run();
+    setEnlaceAbierto(false);
   };
 
   // Ningún comando debe ejecutarse si la instancia dejó de estar viva.
@@ -138,7 +143,7 @@ export default function EditorTextoEnriquecido({
     { id: 'subrayado', icono: Underline, etiqueta: 'Subrayado', activo: estado.subrayado, ejecutar: comando((e) => e.chain().focus().toggleUnderline().run()) },
     { id: 'vinietas', icono: List, etiqueta: 'Lista con viñetas', activo: estado.vinietas, ejecutar: comando((e) => e.chain().focus().toggleBulletList().run()) },
     { id: 'numerada', icono: ListOrdered, etiqueta: 'Lista numerada', activo: estado.numerada, ejecutar: comando((e) => e.chain().focus().toggleOrderedList().run()) },
-    { id: 'enlace', icono: Link2, etiqueta: 'Insertar enlace', activo: estado.enlace, ejecutar: enlace },
+    { id: 'enlace', icono: Link2, etiqueta: 'Insertar enlace', activo: estado.enlace, ejecutar: abrirEnlace },
     {
       id: 'limpiar',
       icono: Eraser,
@@ -174,6 +179,27 @@ export default function EditorTextoEnriquecido({
             {estado.palabras} palabra(s) · {estado.caracteres}/{max} caracteres
           </span>
         </div>
+
+        {enlaceAbierto && (
+          <div className="rte-enlace">
+            <input
+              className="rte-enlace-input"
+              type="url"
+              value={urlEnlace}
+              onChange={(e) => setUrlEnlace(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); aplicarEnlace(); }
+                if (e.key === 'Escape') setEnlaceAbierto(false);
+              }}
+              placeholder="https://…"
+              aria-label="URL del enlace"
+              autoFocus
+            />
+            <button type="button" className="rte-boton-texto" onClick={aplicarEnlace}>Aplicar</button>
+            {estado.enlace && <button type="button" className="rte-boton-texto" onClick={quitarEnlace}>Quitar</button>}
+            <button type="button" className="rte-boton-texto" onClick={() => setEnlaceAbierto(false)}>Cancelar</button>
+          </div>
+        )}
 
         <EditorContent editor={editor} />
       </div>
