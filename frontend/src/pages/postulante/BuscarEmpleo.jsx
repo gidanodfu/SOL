@@ -6,6 +6,7 @@ import { detalleOferta, listarOfertas, perfilPostulante, postular } from '../../
 import { listarCategorias } from '../../services/categorias';
 import { useAuth } from '../../context/AuthContext';
 import { Mensaje } from '../../components/UI';
+import { useToast } from '../../components/Feedbacks';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES } from '../../constants';
 import { errorApi, fechaCalendario } from '../../utils';
@@ -364,7 +365,7 @@ function PanelDetalle({ oferta, onCerrar, perfilIncompleto }) {
 }
 
 function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
-  const [nota, setNota] = useState(null);
+  const toast = useToast();
   const [headerOculto, setHeaderOculto] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -398,7 +399,7 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
     }
     try {
       await ejecutar();
-      setNota('Postulación registrada. La empresa la revisará próximamente.');
+      toast.success('Postulación registrada. La empresa la revisará próximamente.');
       setError(null);
       queryClient.invalidateQueries({ queryKey: ['buscar-ofertas'] });
       queryClient.invalidateQueries({ queryKey: ['oferta-detalle', oferta.id] });
@@ -438,7 +439,6 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
           </div>
         </div>
 
-        {nota && <Mensaje tipo="exito">{nota}</Mensaje>}
         <Mensaje>{error}</Mensaje>
 
         <button

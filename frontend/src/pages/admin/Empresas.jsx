@@ -144,7 +144,7 @@ export default function Empresas() {
       <DetalleEmpresa
         empresa={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
       />
     </Tarjeta>
   );

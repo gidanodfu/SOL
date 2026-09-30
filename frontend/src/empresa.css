@@ -22,7 +22,7 @@
 }
 
 /* ---------- Contenido ---------- */
-.app-empresa .content { flex: 1; min-width: 0; padding: 32px 35px 60px; max-width: 1600px; margin-inline: auto; }
+.app-empresa .content { flex: 1; min-width: 0; padding: 32px 35px 50px; max-width: 1600px; margin-inline: auto; }
 
 /* ---------- KPI ---------- */
 .app-empresa .kpi-row {
@@ -115,22 +115,6 @@
 .app-empresa .post-fila .app-main { flex: 1; min-width: 0; }
 .app-empresa .post-fila .who { font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
 .app-empresa .post-fila .who b { color: var(--text-1); font-weight: 600; }
-.app-empresa .btn-ver {
-  background: var(--sky-2);
-  border: 0;
-  color: var(--enlace);
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.app-empresa .btn-ver:hover { background: var(--sky-2); }
 .app-empresa .post-detalle { background: var(--sky); border-radius: var(--radius-lg); padding: 16px; margin: 0 4px 16px; }
 .app-empresa .post-detalle h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; color: var(--ink); }
 .app-empresa .post-detalle .descripcion { margin-bottom: 0.6rem; }
@@ -144,7 +128,7 @@
 @media (max-width: 860px) {
   /* Panel móvil superpuesto (reglas generales en styles.css). */
   .app-empresa .sidebar { position: fixed; }
-  .app-empresa .content { padding: 24px 20px 50px; }
+  .app-empresa .content { padding: 20px 15px; }
 }
 @media (max-width: 560px) {
   .app-empresa .page-head h1 { font-size: 20px; }
