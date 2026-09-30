@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -34,6 +34,10 @@ export default function Ofertas() {
   const [editor, setEditor] = useState(() => (location.state?.nueva ? {} : null));
   const [seleccionada, setSeleccionada] = useState(null);
   const [nota, setNota] = useState(null);
+
+  // Precarga el chunk del editor al entrar a la página: cuando el usuario pulsa
+  // "Nueva oferta"/"Editar", TipTap ya está descargado (no engorda el bundle inicial).
+  useEffect(() => { import('../../components/EditorTextoEnriquecido'); }, []);
 
   // La oferta a editar se resuelve antes de montar el editor, para que el RTE
   // reciba el contenido en su creación (nunca se queda sin cargar).
