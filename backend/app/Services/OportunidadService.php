@@ -42,17 +42,21 @@ class OportunidadService
             $builder->where('o.activo', (int) $filtros['activo']);
         }
 
-        return $builder->orderBy('o.created_at', 'DESC')->limit(300)->get()->getResultArray();
+        $filas = $builder->orderBy('o.created_at', 'DESC')->limit(300)->get()->getResultArray();
+
+        return array_map([$this, 'conEstadoPublicacion'], $filas);
     }
 
     /**
-     * Oportunidades activas para difusión a los ciudadanos (RF-48).
+     * Oportunidades activas y ya alcanzadas por su fecha para difusión a los
+     * ciudadanos (RF-48). La publicación es programada por día (fecha_publicacion);
+     * no hay cron: la visibilidad se calcula al leer.
      *
      * @return list<array<string, mixed>>
      */
     public function publicas(): array
     {
-        return $this->oportunidades->db->table('oportunidades o')
+        $filas = $this->oportunidades->db->table('oportunidades o')
             ->select('o.*, e.razon_social')
             ->join('empresas e', 'e.id = o.empresa_id', 'LEFT')
             ->where('o.activo', 1)
@@ -61,6 +65,27 @@ class OportunidadService
             ->limit(200)
             ->get()
             ->getResultArray();
+
+        return array_map([$this, 'conEstadoPublicacion'], $filas);
+    }
+
+    /**
+     * Estado de publicación derivado (no se persiste): oculta si está desactivada;
+     * programada si su fecha aún no llega; visible si ya puede mostrarse.
+     *
+     * @param array<string, mixed> $fila
+     *
+     * @return array<string, mixed>
+     */
+    private function conEstadoPublicacion(array $fila): array
+    {
+        $fecha  = $fila['fecha_publicacion'] ?? null;
+        $futura = $fecha !== null && $fecha !== '' && $fecha > date('Y-m-d');
+        $fila['estado_publicacion'] = ((int) ($fila['activo'] ?? 0)) === 0
+            ? 'oculta'
+            : ($futura ? 'programada' : 'visible');
+
+        return $fila;
     }
 
     /**

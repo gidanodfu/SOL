@@ -67,6 +67,12 @@ export const fechaHora = (v) => (v ? new Date(v).toLocaleString('es-PE') : '—'
 export const fecha = (v) => (v ? new Date(v).toLocaleDateString('es-PE') : '—');
 
 /**
+ * URL absoluta de un recurso servido por la API a partir de la ruta relativa que
+ * esta devuelve (p. ej. la imagen pública de una actividad).
+ */
+export const urlArchivo = (ruta) => (ruta ? `${API_URL}${ruta}` : null);
+
+/**
  * Fecha calendario (columnas MySQL DATE: `YYYY-MM-DD`). Se formatea por texto,
  * sin `new Date(...)`, para que la zona horaria del navegador no desplace el día.
  * También acepta `YYYY-MM-DD HH:MM:SS` (toma solo la fecha).

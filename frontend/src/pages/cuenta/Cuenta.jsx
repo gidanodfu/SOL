@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { perfilEmpresa } from '../../services/empresas';
 import { Boton, Campo, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import { ROLES } from '../../constants';
@@ -12,6 +14,17 @@ export default function Cuenta() {
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
   const [enviando, setEnviando] = useState(false);
+
+  const esAdmin = usuario?.rol === ROLES.ADMIN;
+  const esEmpresa = usuario?.rol === ROLES.EMPRESA;
+
+  // Para la empresa, los datos institucionales provienen de su propio perfil
+  // (fuente de verdad), no de users.nombres/apellidos.
+  const { data: empresa } = useQuery({
+    queryKey: ['perfil-empresa'],
+    queryFn: perfilEmpresa,
+    enabled: esEmpresa,
+  });
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -32,8 +45,6 @@ export default function Cuenta() {
     }
   };
 
-  const esAdmin = usuario?.rol === ROLES.ADMIN;
-
   return (
     <div>
       {!esAdmin && (
@@ -48,11 +59,21 @@ export default function Cuenta() {
           <div className="tarjeta-titulo">
             <h2>Información de la cuenta</h2>
           </div>
-          <div className="descripcion">
-            <div><b>Usuario</b>{usuario?.username || '—'}</div>
-            <div><b>Nombre</b>{usuario?.nombres} {usuario?.apellidos}</div>
-            <div><b>Correo</b>{usuario?.email || '—'}</div>
-          </div>
+          {esEmpresa ? (
+            <div className="descripcion">
+              <div><b>Razón social</b>{empresa?.razon_social || '—'}</div>
+              <div><b>RUC</b>{empresa?.ruc || usuario?.username || '—'}</div>
+              {empresa?.nombre_comercial && <div><b>Nombre comercial</b>{empresa.nombre_comercial}</div>}
+              <div><b>Representante</b>{empresa?.representante || '—'}</div>
+              <div><b>Correo</b>{empresa?.email || usuario?.email || '—'}</div>
+            </div>
+          ) : (
+            <div className="descripcion">
+              <div><b>Usuario</b>{usuario?.username || '—'}</div>
+              <div><b>Nombre</b>{usuario?.nombres} {usuario?.apellidos}</div>
+              <div><b>Correo</b>{usuario?.email || '—'}</div>
+            </div>
+          )}
         </section>
 
         <section className="tarjeta">

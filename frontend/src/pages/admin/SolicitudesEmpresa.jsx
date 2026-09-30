@@ -10,6 +10,7 @@ import {
 import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
+import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, Link2, XCircle } from 'lucide-react';
 import { errorApi, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
@@ -35,6 +36,7 @@ export default function SolicitudesEmpresa() {
   const [q, setQ] = useState('');
   const [nota, setNota] = useState(null);
   const [seleccionada, setSeleccionada] = useState(null);
+  const [enlaceActivacion, setEnlaceActivacion] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['solicitudes-empresa', filtro, q],
@@ -112,13 +114,50 @@ export default function SolicitudesEmpresa() {
         solicitud={seleccionada}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alGenerarEnlace={setEnlaceActivacion}
       />
+
+      <ModalEnlace enlace={enlaceActivacion} alCerrar={() => setEnlaceActivacion(null)} />
     </Tarjeta>
   );
 }
 
-function DetalleSolicitud({ solicitud, alCerrar, alCambio }) {
+function ModalEnlace({ enlace, alCerrar }) {
+  const toast = useToast();
+  const [copiado, setCopiado] = useState(false);
+  if (!enlace) return null;
+
+  const copiar = async () => {
+    if (await copiarTexto(enlace)) {
+      setCopiado(true);
+      toast.success('Enlace copiado al portapapeles.');
+    } else {
+      toast.warning('No se pudo copiar automáticamente. Selecciona el enlace y cópialo manualmente.');
+    }
+  };
+
+  return (
+    <Modal
+      abierto
+      titulo="Enlace de activación"
+      subtitulo="Compártelo con la empresa por un canal seguro; es de un solo uso."
+      alCerrar={alCerrar}
+      acciones={(
+        <>
+          <Boton variante="gris" onClick={alCerrar}>Cerrar</Boton>
+          <Boton variante="primario" onClick={copiar}>{copiado ? 'Copiado' : 'Copiar enlace'}</Boton>
+        </>
+      )}
+    >
+      <p className="modal-texto">Dato sensible: no lo publiques en canales abiertos. Al regenerar un enlace, el anterior queda invalidado.</p>
+      <input className="enlace-copia" readOnly value={enlace} onFocus={(e) => e.target.select()} aria-label="Enlace de activación" />
+    </Modal>
+  );
+}
+
+function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
   const [error, setError] = useState(null);
+  const { pedirTexto } = useDialogo();
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
   if (!solicitud) return null;
@@ -127,11 +166,8 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio }) {
     try {
       const resultado = await ejecutar(() => aprobarSolicitudEmpresa(solicitud.id));
       setError(null);
-      const enlace = resultado?.link;
-      alCambio(enlace
-        ? 'Solicitud aprobada. Se notificó a la empresa por correo. El enlace de activación quedó disponible para copiar.'
-        : 'Solicitud aprobada y notificada a la empresa.');
-      if (enlace && !(await copiarTexto(enlace))) window.alert(enlace);
+      alCambio('Solicitud aprobada. Se notificó a la empresa por correo.');
+      if (resultado?.link) alGenerarEnlace(resultado.link);
       alCerrar();
     } catch (e) {
       setError(errorApi(e));
@@ -139,7 +175,14 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio }) {
   };
 
   const rechazar = async () => {
-    const motivo = window.prompt('Motivo del rechazo (se notificará a la empresa):');
+    const motivo = await pedirTexto({
+      titulo: 'Rechazar solicitud',
+      mensaje: 'El motivo se notificará a la empresa.',
+      etiqueta: 'Motivo del rechazo',
+      min: 1,
+      textoConfirmar: 'Rechazar',
+      variante: 'peligro',
+    });
     if (!motivo) return;
     try {
       await ejecutar(() => rechazarSolicitudEmpresa(solicitud.id, motivo));
@@ -156,10 +199,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio }) {
     try {
       const resultado = await ejecutar(() => generarEnlaceSolicitud(solicitud.id));
       setError(null);
-      const ok = resultado?.link && (await copiarTexto(resultado.link));
-      alCambio(ok
-        ? 'Nuevo enlace generado y copiado al portapapeles (el anterior quedó invalidado).'
-        : 'Nuevo enlace generado: ' + (resultado?.link || ''));
+      if (resultado?.link) alGenerarEnlace(resultado.link);
     } catch (e) {
       setError(errorApi(e));
     }

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarOportunidad, cambiarActivacionOportunidad, crearOportunidad, listarOportunidadesAdmin } from '../../services/divulgacion';
-import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
+import { EstadoCarga, Boton, Campo, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
@@ -12,6 +12,17 @@ import { errorApi, esEnlaceSeguro, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const VACIO = { fuente: 'empleos_peru', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '' };
+
+// Estado de publicación derivado del backend (oculta / programada / visible).
+function BadgePublicacion({ estado }) {
+  const mapa = {
+    visible: ['badge-green', 'Visible'],
+    programada: ['badge-amber', 'Programada'],
+    oculta: ['badge-gray', 'Oculta'],
+  };
+  const [clase, texto] = mapa[estado] || ['badge-gray', estado || '—'];
+  return <span className={`badge ${clase}`}>{texto}</span>;
+}
 
 export default function Oportunidades() {
   const queryClient = useQueryClient();
@@ -63,13 +74,13 @@ export default function Oportunidades() {
               key={o.id}
               icono={Megaphone}
               titulo={o.titulo}
-              badge={<Estado valor={o.activo ? 'activo1' : 'inactivo'} diccionario={{ activo1: 'Visible', inactivo: 'Oculta' }} />}
+              badge={<BadgePublicacion estado={o.estado_publicacion} />}
               onClick={() => setSeleccionada(o)}
               meta={(
                 <>
                   <span>{ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente]}</span>
                   {o.razon_social && <span>{o.razon_social}</span>}
-                  <span>Publicada el {fechaCalendario(o.fecha_publicacion)}</span>
+                  <span>Publicación: {fechaCalendario(o.fecha_publicacion)}</span>
                 </>
               )}
             >
@@ -129,7 +140,7 @@ function DetalleOportunidad({ oportunidad, alCerrar, alCambio, alEditar }) {
       )}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
-        <Estado valor={oportunidad.activo ? 'activo1' : 'inactivo'} diccionario={{ activo1: 'Visible', inactivo: 'Oculta' }} />
+        <BadgePublicacion estado={oportunidad.estado_publicacion} />
       </div>
 
       <Mensaje>{error}</Mensaje>

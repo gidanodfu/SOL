@@ -5,6 +5,7 @@
 namespace App\Controllers\Api\Admin;
 
 use App\Controllers\Api\BaseApiController;
+use App\Exceptions\ApiException;
 use App\Services\ActividadService;
 
 /**
@@ -43,5 +44,24 @@ class ActividadesController extends BaseApiController
         (new ActividadService())->cambiarEstado((int) $id, (string) ($cuerpo['estado'] ?? ''));
 
         return $this->sinContenido('Estado de la actividad actualizado.');
+    }
+
+    public function subirImagen($id)
+    {
+        $archivo = $this->request->getFile('imagen');
+        if ($archivo === null) {
+            throw ApiException::validacion('Debe adjuntar una imagen.', ['Debe adjuntar una imagen.']);
+        }
+
+        (new ActividadService())->subirImagen((int) $id, $archivo);
+
+        return $this->sinContenido('Imagen de la actividad actualizada.');
+    }
+
+    public function eliminarImagen($id)
+    {
+        (new ActividadService())->eliminarImagen((int) $id);
+
+        return $this->sinContenido('Imagen de la actividad eliminada.');
     }
 }

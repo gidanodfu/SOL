@@ -130,10 +130,14 @@ class App extends BaseConfig
      * The default timezone that will be used in your application to display
      * dates with the date helper, and can be retrieved through app_timezone()
      *
+     * La operación del sistema es en Perú (UTC-5): fechas de publicación,
+     * cierres y reportes se calculan en horario de negocio. Configurable por
+     * entorno con `app.appTimezone` (p. ej. UTC en pruebas).
+     *
      * @see https://www.php.net/manual/en/timezones.php for list of timezones
      *      supported by PHP.
      */
-    public string $appTimezone = 'UTC';
+    public string $appTimezone = 'America/Lima';
 
     /**
      * --------------------------------------------------------------------------

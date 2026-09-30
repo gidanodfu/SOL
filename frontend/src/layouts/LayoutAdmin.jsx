@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { Outlet, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Briefcase,
   Building2,
@@ -14,6 +15,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import { useSidebarColapsado } from '../hooks/useSidebarColapsado';
+import { pendientesAdmin } from '../services/dashboard';
 
 const GRUPOS = [
   {
@@ -61,6 +63,18 @@ export function LayoutAdmin() {
   const { pathname } = useLocation();
   const { colapsado, alternar } = useSidebarColapsado();
 
+  // Indicadores de atención pendiente (conteos reales), sin sistema de leídos.
+  const { data: pendientes } = useQuery({
+    queryKey: ['pendientes-admin'],
+    queryFn: pendientesAdmin,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
+  });
+  const indicadores = {
+    '/admin/ofertas': (pendientes?.ofertas || 0) > 0,
+    '/admin/solicitudes-empresa': (pendientes?.solicitudes || 0) > 0,
+  };
+
   const ruta = Object.keys(TITULO_POR_RUTA)
     .sort((a, b) => b.length - a.length)
     .find((r) => pathname.startsWith(r));
@@ -76,6 +90,7 @@ export function LayoutAdmin() {
         usuario={{ nombre, rol: 'Municipalidad', respaldo: 'AD' }}
         colapsado={colapsado}
         onToggle={alternar}
+        indicadores={indicadores}
       />
 
       <main className="main">

@@ -12,6 +12,7 @@ import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
+import { useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, Lock, XCircle } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO } from '../../constants';
 import { errorApi, fechaCalendario, fechaHora } from '../../utils';
@@ -116,6 +117,7 @@ export default function Ofertas() {
 
 function DetalleOferta({ oferta, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
+  const { confirmar, pedirTexto } = useDialogo();
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
   const { data: detalle, isLoading } = useQuery({
     queryKey: ['oferta-admin-detalle', oferta?.id],
@@ -126,15 +128,28 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
   if (!oferta) return null;
   const o = detalle || oferta;
 
-  const aprobar = () => {
-    if (!window.confirm(`¿Aprobar y publicar la oferta "${oferta.puesto}"?`)) return;
+  const aprobar = async () => {
+    const ok = await confirmar({
+      titulo: 'Aprobar oferta',
+      mensaje: `¿Aprobar y publicar la oferta "${oferta.puesto}"?`,
+      textoConfirmar: 'Aprobar y publicar',
+      variante: 'exito',
+    });
+    if (!ok) return;
     accion(() => aprobarOfertaAdmin(oferta.id), 'Oferta aprobada y publicada.');
   };
 
-  const rechazar = () => {
-    const motivo = window.prompt('Motivo del rechazo (se muestra a la empresa):');
-    if (!motivo || !motivo.trim()) return;
-    accion(() => rechazarOfertaAdmin(oferta.id, motivo.trim()), 'Oferta rechazada.');
+  const rechazar = async () => {
+    const motivo = await pedirTexto({
+      titulo: 'Rechazar oferta',
+      mensaje: 'El motivo se muestra a la empresa.',
+      etiqueta: 'Motivo del rechazo',
+      min: 1,
+      textoConfirmar: 'Rechazar',
+      variante: 'peligro',
+    });
+    if (!motivo) return;
+    accion(() => rechazarOfertaAdmin(oferta.id, motivo), 'Oferta rechazada.');
   };
 
   const accion = async (fn, mensaje) => {

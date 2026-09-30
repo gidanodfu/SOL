@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import { useSidebarColapsado } from '../hooks/useSidebarColapsado';
-import { perfilEmpresa } from '../services/empresas';
+import { perfilEmpresa, pendientesEmpresa } from '../services/empresas';
 
 const GRUPOS = [
   {
@@ -41,6 +41,17 @@ export function LayoutEmpresa() {
   const { colapsado, alternar } = useSidebarColapsado();
   const nombre = perfil?.nombre_comercial || perfil?.razon_social || usuario?.nombres || 'Empresa';
 
+  const { data: pendientes } = useQuery({
+    queryKey: ['pendientes-empresa'],
+    queryFn: pendientesEmpresa,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
+  });
+  const indicadores = {
+    '/empresa/ofertas': (pendientes?.ofertas_rechazadas || 0) > 0,
+    '/empresa/postulaciones': (pendientes?.postulaciones || 0) > 0,
+  };
+
   return (
     <div className={`app-empresa${colapsado ? ' colapsado' : ''}`}>
       <Sidebar
@@ -49,6 +60,7 @@ export function LayoutEmpresa() {
         usuario={{ nombre, rol: 'Empresa', respaldo: 'EM' }}
         colapsado={colapsado}
         onToggle={alternar}
+        indicadores={indicadores}
       />
 
       <main className="content">

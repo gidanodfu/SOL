@@ -7,6 +7,7 @@ import {
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
+import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Eye, KeyRound, Power } from 'lucide-react';
 import { ETIQUETA_ROL } from '../../constants';
 import { errorApi, fechaHora, soloDigitos } from '../../utils';
@@ -18,6 +19,8 @@ const estadosUsuarios = { activo: 'activo', inactivo: 'inactivo' };
 export default function Usuarios() {
   const queryClient = useQueryClient();
   const { usuario: usuarioActual } = useAuth();
+  const toast = useToast();
+  const { pedirTexto } = useDialogo();
   const [filtros, setFiltros] = useState({ rol: '', estado: '', q: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [seleccionado, setSeleccionado] = useState(null);
@@ -40,12 +43,24 @@ export default function Usuarios() {
   };
 
   const resetPassword = async (u) => {
-    const password = window.prompt(`Nueva contraseña para ${u.username} (mínimo 8 caracteres):`);
+    const password = await pedirTexto({
+      titulo: 'Restablecer contraseña',
+      mensaje: `Usuario ${u.username}`,
+      etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
+      secreto: true,
+      min: 8,
+      textoConfirmar: 'Restablecer',
+      variante: 'peligro',
+    });
     if (!password) return;
-    await ejecutar(() => resetPasswordUsuario(u.id, password));
-    setError(null);
-    window.alert('Contraseña restablecida. Entréguela de forma segura al usuario.');
-    refrescar();
+    try {
+      await ejecutar(() => resetPasswordUsuario(u.id, password));
+      setError(null);
+      toast.success('Contraseña restablecida. Entréguela de forma segura al usuario.');
+      refrescar();
+    } catch (e) {
+      setError(errorApi(e));
+    }
   };
 
   return (
@@ -93,7 +108,7 @@ export default function Usuarios() {
               {data.data.map((u) => (
                 <tr key={u.id}>
                   <td className="col-identificador"><strong>{u.username}</strong></td>
-                  <td>{u.nombres} {u.apellidos}</td>
+                  <td>{u.rol === 'empresa' ? (u.razon_social || '—') : `${u.nombres} ${u.apellidos}`}</td>
                   <td><Estado valor={u.rol} diccionario={ETIQUETA_ROL} /></td>
                   <td><Estado valor={u.estado} diccionario={estadosUsuarios} /></td>
                   <td className="col-fecha">{fechaHora(u.ultimo_acceso)}</td>
@@ -125,7 +140,7 @@ export default function Usuarios() {
         usuario={seleccionado}
         propio={seleccionado?.id === usuarioActual?.id}
         alCerrar={() => setSeleccionado(null)}
-        alCambio={(mensaje) => { setError(null); if (mensaje) window.alert(mensaje); refrescar(); }}
+        alCambio={(mensaje) => { setError(null); if (mensaje) toast.success(mensaje); refrescar(); }}
       />
     </Tarjeta>
   );
@@ -133,6 +148,8 @@ export default function Usuarios() {
 
 function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
+  const toast = useToast();
+  const { pedirTexto } = useDialogo();
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
   if (!usuario) return null;
@@ -148,12 +165,20 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
   };
 
   const resetPassword = async () => {
-    const password = window.prompt(`Nueva contraseña para ${usuario.username} (mínimo 8 caracteres):`);
+    const password = await pedirTexto({
+      titulo: 'Restablecer contraseña',
+      mensaje: `Usuario ${usuario.username}`,
+      etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
+      secreto: true,
+      min: 8,
+      textoConfirmar: 'Restablecer',
+      variante: 'peligro',
+    });
     if (!password) return;
     try {
       await ejecutar(() => resetPasswordUsuario(usuario.id, password));
       setError(null);
-      window.alert('Contraseña restablecida. Entréguela de forma segura al usuario.');
+      toast.success('Contraseña restablecida. Entréguela de forma segura al usuario.');
     } catch (e) {
       setError(errorApi(e));
     }
@@ -162,7 +187,7 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
   return (
     <Modal
       abierto
-      titulo={`${usuario.nombres} ${usuario.apellidos}`}
+      titulo={usuario.rol === 'empresa' ? (usuario.razon_social || usuario.username) : `${usuario.nombres} ${usuario.apellidos}`}
       subtitulo={`Usuario ${usuario.username} · ${ETIQUETA_ROL[usuario.rol] || usuario.rol}`}
       alCerrar={alCerrar}
       tamano="ancho"

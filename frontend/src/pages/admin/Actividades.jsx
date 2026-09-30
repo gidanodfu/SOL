@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { actualizarActividad, cambiarEstadoActividad, crearActividad, listarActividadesAdmin } from '../../services/divulgacion';
+import { actualizarActividad, cambiarEstadoActividad, crearActividad, eliminarImagenActividad, listarActividadesAdmin, subirImagenActividad } from '../../services/divulgacion';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
+import ImagenUploader from '../../components/ImagenUploader';
+import { useToast } from '../../components/Feedbacks';
 import { CalendarDays, Pencil } from 'lucide-react';
 import {
   ESTADOS_ACTIVIDAD, ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD, TIPOS_ACTIVIDAD,
 } from '../../constants';
-import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaHora } from '../../utils';
+import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaHora, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 // El editor (TiPTap) se carga solo cuando se abre el formulario de actividad.
@@ -60,10 +62,12 @@ export default function Actividades() {
         {data && data.length === 0 && <ListaVacia />}
       </Tarjeta>
 
-      {editor && (
+      {editor && (!editor.id || editor.fila) && (
         <EditorActividad
+          key={editor.id ?? 'nueva'}
           inicial={editor.id ? editor.fila : null}
-          alGuardar={() => { setEditor(null); setNota('Actividad guardada.'); refrescar(); }}
+          alGuardar={({ cerrar }) => { refrescar(); if (cerrar) setEditor(null); }}
+          alCerrar={() => { setEditor(null); refrescar(); }}
         />
       )}
 
@@ -88,6 +92,7 @@ export default function Actividades() {
                 </>
               )}
             >
+              {a.imagen_url && <img className="imagen-mini" src={urlArchivo(a.imagen_url)} alt="" />}
               {a.descripcion && (
                 <ContenidoEnriquecido className="contenido-resumen">{a.descripcion}</ContenidoEnriquecido>
               )}
@@ -161,6 +166,10 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
 
       <Mensaje>{error}</Mensaje>
 
+      {actividad.imagen_url && (
+        <img className="imagen-actividad" src={urlArchivo(actividad.imagen_url)} alt={actividad.nombre} />
+      )}
+
       <FichaDatos
         items={[
           { etiqueta: 'Tipo', valor: ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo] },
@@ -182,7 +191,9 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
   );
 }
 
-function EditorActividad({ inicial, alGuardar }) {
+function EditorActividad({ inicial, alGuardar, alCerrar }) {
+  const toast = useToast();
+  const esNueva = !inicial;
   const [form, setForm] = useState(() =>
     inicial
       ? {
@@ -192,10 +203,77 @@ function EditorActividad({ inicial, alGuardar }) {
         }
       : VACIO,
   );
+  // idActividad arranca con el de la edición; en creación se fija al guardar,
+  // sin re-montar el formulario (así no se pierde lo escrito ni la imagen elegida).
+  const [idActividad, setIdActividad] = useState(inicial?.id ?? null);
   const [error, setError] = useState(null);
-  const { ejecutar, enviando } = useAccion(() => (inicial ? actualizarActividad(inicial.id, convertir(form)) : crearActividad(convertir(form))));
+  const [enviando, setEnviando] = useState(false);
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [archivoImagen, setArchivoImagen] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [imagenUrl, setImagenUrl] = useState(() => (inicial?.imagen_url ? urlArchivo(inicial.imagen_url) : null));
+
+  // Libera el object URL de la selección previa al guardar.
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const limpiarPreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+  };
+
+  const subirImagen = async (id, archivo, trasCrear) => {
+    setSubiendoImagen(true);
+    try {
+      await subirImagenActividad(id, archivo);
+      limpiarPreview();
+      setArchivoImagen(null);
+      setImagenUrl(`${urlArchivo(`/api/actividades/${id}/imagen`)}?v=${Date.now()}`);
+      toast.success('Imagen cargada correctamente.');
+      return true;
+    } catch (e) {
+      toast.error(trasCrear
+        ? 'Actividad creada, pero la imagen no pudo cargarse. Puedes intentarlo de nuevo.'
+        : `Error al cargar la imagen. ${errorApi(e)}`);
+      return false;
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
+
+  const manejarSubir = async (archivo) => {
+    if (idActividad) {
+      await subirImagen(idActividad, archivo, false);
+      return;
+    }
+    // Creación sin ID todavía: solo preview local (no se sube nada huérfano).
+    limpiarPreview();
+    setError(null);
+    setArchivoImagen(archivo);
+    setPreviewUrl(URL.createObjectURL(archivo));
+  };
+
+  const manejarEliminar = async () => {
+    // Limpia siempre la selección local (preview/pendiente), exista o no la actividad.
+    limpiarPreview();
+    setArchivoImagen(null);
+    if (!idActividad) return;
+
+    setSubiendoImagen(true);
+    try {
+      await eliminarImagenActividad(idActividad);
+      setImagenUrl(null);
+      toast.success('Imagen eliminada correctamente.');
+      alGuardar({ cerrar: false });
+    } catch (e) {
+      toast.error(errorApi(e));
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
 
   const guardar = async () => {
     // Mismo límite que el backend: 10.000 caracteres de TEXTO visible.
@@ -203,17 +281,40 @@ function EditorActividad({ inicial, alGuardar }) {
       setError(`La descripción supera el límite de ${TEXTO_MAX} caracteres.`);
       return;
     }
+    setEnviando(true);
+    setError(null);
     try {
-      await ejecutar();
-      alGuardar();
+      // Edición de una actividad existente: conserva el comportamiento actual.
+      if (idActividad) {
+        await actualizarActividad(idActividad, convertir(form));
+        toast.success('Cambios guardados.');
+        alGuardar({ cerrar: !esNueva });
+        return;
+      }
+
+      // Creación: primero la actividad, luego (si había imagen elegida) la imagen.
+      const creada = await crearActividad(convertir(form));
+      const nuevoId = creada?.id;
+      if (!nuevoId) throw new Error('No se recibió el identificador de la actividad creada.');
+
+      setIdActividad(nuevoId);
+      alGuardar({ cerrar: false });
+
+      if (archivoImagen) {
+        await subirImagen(nuevoId, archivoImagen, true);
+      } else {
+        toast.success('Actividad creada correctamente.');
+      }
     } catch (e) {
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
+    } finally {
+      setEnviando(false);
     }
   };
 
   return (
-    <Tarjeta titulo={inicial ? 'Editar actividad' : 'Nueva actividad'}>
+    <Tarjeta titulo={esNueva ? 'Nueva actividad' : 'Editar actividad'}>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
         <Selecto etiqueta="Tipo *" value={form.tipo} onChange={set('tipo')}>
@@ -228,6 +329,17 @@ function EditorActividad({ inicial, alGuardar }) {
         </Selecto>
         <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
       </div>
+
+      <ImagenUploader
+        container="plano"
+        titulo="Imagen de la actividad"
+        descripcion="Opcional · JPG, PNG o WEBP · máximo 2 MB. Se muestra en el portal público."
+        url={previewUrl || imagenUrl}
+        onSubir={manejarSubir}
+        onEliminar={manejarEliminar}
+        cargando={subiendoImagen}
+      />
+
       <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
         <EditorTextoEnriquecido
           etiqueta="Descripción"
@@ -236,7 +348,15 @@ function EditorActividad({ inicial, alGuardar }) {
           placeholder="Detalla la actividad: agenda, público objetivo, requisitos…"
         />
       </Suspense>
-      <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar</Boton>
+
+      <div className="form-fila">
+        <Boton variante="primario" cargando={enviando || subiendoImagen} onClick={guardar}>
+          {esNueva && idActividad ? 'Guardar cambios' : 'Guardar'}
+        </Boton>
+        {esNueva && idActividad && (
+          <Boton variante="gris" onClick={alCerrar}>Finalizar</Boton>
+        )}
+      </div>
     </Tarjeta>
   );
 }

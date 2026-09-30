@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { FeedbacksProvider } from './components/Feedbacks';
 import SeoMeta from './components/SeoMeta';
 import { Rutas } from './routes';
 
@@ -13,14 +14,16 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <BrowserRouter>
-            <SeoMeta />
-            <Rutas />
-          </BrowserRouter>
-        </AuthProvider>
-      </QueryClientProvider>
+      <FeedbacksProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <BrowserRouter>
+              <SeoMeta />
+              <Rutas />
+            </BrowserRouter>
+          </AuthProvider>
+        </QueryClientProvider>
+      </FeedbacksProvider>
     </ThemeProvider>
   );
 }

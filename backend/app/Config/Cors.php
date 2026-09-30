@@ -24,6 +24,12 @@ class Cors extends BaseConfig
         if (is_string($origenes) && trim($origenes) !== '') {
             $this->default['allowedOrigins'] = array_values(array_filter(array_map('trim', explode(',', $origenes))));
         }
+
+        // Patrones para admitir subdominios (p. ej. https://\w+\.midominio\.gob\.pe).
+        $patrones = env('cors.allowedOriginsPatterns');
+        if (is_string($patrones) && trim($patrones) !== '') {
+            $this->default['allowedOriginsPatterns'] = array_values(array_filter(array_map('trim', explode(',', $patrones))));
+        }
     }
 
     /**

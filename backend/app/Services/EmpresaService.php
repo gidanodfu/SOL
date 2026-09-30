@@ -105,7 +105,9 @@ class EmpresaService
             'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
             'rol'           => 'empresa',
             'nombres'       => $datos['razon_social'],
-            'apellidos'     => $datos['representante'] ?? $datos['razon_social'],
+            // Los datos de la empresa tienen su propia fuente de verdad (tabla empresas);
+            // no se replica la razón social en apellidos para evitar duplicados.
+            'apellidos'     => $datos['representante'] ?? '',
             'email'         => $datos['email'] ?? null,
             'telefono'      => $datos['telefono'] ?? null,
             // La cuenta se habilita junto con la empresa (RF-16). Inicia inactiva

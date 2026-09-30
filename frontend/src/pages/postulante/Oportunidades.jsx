@@ -4,7 +4,7 @@ import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../se
 import { EstadoCarga, Mensaje } from '../../components/UI';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD } from '../../constants';
-import { errorApi, esEnlaceSeguro, fechaCalendario, fechaHora } from '../../utils';
+import { errorApi, esEnlaceSeguro, fechaCalendario, fechaHora, urlArchivo } from '../../utils';
 
 const CLASE_ESTADO_ACTIVIDAD = {
   programado: 'badge-amber',
@@ -47,6 +47,7 @@ export default function Oportunidades() {
                   <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--ink)' }}>{a.nombre}</h3>
                   <span className={`badge ${CLASE_ESTADO_ACTIVIDAD[a.estado] || 'badge-gray'}`}>{ETIQUETA_ESTADO_ACTIVIDAD[a.estado] || a.estado}</span>
                 </div>
+                {a.imagen_url && <img className="imagen-actividad" src={urlArchivo(a.imagen_url)} alt={a.nombre} style={{ marginTop: 10 }} />}
                 <p style={{ color: 'var(--text-2)', margin: '10px 0 8px', fontSize: '0.88rem' }}>
                   <i className="ti ti-calendar-event" style={{ marginRight: 5, color: 'var(--blue)' }} />
                   {ETIQUETA_TIPO_ACTIVIDAD[a.tipo]} · {fechaHora(a.fecha_inicio)}

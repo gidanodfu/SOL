@@ -218,6 +218,36 @@ class DashboardRepository
     }
 
     /**
+     * Conteos de atención pendiente para el admin (indicadores de la sidebar):
+     * ofertas por revisar y solicitudes de empresa sin resolver.
+     *
+     * @return array{ofertas: int, solicitudes: int}
+     */
+    public function pendientesAdmin(): array
+    {
+        return [
+            'ofertas'     => (int) $this->db->table('ofertas')->where('estado', 'pendiente')->countAllResults(),
+            'solicitudes' => (int) $this->db->table('solicitudes_empresa')->where('estado', 'pendiente')->countAllResults(),
+        ];
+    }
+
+    /**
+     * Conteos de atención pendiente de una empresa (indicadores de la sidebar):
+     * ofertas rechazadas que requieren acción y postulaciones por revisar.
+     *
+     * @return array{ofertas_rechazadas: int, postulaciones: int}
+     */
+    public function pendientesEmpresa(int $empresaId): array
+    {
+        return [
+            'ofertas_rechazadas' => (int) $this->db->table('ofertas')
+                ->where('empresa_id', $empresaId)->where('estado', 'rechazada')->countAllResults(),
+            'postulaciones' => (int) $this->db->table('postulaciones')
+                ->where('empresa_id', $empresaId)->where('activo', 1)->where('estado', 'pendiente')->countAllResults(),
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function postulante(int $postulanteId): array

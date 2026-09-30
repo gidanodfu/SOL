@@ -35,6 +35,12 @@ export default function Ofertas() {
   const [seleccionada, setSeleccionada] = useState(null);
   const [nota, setNota] = useState(null);
 
+  // La oferta a editar se resuelve antes de montar el editor, para que el RTE
+  // reciba el contenido en su creación (nunca se queda sin cargar).
+  const inicialEdicion = editor?.id
+    ? editor.fila || ofertas?.find((o) => o.id === editor.id) || null
+    : null;
+
   const refrescar = () => {
     queryClient.invalidateQueries({ queryKey: ['ofertas-empresa'] });
     queryClient.invalidateQueries({ queryKey: ['oferta-empresa-detalle'] });
@@ -60,10 +66,11 @@ export default function Ofertas() {
       <Mensaje tipo="exito">{nota}</Mensaje>
       {isLoading && <EstadoCarga />}
 
-      {editor && (
+      {editor && (!editor.id || inicialEdicion) && (
         <EditorOferta
+          key={editor.id ?? 'nueva'}
           categorias={categorias || []}
-          inicial={editor.id ? ofertas?.find((o) => o.id === editor.id) : null}
+          inicial={editor.id ? inicialEdicion : null}
           alGuardar={(mensaje) => {
             setEditor(null);
             setNota(mensaje);
@@ -113,7 +120,7 @@ export default function Ofertas() {
         oferta={seleccionada}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { setNota(mensaje); setSeleccionada(null); refrescar(); }}
-        alEditar={(oferta) => { setSeleccionada(null); setEditor({ id: oferta.id }); }}
+        alEditar={(oferta) => { setSeleccionada(null); setEditor({ id: oferta.id, fila: oferta }); }}
       />
     </div>
   );
