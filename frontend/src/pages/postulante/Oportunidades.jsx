@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
 import { useQuery } from '@tanstack/react-query';
+import { Building2, CalendarDays, ExternalLink, MapPin, Monitor, Tag } from 'lucide-react';
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
-import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
-import { ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD } from '../../constants';
-import { errorApi, esEnlaceSeguro, fechaCalendario, fechaHora, urlArchivo } from '../../utils';
+import {
+  ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD,
+  MODALIDADES_ACTIVIDAD,
+} from '../../constants';
+import { errorApi, esEnlaceSeguro, fechaCalendario, fechaHora, textoVisible, urlArchivo } from '../../utils';
 
 const CLASE_ESTADO_ACTIVIDAD = {
-  programado: 'badge-amber',
-  en_curso: 'badge-blue',
-  finalizado: 'badge-green',
-  cancelado: 'badge-gray',
+  programado: 'badge-programado',
+  en_curso: 'badge-en_curso',
+  finalizado: 'badge-finalizado',
+  cancelado: 'badge-cancelado',
 };
 
 const CLASE_FUENTE = {
@@ -18,6 +21,47 @@ const CLASE_FUENTE = {
   mype_local: 'badge-blue',
   otro: 'badge-gray',
 };
+
+const ETIQUETA_MODALIDAD = Object.fromEntries(MODALIDADES_ACTIVIDAD.map((m) => [m.v, m.l]));
+
+/**
+ * Tarjeta editorial local (solo esta página): media opcional, cabecera con
+ * título + badge, metadata con iconos, descripción con límite visual y acción.
+ * Reutiliza tokens y componentes del Design System; no introduce estados.
+ */
+function TarjetaContenido({ media = null, badge = null, titulo, meta = [], descripcion = null, accion = null, lineas = 3 }) {
+  const filas = meta.filter((f) => f && f.texto);
+
+  return (
+    <article className="content-card">
+      {media}
+
+      <div className="content-card-cab">
+        <h3>{titulo}</h3>
+        {badge && <span className="content-card-badge">{badge}</span>}
+      </div>
+
+      {filas.length > 0 && (
+        <ul className="content-card-meta">
+          {filas.map(({ icono: Icono, texto }) => (
+            <li key={texto}>
+              <Icono size={15} aria-hidden="true" />
+              <span>{texto}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {descripcion && (
+        <p className="content-card-desc" style={{ WebkitLineClamp: lineas, lineClamp: lineas }}>
+          {descripcion}
+        </p>
+      )}
+
+      {accion && <div className="content-card-accion">{accion}</div>}
+    </article>
+  );
+}
 
 export default function Oportunidades() {
   const actividades = useQuery({ queryKey: ['actividades-publicas'], queryFn: listarActividadesPublicas });
@@ -42,20 +86,26 @@ export default function Oportunidades() {
         {actividades.data?.length > 0 && (
           <div className="malla">
             {actividades.data.map((a) => (
-              <div className="tarjeta" key={a.id} style={{ margin: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                  <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--ink)' }}>{a.nombre}</h3>
-                  <span className={`badge ${CLASE_ESTADO_ACTIVIDAD[a.estado] || 'badge-gray'}`}>{ETIQUETA_ESTADO_ACTIVIDAD[a.estado] || a.estado}</span>
-                </div>
-                {a.imagen_url && <img className="imagen-actividad" src={urlArchivo(a.imagen_url)} alt={a.nombre} style={{ marginTop: 10 }} />}
-                <p style={{ color: 'var(--text-2)', margin: '10px 0 8px', fontSize: '0.88rem' }}>
-                  <i className="ti ti-calendar-event" style={{ marginRight: 5, color: 'var(--blue)' }} />
-                  {ETIQUETA_TIPO_ACTIVIDAD[a.tipo]} · {fechaHora(a.fecha_inicio)}
-                  {a.lugar ? <><br />Lugar: {a.lugar}</> : null}
-                  {a.modalidad ? <><br />Modalidad: {a.modalidad}</> : null}
-                </p>
-                {a.descripcion && <ContenidoEnriquecido className="oportunidad-texto">{a.descripcion}</ContenidoEnriquecido>}
-              </div>
+              <TarjetaContenido
+                key={a.id}
+                media={a.imagen_url
+                  ? <img className="content-card-media" src={urlArchivo(a.imagen_url)} alt={a.nombre} loading="lazy" />
+                  : <div className="content-card-placeholder"><CalendarDays size={26} aria-hidden="true" /></div>}
+                badge={(
+                  <span className={`badge ${CLASE_ESTADO_ACTIVIDAD[a.estado] || 'badge-gray'}`}>
+                    {ETIQUETA_ESTADO_ACTIVIDAD[a.estado] || a.estado}
+                  </span>
+                )}
+                titulo={a.nombre}
+                meta={[
+                  { icono: Tag, texto: ETIQUETA_TIPO_ACTIVIDAD[a.tipo] || a.tipo },
+                  { icono: CalendarDays, texto: fechaHora(a.fecha_inicio) },
+                  a.lugar ? { icono: MapPin, texto: `Lugar: ${a.lugar}` } : null,
+                  a.modalidad ? { icono: Monitor, texto: `Modalidad: ${ETIQUETA_MODALIDAD[a.modalidad] || a.modalidad}` } : null,
+                ]}
+                descripcion={a.descripcion ? textoVisible(a.descripcion) : null}
+                lineas={3}
+              />
             ))}
           </div>
         )}
@@ -73,19 +123,26 @@ export default function Oportunidades() {
         {oportunidades.data?.length > 0 && (
           <div className="malla">
             {oportunidades.data.map((o) => (
-              <div className="tarjeta" key={o.id} style={{ margin: 0 }}>
-                <span className={`badge ${CLASE_FUENTE[o.fuente] || 'badge-gray'}`}>{ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente] || o.fuente}</span>
-                <h3 style={{ margin: '8px 0 6px', fontSize: '15px', color: 'var(--ink)' }}>{o.titulo}</h3>
-                {o.descripcion && <p style={{ fontSize: '0.9rem', margin: '0 0 8px' }}>{o.descripcion}</p>}
-                <p style={{ color: 'var(--text-2)', fontSize: '0.85rem', margin: 0 }}>
-                  {o.razon_social ? `${o.razon_social} · ` : ''}Difundida el {fechaCalendario(o.fecha_publicacion)}
-                </p>
-                {o.enlace && esEnlaceSeguro(o.enlace) && (
-                  <a className="btn btn-gris" style={{ marginTop: '0.7rem' }} href={o.enlace} target="_blank" rel="noopener noreferrer">
-                    <i className="ti ti-external-link" />Ver convocatoria
-                  </a>
+              <TarjetaContenido
+                key={o.id}
+                badge={(
+                  <span className={`badge ${CLASE_FUENTE[o.fuente] || 'badge-gray'}`}>
+                    {ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente] || o.fuente}
+                  </span>
                 )}
-              </div>
+                titulo={o.titulo}
+                meta={[
+                  o.razon_social ? { icono: Building2, texto: o.razon_social } : null,
+                  { icono: CalendarDays, texto: `Difundida el ${fechaCalendario(o.fecha_publicacion)}` },
+                ]}
+                descripcion={o.descripcion || null}
+                lineas={2}
+                accion={o.enlace && esEnlaceSeguro(o.enlace) ? (
+                  <a className="btn btn-gris" href={o.enlace} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink size={15} aria-hidden="true" /> Ver convocatoria
+                  </a>
+                ) : null}
+              />
             ))}
           </div>
         )}

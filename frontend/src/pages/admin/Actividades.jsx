@@ -35,6 +35,9 @@ export default function Actividades() {
     queryFn: () => listarActividadesAdmin(Object.fromEntries(Object.entries(filtros).filter(([, v]) => v))),
   });
 
+  // Precarga el chunk del editor al entrar a la página (no engorda el bundle inicial).
+  useEffect(() => { import('../../components/EditorTextoEnriquecido'); }, []);
+
   const refrescar = () => queryClient.invalidateQueries({ queryKey: ['actividades-admin'] });
 
   return (
@@ -316,18 +319,22 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
   return (
     <Tarjeta titulo={esNueva ? 'Nueva actividad' : 'Editar actividad'}>
       <Mensaje>{error}</Mensaje>
-      <div className="form-malla">
-        <Selecto etiqueta="Tipo *" value={form.tipo} onChange={set('tipo')}>
-          {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}
-        </Selecto>
-        <Campo etiqueta="Nombre *" value={form.nombre} onChange={set('nombre')} />
-        <Campo etiqueta="Inicio *" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} />
-        <Campo etiqueta="Fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} />
-        <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
-        <Selecto etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')}>
-          {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
-        </Selecto>
-        <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
+
+      <div className="form-seccion">
+        <span className="form-seccion-titulo">Información básica</span>
+        <div className="form-malla">
+          <Selecto etiqueta="Tipo *" value={form.tipo} onChange={set('tipo')}>
+            {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}
+          </Selecto>
+          <Campo etiqueta="Nombre *" value={form.nombre} onChange={set('nombre')} />
+          <Campo etiqueta="Inicio *" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} />
+          <Campo etiqueta="Fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} />
+          <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
+          <Selecto etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')}>
+            {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
+          </Selecto>
+          <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
+        </div>
       </div>
 
       <ImagenUploader
@@ -340,14 +347,17 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
         cargando={subiendoImagen}
       />
 
-      <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
-        <EditorTextoEnriquecido
-          etiqueta="Descripción"
-          valor={form.descripcion}
-          onChange={(html) => setForm((previo) => ({ ...previo, descripcion: html }))}
-          placeholder="Detalla la actividad: agenda, público objetivo, requisitos…"
-        />
-      </Suspense>
+      <div className="form-seccion">
+        <span className="form-seccion-titulo">Descripción</span>
+        <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
+          <EditorTextoEnriquecido
+            etiqueta=""
+            valor={form.descripcion}
+            onChange={(html) => setForm((previo) => ({ ...previo, descripcion: html }))}
+            placeholder="Detalla la actividad: agenda, público objetivo, requisitos…"
+          />
+        </Suspense>
+      </div>
 
       <div className="form-fila">
         <Boton variante="primario" cargando={enviando || subiendoImagen} onClick={guardar}>
