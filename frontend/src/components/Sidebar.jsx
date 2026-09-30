@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Menu, X } from 'lucide-react';
 import BotonSalir from './BotonSalir';
 import BotonTema from './BotonTema';
 
 /**
  * Sidebar compartido por admin y empresa: misma estructura, estilos y
  * comportamiento. La navegación la define cada rol (no se mezclan opciones).
- * Iconografía con Lucide. En escritorio se contrae a un carril de iconos con
- * tooltip; en móvil (≤860px) se abre como panel superpuesto.
+ * Iconografía Lucide. En escritorio se contrae a un carril de iconos con
+ * tooltip; en móvil (≤860px) se abre como drawer superpuesto.
  */
 function iniciales(nombre = '', respaldo = 'US') {
   const siglas = (nombre || '')
@@ -42,13 +42,36 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle })
       {abiertoMovil && <div className="side-backdrop" onClick={() => setAbiertoMovil(false)} aria-hidden="true" />}
 
       <aside className={`sidebar${colapsado ? ' colapsado' : ''}${abiertoMovil ? ' abierto' : ''}`}>
-        <Link to={marca.to} className="side-brand" title={marca.nombre} onClick={() => setAbiertoMovil(false)}>
-          <span className="brand-mark">{marca.iniciales}</span>
-          <span className="brand-text">
-            <span className="name">{marca.nombre}</span>
-            <span className="tag">{marca.tag}</span>
-          </span>
-        </Link>
+        <header className="side-cabecera">
+          <Link to={marca.to} className="side-brand" title={marca.nombre} onClick={() => setAbiertoMovil(false)}>
+            <span className="brand-mark">{marca.iniciales}</span>
+            <span className="brand-text">
+              <span className="name">{marca.nombre}</span>
+              <span className="tag">{marca.tag}</span>
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            className="side-toggle-icono side-colapsar"
+            onClick={onToggle}
+            title={etiquetaToggle}
+            aria-label={etiquetaToggle}
+            aria-expanded={!colapsado}
+          >
+            {colapsado ? <ChevronsRight size={18} aria-hidden="true" /> : <ChevronsLeft size={18} aria-hidden="true" />}
+          </button>
+
+          <button
+            type="button"
+            className="side-toggle-icono side-cerrar-movil"
+            onClick={() => setAbiertoMovil(false)}
+            title="Cerrar menú"
+            aria-label="Cerrar menú"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
 
         <nav className="side-nav">
           {grupos.map((grupo) => (
@@ -72,18 +95,6 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle })
         </nav>
 
         <div className="side-foot">
-          <button
-            type="button"
-            className="side-toggle side-colapsar"
-            onClick={onToggle}
-            title={etiquetaToggle}
-            aria-label={etiquetaToggle}
-            aria-expanded={!colapsado}
-          >
-            {colapsado ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
-            <span className="side-toggle-text">Contraer menú</span>
-          </button>
-
           <BotonTema />
 
           <div className="side-user">
