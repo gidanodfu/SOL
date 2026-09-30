@@ -5,14 +5,15 @@ import { useAuth } from '../../context/AuthContext';
 import { perfilEmpresa } from '../../services/empresas';
 import { Boton, Campo, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import { useToast } from '../../components/Feedbacks';
 import { ROLES } from '../../constants';
 import { errorApi } from '../../utils';
 
 export default function Cuenta() {
   const { usuario, cambiarContrasena } = useAuth();
+  const toast = useToast();
   const [form, setForm] = useState({ password_actual: '', password: '', password2: '' });
   const [error, setError] = useState(null);
-  const [ok, setOk] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
   const esAdmin = usuario?.rol === ROLES.ADMIN;
@@ -32,11 +33,10 @@ export default function Cuenta() {
     e.preventDefault();
     setEnviando(true);
     setError(null);
-    setOk(null);
     try {
       await cambiarContrasena(form);
       setForm({ password_actual: '', password: '', password2: '' });
-      setOk('Contraseña actualizada correctamente.');
+      toast.success('Contraseña actualizada correctamente.');
     } catch (err) {
       const det = err?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(err));
@@ -84,7 +84,6 @@ export default function Cuenta() {
 
           <form onSubmit={guardar}>
             <Mensaje>{error}</Mensaje>
-            <Mensaje tipo="exito">{ok}</Mensaje>
             <div className="form-malla">
               <Campo etiqueta="Contraseña actual" type="password" value={form.password_actual} onChange={set('password_actual')} required autoComplete="current-password" />
               <Campo etiqueta="Nueva contraseña" type="password" value={form.password} onChange={set('password')} required minLength={8} autoComplete="new-password" />

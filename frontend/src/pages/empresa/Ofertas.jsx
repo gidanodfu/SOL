@@ -12,6 +12,7 @@ import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
+import { useToast } from '../../components/Feedbacks';
 import { Briefcase, Lock, Pencil, Plus, Send, X } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, TIPOS_EMPLEO } from '../../constants';
 import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaCalendario } from '../../utils';
@@ -29,11 +30,11 @@ const FORM_VACIO = {
 export default function Ofertas() {
   const queryClient = useQueryClient();
   const location = useLocation();
+  const toast = useToast();
   const { data: ofertas, isLoading } = useQuery({ queryKey: ['ofertas-empresa'], queryFn: listarOfertasEmpresa });
   const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias });
   const [editor, setEditor] = useState(() => (location.state?.nueva ? {} : null));
   const [seleccionada, setSeleccionada] = useState(null);
-  const [nota, setNota] = useState(null);
 
   // Precarga el chunk del editor al entrar a la página: cuando el usuario pulsa
   // "Nueva oferta"/"Editar", TipTap ya está descargado (no engorda el bundle inicial).
@@ -67,7 +68,6 @@ export default function Ofertas() {
         )}
       />
 
-      <Mensaje tipo="exito">{nota}</Mensaje>
       {isLoading && <EstadoCarga />}
 
       {editor && (!editor.id || inicialEdicion) && (
@@ -77,7 +77,7 @@ export default function Ofertas() {
           inicial={editor.id ? inicialEdicion : null}
           alGuardar={(mensaje) => {
             setEditor(null);
-            setNota(mensaje);
+            toast.success(mensaje);
             refrescar();
           }}
         />
@@ -123,7 +123,7 @@ export default function Ofertas() {
       <DetalleOferta
         oferta={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { setNota(mensaje); setSeleccionada(null); refrescar(); }}
+        alCambio={(mensaje) => { toast.success(mensaje); setSeleccionada(null); refrescar(); }}
         alEditar={(oferta) => { setSeleccionada(null); setEditor({ id: oferta.id, fila: oferta }); }}
       />
     </div>

@@ -53,7 +53,7 @@ export default function Postulaciones() {
         titulo="Postulaciones"
         descripcion="Postulaciones recibidas a tus ofertas y su estado de avance."
         accion={data && pendientes > 0 && (
-          <span className="badge badge-amber" style={{ padding: '8px 13px' }}>
+          <span className="badge badge-amber">
             <i className="ti ti-bell" style={{ marginRight: 6 }} />
             {pendientes} pendiente(s) por revisar
           </span>

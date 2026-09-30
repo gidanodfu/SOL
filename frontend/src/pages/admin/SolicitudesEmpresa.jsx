@@ -32,9 +32,9 @@ async function copiarTexto(texto) {
 
 export default function SolicitudesEmpresa() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [filtro, setFiltro] = useState('');
   const [q, setQ] = useState('');
-  const [nota, setNota] = useState(null);
   const [seleccionada, setSeleccionada] = useState(null);
   const [enlaceActivacion, setEnlaceActivacion] = useState(null);
 
@@ -63,7 +63,6 @@ export default function SolicitudesEmpresa() {
         <input placeholder="Buscar por RUC, razón social, representante o correo…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
-      <Mensaje tipo="exito">{nota}</Mensaje>
       {isLoading && <EstadoCarga />}
       {data && data.data.length === 0 && <ListaVacia texto="No hay solicitudes en este estado." />}
 
@@ -113,7 +112,7 @@ export default function SolicitudesEmpresa() {
       <DetalleSolicitud
         solicitud={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
         alGenerarEnlace={setEnlaceActivacion}
       />
 

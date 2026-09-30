@@ -264,7 +264,6 @@
 .app-postulante .results-head .count { font-size: 15px; font-weight: 600; color: var(--ink); }
 .app-postulante .results-head .count span { color: var(--blue); }
 .app-postulante .results-head .sort { font-size: 12.5px; color: var(--text-3); }
-.app-postulante .empty-note { text-align: center; color: var(--text-3); font-size: 13px; padding: 18px 0 4px; }
 
 /* ---------- Tarjetas de empleo ---------- */
 .app-postulante .job-card {

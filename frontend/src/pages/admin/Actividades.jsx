@@ -25,10 +25,10 @@ const VACIO = { tipo: 'taller', nombre: '', descripcion: '', fecha_inicio: '', f
 
 export default function Actividades() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [filtros, setFiltros] = useState({ tipo: '', estado: '' });
   const [editor, setEditor] = useState(null);
   const [seleccionada, setSeleccionada] = useState(null);
-  const [nota, setNota] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['actividades-admin', filtros],
@@ -50,7 +50,6 @@ export default function Actividades() {
           </Boton>
         }
       >
-        <Mensaje tipo="exito">{nota}</Mensaje>
         <div className="form-fila">
           <Selecto etiqueta="" value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
             <option value="">Todos los tipos</option>
@@ -107,7 +106,7 @@ export default function Actividades() {
       <DetalleActividad
         actividad={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
         alEditar={(actividad) => { setSeleccionada(null); setEditor({ id: actividad.id, fila: actividad }); }}
       />
     </div>

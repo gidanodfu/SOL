@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarContratacion, listarContratacionesEmpresa, opcionesContratacionEmpresa, registrarContratacion } from '../../services/contrataciones';
 import { EstadoCarga, Boton, Campo, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import { useToast } from '../../components/Feedbacks';
 import { errorApi, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
@@ -11,10 +12,10 @@ const VACIO = { postulacion_id: '', fecha_contratacion: '', cargo: '', modalidad
 
 export default function Contrataciones() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { data: contratos, isLoading } = useQuery({ queryKey: ['contrataciones-empresa'], queryFn: listarContratacionesEmpresa });
   const { data: opciones } = useQuery({ queryKey: ['opciones-contratacion'], queryFn: opcionesContratacionEmpresa });
   const [editor, setEditor] = useState(null);
-  const [nota, setNota] = useState(null);
 
   const refrescar = () => {
     queryClient.invalidateQueries({ queryKey: ['contrataciones-empresa'] });
@@ -41,14 +42,13 @@ export default function Contrataciones() {
         )}
       />
 
-      <Mensaje tipo="exito">{nota}</Mensaje>
       {isLoading && <EstadoCarga />}
 
       {editor && (
         <EditorContratacion
           opciones={opciones || []}
           inicial={editor.id ? contratos?.find((c) => c.id === editor.id) : null}
-          alGuardar={() => { setEditor(null); setNota('Contratación guardada.'); refrescar(); }}
+          alGuardar={() => { setEditor(null); toast.success('Contratación guardada.'); refrescar(); }}
         />
       )}
 

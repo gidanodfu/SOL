@@ -12,7 +12,7 @@ import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
-import { useDialogo } from '../../components/Feedbacks';
+import { useDialogo, useToast } from '../../components/Feedbacks';
 import { Check, Eye, Lock, XCircle } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO } from '../../constants';
 import { errorApi, fechaCalendario, fechaHora } from '../../utils';
@@ -28,9 +28,9 @@ const FILTROS = [
 
 export default function Ofertas() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [filtro, setFiltro] = useState('');
   const [seleccionada, setSeleccionada] = useState(null);
-  const [nota, setNota] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['ofertas-admin', filtro],
@@ -63,7 +63,6 @@ export default function Ofertas() {
         ))}
       </div>
 
-      <Mensaje tipo="exito">{nota}</Mensaje>
       {isLoading && <EstadoCarga />}
       {data && data.length === 0 && <ListaVacia texto="No hay ofertas en este estado." />}
 
@@ -109,7 +108,7 @@ export default function Ofertas() {
       <DetalleOferta
         oferta={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { setNota(mensaje); refrescar({ cerrar: true }); }}
+        alCambio={(mensaje) => { toast.success(mensaje); refrescar({ cerrar: true }); }}
       />
     </Tarjeta>
   );

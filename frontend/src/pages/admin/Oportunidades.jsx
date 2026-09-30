@@ -6,6 +6,7 @@ import { EstadoCarga, Boton, Campo, ListaVacia, Mensaje, Selecto, Tarjeta } from
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
+import { useToast } from '../../components/Feedbacks';
 import { ExternalLink, EyeOff, Megaphone, Pencil, Upload } from 'lucide-react';
 import { ETIQUETA_FUENTE_OPORTUNIDAD, FUENTES_OPORTUNIDAD } from '../../constants';
 import { errorApi, esEnlaceSeguro, fechaCalendario } from '../../utils';
@@ -26,10 +27,10 @@ function BadgePublicacion({ estado }) {
 
 export default function Oportunidades() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [filtros, setFiltros] = useState({ fuente: '' });
   const [editor, setEditor] = useState(null);
   const [seleccionada, setSeleccionada] = useState(null);
-  const [nota, setNota] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['oportunidades-admin', filtros],
@@ -48,7 +49,6 @@ export default function Oportunidades() {
           </Boton>
         }
       >
-        <Mensaje tipo="exito">{nota}</Mensaje>
         <Selecto etiqueta="" value={filtros.fuente} onChange={(e) => setFiltros({ ...filtros, fuente: e.target.value })}>
           <option value="">Todas las fuentes</option>
           {FUENTES_OPORTUNIDAD.map((f) => <option key={f} value={f}>{ETIQUETA_FUENTE_OPORTUNIDAD[f]}</option>)}
@@ -60,7 +60,7 @@ export default function Oportunidades() {
       {editor && (
         <EditorOportunidad
           inicial={editor.id ? editor.fila : null}
-          alGuardar={() => { setEditor(null); setNota('Oportunidad guardada.'); refrescar(); }}
+          alGuardar={() => { setEditor(null); toast.success('Oportunidad guardada.'); refrescar(); }}
         />
       )}
 
@@ -95,7 +95,7 @@ export default function Oportunidades() {
       <DetalleOportunidad
         oportunidad={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { setNota(mensaje); refrescar(); }}
+        alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
         alEditar={(o) => { setSeleccionada(null); setEditor({ id: o.id, fila: o }); }}
       />
     </div>
