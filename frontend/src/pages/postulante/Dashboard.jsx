@@ -41,13 +41,15 @@ export default function Dashboard() {
           </div>
 
           {total > 0 ? (
-            <DonutCard
-              titulo="Estado de mis postulaciones"
-              descripcion="Distribución de tus postulaciones por etapa"
-              datos={postulaciones}
-              items={DONA_ESTADO_POSTULACION}
-              etiquetaTotal="Postulaciones"
-            />
+            <div className="dona-compacta">
+              <DonutCard
+                titulo="Estado de mis postulaciones"
+                descripcion="Distribución de tus postulaciones por etapa"
+                datos={postulaciones}
+                items={DONA_ESTADO_POSTULACION}
+                etiquetaTotal="Postulaciones"
+              />
+            </div>
           ) : (
             <div className="list-card">
               <div className="list-card-head">

@@ -336,6 +336,12 @@
 /* ---------- Estadísticas (dashboard) ---------- */
 .app-postulante .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
 
+/* "Estado de mis postulaciones": tarjeta compacta y proporcional (solo esta
+   vista; DonutCard compartido no se modifica globalmente). */
+.app-postulante .dona-compacta .chart-card { max-width: min(520px, 100%); }
+.app-postulante .dona-compacta .chart-card-head { margin-bottom: 14px; }
+.app-postulante .dona-compacta .chart-body { gap: 18px; }
+
 /* ---------- Filas / listas ---------- */
 .app-postulante .fila { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .app-postulante .fila:last-of-type { border-bottom: none; }
