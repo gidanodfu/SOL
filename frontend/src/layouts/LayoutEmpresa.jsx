@@ -63,8 +63,10 @@ export function LayoutEmpresa() {
         indicadores={indicadores}
       />
 
-      <main className="content">
-        <Outlet />
+      <main className="main app-workspace">
+        <section className="content">
+          <Outlet />
+        </section>
       </main>
     </div>
   );

@@ -17,7 +17,26 @@
 /* ---------- Barra lateral (geometría común en styles.css) ---------- */
 
 /* ---------- Contenido ---------- */
-.app-empresa .content { flex: 1; min-width: 0; padding: 32px 35px 50px; max-width: 1600px; margin-inline: auto; }
+.app-empresa .content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 35px 50px;
+  max-width: 1600px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-inline: auto;
+}
+
+/* Banda de header alineada con la cabecera del Sidebar: misma referencia
+   horizontal que el topbar de Admin (82px + borde inferior con --line). */
+.app-empresa .content .page-head {
+  min-height: var(--shell-header-h);
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  margin: 0 -35px 26px;
+  padding: 0 35px;
+}
 
 /* ---------- KPI ---------- */
 .app-empresa .kpi-row {
@@ -123,7 +142,12 @@
 @media (max-width: 860px) {
   /* Panel móvil superpuesto (reglas generales en styles.css). */
   .app-empresa .sidebar { position: fixed; }
-  .app-empresa .content { padding: 20px 15px; }
+  .app-empresa .content { padding: 0 15px 50px; }
+  .app-empresa .content .page-head {
+    min-height: var(--shell-header-h);
+    margin: 0 -15px 20px;
+    padding: 0 15px;
+  }
 }
 @media (max-width: 560px) {
   .app-empresa .page-head h1 { font-size: 20px; }
