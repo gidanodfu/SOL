@@ -985,6 +985,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 :root {
   --sidebar-w: 280px;
   --sidebar-w-colapsado: 72px;
+  /* Pieza vertical redondeada: separación al shell y radio de los extremos */
+  --sidebar-gap: 12px;
+  --sidebar-radius: var(--radius-2xl);
 }
 
 .sidebar {
@@ -994,7 +997,15 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   color: #fff;
   display: flex;
   flex-direction: column;
+  border-radius: var(--sidebar-radius);
+  box-shadow: var(--sombra-tarjeta);
   transition: width 0.18s ease;
+  /* Pieza vertical independiente e integrada al shell (extremos superior e
+     inferior redondeados). El contenido se ajusta solo al contraerla. */
+  position: sticky;
+  top: var(--sidebar-gap);
+  height: calc(100vh - 2 * var(--sidebar-gap));
+  margin: var(--sidebar-gap);
 }
 
 /* Cabecera: marca + nombre/subtítulo + botón de colapsar (icon button) */
@@ -1303,6 +1314,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
     top: 0;
     bottom: 0;
     height: 100vh;
+    margin: 0;
     width: min(85vw, 320px);
     border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
     transform: translateX(-105%);

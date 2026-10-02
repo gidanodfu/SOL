@@ -14,12 +14,7 @@
 }
 .app-empresa a { color: inherit; }
 
-/* ---------- Barra lateral (visual común en styles.css) ---------- */
-.app-empresa .sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-}
+/* ---------- Barra lateral (geometría común en styles.css) ---------- */
 
 /* ---------- Contenido ---------- */
 .app-empresa .content { flex: 1; min-width: 0; padding: 32px 35px 50px; max-width: 1600px; margin-inline: auto; }

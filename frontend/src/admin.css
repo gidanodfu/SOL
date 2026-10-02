@@ -12,14 +12,9 @@
   color: var(--ink);
 }
 
-/* ---------------- BARRA LATERAL (visual común en styles.css) ----------------
-   Mismo mecanismo que el panel de empresa: la barra vive en el flujo (sticky)
-   y el contenido se ajusta solo al contraerla, sin saltos ni márgenes fijos. */
-.app-admin .sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-}
+/* ---------------- BARRA LATERAL ----------------
+   La geometría (posición sticky, margen, altura y extremos redondeados) vive
+   en styles.css (fuente única); aquí solo el shell del módulo. */
 
 .pdefin {
   white-space: pre-wrap;
