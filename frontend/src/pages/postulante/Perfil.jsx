@@ -21,7 +21,7 @@ export default function Perfil() {
       <Tarjeta titulo="Mi perfil laboral">
         {isLoading && <EstadoCarga />}
         {data && (
-          <div className="descripcion">
+          <div className="descripcion perfil-datos">
             <div style={{display:'none'}}><b>DNI</b>{data.dni}</div>
             <div><b>Nombres</b>{data.nombres} {data.apellidos}</div>
             <div><b>Distrito</b>{data.distrito || '—'}</div>
