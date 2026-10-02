@@ -24,13 +24,12 @@
 .app-admin .main {
   flex: 1;
   min-width: 0;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .app-admin .topbar {
-  height: 82px;
+  height: var(--shell-header-h);
   background: var(--white);
   border-bottom: 1px solid var(--line);
   display: flex;
@@ -62,6 +61,8 @@
 }
 
 .app-admin .content {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 32px 35px 50px;
   max-width: 1600px;
   width: 100%;

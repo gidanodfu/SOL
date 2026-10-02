@@ -988,6 +988,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   /* Pieza vertical redondeada: separación al shell y radio de los extremos */
   --sidebar-gap: 12px;
   --sidebar-radius: var(--radius-2xl);
+  /* Altura de la franja de cabecera del shell (Sidebar + Workspace). Una sola
+     referencia horizontal para la división header/contenido en Admin y Empresa. */
+  --shell-header-h: 82px;
 }
 
 .sidebar {
@@ -1008,12 +1011,35 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   margin: var(--sidebar-gap);
 }
 
+/* ---------------------------------------------------------------------
+   Workspace: superficie principal del área de trabajo (Admin y Empresa).
+   Contiene el header de página y el contenido. NO es una .tarjeta: sin
+   sombra, para no competir con las tarjetas internas ni crear doble sombra.
+   Comparte con el Sidebar radios, separación exterior y jerarquía.
+   --------------------------------------------------------------------- */
+.app-workspace {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2xl);
+  margin: var(--sidebar-gap) var(--sidebar-gap) var(--sidebar-gap) 0;
+  /* Crece con el contenido: el desplazamiento es el de la página (un solo
+     scroll). `overflow: hidden` solo recorta a las esquinas redondeadas y
+     contiene los márgenes negativos del header, sin crear scroll interno. */
+  min-height: calc(100vh - 2 * var(--sidebar-gap));
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
 /* Cabecera: marca + nombre/subtítulo + botón de colapsar (icon button) */
 .side-cabecera {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 82px;
+  min-height: var(--shell-header-h);
   padding: 14px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   flex: 0 0 auto;
@@ -1307,6 +1333,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 @media (max-width: 860px) {
   .side-movil-btn { display: inline-flex; }
 
+  /* Sin sidebar en el flujo, el Workspace respira por los cuatro lados. */
+  .app-workspace { margin: var(--sidebar-gap); }
+
   .sidebar,
   .sidebar.colapsado {
     position: fixed;
@@ -1369,7 +1398,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
    La navegación debe caber completa en 100vh; se reduce solo el aire
    vertical en pantallas bajas, manteniendo textos, iconos y jerarquía. */
 @media (max-height: 900px) {
-  .side-cabecera { min-height: 76px; padding: 12px; }
+  :root { --shell-header-h: 76px; }
+  .side-cabecera { padding: 12px; }
   .side-nav { padding: 14px 12px; }
   .side-link { padding: 11px 14px; }
   .side-group { margin-bottom: 14px; }
@@ -1385,7 +1415,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 
 @media (max-height: 720px) {
-  .side-cabecera { min-height: 68px; padding: 10px 12px; }
+  :root { --shell-header-h: 68px; }
+  .side-cabecera { padding: 10px 12px; }
   .side-nav { padding: 12px 12px; }
   .side-link { padding: 9px 14px; }
   .side-group { margin-bottom: 12px; }

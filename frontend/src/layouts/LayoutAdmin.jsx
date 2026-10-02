@@ -93,7 +93,7 @@ export function LayoutAdmin() {
         indicadores={indicadores}
       />
 
-      <main className="main">
+      <main className="main app-workspace">
         <header className="topbar">
           <div className="page-title">
             <h2>{titulo}</h2>
