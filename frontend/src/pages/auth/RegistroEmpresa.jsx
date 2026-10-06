@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mensaje } from '../../components/UI';
+import Turnstile from '../../components/Turnstile';
+import { useTema } from '../../context/ThemeContext';
 import { enviarSolicitudEmpresa, verificarRuc } from '../../services/solicitudes';
 import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
 
 const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
 
 export default function RegistroEmpresa() {
+  const { tema } = useTema();
   const [form, setForm] = useState({
     ruc: '', email: '', telefono: '', representante: '',
     razon_social: '', direccion: '', ruc_verificado: false,
@@ -16,6 +19,9 @@ export default function RegistroEmpresa() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const turnstileRef = useRef(null);
+  const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
 
   const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -50,6 +56,10 @@ export default function RegistroEmpresa() {
       setError('Verifique primero el RUC antes de enviar la solicitud.');
       return;
     }
+    if (turnstileRequerido && !turnstileToken) {
+      setError('Completa la verificación de seguridad e inténtalo de nuevo.');
+      return;
+    }
     if (!esTelefonoValido(form.telefono)) {
       setError('El teléfono debe tener 9 u 11 dígitos.');
       return;
@@ -63,6 +73,7 @@ export default function RegistroEmpresa() {
         email: form.email,
         telefono: form.telefono,
         representante: form.representante,
+        turnstile_token: turnstileToken,
       });
       setOk('Solicitud enviada. La Municipalidad revisará sus datos y le notificará el resultado al correo indicado.');
       setForm((f) => ({ ...f, email: '', telefono: '', representante: '' }));
@@ -71,6 +82,8 @@ export default function RegistroEmpresa() {
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(err));
     } finally {
       setEnviando(false);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -170,6 +183,14 @@ export default function RegistroEmpresa() {
               {enviando ? 'ENVIANDO SOLICITUD...' : 'ENVIAR SOLICITUD'}
             </button>
           </form>
+
+          <Turnstile
+            ref={turnstileRef}
+            accion="registro_empresa"
+            tema={tema === 'oscuro' ? 'dark' : 'light'}
+            onToken={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+          />
 
           <div className="login-registro-link">
             ¿Ya está afiliado? <Link to="/login">Iniciar sesión</Link>

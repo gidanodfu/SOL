@@ -2,8 +2,10 @@
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTema } from '../../context/ThemeContext';
 import { Mensaje } from '../../components/UI';
 import GoogleButton from '../../components/GoogleButton';
+import Turnstile from '../../components/Turnstile';
 import { ROLES } from '../../constants';
 import { errorApi } from '../../utils';
 
@@ -12,13 +14,19 @@ const destinoPorRol = { admin: '/admin/dashboard', empresa: '/empresa/dashboard'
 
 export default function Login() {
   const { login, loginGoogle } = useAuth();
+  const { tema } = useTema();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [verPass, setVerPass] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const turnstileRef = useRef(null);
   const enProceso = useRef(false);
+  // Si el widget está configurado, el token es obligatorio en el cliente; el
+  // backend además lo valida siempre con Siteverify (autoridad real).
+  const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
 
   const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -30,17 +38,24 @@ export default function Login() {
   const enviar = async (e) => {
     e.preventDefault();
     if (enProceso.current) return;
+    if (turnstileRequerido && !turnstileToken) {
+      setError('Completa la verificación de seguridad e inténtalo de nuevo.');
+      return;
+    }
     enProceso.current = true;
     setEnviando(true);
     setError(null);
     try {
-      const datos = await login(form.username.trim(), form.password);
+      const datos = await login(form.username.trim(), form.password, turnstileToken);
       navigate(destinoPostLogin(datos.usuario), { replace: true });
     } catch (err) {
       setError(errorApi(err));
     } finally {
       enProceso.current = false;
       setEnviando(false);
+      // El token de Turnstile es de un solo uso: se descarta y se pide uno nuevo.
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -163,6 +178,14 @@ export default function Login() {
           <div className="login-divisor">O</div>
 
           <GoogleButton modo="login" onCredencial={conGoogle} />
+
+          <Turnstile
+            ref={turnstileRef}
+            accion="login"
+            tema={tema === 'oscuro' ? 'dark' : 'light'}
+            onToken={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+          />
 
           <div className="login-registro-link">
             ¿Eres ciudadano? <Link to="/registro">Regístrate aquí</Link>

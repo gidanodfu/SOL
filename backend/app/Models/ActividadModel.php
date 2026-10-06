@@ -15,6 +15,6 @@ class ActividadModel extends Model
 
     protected $allowedFields = [
         'tipo', 'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin',
-        'lugar', 'modalidad', 'organizador', 'estado', 'imagen_key',
+        'lugar', 'modalidad', 'organizador', 'enlace', 'estado', 'imagen_key',
     ];
 }

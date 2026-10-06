@@ -38,8 +38,14 @@ class AuthController extends BaseApiController
                 ], JSON_UNESCAPED_UNICODE));
         }
 
+        $turnstileToken = $datos['turnstile_token'] ?? $datos['cf-turnstile-response'] ?? null;
+
         return $this->ok(
-            $this->auth->login((string) $datos['username'], (string) $datos['password']),
+            $this->auth->login(
+                (string) $datos['username'],
+                (string) $datos['password'],
+                $turnstileToken !== null ? (string) $turnstileToken : null,
+            ),
             'Bienvenido.',
         );
     }

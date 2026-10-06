@@ -9,19 +9,19 @@ import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import ImagenUploader from '../../components/ImagenUploader';
 import { useToast } from '../../components/Feedbacks';
-import { CalendarDays, Pencil } from 'lucide-react';
+import { CalendarDays, ExternalLink, Pencil } from 'lucide-react';
 import {
   ESTADOS_ACTIVIDAD, ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD, TIPOS_ACTIVIDAD,
 } from '../../constants';
-import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaHora, urlArchivo } from '../../utils';
+import { TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto, fechaHora, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 // El editor (TiPTap) se carga solo cuando se abre el formulario de actividad.
 const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
 
 const aLocal = (v) => (v ? String(v).slice(0, 16).replace(' ', 'T') : '');
-const VACIO = { tipo: 'taller', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: 'presencial', organizador: '' };
+const VACIO = { tipo: 'taller', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: 'presencial', organizador: '', enlace: '' };
 
 export default function Actividades() {
   const queryClient = useQueryClient();
@@ -180,6 +180,14 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
           { etiqueta: 'Lugar', valor: actividad.lugar },
           { etiqueta: 'Modalidad', valor: actividad.modalidad },
           { etiqueta: 'Organizador', valor: actividad.organizador || 'MDJLO' },
+          {
+            etiqueta: 'Enlace',
+            valor: actividad.enlace && esEnlaceSeguro(actividad.enlace) ? (
+              <a className="enlace" href={actividad.enlace} target="_blank" rel="noopener noreferrer">
+                Ver convocatoria <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            ) : null,
+          },
         ]}
       />
 
@@ -202,6 +210,7 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
           tipo: inicial.tipo, nombre: inicial.nombre, descripcion: inicial.descripcion || '',
           fecha_inicio: aLocal(inicial.fecha_inicio), fecha_fin: aLocal(inicial.fecha_fin),
           lugar: inicial.lugar || '', modalidad: inicial.modalidad || 'presencial', organizador: inicial.organizador || '',
+          enlace: inicial.enlace || '',
         }
       : VACIO,
   );
@@ -348,13 +357,16 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
             <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
             <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
           </div>
+          <div className="form-actividad-fila">
+            <Campo etiqueta="Enlace (URL de la convocatoria)" value={form.enlace} onChange={set('enlace')} />
+          </div>
         </div>
       </div>
 
       <ImagenUploader
         container="plano"
         titulo="Imagen de la actividad"
-        descripcion="Opcional · JPG, PNG o WEBP · máximo 2 MB. Se muestra en el portal público."
+        descripcion="Opcional · JPG, PNG o WEBP · máximo 2 MB · resolución recomendada 1280 × 720 px (16:9), máxima 1920 × 1080 px. Se muestra en el portal público."
         url={previewUrl || imagenUrl}
         onSubir={manejarSubir}
         onEliminar={manejarEliminar}

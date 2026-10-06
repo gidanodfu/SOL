@@ -157,16 +157,41 @@ class CvService
 
         $extension = strtolower((string) $archivo->getClientExtension());
         $mime      = (string) $archivo->getClientMimeType();
+        $tamano    = (int) $archivo->getSize();
 
         if (! in_array($extension, self::EXTENSIONES_PERMITIDAS, true)) {
             throw ApiException::validacion('Solo se permiten archivos PDF, DOC o DOCX.', ['Solo se permiten archivos PDF, DOC o DOCX.']);
         }
+        if ($tamano <= 0) {
+            throw ApiException::validacion('El archivo está vacío.', ['El archivo está vacío.']);
+        }
+        if ($tamano > self::TAMANO_MAXIMO) {
+            throw ApiException::validacion('El CV supera el tamaño máximo de 5 MB.', ['El CV supera el tamaño máximo de 5 MB.']);
+        }
+        // El MIME lo envía el navegador: se usa solo como filtro previo.
         if (! in_array($mime, self::MIME_PERMITIDOS, true)) {
             throw ApiException::validacion('El tipo del archivo no es válido.', ['El tipo del archivo no es válido.']);
         }
-        if ((int) $archivo->getSize() > self::TAMANO_MAXIMO) {
-            throw ApiException::validacion('El CV supera el tamaño máximo de 5 MB.', ['El CV supera el tamaño máximo de 5 MB.']);
+        // Autoridad real: bytes mágicos del documento (no se confía en el nombre
+        // ni en el content-type enviados por el cliente).
+        $inicio = (string) @file_get_contents($archivo->getTempName(), false, null, 0, 8);
+        if (! $this->esDocumentoReal($inicio, $extension)) {
+            throw ApiException::validacion('El archivo no es un documento PDF, DOC o DOCX válido.', ['El archivo no es un documento PDF, DOC o DOCX válido.']);
         }
+    }
+
+    /**
+     * Verifica la firma binaria según la extensión declarada: PDF (%PDF), DOC
+     * (cabecera OLE) o DOCX (contenedor ZIP, "PK").
+     */
+    private function esDocumentoReal(string $bytes, string $extension): bool
+    {
+        return match ($extension) {
+            'pdf'   => str_starts_with($bytes, '%PDF'),
+            'doc'   => str_starts_with($bytes, "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"),
+            'docx'  => str_starts_with($bytes, 'PK'),
+            default => false,
+        };
     }
 
     /**

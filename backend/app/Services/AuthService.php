@@ -32,6 +32,8 @@ class AuthService
 
     private PostulanteRepository $perfiles;
 
+    private TurnstileService $turnstile;
+
     public function __construct(
         ?UserModel $users = null,
         ?PostulanteModel $postulantes = null,
@@ -39,6 +41,7 @@ class AuthService
         ?JwtService $jwt = null,
         ?AuditoriaService $auditoria = null,
         ?PostulanteRepository $perfiles = null,
+        ?TurnstileService $turnstile = null,
     ) {
         $this->users         = $users ?? model(UserModel::class);
         $this->postulantes   = $postulantes ?? model(PostulanteModel::class);
@@ -46,12 +49,13 @@ class AuthService
         $this->jwt           = $jwt ?? new JwtService();
         $this->auditoria     = $auditoria ?? new AuditoriaService();
         $this->perfiles      = $perfiles ?? new PostulanteRepository();
+        $this->turnstile     = $turnstile ?? new TurnstileService();
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function login(string $username, string $password): array
+    public function login(string $username, string $password, ?string $turnstileToken = null): array
     {
         // Máximo 5 intentos por IP+usuario cada 5 minutos. Solo cuentan los fallos:
         // el contador se elimina al iniciar sesión correctamente (no se bloquea a
@@ -65,6 +69,13 @@ class AuthService
                 'Demasiados intentos de inicio de sesión. Intente nuevamente en ' . $espera . ' segundos.',
                 $espera,
             );
+        }
+
+        // Verificación anti-bot (Cloudflare Turnstile) antes de tocar credenciales.
+        // Se ejecuta después del rate limit para acotar las llamadas salientes a
+        // Siteverify; fail-closed (sin token válido no hay login).
+        if ($this->turnstile->habilitado()) {
+            $this->turnstile->verificar($turnstileToken, $this->ipCliente());
         }
 
         // El identificador puede ser el nombre de usuario (RUC/DNI) o el correo
@@ -97,14 +108,21 @@ class AuthService
      */
     private function claveLogin(string $username): string
     {
-        $ip = '';
-        try {
-            $ip = service('request')->getIPAddress();
-        } catch (\Throwable) {
-            $ip = 'cli';
-        }
+        return sha1('login|' . ($this->ipCliente() ?? 'cli') . '|' . mb_strtolower($username));
+    }
 
-        return sha1('login|' . $ip . '|' . mb_strtolower($username));
+    /**
+     * IP del cliente para el `remoteip` de Turnstile. Null si no está disponible.
+     */
+    private function ipCliente(): ?string
+    {
+        try {
+            $ip = trim((string) service('request')->getIPAddress());
+
+            return $ip === '' ? null : $ip;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
