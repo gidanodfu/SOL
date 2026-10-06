@@ -88,9 +88,16 @@ class CvController extends BaseApiController
             throw ApiException::noEncontrado('El archivo no existe.');
         }
 
+        // El nombre proviene del cliente: se sanea para evitar inyección de
+        // cabeceras (CRLF) o rutas en Content-Disposition.
+        $nombre = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename((string) $archivo['nombre']));
+        if ($nombre === '' || $nombre === null) {
+            $nombre = 'cv';
+        }
+
         return $this->response
             ->setContentType($archivo['mime'], 'UTF-8')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $archivo['nombre'] . '"')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
             ->setBody(file_get_contents($archivo['ruta']));
     }
 }

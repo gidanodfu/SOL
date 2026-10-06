@@ -33,8 +33,8 @@ export function AuthProvider({ children }) {
   // ({ access_token, refresh_token, usuario, ... }) para que las páginas puedan
   // decidir la redirección (p. ej. perfil incompleto tras Google).
 
-  const login = useCallback(async (username, password) => {
-    const datos = await apiLogin(username, password);
+  const login = useCallback(async (username, password, turnstileToken) => {
+    const datos = await apiLogin(username, password, turnstileToken);
     guardarSesion(datos);
     setUsuario(datos.usuario);
     return datos;

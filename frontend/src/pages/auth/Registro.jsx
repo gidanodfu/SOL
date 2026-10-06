@@ -1,21 +1,27 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mensaje } from '../../components/UI';
 import GoogleButton from '../../components/GoogleButton';
+import Turnstile from '../../components/Turnstile';
 import { useAuth } from '../../context/AuthContext';
+import { useTema } from '../../context/ThemeContext';
 import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
 
 const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
 
 export default function Registro() {
   const { loginGoogle, registrarPostulante } = useAuth();
+  const { tema } = useTema();
   const navigate = useNavigate();
   const [form, setForm] = useState({ dni: '', nombres: '', apellidos: '', email: '', telefono: '', password: '', password2: '' });
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [verPass, setVerPass] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const turnstileRef = useRef(null);
+  const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
 
   const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -42,6 +48,10 @@ export default function Registro() {
   // automático), por lo que se redirige a la bolsa de empleo.
   const enviar = async (e) => {
     e.preventDefault();
+    if (turnstileRequerido && !turnstileToken) {
+      setError('Completa la verificación de seguridad e inténtalo de nuevo.');
+      return;
+    }
     if (!esTelefonoValido(form.telefono)) {
       setError('El teléfono debe tener 9 u 11 dígitos.');
       return;
@@ -50,7 +60,7 @@ export default function Registro() {
     setError(null);
     setOk(null);
     try {
-      await registrarPostulante(form);
+      await registrarPostulante({ ...form, turnstile_token: turnstileToken });
       setOk('Cuenta creada correctamente. ¡Bienvenido!');
       navigate('/postulante/buscar', { replace: true });
     } catch (err) {
@@ -58,6 +68,8 @@ export default function Registro() {
       setError(Array.isArray(detalles) && detalles.length ? detalles.join('. ') : errorApi(err));
     } finally {
       setEnviando(false);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -261,6 +273,14 @@ export default function Registro() {
               {enviando ? 'CREANDO CUENTA...' : 'CREAR CUENTA'}
             </button>
           </form>
+
+          <Turnstile
+            ref={turnstileRef}
+            accion="registro"
+            tema={tema === 'oscuro' ? 'dark' : 'light'}
+            onToken={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+          />
 
           <div className="login-registro-link">
             ¿Ya tienes cuenta? <Link to="/login">Iniciar sesión</Link>

@@ -228,6 +228,7 @@ class ActividadService
             'descripcion'  => ['texto_max:10000'],
             'lugar'        => ['max:150'],
             'organizador'  => ['max:150'],
+            'enlace'       => ['max:300'],
             'modalidad'    => ['enum:' . implode(',', self::MODALIDADES)],
             'fecha_inicio' => ['required', 'fecha_hora'],
             'fecha_fin'    => ['fecha_hora'],
@@ -239,6 +240,16 @@ class ActividadService
             throw ApiException::validacion('La fecha de fin no puede ser anterior al inicio.', ['La fecha de fin no puede ser anterior al inicio.']);
         }
 
+        // El enlace se muestra como href en el panel municipal: solo http(s).
+        // FILTER_VALIDATE_URL por sí solo acepta esquemas peligrosos (javascript:).
+        $enlace = $datos['enlace'] ?? null;
+        if ($enlace !== null && $enlace !== '') {
+            $esquema = strtolower((string) parse_url((string) $enlace, PHP_URL_SCHEME));
+            if (! in_array($esquema, ['http', 'https'], true) || ! filter_var($enlace, FILTER_VALIDATE_URL)) {
+                throw ApiException::validacion('El enlace debe ser una URL http(s) válida.', ['El enlace debe ser una URL http(s) válida.']);
+            }
+        }
+
         return [
             'tipo'        => $datos['tipo'],
             'nombre'      => $datos['nombre'],
@@ -248,6 +259,7 @@ class ActividadService
             'lugar'       => $datos['lugar'] ?? null,
             'modalidad'   => $datos['modalidad'] ?? null,
             'organizador' => $datos['organizador'] ?? null,
+            'enlace'      => $enlace ?: null,
         ];
     }
 

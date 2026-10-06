@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useQuery } from '@tanstack/react-query';
-import { Building2, CalendarDays, ExternalLink, MapPin, Monitor, Tag } from 'lucide-react';
+import { Building2, CalendarDays, ExternalLink, Link2, MapPin, Monitor, Tag } from 'lucide-react';
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
 import {
@@ -43,10 +43,14 @@ function TarjetaContenido({ media = null, badge = null, titulo, meta = [], descr
 
       {filas.length > 0 && (
         <ul className="content-card-meta">
-          {filas.map(({ icono: Icono, texto }) => (
-            <li key={texto}>
+          {filas.map(({ icono: Icono, texto, href }, i) => (
+            <li key={i}>
               <Icono size={15} aria-hidden="true" />
-              <span>{texto}</span>
+              {href ? (
+                <a className="enlace" href={href} target="_blank" rel="noopener noreferrer">{texto}</a>
+              ) : (
+                <span>{texto}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -102,6 +106,7 @@ export default function Oportunidades() {
                   { icono: CalendarDays, texto: fechaHora(a.fecha_inicio) },
                   a.lugar ? { icono: MapPin, texto: `Lugar: ${a.lugar}` } : null,
                   a.modalidad ? { icono: Monitor, texto: `Modalidad: ${ETIQUETA_MODALIDAD[a.modalidad] || a.modalidad}` } : null,
+                  a.enlace && esEnlaceSeguro(a.enlace) ? { icono: Link2, texto: a.enlace, href: a.enlace } : null,
                 ]}
                 descripcion={a.descripcion ? textoVisible(a.descripcion) : null}
                 lineas={3}
