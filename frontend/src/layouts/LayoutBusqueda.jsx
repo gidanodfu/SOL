@@ -59,7 +59,7 @@ function CabeceroPublico({ usuario }) {
           ))}
         </nav>
 
-        <BotonTema variante="header" />
+        <BotonTema />
 
         {usuario ? (
           <div className="guest-actions">

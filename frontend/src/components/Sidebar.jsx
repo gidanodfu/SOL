@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight, Menu, X } from 'lucide-react';
 import BotonSalir from './BotonSalir';
-import BotonTema from './BotonTema';
 
 /**
  * Sidebar compartido por admin y empresa: misma estructura, estilos y
@@ -78,28 +77,40 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle, i
             <div className="side-group" key={grupo.titulo || 'principal'}>
               {grupo.titulo && <div className="side-group-title">{grupo.titulo}</div>}
               {grupo.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  data-tooltip={colapsado ? item.texto : undefined}
-                  aria-label={item.texto}
-                  onClick={() => setAbiertoMovil(false)}
-                  className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}
-                >
-                  <item.icono size={18} strokeWidth={2} aria-hidden="true" />
-                  <span className="side-link-text">{item.texto}</span>
-                  {indicadores[item.to] ? (
-                    <span className="side-punto" role="status" aria-label={`${item.texto}: tiene pendientes`} />
-                  ) : null}
-                </NavLink>
+                item.onClick ? (
+                  <button
+                    key={item.texto}
+                    type="button"
+                    className="side-link"
+                    data-tooltip={colapsado ? item.texto : undefined}
+                    aria-label={item.texto}
+                    onClick={() => { item.onClick(); setAbiertoMovil(false); }}
+                  >
+                    <item.icono size={18} strokeWidth={2} aria-hidden="true" />
+                    <span className="side-link-text">{item.texto}</span>
+                  </button>
+                ) : (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    data-tooltip={colapsado ? item.texto : undefined}
+                    aria-label={item.texto}
+                    onClick={() => setAbiertoMovil(false)}
+                    className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}
+                  >
+                    <item.icono size={18} strokeWidth={2} aria-hidden="true" />
+                    <span className="side-link-text">{item.texto}</span>
+                    {indicadores[item.to] ? (
+                      <span className="side-punto" role="status" aria-label={`${item.texto}: tiene pendientes`} />
+                    ) : null}
+                  </NavLink>
+                )
               ))}
             </div>
           ))}
         </nav>
 
         <div className="side-foot">
-          <BotonTema />
-
           <div className="side-user">
             <span className="side-avatar">{iniciales(usuario?.nombre, usuario?.respaldo)}</span>
             <span className="side-user-info">

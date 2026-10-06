@@ -14,7 +14,7 @@ const destinoPorRol = { admin: '/admin/dashboard', empresa: '/empresa/dashboard'
 
 export default function Login() {
   const { login, loginGoogle } = useAuth();
-  const { tema } = useTema();
+  const { modoEfectivo } = useTema();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ username: '', password: '' });
@@ -182,7 +182,7 @@ export default function Login() {
           <Turnstile
             ref={turnstileRef}
             accion="login"
-            tema={tema === 'oscuro' ? 'dark' : 'light'}
+            tema={modoEfectivo}
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}
           />

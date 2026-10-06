@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   FileCheck2,
   LayoutDashboard,
+  Palette,
   UserCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +25,12 @@ const GRUPOS = [
       { to: '/empresa/contrataciones', icono: ClipboardCheck, texto: 'Contrataciones' },
       { to: '/empresa/perfil', icono: Building2, texto: 'Mi empresa' },
       { to: '/empresa/cuenta', icono: UserCircle, texto: 'Mi cuenta' },
+    ],
+  },
+  {
+    titulo: 'Configuración',
+    items: [
+      { to: '/configuracion/temas', icono: Palette, texto: 'Temas' },
     ],
   },
 ];

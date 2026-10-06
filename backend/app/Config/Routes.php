@@ -68,6 +68,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('auth/me', 'AuthController::me');
         $routes->post('auth/logout', 'AuthController::logout');
         $routes->put('cuenta/contrasena', 'CuentaController::cambiarContrasena');
+        $routes->get('cuenta/preferencias', 'CuentaController::preferencias');
+        $routes->put('cuenta/preferencias', 'CuentaController::guardarPreferencias');
     });
 
     // Administración municipal (RF-07, RF-08..RF-17, RF-52..RF-60).

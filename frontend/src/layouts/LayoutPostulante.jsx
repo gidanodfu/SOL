@@ -60,7 +60,7 @@ export function LayoutPostulante() {
           ))}
         </nav>
 
-        <BotonTema variante="header" />
+        <BotonTema />
 
         <div ref={bloqueRef} className="user-menu">
           <button

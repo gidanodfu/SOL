@@ -9,6 +9,7 @@ import {
   FileCheck2,
   LayoutDashboard,
   Megaphone,
+  Palette,
   UserCircle,
   Users,
 } from 'lucide-react';
@@ -37,6 +38,12 @@ const GRUPOS = [
       { to: '/cuenta', icono: UserCircle, texto: 'Mi cuenta' },
     ],
   },
+  {
+    titulo: 'Configuración',
+    items: [
+      { to: '/configuracion/temas', icono: Palette, texto: 'Temas' },
+    ],
+  },
 ];
 
 const MARCA = {
@@ -55,6 +62,7 @@ const TITULO_POR_RUTA = {
   '/admin/usuarios': ['Usuarios', 'Cuentas del sistema'],
   '/admin/empresas': ['Empresas', 'Empresas afiliadas'],
   '/admin/solicitudes-empresa': ['Solicitudes', 'Solicitudes de afiliación de empresas'],
+  '/configuracion/temas': ['Temas', 'Personaliza la apariencia de tu espacio de trabajo'],
   '/cuenta': ['Mi cuenta', 'Tu cuenta y contraseña'],
 };
 
