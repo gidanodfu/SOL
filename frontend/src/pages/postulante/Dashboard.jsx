@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Briefcase, Clock3, FileCheck2, IdCard, Search } from 'lucide-react';
 import { dashboardPostulante } from '../../services/postulante';
-import { Mensaje, EstadoCarga } from '../../components/UI';
+import { Mensaje, EstadoCarga, Tarjeta } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import DonutCard from '../../components/DonutCard';
@@ -40,35 +40,43 @@ export default function Dashboard() {
             />
           </div>
 
-          {total > 0 ? (
-            <div className="dona-compacta">
-              <DonutCard
-                titulo="Estado de mis postulaciones"
-                descripcion="Distribución de tus postulaciones por etapa"
-                datos={postulaciones}
-                items={DONA_ESTADO_POSTULACION}
-                etiquetaTotal="Postulaciones"
-              />
-            </div>
-          ) : (
-            <div className="list-card">
-              <div className="list-card-head">
-                <h2>Estado de mis postulaciones</h2>
+          <div className="dash-grid">
+            {total > 0 ? (
+              <div className="dona-compacta">
+                <DonutCard
+                  titulo="Estado de mis postulaciones"
+                  descripcion="Distribución de tus postulaciones por etapa"
+                  datos={postulaciones}
+                  items={DONA_ESTADO_POSTULACION}
+                  etiquetaTotal="Postulaciones"
+                />
               </div>
-              <div className="empty-card">
-                <FileCheck2 size={28} aria-hidden="true" />
-                <p>No tienes postulaciones todavía. Explora las ofertas publicadas y postúlate.</p>
+            ) : (
+              <div className="list-card">
+                <div className="list-card-head">
+                  <h2>Estado de mis postulaciones</h2>
+                </div>
+                <div className="empty-card">
+                  <FileCheck2 size={28} aria-hidden="true" />
+                  <p>No tienes postulaciones todavía. Explora las ofertas publicadas y postúlate.</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="form-fila" style={{ marginTop: 18 }}>
-            <Link className="btn btn-primario" to="/postulante/buscar">
-              <Search size={17} aria-hidden="true" />Buscar empleo
-            </Link>
-            <Link className="btn btn-gris" to="/postulante/perfil">
-              <IdCard size={17} aria-hidden="true" />Gestionar perfil y CV
-            </Link>
+            <Tarjeta titulo="Acciones rápidas">
+              <p className="tarjeta-sub">Accesos frecuentes para gestionar tu búsqueda de empleo.</p>
+              <div className="dash-acciones">
+                <Link className="btn btn-primario" to="/postulante/buscar">
+                  <Search size={17} aria-hidden="true" />Buscar empleo
+                </Link>
+                <Link className="btn btn-gris" to="/postulante/postulaciones">
+                  <FileCheck2 size={17} aria-hidden="true" />Mis postulaciones
+                </Link>
+                <Link className="btn btn-gris" to="/postulante/perfil">
+                  <IdCard size={17} aria-hidden="true" />Gestionar perfil y CV
+                </Link>
+              </div>
+            </Tarjeta>
           </div>
         </>
       )}

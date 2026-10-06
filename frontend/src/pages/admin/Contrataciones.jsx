@@ -42,12 +42,12 @@ export default function Contrataciones() {
             <tbody>
               {data.map((c) => (
                 <tr key={c.id}>
-                  <td className="col-fecha">{fechaCalendario(c.fecha_contratacion)}</td>
-                  <td>{c.razon_social}<br /><small style={{ color: 'var(--gris)' }}>RUC {c.ruc}</small></td>
-                  <td>{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>DNI {c.dni}</small></td>
-                  <td>{c.puesto}<br /><small style={{ color: 'var(--gris)' }}>{c.cargo}</small></td>
-                  <td>{c.modalidad || '—'}</td>
-                  <td className="col-monto">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
+                  <td className="col-fecha" data-label="Fecha">{fechaCalendario(c.fecha_contratacion)}</td>
+                  <td data-label="Empresa">{c.razon_social}<br /><small style={{ color: 'var(--gris)' }}>RUC {c.ruc}</small></td>
+                  <td data-label="Contratado">{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>DNI {c.dni}</small></td>
+                  <td data-label="Oferta / cargo">{c.puesto}<br /><small style={{ color: 'var(--gris)' }}>{c.cargo}</small></td>
+                  <td data-label="Modalidad">{c.modalidad || '—'}</td>
+                  <td className="col-monto" data-label="Remuneración">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
                 </tr>
               ))}
             </tbody>

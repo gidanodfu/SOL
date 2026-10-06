@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Building2, CalendarDays, ExternalLink, Link2, MapPin, Monitor, Tag } from 'lucide-react';
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
+import PageHeader from '../../components/PageHeader';
 import {
   ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD,
@@ -73,10 +74,10 @@ export default function Oportunidades() {
 
   return (
     <div>
-      <div className="page-head">
-        <h1>Ferias y oportunidades</h1>
-        <p>Actividades municipales de intermediación y oportunidades de empleo difundidas.</p>
-      </div>
+      <PageHeader
+        titulo="Ferias y oportunidades"
+        descripcion="Actividades municipales de intermediación y oportunidades de empleo difundidas."
+      />
 
       <div className="list-card">
         <div className="list-card-head">

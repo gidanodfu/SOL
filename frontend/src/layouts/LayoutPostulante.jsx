@@ -2,10 +2,9 @@
 import { useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, IdCard, LayoutDashboard, UserCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, IdCard, LayoutDashboard, Palette, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
-import BotonTema from '../components/BotonTema';
 import { perfilPostulante } from '../services/postulante';
 import { useClickFuera } from '../hooks/useClickFuera';
 
@@ -21,6 +20,7 @@ const NAV = [
 const MENU = [
   { to: '/postulante/dashboard', icono: LayoutDashboard, texto: 'Dashboard' },
   { to: '/postulante/perfil', icono: IdCard, texto: 'Mi perfil y CV' },
+  { to: '/configuracion/temas', icono: Palette, texto: 'Temas' },
   { to: '/postulante/cuenta', icono: UserCircle, texto: 'Mi cuenta' },
 ];
 
@@ -59,8 +59,6 @@ export function LayoutPostulante() {
             </NavLink>
           ))}
         </nav>
-
-        <BotonTema />
 
         <div ref={bloqueRef} className="user-menu">
           <button

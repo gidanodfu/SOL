@@ -21,10 +21,9 @@
 .app-postulante .post-header {
   background: var(--navy);
   color: #fff;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: nowrap;
   gap: 18px;
   /* Superficie flotante contenida: no toca los bordes del viewport, centrada,
      con extremos redondeados (misma familia que el shell de Admin/Empresa). */
@@ -36,6 +35,10 @@
   border-radius: var(--radius-2xl);
   box-shadow: var(--sombra-tarjeta);
 }
+/* Tres áreas: marca (izq) · navegación (centro real) · usuario (der) */
+.app-postulante .post-header .brand { justify-self: start; }
+.app-postulante .post-header .post-nav { justify-self: center; }
+.app-postulante .post-header .user-menu { justify-self: end; }
 .app-postulante .brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; text-decoration: none; }
 .app-postulante .brand-mark {
   width: 38px;
@@ -59,8 +62,6 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  flex: 0 1 auto;
-  margin-inline: auto;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -380,9 +381,32 @@
 
 /* "Estado de mis postulaciones": tarjeta compacta y proporcional (solo esta
    vista; DonutCard compartido no se modifica globalmente). */
-.app-postulante .dona-compacta .chart-card { max-width: min(520px, 100%); }
 .app-postulante .dona-compacta .chart-card-head { margin-bottom: 14px; }
 .app-postulante .dona-compacta .chart-body { gap: 18px; }
+
+/* Dashboard: dona + acciones rápidas en dos columnas equilibradas */
+.app-postulante .dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+.app-postulante .dash-acciones { display: flex; flex-direction: column; gap: 10px; }
+.app-postulante .dash-acciones .btn { justify-content: flex-start; }
+
+/* Perfil: información + currículum en dos columnas (1 en pantallas menores) */
+.app-postulante .perfil-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .app-postulante .perfil-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .app-postulante .dash-grid { grid-template-columns: 1fr; }
+}
 
 /* ---------- Filas / listas ---------- */
 .app-postulante .fila { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -548,14 +572,29 @@
 .app-postulante .completitud li.falta i { color: var(--amber-tx); }
 
 /* ========== Responsive ========== */
+/* Navbar en dos filas (marca+usuario arriba, navegación centrada abajo) cuando
+   el ancho no permite marca + navegación + usuario en una sola fila. */
+@media (max-width: 1100px) {
+  .app-postulante .post-header {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .app-postulante .brand { flex-shrink: 0; }
+  .app-postulante .post-nav {
+    order: 3;
+    width: 100%;
+    flex: 0 0 100%;
+  }
+  .app-postulante .post-nav a { flex: 1 1 0; justify-content: center; text-align: center; }
+}
 @media (max-width: 1024px) {
   .app-postulante .post-header { padding: 14px 20px; }
 }
 @media (max-width: 860px) {
   .app-postulante { --post-shell-w: calc(100% - 32px); }
-  .app-postulante .post-header { width: var(--post-shell-w); margin-top: 10px; padding: 12px 14px; flex-wrap: wrap; gap: 10px; }
-  .app-postulante .brand { flex-shrink: 0; }
-  .app-postulante .post-nav { order: 3; width: 100%; flex: 0 0 100%; }
+  .app-postulante .post-header { width: var(--post-shell-w); margin-top: 10px; padding: 12px 14px; }
   .app-postulante .post-main { width: var(--post-shell-w); margin-top: 12px; padding: 16px 14px 26px; }
   .app-postulante .stat-row { grid-template-columns: 1fr; }
 }
@@ -584,6 +623,43 @@
   .app-postulante .post-nav a i { font-size: 13px; margin-right: 3px; }
   .app-postulante .pill-btn { font-size: 12px; padding: 8px 12px; }
   .app-postulante .pill-btn i { font-size: 14px; }
+}
+
+/* ========== Mobile: postulaciones como tarjetas y filtros en 2 columnas ====== */
+@media (max-width: 640px) {
+  /* Filtros de búsqueda: rejilla equilibrada de 2 columnas */
+  .app-postulante .filter-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .app-postulante .filter-bar .pill { min-width: 0; }
+  .app-postulante .filter-bar .pill-btn { width: 100%; }
+  .app-postulante .filter-bar .pill-label { min-width: 0; }
+  .app-postulante .filter-bar .label-text { overflow: hidden; text-overflow: ellipsis; }
+  .app-postulante .filter-bar .filtro-chevron { margin-left: auto; }
+  .app-postulante .filter-bar .pill:nth-child(even) .pill-panel { left: auto; right: 0; }
+
+  /* Cada postulación es una tarjeta Rounded en vertical */
+  .app-postulante .fila {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    margin-bottom: 10px;
+  }
+  .app-postulante .fila:last-of-type { border-bottom: 1px solid var(--line); }
+  .app-postulante .fila-derecha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+  }
+  .app-postulante .fila-derecha .fecha { margin-bottom: 0; }
+  .app-postulante .fila-accion { display: flex; }
 }
 
 /* ========== Vista maestro-detalle de búsqueda (lista + panel) ========== */
