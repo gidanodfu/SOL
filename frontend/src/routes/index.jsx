@@ -29,6 +29,7 @@ import BuscarEmpleo from '../pages/postulante/BuscarEmpleo';
 import MisPostulaciones from '../pages/postulante/MisPostulaciones';
 import OportunidadesPostulante from '../pages/postulante/Oportunidades';
 import Cuenta from '../pages/cuenta/Cuenta';
+import Temas from '../pages/configuracion/Temas';
 
 export function Rutas() {
   return (
@@ -80,6 +81,11 @@ export function Rutas() {
           <Route path="postulante/postulaciones" element={<MisPostulaciones />} />
           <Route path="postulante/perfil" element={<PerfilPostulante />} />
           <Route path="postulante/cuenta" element={<Cuenta />} />
+        </Route>
+
+        {/* Configuración de apariencia: compartida por Administrador y Empresa. */}
+        <Route element={<RutaProtegida roles={[ROLES.ADMIN, ROLES.EMPRESA]}><Outlet /></RutaProtegida>}>
+          <Route path="configuracion/temas" element={<Temas />} />
         </Route>
 
         <Route path="cuenta" element={<Cuenta />} />

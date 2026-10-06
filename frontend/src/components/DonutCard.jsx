@@ -6,7 +6,7 @@
  */
 function donutGradiente(datos, items) {
   const total = items.reduce((suma, it) => suma + (datos[it.estado] || 0), 0);
-  if (total === 0) return 'conic-gradient(#E9EEF5 0% 100%)';
+  if (total === 0) return 'conic-gradient(var(--line) 0% 100%)';
 
   let acumulado = 0;
   const partes = items

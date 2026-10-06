@@ -10,7 +10,7 @@ import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
 const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
 
 export default function RegistroEmpresa() {
-  const { tema } = useTema();
+  const { modoEfectivo } = useTema();
   const [form, setForm] = useState({
     ruc: '', email: '', telefono: '', representante: '',
     razon_social: '', direccion: '', ruc_verificado: false,
@@ -187,7 +187,7 @@ export default function RegistroEmpresa() {
           <Turnstile
             ref={turnstileRef}
             accion="registro_empresa"
-            tema={tema === 'oscuro' ? 'dark' : 'light'}
+            tema={modoEfectivo}
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}
           />

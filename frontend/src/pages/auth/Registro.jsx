@@ -12,7 +12,7 @@ const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587
 
 export default function Registro() {
   const { loginGoogle, registrarPostulante } = useAuth();
-  const { tema } = useTema();
+  const { modoEfectivo } = useTema();
   const navigate = useNavigate();
   const [form, setForm] = useState({ dni: '', nombres: '', apellidos: '', email: '', telefono: '', password: '', password2: '' });
   const [error, setError] = useState(null);
@@ -277,7 +277,7 @@ export default function Registro() {
           <Turnstile
             ref={turnstileRef}
             accion="registro"
-            tema={tema === 'oscuro' ? 'dark' : 'light'}
+            tema={modoEfectivo}
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}
           />
