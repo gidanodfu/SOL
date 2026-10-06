@@ -83,18 +83,18 @@ export default function SolicitudesEmpresa() {
             <tbody>
               {data.data.map((s) => (
                 <tr key={s.id}>
-                  <td className="col-identificador"><strong>{s.ruc}</strong></td>
-                  <td>
+                  <td className="col-identificador" data-label="RUC"><strong>{s.ruc}</strong></td>
+                  <td data-label="Empresa">
                     {s.razon_social}
                     {s.nombre_comercial ? <><br /><small style={{ color: 'var(--gris)' }}>{s.nombre_comercial}</small></> : null}
                   </td>
-                  <td>{s.representante}</td>
-                  <td>
+                  <td data-label="Representante">{s.representante}</td>
+                  <td data-label="Correo / Teléfono">
                     {s.email}<br />
                     <small style={{ color: 'var(--gris)' }}>{s.telefono}</small>
                   </td>
-                  <td><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
-                  <td className="col-fecha">{fechaHora(s.created_at)}</td>
+                  <td data-label="Estado"><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
+                  <td className="col-fecha" data-label="Recibida">{fechaHora(s.created_at)}</td>
                   <td className="col-acciones">
                     <div className="acciones">
                       <Boton variante="gris" onClick={() => setSeleccionada(s)}>

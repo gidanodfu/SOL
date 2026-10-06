@@ -18,21 +18,28 @@ export default function Perfil() {
         descripcion="Completa tu perfil laboral para que las empresas te conozcan mejor al postular."
       />
       {data?.completitud && !data.completitud.completo && <ResumenCompletitud c={data.completitud} />}
-      <Tarjeta titulo="Mi perfil laboral">
-        {isLoading && <EstadoCarga />}
-        {data && (
-          <div className="descripcion perfil-datos">
-            <div style={{display:'none'}}><b>DNI</b>{data.dni}</div>
-            <div><b>Nombres</b>{data.nombres} {data.apellidos}</div>
-            <div><b>Distrito</b>{data.distrito || '—'}</div>
-            <div><b>Teléfono</b>{data.telefono || '—'}</div>
-            <div><b>Correo</b>{data.email || '—'}</div>
-          </div>
-        )}
-      </Tarjeta>
+      <div className="perfil-grid">
+        <div>
+          <Tarjeta titulo="Mi perfil laboral">
+            {isLoading && <EstadoCarga />}
+            {data && (
+              <div className="descripcion perfil-datos">
+                <div style={{display:'none'}}><b>DNI</b>{data.dni}</div>
+                <div><b>Nombres</b>{data.nombres} {data.apellidos}</div>
+                <div><b>Distrito</b>{data.distrito || '—'}</div>
+                <div><b>Teléfono</b>{data.telefono || '—'}</div>
+                <div><b>Correo</b>{data.email || '—'}</div>
+              </div>
+            )}
+          </Tarjeta>
 
-      {data && <EdicionBasica perfil={data} />}
-      {data && <CvUploader />}
+          {data && <CvUploader />}
+        </div>
+
+        <div>
+          {data && <EdicionBasica perfil={data} />}
+        </div>
+      </div>
     </div>
   );
 }

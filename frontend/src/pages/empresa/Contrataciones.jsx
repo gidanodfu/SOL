@@ -82,12 +82,12 @@ export default function Contrataciones() {
               <tbody>
                 {contratos.map((c) => (
                   <tr key={c.id}>
-                    <td className="col-fecha">{fechaCalendario(c.fecha_contratacion)}</td>
-                    <td>{c.nombres} {c.apellidos}</td>
-                    <td>{c.puesto}</td>
-                    <td>{c.cargo}</td>
-                    <td>{c.modalidad || '—'}</td>
-                    <td className="col-monto">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
+                    <td className="col-fecha" data-label="Fecha">{fechaCalendario(c.fecha_contratacion)}</td>
+                    <td data-label="Contratado">{c.nombres} {c.apellidos}</td>
+                    <td data-label="Puesto">{c.puesto}</td>
+                    <td data-label="Cargo">{c.cargo}</td>
+                    <td data-label="Modalidad">{c.modalidad || '—'}</td>
+                    <td className="col-monto" data-label="Remuneración">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
                     <td className="col-acciones"><Boton variante="gris" onClick={() => setEditor({ id: c.id })}>Editar</Boton></td>
                   </tr>
                 ))}

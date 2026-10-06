@@ -107,11 +107,11 @@ export default function Usuarios() {
             <tbody>
               {data.data.map((u) => (
                 <tr key={u.id}>
-                  <td className="col-identificador"><strong>{u.username}</strong></td>
-                  <td>{u.rol === 'empresa' ? (u.razon_social || '—') : `${u.nombres} ${u.apellidos}`}</td>
-                  <td><Estado valor={u.rol} diccionario={ETIQUETA_ROL} /></td>
-                  <td><Estado valor={u.estado} diccionario={estadosUsuarios} /></td>
-                  <td className="col-fecha">{fechaHora(u.ultimo_acceso)}</td>
+                  <td className="col-identificador" data-label="Usuario"><strong>{u.username}</strong></td>
+                  <td data-label="Nombre">{u.rol === 'empresa' ? (u.razon_social || '—') : `${u.nombres} ${u.apellidos}`}</td>
+                  <td data-label="Rol"><Estado valor={u.rol} diccionario={ETIQUETA_ROL} /></td>
+                  <td data-label="Estado"><Estado valor={u.estado} diccionario={estadosUsuarios} /></td>
+                  <td className="col-fecha" data-label="Último acceso">{fechaHora(u.ultimo_acceso)}</td>
                   <td className="col-acciones">
                     <div className="acciones">
                       <Boton variante="gris" onClick={() => setSeleccionado(u)}>

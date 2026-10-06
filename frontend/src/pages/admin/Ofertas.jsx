@@ -84,13 +84,13 @@ export default function Ofertas() {
             <tbody>
               {data.map((o) => (
                 <tr key={o.id}>
-                  <td><Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
-                  <td><strong>{o.puesto}</strong></td>
-                  <td>{o.razon_social}</td>
-                  <td className="col-identificador">{o.ruc}</td>
-                  <td className="col-monto">{o.vacantes}</td>
-                  <td className="col-fecha">{o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : '—'}</td>
-                  <td className="col-fecha">{fechaHora(o.created_at)}</td>
+                  <td data-label="Estado"><Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
+                  <td data-label="Puesto"><strong>{o.puesto}</strong></td>
+                  <td data-label="Empresa">{o.razon_social}</td>
+                  <td className="col-identificador" data-label="RUC">{o.ruc}</td>
+                  <td className="col-monto" data-label="Vacantes">{o.vacantes}</td>
+                  <td className="col-fecha" data-label="Cierre">{o.fecha_cierre ? fechaCalendario(o.fecha_cierre) : '—'}</td>
+                  <td className="col-fecha" data-label="Enviada">{fechaHora(o.created_at)}</td>
                   <td className="col-acciones">
                     <div className="acciones">
                       <Boton variante="gris" onClick={() => setSeleccionada(o)}>

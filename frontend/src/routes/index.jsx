@@ -83,8 +83,9 @@ export function Rutas() {
           <Route path="postulante/cuenta" element={<Cuenta />} />
         </Route>
 
-        {/* Configuración de apariencia: compartida por Administrador y Empresa. */}
-        <Route element={<RutaProtegida roles={[ROLES.ADMIN, ROLES.EMPRESA]}><Outlet /></RutaProtegida>}>
+        {/* Configuración de apariencia: disponible para los paneles con selector
+            de temas (Administrador, Empresa y Postulante). */}
+        <Route element={<RutaProtegida roles={[ROLES.ADMIN, ROLES.EMPRESA, ROLES.POSTULANTE]}><Outlet /></RutaProtegida>}>
           <Route path="configuracion/temas" element={<Temas />} />
         </Route>
 

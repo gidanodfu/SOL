@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { listarMisPostulaciones, retirarPostulacion } from '../../services/postulante';
 import { EstadoCarga, Boton, Estado, Mensaje } from '../../components/UI';
+import PageHeader from '../../components/PageHeader';
 import { useToast, useDialogo } from '../../components/Feedbacks';
 import { ETIQUETA_ESTADO_POSTULACION } from '../../constants';
 import { errorApi, fechaHora } from '../../utils';
@@ -41,10 +42,10 @@ export default function MisPostulaciones() {
 
   return (
     <div>
-      <div className="page-head">
-        <h1>Mis postulaciones</h1>
-        <p>Seguimiento de las postulaciones que realizaste a las ofertas de empleo.</p>
-      </div>
+      <PageHeader
+        titulo="Mis postulaciones"
+        descripcion="Seguimiento de las postulaciones que realizaste a las ofertas de empleo."
+      />
 
       <Mensaje>{error}</Mensaje>
       {isLoading && <EstadoCarga />}
@@ -75,7 +76,7 @@ export default function MisPostulaciones() {
                 <div className="fecha">{fechaHora(p.fecha_postulacion)}</div>
                 <Estado valor={p.estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
               </div>
-              <div>
+              <div className="fila-accion">
                 {p.activo === 1 ? (
                   <Boton variante="peligro" onClick={() => retirar(p.id)}>Retirar</Boton>
                 ) : (

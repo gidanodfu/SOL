@@ -110,15 +110,15 @@ export default function Empresas() {
             <tbody>
               {data.data.map((e) => (
                 <tr key={e.id}>
-                  <td className="col-identificador"><strong>{e.ruc}</strong></td>
-                  <td>{e.razon_social}<br /><small style={{ color: 'var(--gris)' }}>{e.nombre_comercial}</small></td>
-                  <td>{e.representante}</td>
-                  <td className="col-correo">{e.email}</td>
-                  <td>
+                  <td className="col-identificador" data-label="RUC"><strong>{e.ruc}</strong></td>
+                  <td data-label="Razón social">{e.razon_social}<br /><small style={{ color: 'var(--gris)' }}>{e.nombre_comercial}</small></td>
+                  <td data-label="Representante">{e.representante}</td>
+                  <td className="col-correo" data-label="Correo">{e.email}</td>
+                  <td data-label="Estado">
                     <Estado valor={e.estado} diccionario={estadosEmpresa} />
                     {e.evaluacion_presencial ? <div><small style={{ color: 'var(--verde)' }}>Evaluada presencialmente</small></div> : null}
                   </td>
-                  <td className="col-fecha">{fecha(e.created_at)}</td>
+                  <td className="col-fecha" data-label="Registro">{fecha(e.created_at)}</td>
                   <td className="col-acciones">
                     <div className="acciones">
                       <Boton variante="gris" onClick={() => setSeleccionada(e)}>
