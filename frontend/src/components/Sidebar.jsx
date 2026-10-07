@@ -27,6 +27,26 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle, i
 
   return (
     <>
+      <header className="side-movil-bar">
+        <button
+          type="button"
+          className="side-movil-burger"
+          onClick={() => setAbiertoMovil(true)}
+          title="Abrir menú"
+          aria-label="Abrir menú"
+          aria-expanded={abiertoMovil}
+        >
+          <Menu size={20} aria-hidden="true" />
+        </button>
+
+        <Link to={marca.to} className="side-movil-marca" onClick={() => setAbiertoMovil(false)}>
+          <span className="side-movil-mark">{marca.iniciales}</span>
+          <span className="side-movil-nombre">{marca.nombre}</span>
+        </Link>
+
+        <span className="side-movil-spacer" aria-hidden="true" />
+      </header>
+
       <button
         type="button"
         className="side-movil-btn"

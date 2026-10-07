@@ -255,13 +255,34 @@
 @media (max-width: 860px) {
   /* Panel móvil superpuesto (reglas generales en styles.css). */
   .app-admin .sidebar { position: fixed; }
+
+  /* Cabecera de página centrada, con subtítulo, igual que Empresa/Postulante. */
+  .app-admin .topbar {
+    height: auto;
+    min-height: var(--shell-header-h);
+    padding: 14px 15px;
+    justify-content: center;
+    text-align: center;
+  }
+  .app-admin .topbar .page-title { width: 100%; }
+  .app-admin .page-title p { display: block; }
+
+  .app-admin .content { padding: 22px 15px 40px; }
+  .app-admin .filters { margin-bottom: 16px; }
+
+  /* Acciones de cabecera de sección a todo el ancho en móvil. */
+  .app-admin .tarjeta-titulo .btn,
+  .app-admin .list-card-head .btn,
+  .app-admin .form-malla + .btn { width: 100%; }
 }
 
 @media (max-width: 680px) {
-  .app-admin .topbar { padding: 0 15px; }
-  .app-admin .content { padding: 20px 15px; }
-  .app-admin .kpi-grid,
+  .app-admin .page-title h2 { font-size: 20px; }
+  .app-admin .page-title p { font-size: 13px; }
+
+  /* Los KPI conservan densidad: dos columnas; el impar ocupa la fila. */
+  .app-admin .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .app-admin .kpi-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
   .app-admin .bottom-grid { grid-template-columns: 1fr; }
-  .app-admin .page-title p { display: none; }
   .app-admin .status-row { grid-template-columns: 90px 1fr 36px; }
 }
