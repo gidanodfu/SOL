@@ -62,7 +62,7 @@ export default function CvUploader() {
       setMensaje('CV cargado correctamente.');
       setElegido(null);
       queryClient.invalidateQueries({ queryKey: ['cv'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-postulante'] });
+      // Refresca el perfil completo (incluye actividad y estado del CV).
       queryClient.invalidateQueries({ queryKey: ['perfil-postulante'] });
       if (inputRef.current) inputRef.current.value = '';
     } catch (err) {

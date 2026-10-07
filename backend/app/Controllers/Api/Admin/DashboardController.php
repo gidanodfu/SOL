@@ -35,4 +35,16 @@ class DashboardController extends BaseApiController
             'Pendientes de atención.',
         );
     }
+
+    /**
+     * Estadísticas de empleabilidad: empleos generados, empresas que los generan,
+     * empleos vigentes por empresa y situación de las contrataciones.
+     */
+    public function empleabilidad()
+    {
+        return $this->ok(
+            (new DashboardService())->empleabilidad(),
+            'Estadísticas de empleabilidad.',
+        );
+    }
 }

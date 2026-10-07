@@ -40,9 +40,7 @@ class PostulacionService
      */
     private const TRANSICIONES = [
         'pendiente'         => ['en_revision', 'no_seleccionado'],
-        'en_revision'       => ['preseleccionado', 'contactado', 'no_seleccionado'],
-        'preseleccionado'   => ['contactado', 'seleccionado', 'no_seleccionado'],
-        'contactado'        => ['seleccionado', 'no_seleccionado'],
+        'en_revision'       => ['seleccionado', 'no_seleccionado'],
         'no_seleccionado'   => ['en_revision'],
     ];
 
@@ -64,7 +62,14 @@ class PostulacionService
 
     public function listar(int $postulanteId): array
     {
-        return $this->repository->dePostulante($postulanteId);
+        // Expone la URL pública del logo de la empresa (nunca la clave interna).
+        return array_map(static function (array $fila): array {
+            $fila['logo_url'] = ! empty($fila['logo_key']) ? '/api/empresas/' . (int) $fila['empresa_id'] . '/logo' : null;
+            $fila['empresa_antiguedad'] = AntiguedadService::texto($fila['empresa_created_at'] ?? null);
+            unset($fila['logo_key'], $fila['empresa_created_at']);
+
+            return $fila;
+        }, $this->repository->dePostulante($postulanteId));
     }
 
     public function postular(int $postulanteId, int $ofertaId): int
@@ -144,9 +149,17 @@ class PostulacionService
 
     /* ---------------------- Bandeja de la empresa (RF-33..RF-40) ---------------------- */
 
-    public function listarDeEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null): array
+    public function listarDeEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null, ?string $q = null): array
     {
-        return $this->repository->deEmpresa($empresaId, $estado, $ofertaId, $desde, $hasta);
+        // Expone la URL de la foto del candidato (proxy público) y oculta la clave.
+        return array_map(static function (array $fila): array {
+            $fila['foto_url'] = ! empty($fila['foto_key'])
+                ? '/api/postulantes/' . (int) $fila['postulante_id'] . '/foto'
+                : null;
+            unset($fila['foto_key']);
+
+            return $fila;
+        }, $this->repository->deEmpresa($empresaId, $estado, $ofertaId, $desde, $hasta, $q));
     }
 
     /**
@@ -193,8 +206,8 @@ class PostulacionService
 
         $this->postulaciones->db->transStart();
         $this->postulaciones->update($id, ['estado' => $nuevoEstado]);
-        // Historial del cambio (RF-39); el estado "contactado" alimenta el tiempo de
-        // atención (RF-59).
+        // Historial del cambio (RF-39); el primer paso a "en_revision" alimenta el
+        // tiempo de atención (RF-59).
         $this->postulaciones->db->table('postulacion_historial')->insert([
             'postulacion_id'  => $id,
             'estado_anterior' => $postulacion['estado'],

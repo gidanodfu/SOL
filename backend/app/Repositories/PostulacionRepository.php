@@ -26,7 +26,10 @@ class PostulacionRepository
         return $this->db->table('postulaciones p')
             ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
                       of.puesto, of.ubicacion, of.remuneracion, of.fecha_cierre,
-                      emp.razon_social, emp.ruc, cat.nombre AS categoria_nombre')
+                      emp.id AS empresa_id, emp.razon_social, emp.nombre_comercial, emp.ruc,
+                      emp.direccion, emp.telefono AS empresa_telefono, emp.email AS empresa_email,
+                      emp.info_adicional, emp.logo_key, emp.created_at AS empresa_created_at,
+                      cat.nombre AS categoria_nombre')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->join('empresas emp', 'emp.id = p.empresa_id')
             ->join('categorias cat', 'cat.id = of.categoria_id', 'LEFT')
@@ -39,17 +42,17 @@ class PostulacionRepository
     /**
      * @return list<array<string, mixed>>
      */
-    public function deEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null): array
+    public function deEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null, ?string $q = null): array
     {
         $builder = $this->db->table('postulaciones p')
             ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
                       of.puesto, of.ubicacion, of.estado AS oferta_estado, of.fecha_cierre,
-                      po.id AS postulante_id, po.dni, po.nombres, po.apellidos, po.telefono')
+                      po.id AS postulante_id, po.dni, po.nombres, po.apellidos, po.telefono, po.foto_key')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->join('postulantes po', 'po.id = p.postulante_id')
             ->where('p.empresa_id', $empresaId)
             // RF-34/RN-16: pendientes primero y, dentro de cada estado, más recientes arriba.
-            ->orderBy('FIELD(p.estado, "pendiente", "en_revision", "preseleccionado", "contactado", "seleccionado", "no_seleccionado")', '', false)
+            ->orderBy('FIELD(p.estado, "pendiente", "en_revision", "seleccionado", "no_seleccionado")', '', false)
             ->orderBy('p.fecha_postulacion', 'DESC');
 
         if ($estado !== null) {
@@ -65,6 +68,17 @@ class PostulacionRepository
         }
         if ($hasta !== null) {
             $builder->where('p.fecha_postulacion <=', $hasta . ' 23:59:59');
+        }
+
+        // Búsqueda por texto (candidato o puesto) combinable con los demás filtros.
+        if ($q !== null && trim($q) !== '') {
+            $termino = trim($q);
+            $builder->groupStart()
+                ->like('po.nombres', $termino)
+                ->orLike('po.apellidos', $termino)
+                ->orLike('po.dni', $termino)
+                ->orLike('of.puesto', $termino)
+            ->groupEnd();
         }
 
         return $builder->limit(300)->get()->getResultArray();

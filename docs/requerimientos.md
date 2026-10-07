@@ -118,8 +118,7 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-33** Bandeja "Postulaciones" de la empresa.
 - **RF-34** Priorizar pendientes; dentro de cada estado, más recientes primero.
 - **RF-35** Detalle: postulante, CV, oferta, fecha y estado.
-- **RF-36** Estados de postulación: Pendiente, En revisión, Preseleccionado, Contactado,
-  Seleccionado, No seleccionado.
+- **RF-36** Estados de postulación: Pendiente, En revisión, Seleccionado, No seleccionado.
 - **RF-37** Activar/desactivar postulación.
 - **RF-38** Sin eliminación física; la desactivación solo cambia su activación.
 - **RF-39** Conservar historial de estados (el historial referencia `users.id`).

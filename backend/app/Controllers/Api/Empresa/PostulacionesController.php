@@ -16,7 +16,7 @@ use App\Services\PostulacionService;
  */
 class PostulacionesController extends BaseApiController
 {
-    private const ESTADOS = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
+    private const ESTADOS = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 
     private PostulacionService $servicio;
 
@@ -45,7 +45,17 @@ class PostulacionesController extends BaseApiController
             throw ApiException::validacion('Oferta no válida.');
         }
 
-        return $this->ok($this->servicio->listarDeEmpresa($this->empresaId, $estado, $ofertaId !== null ? (int) $ofertaId : null), 'Postulaciones recibidas.');
+        // Búsqueda por texto (candidato/puesto). El Query Builder parametriza el
+        // término: no se concatena entrada del usuario en SQL.
+        $q = trim((string) ($this->request->getGet('q') ?? ''));
+        if (mb_strlen($q) > 100) {
+            throw ApiException::validacion('El término de búsqueda es demasiado largo.');
+        }
+
+        return $this->ok(
+            $this->servicio->listarDeEmpresa($this->empresaId, $estado, $ofertaId !== null ? (int) $ofertaId : null, null, null, $q !== '' ? $q : null),
+            'Postulaciones recibidas.',
+        );
     }
 
     public function show($id)

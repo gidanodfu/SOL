@@ -12,7 +12,10 @@ export const ROLES = {
 };
 
 export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'rechazada', 'cerrada'];
-export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
+export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
+
+/** Situación laboral posterior de una contratación (RF-58). Máximo 4 estados. */
+export const SITUACIONES_CONTRATACION = ['contratado', 'finalizado', 'despedido', 'renuncio'];
 
 export const TIPOS_EMPLEO = [
   'tiempo_completo',
@@ -46,18 +49,22 @@ export const ETIQUETA_ESTADO_OFERTA = {
 export const ETIQUETA_ESTADO_POSTULACION = {
   pendiente: 'Pendiente',
   en_revision: 'En revisión',
-  preseleccionado: 'Preseleccionado',
-  contactado: 'Contactado',
   seleccionado: 'Seleccionado',
   no_seleccionado: 'No seleccionado',
+};
+
+/** Situación laboral de una contratación (etiquetas de UI). */
+export const ETIQUETA_SITUACION_CONTRATACION = {
+  contratado: 'Contratado',
+  finalizado: 'Finalizó contrato',
+  despedido: 'Despedido',
+  renuncio: 'Renunció',
 };
 
 /** Estados de postulación con su color para el gráfico de dona (fuente única). */
 export const DONA_ESTADO_POSTULACION = [
   { estado: 'pendiente', color: 'var(--amber)' },
   { estado: 'en_revision', color: 'var(--blue-c)' },
-  { estado: 'preseleccionado', color: 'var(--blue-tx)' },
-  { estado: 'contactado', color: 'var(--blue-dark)' },
   { estado: 'seleccionado', color: 'var(--green)' },
   { estado: 'no_seleccionado', color: 'var(--gray-c)' },
 ].map((item) => ({ ...item, etiqueta: ETIQUETA_ESTADO_POSTULACION[item.estado] }));
@@ -74,9 +81,7 @@ export const ETIQUETA_ROL = {
  */
 export const TRANSICIONES_POSTULACION = {
   pendiente: ['en_revision', 'no_seleccionado'],
-  en_revision: ['preseleccionado', 'contactado', 'no_seleccionado'],
-  preseleccionado: ['contactado', 'seleccionado', 'no_seleccionado'],
-  contactado: ['seleccionado', 'no_seleccionado'],
+  en_revision: ['seleccionado', 'no_seleccionado'],
   no_seleccionado: ['en_revision'],
   seleccionado: [],
 };

@@ -556,10 +556,15 @@ tbody tr:last-child td { border-bottom: 0; }
 .badge-pendiente, .badge-programado { background: var(--amber-bg); color: var(--amber-tx); }
 .badge-publicada, .badge-seleccionado, .badge-activo, .badge-activo1, .badge-aprobada,
 .badge-en_curso { background: var(--green-bg); color: var(--green-tx); }
-.badge-en_revision, .badge-preseleccionado, .badge-contactado { background: var(--blue-bg2); color: var(--blue-tx); }
+.badge-en_revision { background: var(--blue-bg2); color: var(--blue-tx); }
 .badge-borrador, .badge-cerrada, .badge-no_seleccionado, .badge-inactivo,
 .badge-cancelado, .badge-finalizado { background: var(--gray-bg); color: var(--gray-tx); }
 .badge-rechazada { background: var(--red-bg); color: var(--red-tx); }
+
+/* Situación laboral de la contratación (RF-58) */
+.badge-contratado { background: var(--green-bg); color: var(--green-tx); }
+.badge-despedido { background: var(--red-bg); color: var(--red-tx); }
+.badge-renuncio { background: var(--amber-bg); color: var(--amber-tx); }
 
 /* ---------- Formularios ---------- */
 .campo { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.9rem; }
@@ -1176,20 +1181,6 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   text-decoration: none;
 }
 
-.side-brand .brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: var(--blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
-  flex: none;
-}
-
 .side-brand .brand-text { min-width: 0; }
 .side-brand .name { display: block; color: #fff; font-weight: 600; font-size: 15px; line-height: 1.2; }
 .side-brand .tag { display: block; color: rgba(255, 255, 255, 0.65); font-size: 11px; line-height: 1.3; }
@@ -1340,8 +1331,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   gap: 8px;
   padding: 12px 0;
 }
-.sidebar.colapsado .side-brand { flex: none; justify-content: center; }
-.sidebar.colapsado .brand-mark { width: 44px; height: 44px; font-size: 14px; }
+/* Contraído: la marca desaparece y el botón de expandir ocupa la cabecera. */
+.sidebar.colapsado .side-brand { display: none; }
 .sidebar.colapsado .side-nav { padding: 18px 12px; }
 .sidebar.colapsado .side-link { justify-content: center; padding: 13px 0; }
 .sidebar.colapsado .side-foot { padding: 12px; }
@@ -1528,8 +1519,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
     gap: 10px;
     padding: 14px 12px;
   }
-  .sidebar.colapsado .side-brand { flex: 1; justify-content: flex-start; }
-  .sidebar.colapsado .brand-mark { width: 48px; height: 48px; font-size: 15px; }
+  .sidebar.colapsado .side-brand { display: flex; flex: 1; justify-content: flex-start; }
   .sidebar.colapsado .side-nav { padding: 18px 12px; }
   .sidebar.colapsado .side-link { justify-content: flex-start; padding: 13px 12px; }
   .sidebar.colapsado .side-foot { padding: 14px 12px; }
@@ -1677,6 +1667,24 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   .filters-acciones { flex-direction: column; align-items: stretch; }
   .filter-button { width: 100%; justify-content: center; }
 }
+
+/* =====================================================================
+   Imagen de perfil/avatar (empresa y postulante) — componente compartido.
+   ===================================================================== */
+.profile-image {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--sky);
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.profile-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.profile-image-inicial { font-weight: 700; color: var(--enlace); line-height: 1; }
+.emp-modal-cabecera { display: flex; justify-content: center; margin-bottom: 14px; }
 
 /* =====================================================================
    Tarjetas de gráfico (donas) — compartidas por empresa y postulante.

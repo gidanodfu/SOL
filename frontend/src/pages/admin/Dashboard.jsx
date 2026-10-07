@@ -11,14 +11,14 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
-import { dashboardAdmin, exportarReporteAdmin } from '../../services/dashboard';
+import { dashboardAdmin, exportarReporteAdmin, empleabilidadAdmin } from '../../services/dashboard';
 import { Mensaje, EstadoCarga } from '../../components/UI';
 import FiltroPeriodo from '../../components/FiltroPeriodo';
 import StatCard from '../../components/StatCard';
-import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION } from '../../constants';
+import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION, ETIQUETA_SITUACION_CONTRATACION } from '../../constants';
 import { errorApi } from '../../utils';
 
-const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
+const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 const ORDEN_OFERTAS = ['pendiente', 'publicada', 'rechazada', 'borrador', 'cerrada'];
 
 export default function Dashboard() {
@@ -30,6 +30,11 @@ export default function Dashboard() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard-admin', filtro.desde, filtro.hasta],
     queryFn: () => dashboardAdmin({ desde: filtro.desde || undefined, hasta: filtro.hasta || undefined }),
+  });
+
+  const { data: empleabilidad } = useQuery({
+    queryKey: ['empleabilidad-admin'],
+    queryFn: empleabilidadAdmin,
   });
 
   const aplicar = () => setFiltro({ ...form });
@@ -100,6 +105,8 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {empleabilidad && <Empleabilidad datos={empleabilidad} />}
+
           <div className="bottom-grid">
             <div className="card">
               <div className="card-header">
@@ -152,8 +159,8 @@ function GrillaKpis({ d }) {
       icono: UserCheck, tendencia: 'Contratos registrados',
     },
     {
-      nombre: 'Tiempo a contacto', valor: d.tiempo_promedio_contacto_dias ?? '—', descripcion: 'días promedio', color: 'amber',
-      icono: Clock3, tendencia: 'postulación → contacto',
+      nombre: 'Tiempo a revisión', valor: d.tiempo_promedio_revision_dias ?? '—', descripcion: 'días promedio', color: 'amber',
+      icono: Clock3, tendencia: 'postulación → revisión',
     },
     {
       nombre: 'Tasa de selección', valor: `${d.tasa_seleccion}%`, descripcion: 'seleccionados ÷ postulaciones', color: 'green',
@@ -243,9 +250,9 @@ function ListaIndicadores({ d }) {
       valor: `${d.tasa_contratacion}%`, clase: 'process',
     },
     {
-      icono: Clock3, etiqueta: 'Tiempo a contacto',
-      sub: 'días promedio postulación → contacto',
-      valor: d.tiempo_promedio_contacto_dias === null ? '—' : `${d.tiempo_promedio_contacto_dias} d`, clase: 'pending',
+      icono: Clock3, etiqueta: 'Tiempo a revisión',
+      sub: 'días promedio postulación → revisión',
+      valor: d.tiempo_promedio_revision_dias === null ? '—' : `${d.tiempo_promedio_revision_dias} d`, clase: 'pending',
     },
     {
       icono: Timer, etiqueta: 'Tiempo a selección',
@@ -266,4 +273,44 @@ function ListaIndicadores({ d }) {
       <span className={`badge ${f.clase}`}>{f.valor}</span>
     </div>
   ));
+}
+
+/**
+ * Estadísticas de empleabilidad (RF-58/RF-60): empleos generados, empresas que
+ * los generan, empleos vigentes por empresa y situación de las contrataciones.
+ * Todos los datos provienen del backend (sin cálculo de negocio en React).
+ */
+function Empleabilidad({ datos }) {
+  const situaciones = datos.situaciones || {};
+  return (
+    <div className="bottom-grid empleabilidad" style={{ marginTop: '1rem' }}>
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <h3>Empleos generados</h3>
+            <p>Ofertas publicadas por empresa</p>
+          </div>
+        </div>
+        <FilasProgreso
+          datos={datos.empresas?.reduce((acc, e) => ({ ...acc, [e.razon_social]: e.total_ofertas }), {}) || {}}
+          orden={(datos.empresas || []).map((e) => e.razon_social)}
+          diccionario={{}}
+        />
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <h3>Situación de contrataciones</h3>
+            <p>Total: {datos.contrataciones}</p>
+          </div>
+        </div>
+        <FilasProgreso
+          datos={situaciones}
+          orden={['contratado', 'finalizado', 'despedido', 'renuncio']}
+          diccionario={ETIQUETA_SITUACION_CONTRATACION}
+        />
+      </div>
+    </div>
+  );
 }

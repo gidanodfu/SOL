@@ -71,6 +71,16 @@ class DashboardService
     }
 
     /**
+     * Estadísticas de empleabilidad para la administración (RF-58/RF-60).
+     *
+     * @return array<string, mixed>
+     */
+    public function empleabilidad(): array
+    {
+        return $this->repositorio->empleabilidad();
+    }
+
+    /**
      * Conteos de atención pendiente de la empresa autenticada, acotados por
      * sesión (no por parámetros).
      *

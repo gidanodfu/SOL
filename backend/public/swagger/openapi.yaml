@@ -1902,7 +1902,7 @@ paths:
           description: Estado de la postulación (validado en el controlador).
           schema:
             type: string
-            enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+            enum: [pendiente, en_revision, seleccionado, no_seleccionado]
         - name: oferta_id
           in: query
           description: Filtra por la oferta laboral indicada (opcional).
@@ -2798,10 +2798,9 @@ paths:
       summary: Cambiar estado de postulación
       description: |
         Cambia el estado según la máquina de transiciones de la empresa:
-        `pendiente → en_revision | no_seleccionado`; `en_revision → preseleccionado |
-        contactado | no_seleccionado`; `preseleccionado → contactado | seleccionado |
-        no_seleccionado`; `contactado → seleccionado | no_seleccionado`;
-        `no_seleccionado → en_revision`; `seleccionado` es terminal. 409 si la transición
+        `pendiente → en_revision | no_seleccionado`; `en_revision → seleccionado |
+        no_seleccionado`; `no_seleccionado → en_revision`; `seleccionado` es terminal.
+        409 si la transición
         no es válida o la postulación está inactiva. Registra en `postulacion_historial`.
       security:
         - bearerAuth: []
@@ -4585,7 +4584,7 @@ components:
           type: integer
         estado:
           type: string
-          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+          enum: [pendiente, en_revision, seleccionado, no_seleccionado]
         activo:
           type: integer
           enum: [0, 1]
@@ -4621,7 +4620,7 @@ components:
           type: integer
         estado:
           type: string
-          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+          enum: [pendiente, en_revision, seleccionado, no_seleccionado]
         activo:
           type: integer
           enum: [0, 1]
@@ -4663,7 +4662,7 @@ components:
           type: string
         estado:
           type: string
-          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+          enum: [pendiente, en_revision, seleccionado, no_seleccionado]
         activo:
           type: integer
           enum: [0, 1]
@@ -4693,7 +4692,7 @@ components:
       properties:
         estado:
           type: string
-          enum: [pendiente, en_revision, preseleccionado, contactado, seleccionado, no_seleccionado]
+          enum: [pendiente, en_revision, seleccionado, no_seleccionado]
           description: Debe ser una transición válida desde el estado actual.
 
     # ----------------------- Perfil postulante -----------------------
@@ -5009,10 +5008,6 @@ components:
         pendiente:
           type: integer
         en_revision:
-          type: integer
-        preseleccionado:
-          type: integer
-        contactado:
           type: integer
         seleccionado:
           type: integer

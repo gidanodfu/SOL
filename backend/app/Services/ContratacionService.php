@@ -112,6 +112,10 @@ class ContratacionService
             'modalidad'           => $datos['modalidad'] ?? null,
             'remuneracion'        => $datos['remuneracion'] ?? null,
             'observaciones'       => $datos['observaciones'] ?? null,
+            // Situación laboral inicial: recién contratado.
+            'situacion_laboral'   => $datos['situacion_laboral'] ?? 'contratado',
+            'motivo_situacion'    => $datos['motivo_situacion'] ?? null,
+            'fecha_situacion'     => $datos['fecha_situacion'] ?? $datos['fecha_contratacion'],
         ]);
 
         return (int) $this->contrataciones->getInsertID();
@@ -128,12 +132,24 @@ class ContratacionService
         }
 
         $datos = $this->validar($datos + ['postulacion_id' => $contrato['postulacion_id']]);
+
+        // Al cambiar la situación laboral se registra cuándo ocurrió (si no se
+        // indicó una fecha explícita) y el motivo queda separado para auditoría.
+        $situacion = $datos['situacion_laboral'] ?? $contrato['situacion_laboral'];
+        $fechaSituacion = $datos['fecha_situacion'] ?? $contrato['fecha_situacion'];
+        if ($situacion !== $contrato['situacion_laboral'] && empty($datos['fecha_situacion'])) {
+            $fechaSituacion = date('Y-m-d');
+        }
+
         $this->contrataciones->update($id, [
             'fecha_contratacion' => $datos['fecha_contratacion'],
             'cargo'              => $datos['cargo'],
             'modalidad'          => $datos['modalidad'] ?? null,
             'remuneracion'       => $datos['remuneracion'] ?? null,
             'observaciones'      => $datos['observaciones'] ?? null,
+            'situacion_laboral'  => $situacion,
+            'motivo_situacion'   => $datos['motivo_situacion'] ?? $contrato['motivo_situacion'],
+            'fecha_situacion'    => $fechaSituacion,
         ]);
     }
 
@@ -167,6 +183,9 @@ class ContratacionService
             'modalidad'          => ['max:60'],
             'remuneracion'       => ['regex:/^\d{1,10}(\.\d{1,2})?$/'],
             'observaciones'      => ['max:10000'],
+            'situacion_laboral'  => ['enum:contratado,finalizado,despedido,renuncio'],
+            'motivo_situacion'   => ['max:255'],
+            'fecha_situacion'    => ['fecha'],
         ]);
 
         return $datos;

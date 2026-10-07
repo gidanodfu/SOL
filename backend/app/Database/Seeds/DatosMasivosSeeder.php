@@ -308,7 +308,7 @@ class DatosMasivosSeeder extends Seeder
             if ($plan[$r] > 1) { --$plan[$r]; --$totalPlan; } else { $plan[$r] = 0; --$totalPlan; }
         }
 
-        $estados = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
+        $estados = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
         $usados = [];   // postulanteId-ofertaId activos
         $historial = [];
         $contratos = [];
@@ -338,9 +338,7 @@ class DatosMasivosSeeder extends Seeder
             $pasos = [
                 'pendiente' => [],
                 'en_revision' => ['en_revision'],
-                'preseleccionado' => ['en_revision', 'preseleccionado'],
-                'contactado' => ['en_revision', 'preseleccionado', 'contactado'],
-                'seleccionado' => ['en_revision', 'preseleccionado', 'contactado', 'seleccionado'],
+                'seleccionado' => ['en_revision', 'seleccionado'],
                 'no_seleccionado' => ['en_revision', 'no_seleccionado'],
             ];
             $fechaPaso = $fecha;
@@ -369,10 +367,10 @@ class DatosMasivosSeeder extends Seeder
                 $clave = $postulanteIds[$postulanteIdx] . '-' . $ofertaId;
                 if (isset($usados[$clave])) { continue; }
 
-                $estado = $estados[mt_rand(0, 5)];
+                $estado = $estados[mt_rand(0, 3)];
                 // Coherencia con ofertas cerradas: pocas pendientes nuevas sobre cerradas.
                 if ($infoOferta['estado'] === 'cerrada' && $estado === 'pendiente' && mt_rand(0, 3) > 0) {
-                    $estado = $estados[mt_rand(1, 5)];
+                    $estado = $estados[mt_rand(1, 3)];
                 }
 
                 $min = $infoOferta['fecha_publicacion'] ? new \DateTimeImmutable($infoOferta['fecha_publicacion']) : $hace12m;

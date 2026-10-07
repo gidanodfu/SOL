@@ -34,6 +34,16 @@ class PostulanteRepository
             return [];
         }
 
+        // El teléfono puede vivir en `postulantes` (edición de perfil) o en
+        // `users` (dato capturado en el registro); se expone uno solo y coherente.
+        $postulante['telefono'] = $postulante['telefono'] ?: ($postulante['user_telefono'] ?? null);
+
+        // La clave interna de la foto no se expone; se entrega la URL del proxy.
+        $postulante['foto_url'] = ! empty($postulante['foto_key'])
+            ? '/api/postulantes/' . $postulante['id'] . '/foto'
+            : null;
+        unset($postulante['foto_key']);
+
         $postulante['cv'] = $this->db->table('cvs')
             ->where('postulante_id', $postulanteId)
             ->where('activo', 1)

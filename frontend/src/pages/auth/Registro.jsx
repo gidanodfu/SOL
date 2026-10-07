@@ -6,6 +6,7 @@ import GoogleButton from '../../components/GoogleButton';
 import Turnstile from '../../components/Turnstile';
 import { useAuth } from '../../context/AuthContext';
 import { useTema } from '../../context/ThemeContext';
+import { verificarDni as apiVerificarDni } from '../../services/solicitudes';
 import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
 
 const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
@@ -20,10 +21,33 @@ export default function Registro() {
   const [enviando, setEnviando] = useState(false);
   const [verPass, setVerPass] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);
+  const [verificandoDni, setVerificandoDni] = useState(false);
+  const [dniVerificado, setDniVerificado] = useState(false);
   const turnstileRef = useRef(null);
   const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
 
   const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  // Consulta RENIEC vía backend para autocompletar nombres/apellidos. El token
+  // del proveedor vive solo en el backend; aquí no se maneja ninguna credencial.
+  const consultarDni = async () => {
+    if (!/^\d{8}$/.test(form.dni)) {
+      setError('Ingrese un DNI válido (8 dígitos).');
+      return;
+    }
+    setVerificandoDni(true);
+    setError(null);
+    try {
+      const datos = await apiVerificarDni(form.dni);
+      setForm((f) => ({ ...f, nombres: datos.nombres || f.nombres, apellidos: datos.apellidos || f.apellidos }));
+      setDniVerificado(true);
+    } catch (err) {
+      setDniVerificado(false);
+      setError(errorApi(err));
+    } finally {
+      setVerificandoDni(false);
+    }
+  };
 
   // Registro/ingreso con Google: si la cuenta recién creada (o existente) tiene
   // el perfil incompleto se lleva al postulante a completar los datos que
@@ -106,15 +130,19 @@ export default function Registro() {
                 </svg>
                 <input
                   id="dni"
-                  className="login-campo-input"
+                  className="login-campo-input login-campo-input-con-boton"
                   type="text"
                   name="dni"
                   placeholder="Ingrese su DNI"
                   maxLength={8}
                   value={form.dni}
-                  onChange={cambiar}
+                  onChange={(e) => { setDniVerificado(false); cambiar({ target: { name: 'dni', value: soloDigitos(e.target.value) } }); }}
+                  inputMode="numeric"
                   required
                 />
+                <button type="button" className="login-btn-verificar" onClick={consultarDni} disabled={verificandoDni || dniVerificado}>
+                  {verificandoDni ? 'Verificando…' : dniVerificado ? 'Verificado' : 'Verificar'}
+                </button>
               </div>
             </div>
 

@@ -9,6 +9,7 @@ use App\Models\EmpresaModel;
 use App\Models\UserModel;
 use App\Repositories\EmpresaRepository;
 use App\Validation\Validador;
+use CodeIgniter\HTTP\Files\UploadedFile;
 
 /**
  * Registro y administración municipal de empresas (RF-08..RF-17, RN-01..RN-06).
@@ -25,16 +26,24 @@ class EmpresaService
 
     private AuditoriaService $auditoria;
 
+    private StorageService $storage;
+
+    private ImageService $images;
+
     public function __construct(
         ?EmpresaRepository $repository = null,
         ?EmpresaModel $empresas = null,
         ?UserModel $users = null,
         ?AuditoriaService $auditoria = null,
+        ?StorageService $storage = null,
+        ?ImageService $images = null,
     ) {
         $this->repository = $repository ?? new EmpresaRepository();
         $this->empresas   = $empresas ?? model(EmpresaModel::class);
         $this->users      = $users ?? model(UserModel::class);
         $this->auditoria  = $auditoria ?? new AuditoriaService();
+        $this->storage    = $storage ?? new StorageService();
+        $this->images     = $images ?? new ImageService();
     }
 
     /**
@@ -45,7 +54,7 @@ class EmpresaService
     public function listar(array $filtros, int $limite, int $offset): array
     {
         return [
-            'data'  => $this->repository->listar($filtros, $limite, $offset),
+            'data'  => array_map([$this, 'conImagenPublica'], $this->repository->listar($filtros, $limite, $offset)),
             'total' => $this->repository->contar($filtros),
         ];
     }
@@ -62,7 +71,7 @@ class EmpresaService
 
         $empresa['cantidad_ofertas'] = $this->repository->contarOfertas($id);
 
-        return $empresa;
+        return $this->conImagenPublica($empresa);
     }
 
     /**
@@ -215,6 +224,120 @@ class EmpresaService
      * @return array<string, mixed>
      */
     public function deUsuario(int $userId): array
+    {
+        $empresa = $this->repository->porUserId($userId);
+        if ($empresa === null) {
+            throw ApiException::noEncontrado('No se encontró la empresa asociada a su cuenta.');
+        }
+
+        return $this->conImagenPublica($empresa);
+    }
+
+    /**
+     * Sustituye el logo de la empresa (solo la propia; la autorización viene de la
+     * sesión). Reutiliza StorageService; la imagen previa se elimina.
+     */
+    public function subirLogo(int $userId, UploadedFile $archivo): void
+    {
+        $empresa = $this->exigirPropia($userId);
+        $this->guardarLogo((int) $empresa['id'], $archivo);
+    }
+
+    public function eliminarLogo(int $userId): void
+    {
+        $empresa = $this->exigirPropia($userId);
+        $this->quitarLogo((int) $empresa['id']);
+    }
+
+    /**
+     * Contenido binario del logo (foto de perfil) de una empresa para el proxy de
+     * lectura pública. Null si no existe.
+     *
+     * @return array{mime: string, contenido: string}|null
+     */
+    public function logoContenido(int $empresaId): ?array
+    {
+        $key = $this->claveImagen($empresaId, 'logo_key');
+        if (empty($key)) {
+            return null;
+        }
+
+        $contenido = $this->storage->obtenerContenido($key);
+        if ($contenido === null) {
+            return null;
+        }
+
+        return ['mime' => $this->mimeDeImagen($key), 'contenido' => $contenido];
+    }
+
+    /**
+     * Guarda la foto de perfil (logo) normalizada a 800x800: se conserva el logo
+     * completo (contain) sobre fondo blanco, sin recortar texto ni deformar.
+     */
+    private function guardarLogo(int $empresaId, UploadedFile $archivo): void
+    {
+        $contenido   = $this->images->leerSubida($archivo);
+        $normalizada = $this->images->normalizar($contenido, 'contain', 'png');
+
+        $objectKey = 'empresas/logo/' . $empresaId . '/' . bin2hex(random_bytes(8)) . '.' . $normalizada['extension'];
+        $this->storage->almacenarContenido($objectKey, $normalizada['bytes'], $normalizada['mime']);
+
+        $anterior = $this->claveImagen($empresaId, 'logo_key');
+        $this->empresas->update($empresaId, ['logo_key' => $objectKey]);
+
+        if ($anterior && $anterior !== $objectKey) {
+            $this->storage->eliminar($anterior);
+        }
+    }
+
+    private function quitarLogo(int $empresaId): void
+    {
+        $key = $this->claveImagen($empresaId, 'logo_key');
+        if ($key) {
+            $this->storage->eliminar($key);
+        }
+        $this->empresas->update($empresaId, ['logo_key' => null]);
+    }
+
+    private function claveImagen(int $empresaId, string $columna): ?string
+    {
+        $fila = $this->empresas->db->table('empresas')
+            ->select($columna)
+            ->where('id', $empresaId)
+            ->get()
+            ->getRowArray();
+
+        return $fila[$columna] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $empresa
+     *
+     * @return array<string, mixed>
+     */
+    private function conImagenPublica(array $empresa): array
+    {
+        $empresa['logo_url']  = ! empty($empresa['logo_key']) ? '/api/empresas/' . $empresa['id'] . '/logo' : null;
+        $empresa['fecha_alta'] = $empresa['created_at'] ?? null;
+        $empresa['antiguedad'] = AntiguedadService::texto($empresa['created_at'] ?? null);
+        unset($empresa['logo_key']);
+
+        return $empresa;
+    }
+
+    private function mimeDeImagen(string $key): string
+    {
+        return match (strtolower(pathinfo($key, PATHINFO_EXTENSION))) {
+            'png'         => 'image/png',
+            'webp'        => 'image/webp',
+            default       => 'image/jpeg',
+        };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function exigirPropia(int $userId): array
     {
         $empresa = $this->repository->porUserId($userId);
         if ($empresa === null) {

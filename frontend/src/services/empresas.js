@@ -10,6 +10,14 @@ export const resetPasswordEmpresa = (id, password) => api.put(`/admin/empresas/$
 
 export const perfilEmpresa = () => api.get('/empresa/perfil').then((r) => r.data.data);
 export const actualizarPerfilEmpresa = (datos) => api.put('/empresa/perfil', datos).then((r) => r.data.data);
+
+/* Foto de perfil de la propia empresa (logo). El binario vive en Storage. */
+export const subirLogoEmpresa = (archivo) => {
+  const form = new FormData();
+  form.append('logo', archivo);
+  return api.post('/empresa/perfil/logo', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data.data);
+};
+export const eliminarLogoEmpresa = () => api.delete('/empresa/perfil/logo').then((r) => r.data.data);
 export const dashboardEmpresa = (params = {}) => api.get('/empresa/dashboard', { params }).then((r) => r.data.data);
 export const pendientesEmpresa = () => api.get('/empresa/pendientes').then((r) => r.data.data);
 export const exportarReporteEmpresa = (params = {}) =>

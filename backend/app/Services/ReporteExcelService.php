@@ -37,13 +37,11 @@ class ReporteExcelService
         'cerrada'   => 'Cerrada',
     ];
 
-    private const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'];
+    private const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 
     private const ETIQUETA_ESTADO_POSTULACION = [
         'pendiente'       => 'Pendiente',
         'en_revision'     => 'En revisión',
-        'preseleccionado' => 'Preseleccionado',
-        'contactado'      => 'Contactado',
         'seleccionado'    => 'Seleccionado',
         'no_seleccionado' => 'No seleccionado',
     ];
@@ -108,7 +106,7 @@ class ReporteExcelService
             'Tasa de selección (%)'            => $indicadores['tasa_seleccion'],
             'Contrataciones del periodo'       => $indicadores['contrataciones'],
             'Tasa de contratación (%)'         => $indicadores['tasa_contratacion'],
-            'Tiempo promedio a contacto (días)'  => $indicadores['tiempo_promedio_contacto_dias'] ?? 'Sin datos',
+            'Tiempo promedio a revisión (días)'  => $indicadores['tiempo_promedio_revision_dias'] ?? 'Sin datos',
             'Tiempo promedio a selección (días)' => $indicadores['tiempo_promedio_seleccion_dias'] ?? 'Sin datos',
         ];
 

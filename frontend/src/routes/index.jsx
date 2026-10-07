@@ -23,7 +23,6 @@ import PerfilEmpresa from '../pages/empresa/Perfil';
 import OfertasEmpresa from '../pages/empresa/Ofertas';
 import PostulacionesEmpresa from '../pages/empresa/Postulaciones';
 import ContratacionesEmpresa from '../pages/empresa/Contrataciones';
-import DashboardPostulante from '../pages/postulante/Dashboard';
 import PerfilPostulante from '../pages/postulante/Perfil';
 import BuscarEmpleo from '../pages/postulante/BuscarEmpleo';
 import MisPostulaciones from '../pages/postulante/MisPostulaciones';
@@ -77,7 +76,9 @@ export function Rutas() {
         </Route>
 
         <Route element={<RutaProtegida roles={[ROLES.POSTULANTE]}><Outlet /></RutaProtegida>}>
-          <Route path="postulante/dashboard" element={<DashboardPostulante />} />
+          {/* El dashboard del postulante se migró a "Mi perfil y CV"; se conserva la
+              ruta como redirección para no romper enlaces ni favoritos antiguos. */}
+          <Route path="postulante/dashboard" element={<Navigate to="/postulante/perfil" replace />} />
           <Route path="postulante/postulaciones" element={<MisPostulaciones />} />
           <Route path="postulante/perfil" element={<PerfilPostulante />} />
           <Route path="postulante/cuenta" element={<Cuenta />} />

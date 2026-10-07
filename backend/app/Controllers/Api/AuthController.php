@@ -5,6 +5,7 @@
 namespace App\Controllers\Api;
 
 use App\Services\AuthService;
+use App\Services\DniService;
 use App\Services\JwtGuard;
 
 /**
@@ -90,6 +91,28 @@ class AuthController extends BaseApiController
             $this->auth->autenticarConGoogle((string) $datos['id_token']),
             'Bienvenido.',
         );
+    }
+
+    /**
+     * Verificación pública de DNI (RENIEC) para autocompletar el registro del
+     * postulante. El proveedor y su token viven solo en el backend.
+     */
+    public function verificarDni()
+    {
+        $dni = (string) ($this->cuerpo()['dni'] ?? '');
+
+        if (! preg_match('/^\d{8}$/', $dni)) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setContentType('application/json', 'UTF-8')
+                ->setBody(json_encode([
+                    'success' => false,
+                    'message' => 'Ingrese un DNI válido (8 dígitos).',
+                    'errors'  => [],
+                ], JSON_UNESCAPED_UNICODE));
+        }
+
+        return $this->ok((new DniService())->consultar($dni), 'DNI verificado.');
     }
 
     public function logout()

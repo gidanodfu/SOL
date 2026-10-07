@@ -6,12 +6,13 @@ import {
   generarEnlaceSolicitud,
   listarSolicitudesEmpresa,
   rechazarSolicitudEmpresa,
+  reenviarActivacionSolicitud,
 } from '../../services/solicitudes';
 import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import { useToast, useDialogo } from '../../components/Feedbacks';
-import { Check, Eye, Link2, XCircle } from 'lucide-react';
+import { Check, Eye, Link2, Send, XCircle } from 'lucide-react';
 import { errorApi, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
@@ -112,7 +113,7 @@ export default function SolicitudesEmpresa() {
       <DetalleSolicitud
         solicitud={seleccionada}
         alCerrar={() => setSeleccionada(null)}
-        alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
+        alCambio={refrescar}
         alGenerarEnlace={setEnlaceActivacion}
       />
 
@@ -155,6 +156,7 @@ function ModalEnlace({ enlace, alCerrar }) {
 }
 
 function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
+  const toast = useToast();
   const [error, setError] = useState(null);
   const { pedirTexto } = useDialogo();
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
@@ -165,8 +167,13 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
     try {
       const resultado = await ejecutar(() => aprobarSolicitudEmpresa(solicitud.id));
       setError(null);
-      alCambio('Solicitud aprobada. Se notificó a la empresa por correo.');
+      if (resultado?.correo_enviado) {
+        toast.success(`Empresa aprobada. Correo de activación enviado a ${resultado.correo_destino}.`);
+      } else {
+        toast.warning('La empresa fue aprobada, pero el correo no pudo enviarse. Puede reenviar el enlace.');
+      }
       if (resultado?.link) alGenerarEnlace(resultado.link);
+      alCambio();
       alCerrar();
     } catch (e) {
       setError(errorApi(e));
@@ -186,11 +193,27 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
     try {
       await ejecutar(() => rechazarSolicitudEmpresa(solicitud.id, motivo));
       setError(null);
-      alCambio('Solicitud rechazada. Se notificó a la empresa.');
+      toast.success('Solicitud rechazada. Se notificó a la empresa.');
+      alCambio();
       alCerrar();
     } catch (e) {
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
+    }
+  };
+
+  // Reenvío del correo de activación (regenera el enlace por seguridad).
+  const reenviar = async () => {
+    try {
+      const resultado = await ejecutar(() => reenviarActivacionSolicitud(solicitud.id));
+      setError(null);
+      if (resultado?.correo_enviado) {
+        toast.success(`Correo de activación reenviado a ${resultado.correo_destino}.`);
+      } else {
+        toast.error('No se pudo enviar el correo. Inténtalo nuevamente.');
+      }
+    } catch (e) {
+      setError(errorApi(e));
     }
   };
 
@@ -221,9 +244,14 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
         </>
       )}
       {solicitud.estado === 'aprobada' && (
-        <Boton variante="acento" cargando={enviando} onClick={copiarEnlace}>
-          <Link2 size={16} aria-hidden="true" />Copiar enlace
-        </Boton>
+        <>
+          <Boton variante="exito" cargando={enviando} onClick={reenviar}>
+            <Send size={16} aria-hidden="true" />Reenviar correo
+          </Boton>
+          <Boton variante="gris" cargando={enviando} onClick={copiarEnlace}>
+            <Link2 size={16} aria-hidden="true" />Ver enlace
+          </Boton>
+        </>
       )}
     </>
   );

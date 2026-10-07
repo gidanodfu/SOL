@@ -29,10 +29,6 @@ const PAGINAS = {
     titulo: 'Oportunidades laborales',
     descripcion: 'Convocatorias y oportunidades de empleo difundidas por la Municipalidad de José Leonardo Ortiz.',
   },
-  '/postulante/dashboard': {
-    titulo: 'Panel del postulante',
-    descripcion: 'Revisa el estado de tus postulaciones y la completitud de tu perfil laboral.',
-  },
   '/postulante/postulaciones': {
     titulo: 'Mis postulaciones',
     descripcion: 'Consulta el estado y el historial de tus postulaciones a ofertas de empleo.',

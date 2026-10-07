@@ -65,7 +65,41 @@ class OfertaService
      */
     public function listarPublicadas(array $filtros): array
     {
-        return $this->repository->publicadas(array_filter($filtros, static fn ($v) => $v !== null && $v !== ''));
+        $filas = $this->repository->publicadas(array_filter($filtros, static fn ($v) => $v !== null && $v !== ''));
+
+        return array_map([$this, 'conEmpresa'], $filas);
+    }
+
+    /**
+     * Añade un bloque `empresa` con solo información pública (identidad y
+     * antigüedad) y oculta la clave interna del logo. Sin consultas extra: los
+     * datos vienen del JOIN de la propia consulta de ofertas (sin N+1).
+     *
+     * @param array<string, mixed> $fila
+     *
+     * @return array<string, mixed>
+     */
+    private function conEmpresa(array $fila): array
+    {
+        $empresaId = (int) ($fila['empresa_id'] ?? 0);
+        $fila['empresa'] = [
+            'id'               => $empresaId,
+            'razon_social'     => $fila['razon_social'] ?? null,
+            'nombre_comercial' => $fila['empresa_nombre_comercial'] ?? null,
+            'ruc'              => $fila['ruc'] ?? null,
+            'direccion'        => $fila['empresa_direccion'] ?? null,
+            'logo_url'         => ! empty($fila['empresa_logo_key']) ? '/api/empresas/' . $empresaId . '/logo' : null,
+            'fecha_alta'       => $fila['empresa_created_at'] ?? null,
+            'antiguedad'       => AntiguedadService::texto($fila['empresa_created_at'] ?? null),
+        ];
+        unset(
+            $fila['empresa_nombre_comercial'],
+            $fila['empresa_direccion'],
+            $fila['empresa_created_at'],
+            $fila['empresa_logo_key'],
+        );
+
+        return $fila;
     }
 
     /**
@@ -79,6 +113,7 @@ class OfertaService
         if ($oferta === null || $oferta['estado'] !== 'publicada') {
             throw ApiException::noEncontrado('La oferta no está disponible.');
         }
+        $oferta = $this->conEmpresa($oferta);
 
         if ($postulanteId !== null) {
             $oferta['ya_postule'] = (bool) $this->ofertas->db->table('postulaciones')

@@ -2,13 +2,17 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarContratacion, listarContratacionesEmpresa, opcionesContratacionEmpresa, registrarContratacion } from '../../services/contrataciones';
-import { EstadoCarga, Boton, Campo, Mensaje, Selecto } from '../../components/UI';
+import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import { useToast } from '../../components/Feedbacks';
+import { ETIQUETA_SITUACION_CONTRATACION, SITUACIONES_CONTRATACION } from '../../constants';
 import { errorApi, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
-const VACIO = { postulacion_id: '', fecha_contratacion: '', cargo: '', modalidad: '', remuneracion: '', observaciones: '' };
+const VACIO = {
+  postulacion_id: '', fecha_contratacion: '', cargo: '', modalidad: '', remuneracion: '',
+  observaciones: '', situacion_laboral: 'contratado', motivo_situacion: '', fecha_situacion: '',
+};
 
 export default function Contrataciones() {
   const queryClient = useQueryClient();
@@ -75,6 +79,7 @@ export default function Contrataciones() {
                   <th>Puesto</th>
                   <th>Cargo</th>
                   <th>Modalidad</th>
+                  <th>Situación</th>
                   <th className="col-monto">Remuneración</th>
                   <th className="col-acciones">Acciones</th>
                 </tr>
@@ -87,6 +92,7 @@ export default function Contrataciones() {
                     <td data-label="Puesto">{c.puesto}</td>
                     <td data-label="Cargo">{c.cargo}</td>
                     <td data-label="Modalidad">{c.modalidad || '—'}</td>
+                    <td data-label="Situación"><Estado valor={c.situacion_laboral} diccionario={ETIQUETA_SITUACION_CONTRATACION} /></td>
                     <td className="col-monto" data-label="Remuneración">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>
                     <td className="col-acciones"><Boton variante="gris" onClick={() => setEditor({ id: c.id })}>Editar</Boton></td>
                   </tr>
@@ -106,6 +112,7 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
       ? {
           postulacion_id: inicial.postulacion_id, fecha_contratacion: inicial.fecha_contratacion,
           cargo: inicial.cargo, modalidad: inicial.modalidad || '', remuneracion: inicial.remuneracion || '', observaciones: inicial.observaciones || '',
+          situacion_laboral: inicial.situacion_laboral || 'contratado', motivo_situacion: inicial.motivo_situacion || '', fecha_situacion: inicial.fecha_situacion || '',
         }
       : VACIO,
   );
@@ -143,7 +150,14 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
         <Campo etiqueta="Cargo contratado *" value={form.cargo} onChange={set('cargo')} />
         <Campo etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')} />
         <Campo etiqueta="Remuneración (S/)" value={form.remuneracion} onChange={set('remuneracion')} />
+        <Selecto etiqueta="Situación laboral" value={form.situacion_laboral} onChange={set('situacion_laboral')}>
+          {SITUACIONES_CONTRATACION.map((s) => (
+            <option key={s} value={s}>{ETIQUETA_SITUACION_CONTRATACION[s]}</option>
+          ))}
+        </Selecto>
+        <Campo etiqueta="Fecha de cambio de situación" type="date" value={form.fecha_situacion} onChange={set('fecha_situacion')} />
       </div>
+      <label className="campo"><span>Motivo / razón del cambio (opcional)</span><textarea rows="2" value={form.motivo_situacion} onChange={set('motivo_situacion')} maxLength={255} /></label>
       <label className="campo"><span>Observaciones</span><textarea rows="2" value={form.observaciones} onChange={set('observaciones')} /></label>
       <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar contratación</Boton>
     </div>

@@ -88,6 +88,28 @@ class OfertaRepository
         if (! empty($filtros['experiencia'])) {
             $builder->like('ofertas.experiencia_requerida', $filtros['experiencia']);
         }
+        if (! empty($filtros['tipo_empleo'])) {
+            $builder->where('ofertas.tipo_empleo', $filtros['tipo_empleo']);
+        }
+        if (! empty($filtros['empresa'])) {
+            $builder->like('empresas.razon_social', $filtros['empresa']);
+        }
+        if (isset($filtros['salario_min']) && $filtros['salario_min'] !== '') {
+            $builder->where('ofertas.remuneracion >=', (float) $filtros['salario_min']);
+        }
+        // Búsqueda por palabras clave sobre los campos relevantes de la oferta
+        // (puesto, descripción, funciones, requisitos, categoría y empresa).
+        if (! empty($filtros['q'])) {
+            $termino = (string) $filtros['q'];
+            $builder->groupStart()
+                ->like('ofertas.puesto', $termino)
+                ->orLike('ofertas.descripcion', $termino)
+                ->orLike('ofertas.funciones', $termino)
+                ->orLike('ofertas.requisitos', $termino)
+                ->orLike('categorias.nombre', $termino)
+                ->orLike('empresas.razon_social', $termino)
+            ->groupEnd();
+        }
 
         return $builder->limit(200)->get()->getResultArray();
     }
@@ -114,7 +136,11 @@ class OfertaRepository
     private function base(): \CodeIgniter\Database\BaseBuilder
     {
         return $this->db->table('ofertas')
-            ->select('ofertas.*, categorias.nombre AS categoria_nombre, empresas.ruc, empresas.razon_social')
+            ->select('ofertas.*, categorias.nombre AS categoria_nombre,
+                      empresas.ruc, empresas.razon_social,
+                      empresas.id AS empresa_id, empresas.nombre_comercial AS empresa_nombre_comercial,
+                      empresas.direccion AS empresa_direccion, empresas.created_at AS empresa_created_at,
+                      empresas.logo_key AS empresa_logo_key')
             ->join('categorias', 'categorias.id = ofertas.categoria_id', 'LEFT')
             ->join('empresas', 'empresas.id = ofertas.empresa_id', 'LEFT');
     }

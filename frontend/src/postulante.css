@@ -197,6 +197,26 @@
 .app-postulante .panel-detalle::-webkit-scrollbar,
 .app-postulante .pill-panel::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
+/* ---------- Búsqueda por palabras clave ---------- */
+.app-postulante .busqueda-texto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.app-postulante .busqueda-texto > i { color: var(--text-3); font-size: 18px; }
+.app-postulante .busqueda-texto input {
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--text-1);
+  font-size: 14px;
+}
+.app-postulante .busqueda-texto input[type="search"] { flex: 1 1 auto; min-width: 0; }
+.app-postulante .busqueda-texto .busqueda-empresa { flex: 0 1 220px; }
+
 /* ---------- Pills de filtro ---------- */
 .app-postulante .filter-bar {
   display: flex;
@@ -319,18 +339,16 @@
 }
 .app-postulante .job-card:hover { border-color: var(--blue); box-shadow: var(--sombra-tarjeta); }
 .app-postulante .job-card .job-fila { display: flex; gap: 18px; align-items: flex-start; }
-.app-postulante .job-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-ctl);
-  background: var(--sky);
-  color: var(--enlace);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
+.app-postulante .job-avatar {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
   flex-shrink: 0;
+  line-height: 0;
+  border-radius: var(--radius-md);
 }
+.app-postulante .job-avatar:focus-visible { outline: 2px solid var(--enlace); outline-offset: 2px; }
 .app-postulante .job-body { flex: 1; min-width: 0; }
 .app-postulante .job-body h3 { margin: 0 0 3px; font-size: 16.5px; font-weight: 600; color: var(--ink); }
 .app-postulante .company { color: var(--text-2); font-size: 13.5px; margin: 0 0 12px; }
@@ -387,7 +405,9 @@
 /* Dashboard: dona + acciones rápidas en dos columnas equilibradas */
 .app-postulante .dash-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  /* "Estado de mis postulaciones" y "Acciones rápidas" comparten el ancho al
+     50% (dos columnas iguales); en pantallas menores colapsa a una columna. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.2rem;
   align-items: start;
 }
@@ -406,6 +426,41 @@
 }
 @media (max-width: 860px) {
   .app-postulante .dash-grid { grid-template-columns: 1fr; }
+}
+
+/* Actividad laboral integrada como sección del perfil (no un contenedor aparte):
+   misma tipografía y ancho que el resto de "Mi perfil y CV". */
+.app-postulante .perfil-actividad {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.app-postulante .perfil-actividad > h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.app-postulante .perfil-actividad-sub {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* ---------- Foto de perfil e identidad (usa .profile-image compartido) ---------- */
+.app-postulante .perfil-identidad { display: flex; gap: 18px; align-items: flex-start; }
+/* Ancho estable: la columna de foto no debe cambiar con el contenido (el avatar
+   mide 112px y las acciones se apilan dentro de ese ancho, sin ensanchar la
+   columna ni desplazar los datos al aparecer/desaparecer "Quitar"). */
+.app-postulante .perfil-foto { width: 112px; display: flex; flex-direction: column; gap: 10px; align-items: center; flex-shrink: 0; }
+.app-postulante .perfil-foto-acciones { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.app-postulante .perfil-foto-acciones .btn { width: 100%; justify-content: center; }
+.app-postulante .fila-clicable { cursor: pointer; border-radius: var(--radius-md); transition: background 0.15s; }
+.app-postulante .fila-clicable:hover { background: var(--sky); }
+.app-postulante .fila-clicable:focus-visible { outline: 2px solid var(--enlace); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .app-postulante .perfil-identidad { flex-direction: column; align-items: center; }
+  .app-postulante .perfil-foto { width: 100%; }
 }
 
 /* ---------- Filas / listas ---------- */
@@ -612,7 +667,6 @@
   .app-postulante .pill-panel { left: -80px; min-width: 200px; }
   .app-postulante .job-card .job-fila { flex-direction: column; }
   .app-postulante .job-card { padding: 16px; }
-  .app-postulante .job-icon { width: 40px; height: 40px; font-size: 17px; }
   .app-postulante .job-body h3 { font-size: 15.5px; }
   .app-postulante .job-foot { flex-direction: column; align-items: stretch; gap: 10px; }
   .app-postulante .btn-detail { width: 100%; justify-content: center; }
@@ -639,6 +693,11 @@
   .app-postulante .filter-bar .label-text { overflow: hidden; text-overflow: ellipsis; }
   .app-postulante .filter-bar .filtro-chevron { margin-left: auto; }
   .app-postulante .filter-bar .pill:nth-child(even) .pill-panel { left: auto; right: 0; }
+
+  /* Búsqueda por palabras clave: apilada, ancho completo */
+  .app-postulante .busqueda-texto { flex-wrap: wrap; }
+  .app-postulante .busqueda-texto input[type="search"],
+  .app-postulante .busqueda-texto .busqueda-empresa { flex: 1 1 100%; }
 
   /* Cada postulación es una tarjeta Rounded en vertical */
   .app-postulante .fila {
@@ -670,7 +729,7 @@
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(27, 111, 201, 0.12);
 }
-.app-postulante .job-card.seleccionada .job-icon { background: var(--blue); color: #fff; }
+
 
 .app-postulante .panel-detalle {
   width: 400px;
