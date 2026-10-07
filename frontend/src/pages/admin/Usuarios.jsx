@@ -74,7 +74,7 @@ export default function Usuarios() {
     >
       {mostrarNuevo && <NuevoUsuario alCrear={() => { setMostrarNuevo(false); refrescar(); }} />}
 
-      <div className="form-fila">
+      <div className="form-fila filtros">
         <input placeholder="Buscar por usuario, nombre o empresa…" value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value })} />
         <Selecto etiqueta="" value={filtros.rol} onChange={(e) => setFiltros({ ...filtros, rol: e.target.value })}>
           <option value="">Todos los roles</option>

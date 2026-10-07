@@ -50,7 +50,7 @@ export default function Actividades() {
           </Boton>
         }
       >
-        <div className="form-fila">
+        <div className="form-fila filtros">
           <Selecto etiqueta="" value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
             <option value="">Todos los tipos</option>
             {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}

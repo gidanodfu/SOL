@@ -51,7 +51,7 @@ export default function Ofertas() {
         en la bolsa de empleo o recházalas indicando el motivo. También puedes cerrar una
         oferta publicada.
       </p>
-      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+      <div className="form-fila filtros" style={{ marginBottom: '0.8rem' }}>
         {FILTROS.map(([valor, etiqueta]) => (
           <Boton
             key={valor || 'todas'}

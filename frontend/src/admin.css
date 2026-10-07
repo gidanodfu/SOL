@@ -256,7 +256,7 @@
   /* Panel móvil superpuesto (reglas generales en styles.css). */
   .app-admin .sidebar { position: fixed; }
 
-  /* Cabecera de página centrada, con subtítulo, igual que Empresa/Postulante. */
+  /* Cabecera de página centrada, con subtítulo visible. */
   .app-admin .topbar {
     height: auto;
     min-height: var(--shell-header-h);
@@ -274,6 +274,14 @@
   .app-admin .tarjeta-titulo .btn,
   .app-admin .list-card-head .btn,
   .app-admin .form-malla + .btn { width: 100%; }
+}
+
+@media (max-width: 640px) {
+  /* Filtros como rejilla de 2 columnas (mismo criterio que Postulante). */
+  .app-admin .filtros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .app-admin .filtros .btn { width: 100%; }
+  .app-admin .filtros input,
+  .app-admin .filtros .campo { grid-column: 1 / -1; }
 }
 
 @media (max-width: 680px) {

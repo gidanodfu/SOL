@@ -44,7 +44,15 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle, i
           <span className="side-movil-nombre">{marca.nombre}</span>
         </Link>
 
-        <span className="side-movil-spacer" aria-hidden="true" />
+        <button
+          type="button"
+          className="side-movil-user"
+          onClick={() => setAbiertoMovil(true)}
+          title="Abrir menú de usuario"
+          aria-label="Abrir menú de usuario"
+        >
+          {iniciales(usuario?.nombre, usuario?.respaldo)}
+        </button>
       </header>
 
       <button
