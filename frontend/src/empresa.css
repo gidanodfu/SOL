@@ -142,16 +142,33 @@
 @media (max-width: 860px) {
   /* Panel móvil superpuesto (reglas generales en styles.css). */
   .app-empresa .sidebar { position: fixed; }
-  .app-empresa .content { padding: 0 15px 50px; }
+  .app-empresa .content { padding: 0 15px 40px; }
+
+  /* Banda de cabecera: título y descripción centrados, CTA a todo el ancho. */
   .app-empresa .content .page-head {
     min-height: var(--shell-header-h);
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
     margin: 0 -15px 20px;
-    padding: 0 15px;
+    padding: 14px 15px;
   }
+  .app-empresa .page-head .btn,
+  .app-empresa .tarjeta-titulo .btn,
+  .app-empresa .list-card-head .btn,
+  .app-empresa .form-malla + .btn { width: 100%; }
+
+  /* Menos aire vertical entre bloques en móvil. */
+  .app-empresa .filters { margin-bottom: 16px; }
+  .app-empresa .dash-grid { gap: 16px; margin-bottom: 16px; }
+  .app-empresa .dash-aside { gap: 16px; }
 }
 @media (max-width: 560px) {
   .app-empresa .page-head h1 { font-size: 20px; }
-  .app-empresa .kpi-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .app-empresa .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  /* Un KPI impar ocupa la fila completa en lugar de dejar un hueco. */
+  .app-empresa .kpi-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
   .app-empresa .app-row { align-items: flex-start; }
   .app-empresa .app-meta { text-align: left; }
 }

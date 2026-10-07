@@ -1409,11 +1409,76 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   box-shadow: var(--sombra-tarjeta);
 }
 
-@media (max-width: 860px) {
-  .side-movil-btn { display: inline-flex; }
+/* ---------- Barra superior móvil (Empresa/Admin) ----------
+   Sustituye al botón flotante lateral por una barra real: hamburguesa a la
+   izquierda, marca centrada. Solo se muestra en móvil; en escritorio la
+   navegación sigue siendo el Sidebar de siempre. */
+.side-movil-bar {
+  display: none;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 12px;
+  background: var(--navy);
+  color: #fff;
+  flex: 0 0 auto;
+}
+.side-movil-burger {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+.side-movil-burger:hover { background: rgba(255, 255, 255, 0.16); }
+.side-movil-burger:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.side-movil-marca {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  color: #fff;
+  text-decoration: none;
+}
+.side-movil-mark {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--radius-md);
+  background: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+.side-movil-nombre {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  /* Sin sidebar en el flujo, el Workspace respira por los cuatro lados. */
-  .app-workspace { margin: var(--sidebar-gap); }
+@media (max-width: 860px) {
+  /* La barra superior móvil sustituye al botón flotante lateral. */
+  .side-movil-bar { display: grid; }
+  .side-movil-btn { display: none; }
+
+  /* Shell en una columna: barra superior + workspace. */
+  .app-empresa,
+  .app-admin { flex-direction: column; }
+
+  /* El Workspace respira, se ajusta al contenido (sin área vacía al fondo)
+     y conserva márgenes laterales equivalentes al shell del postulante. */
+  .app-workspace { margin: 10px 16px 16px; min-height: auto; }
 
   .sidebar,
   .sidebar.colapsado {
