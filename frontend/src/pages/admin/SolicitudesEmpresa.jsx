@@ -55,7 +55,7 @@ export default function SolicitudesEmpresa() {
         Las empresas solicitan su afiliación desde el portal. Al aprobar se crea su cuenta y se les envía un enlace para definir su contraseña.
       </p>
 
-      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+      <div className="form-fila filtros" style={{ marginBottom: '0.8rem' }}>
         <Boton variante={filtro === '' ? 'primario' : 'gris'} onClick={() => setFiltro('')}>Todas</Boton>
         <Boton variante={filtro === 'pendiente' ? 'primario' : 'gris'} onClick={() => setFiltro('pendiente')}>Pendientes</Boton>
         <Boton variante={filtro === 'aprobada' ? 'primario' : 'gris'} onClick={() => setFiltro('aprobada')}>Aprobadas</Boton>
