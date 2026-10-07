@@ -18,10 +18,15 @@ class OfertasPublicasController extends BaseApiController
     public function index()
     {
         $filtros = array_filter([
+            'q'            => $this->request->getGet('q'),
             'categoria_id' => $this->request->getGet('categoria_id'),
             'ubicacion'    => $this->request->getGet('ubicacion'),
             'formacion'    => $this->request->getGet('formacion'),
             'experiencia'  => $this->request->getGet('experiencia'),
+            'tipo_empleo'  => $this->request->getGet('tipo_empleo'),
+            'empresa'      => $this->request->getGet('empresa'),
+            // salario_min puede ser 0; no debe eliminarse por vacío falso.
+            'salario_min'  => $this->request->getGet('salario_min'),
         ], static fn ($v) => $v !== null && $v !== '');
 
         return $this->ok((new OfertaService())->listarPublicadas($filtros), 'Ofertas disponibles.');

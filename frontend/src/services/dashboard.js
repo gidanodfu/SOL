@@ -5,5 +5,7 @@ export const dashboardAdmin = (params = {}) => api.get('/admin/dashboard', { par
 
 export const pendientesAdmin = () => api.get('/admin/pendientes').then((r) => r.data.data);
 
+export const empleabilidadAdmin = () => api.get('/admin/empleabilidad').then((r) => r.data.data);
+
 export const exportarReporteAdmin = (params = {}) =>
   api.get('/admin/reportes/excel', { params, responseType: 'blob' }).then((r) => r.data);

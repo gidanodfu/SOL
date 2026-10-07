@@ -44,6 +44,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->post('auth/google', 'AuthController::google', ['filter' => 'throttle:10,300']);
     $routes->post('auth/refresh', 'AuthController::renovar', ['filter' => 'throttle:10,300']);
     $routes->post('registro/postulante', 'AuthController::registroPostulante', ['filter' => 'throttle:10,300']);
+    // Verificación pública de DNI (RENIEC) para autocompletar el registro del postulante.
+    $routes->post('verificar-dni', 'AuthController::verificarDni', ['filter' => 'throttle:10,300']);
 
     // Solicitud de registro de empresa (auto-registro) y activación de cuenta
     // mediante el enlace que recibe la empresa tras la aprobación. Estas rutas
@@ -61,6 +63,10 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->get('oportunidades', 'DivulgacionController::oportunidades');
     $routes->get('actividades', 'DivulgacionController::actividades');
     $routes->get('actividades/(:num)/imagen', 'DivulgacionController::imagenActividad/$1');
+    // Foto de perfil de empresa (proxy público).
+    $routes->get('empresas/(:num)/logo', 'DivulgacionController::imagenEmpresa/$1');
+    // Foto de perfil del postulante (proxy público, solo devuelve la imagen).
+    $routes->get('postulantes/(:num)/foto', 'DivulgacionController::fotoPostulante/$1');
     $routes->get('categorias', 'CategoriasController::index');
 
     // Cualquier rol autenticado (jwt: valida token + estado activo en BD).
@@ -93,10 +99,12 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('solicitudes-empresa/(:num)', 'SolicitudesEmpresaController::show/$1');
         $routes->post('solicitudes-empresa/(:num)/aprobar', 'SolicitudesEmpresaController::aprobar/$1');
         $routes->post('solicitudes-empresa/(:num)/rechazar', 'SolicitudesEmpresaController::rechazar/$1');
+        $routes->post('solicitudes-empresa/(:num)/reenviar', 'SolicitudesEmpresaController::reenviar/$1');
         $routes->get('solicitudes-empresa/(:num)/enlace', 'SolicitudesEmpresaController::enlace/$1');
 
         $routes->get('dashboard', 'DashboardController::index');
         $routes->get('pendientes', 'DashboardController::pendientes');
+        $routes->get('empleabilidad', 'DashboardController::empleabilidad');
 
         $routes->get('ofertas', 'OfertasController::index');
         $routes->get('ofertas/(:num)', 'OfertasController::show/$1');
@@ -127,6 +135,8 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->group('empresa', ['namespace' => 'App\Controllers\Api\Empresa', 'filter' => ['jwt', 'rol:empresa']], static function ($routes) {
         $routes->get('perfil', 'PerfilController::index');
         $routes->put('perfil', 'PerfilController::update');
+        $routes->post('perfil/logo', 'PerfilController::subirLogo');
+        $routes->delete('perfil/logo', 'PerfilController::eliminarLogo');
         $routes->get('dashboard', 'PerfilController::dashboard');
         $routes->get('pendientes', 'PerfilController::pendientes');
 
@@ -158,6 +168,10 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->group('postulante', ['namespace' => 'App\Controllers\Api\Postulante', 'filter' => ['jwt', 'rol:postulante']], static function ($routes) {
         $routes->get('perfil', 'PerfilController::index');
         $routes->put('perfil', 'PerfilController::update');
+        // Foto de perfil (propia): subir/eliminar. La lectura es el proxy público
+        // /api/postulantes/:id/foto (mismo mecanismo que el logo de empresa).
+        $routes->post('perfil/foto', 'PerfilController::subirFoto');
+        $routes->delete('perfil/foto', 'PerfilController::eliminarFoto');
         $routes->get('dashboard', 'PerfilController::dashboard');
 
         $routes->get('cv', 'CvController::index');

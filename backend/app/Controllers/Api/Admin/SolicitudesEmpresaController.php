@@ -36,7 +36,22 @@ class SolicitudesEmpresaController extends BaseApiController
     {
         $resultado = (new SolicitudEmpresaService())->aprobar(service('guard')->id(), (int) $id);
 
-        return $this->ok($resultado, 'Solicitud aprobada. Se notificó a la empresa por correo.');
+        $mensaje = ! empty($resultado['correo_enviado'])
+            ? 'Solicitud aprobada. Correo de activación enviado a ' . $resultado['correo_destino'] . '.'
+            : 'Solicitud aprobada, pero el correo no pudo enviarse. Puede reenviar el enlace.';
+
+        return $this->ok($resultado, $mensaje);
+    }
+
+    public function reenviar($id)
+    {
+        $resultado = (new SolicitudEmpresaService())->reenviarActivacion(service('guard')->id(), (int) $id);
+
+        $mensaje = ! empty($resultado['correo_enviado'])
+            ? 'Correo de activación reenviado a ' . $resultado['correo_destino'] . '.'
+            : 'No se pudo enviar el correo. Inténtalo nuevamente.';
+
+        return $this->ok($resultado, $mensaje);
     }
 
     public function rechazar($id)

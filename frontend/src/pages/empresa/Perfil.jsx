@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { actualizarPerfilEmpresa, perfilEmpresa } from '../../services/empresas';
+import {
+  actualizarPerfilEmpresa, eliminarLogoEmpresa, perfilEmpresa, subirLogoEmpresa,
+} from '../../services/empresas';
 import { EstadoCarga, Boton, Campo, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import ImagenUploader from '../../components/ImagenUploader';
+import { useToast } from '../../components/Feedbacks';
 import { useAccion } from '../../hooks/useAccion';
-import { esTelefonoValido, soloDigitos } from '../../utils';
+import { errorApi, esTelefonoValido, soloDigitos, urlArchivo } from '../../utils';
 
 export default function Perfil() {
   const { data, isLoading } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa });
@@ -81,6 +85,42 @@ export default function Perfil() {
           <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar cambios</Boton>
         </div>
       )}
+
+      {data && <FotoEmpresa data={data} />}
     </div>
+  );
+}
+
+/**
+ * Foto de perfil de la empresa (única imagen de identidad). Reutiliza
+ * ImagenUploader; el binario vive en Storage normalizado a 800x800.
+ */
+function FotoEmpresa({ data }) {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const [cargando, setCargando] = useState(false);
+
+  const hacer = async (fn) => {
+    setCargando(true);
+    try {
+      await fn();
+      queryClient.invalidateQueries({ queryKey: ['perfil-empresa'] });
+      toast.success('Foto de perfil actualizada.');
+    } catch (e) {
+      toast.error(errorApi(e));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <ImagenUploader
+      titulo="Foto de perfil de la empresa"
+      descripcion="Se muestra en la bolsa de empleo, en tu panel y en el detalle municipal."
+      url={urlArchivo(data.logo_url)}
+      cargando={cargando}
+      onSubir={(f) => hacer(() => subirLogoEmpresa(f))}
+      onEliminar={() => hacer(() => eliminarLogoEmpresa())}
+    />
   );
 }

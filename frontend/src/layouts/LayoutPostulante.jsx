@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, IdCard, LayoutDashboard, Palette, UserCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, IdCard, Palette, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
 import { perfilPostulante } from '../services/postulante';
@@ -18,7 +18,6 @@ const NAV = [
 ];
 
 const MENU = [
-  { to: '/postulante/dashboard', icono: LayoutDashboard, texto: 'Dashboard' },
   { to: '/postulante/perfil', icono: IdCard, texto: 'Mi perfil y CV' },
   { to: '/configuracion/temas', icono: Palette, texto: 'Temas' },
   { to: '/postulante/cuenta', icono: UserCircle, texto: 'Mi cuenta' },
@@ -40,7 +39,7 @@ export function LayoutPostulante() {
   return (
     <div className="app-postulante">
       <header className="post-header">
-        <Link to="/postulante/dashboard" className="brand">
+        <Link to="/postulante/perfil" className="brand">
           <div className="brand-mark">
             {logoError ? 'EM' : <img src={LOGO_URL} alt="Logo MDJLO" onError={() => setLogoError(true)} />}
           </div>

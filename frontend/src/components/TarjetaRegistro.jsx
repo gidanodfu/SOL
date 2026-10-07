@@ -11,6 +11,7 @@
  */
 export default function TarjetaRegistro({
   icono: Icono = null,
+  media = null,
   titulo,
   badge = null,
   meta = null,
@@ -38,11 +39,13 @@ export default function TarjetaRegistro({
       aria-label={accionable ? `Ver detalle: ${titulo}` : undefined}
     >
       <header className="record-card-cabecera">
-        {Icono && (
+        {media ? (
+          <span className="record-card-icono">{media}</span>
+        ) : Icono ? (
           <span className="record-card-icono">
             <Icono size={18} aria-hidden="true" />
           </span>
-        )}
+        ) : null}
         <h3>{titulo}</h3>
         {badge && <span className="record-card-badge">{badge}</span>}
       </header>

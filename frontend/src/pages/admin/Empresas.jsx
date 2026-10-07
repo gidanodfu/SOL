@@ -5,9 +5,10 @@ import { cambiarEstadoEmpresa, crearEmpresa, listarEmpresas, resetPasswordEmpres
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
+import ProfileImage from '../../components/ProfileImage';
 import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, KeyRound, Power } from 'lucide-react';
-import { errorApi, fecha, fechaCalendario, soloDigitos } from '../../utils';
+import { errorApi, fecha, fechaCalendario, soloDigitos, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const estadosEmpresa = { activo: 'activo', inactivo: 'inactivo' };
@@ -110,7 +111,12 @@ export default function Empresas() {
             <tbody>
               {data.data.map((e) => (
                 <tr key={e.id}>
-                  <td className="col-identificador" data-label="RUC"><strong>{e.ruc}</strong></td>
+                  <td className="col-identificador" data-label="RUC">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <ProfileImage src={urlArchivo(e.logo_url)} nombre={e.razon_social} variant="company" size={34} />
+                      <strong>{e.ruc}</strong>
+                    </div>
+                  </td>
                   <td data-label="Razón social">{e.razon_social}<br /><small style={{ color: 'var(--gris)' }}>{e.nombre_comercial}</small></td>
                   <td data-label="Representante">{e.representante}</td>
                   <td className="col-correo" data-label="Correo">{e.email}</td>
@@ -118,7 +124,7 @@ export default function Empresas() {
                     <Estado valor={e.estado} diccionario={estadosEmpresa} />
                     {e.evaluacion_presencial ? <div><small style={{ color: 'var(--verde)' }}>Evaluada presencialmente</small></div> : null}
                   </td>
-                  <td className="col-fecha" data-label="Registro">{fecha(e.created_at)}</td>
+                  <td className="col-fecha" data-label="Registro">{fecha(e.created_at)}<br /><small style={{ color: 'var(--gris)' }}>{e.antiguedad}</small></td>
                   <td className="col-acciones">
                     <div className="acciones">
                       <Boton variante="gris" onClick={() => setSeleccionada(e)}>
@@ -215,6 +221,16 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
 
       <Mensaje>{error}</Mensaje>
 
+      <div className="emp-modal-cabecera">
+        <ProfileImage
+          src={urlArchivo(empresa.logo_url)}
+          alt={`Foto de ${empresa.razon_social}`}
+          nombre={empresa.razon_social}
+          variant="company"
+          size={88}
+        />
+      </div>
+
       <FichaDatos
         items={[
           { etiqueta: 'RUC', valor: empresa.ruc },
@@ -227,6 +243,7 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
           { etiqueta: 'Usuario', valor: empresa.username },
           { etiqueta: 'Estado del usuario', valor: empresa.user_estado },
           { etiqueta: 'Registro', valor: fechaCalendario(empresa.created_at) },
+          { etiqueta: 'Antigüedad en la plataforma', valor: empresa.antiguedad },
         ]}
       />
 

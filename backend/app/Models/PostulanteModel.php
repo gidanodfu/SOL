@@ -16,7 +16,8 @@ class PostulanteModel extends Model
 
     protected $allowedFields = [
         'user_id', 'dni', 'nombres', 'apellidos', 'fecha_nacimiento',
-        'direccion', 'distrito', 'telefono',
+        'direccion', 'distrito', 'telefono', 'ocupacion', 'experiencia', 'estudios',
+        'foto_key',
     ];
 
     public function porUserId(int $userId): ?Postulante

@@ -186,19 +186,15 @@ class SolicitudEmpresaService
         $link = $this->nuevoEnlace($userId);
         $this->auditoria->registrar($adminId, 'aprobar_solicitud_empresa', 'solicitud_empresa', $solicitudId, ['ruc' => $solicitud['ruc']]);
 
-        // Notificación por correo (best-effort); el enlace queda para el admin.
-        $this->correo->enviarPlantilla(
-            (string) $solicitud['email'],
-            'Tu cuenta ha sido aprobada',
-            $this->plantillaAprobacion(),
-            [
-                'razon_social' => $solicitud['razon_social'],
-                'ruc'          => $solicitud['ruc'],
-                'link'         => $link,
-            ],
-        );
+        // Correo transaccional de activación (best-effort). Un fallo del envío NO
+        // revierte la aprobación: la cuenta ya está creada y el enlace disponible.
+        $enviado = $this->enviarCorreoActivacion($solicitud, $link);
 
-        return ['link' => $link];
+        return [
+            'link'           => $link,
+            'correo_enviado' => $enviado,
+            'correo_destino' => (string) $solicitud['email'],
+        ];
     }
 
     /**
@@ -250,6 +246,56 @@ class SolicitudEmpresaService
         $link = $this->nuevoEnlace((int) $empresa['user_id']);
 
         return $link;
+    }
+
+    /**
+     * Reenvía el correo de activación de una solicitud aprobada. Regenera el
+     * enlace (el anterior queda invalidado por seguridad) y devuelve el
+     * resultado del envío para que el administrador lo vea.
+     *
+     * @return array{link: string, correo_enviado: bool, correo_destino: string}
+     */
+    public function reenviarActivacion(int $adminId, int $solicitudId): array
+    {
+        $solicitud = $this->obtener($solicitudId);
+        if ($solicitud['estado'] !== 'aprobada') {
+            throw ApiException::conflicto('La solicitud no está aprobada.');
+        }
+
+        $empresa = $this->empresas->asArray()->where('ruc', $solicitud['ruc'])->first();
+        if ($empresa === null) {
+            throw ApiException::conflicto('La cuenta de la empresa no existe.');
+        }
+
+        $link    = $this->nuevoEnlace((int) $empresa['user_id']);
+        $enviado = $this->enviarCorreoActivacion($solicitud, $link);
+
+        $this->auditoria->registrar($adminId, 'reenviar_activacion_empresa', 'solicitud_empresa', $solicitudId, ['ruc' => $solicitud['ruc']]);
+
+        return [
+            'link'           => $link,
+            'correo_enviado' => $enviado,
+            'correo_destino' => (string) $solicitud['email'],
+        ];
+    }
+
+    /**
+     * Envía (best-effort) el correo de activación de empresa. Nunca propaga el
+     * error del proveedor: la operación de negocio ya está confirmada.
+     *
+     * @param array<string, mixed> $solicitud
+     */
+    private function enviarCorreoActivacion(array $solicitud, string $link): bool
+    {
+        return $this->correo->enviarActivacionEmpresa(
+            (string) $solicitud['email'],
+            $link,
+            [
+                'razon_social' => (string) ($solicitud['razon_social'] ?? ''),
+                'ruc'          => (string) ($solicitud['ruc'] ?? ''),
+                'expira_dias'  => (int) (env('activacion.expiraDias') ?: 7),
+            ],
+        );
     }
 
     /**
@@ -355,33 +401,39 @@ class SolicitudEmpresaService
             'expira_en'  => date('Y-m-d H:i:s', strtotime("+{$dias} days")),
         ]);
 
-        // Base del frontend obligatoria por entorno: sin ella el enlace no puede
-        // apuntar a un dominio real (no se asume localhost).
-        $base = rtrim((string) env('app.frontendUrl'), '/');
-        if ($base === '') {
-            throw ApiException::badRequest('Falta configurar app.frontendUrl para generar el enlace de activación.');
-        }
-
-        return $base . '/activar-cuenta/' . $token;
+        return self::enlaceActivacion($this->baseUrlFrontend(), $token);
     }
 
-    private function plantillaAprobacion(): string
+    /**
+     * Base pública del frontend, configurable por entorno. Reutiliza APP_URL y,
+     * si no existe, la variable equivalente app.frontendUrl. Nunca asume
+     * localhost ni usa la URL de una petición concreta.
+     */
+    private function baseUrlFrontend(): string
     {
-        return '<p>Estimado(a) representante de <strong>{{razon_social}}</strong> (RUC {{ruc}}):</p>'
-            . '<p>Su solicitud de afiliación al Sistema de Empleo de la Municipalidad de José Leonardo Ortiz ha sido '
-            . '<strong>aprobada</strong>.</p>'
-            . '<p>Para activar su cuenta y definir su contraseña, ingrese al siguiente enlace:</p>'
-            . '<p><a href="{{link}}">Activar cuenta</a></p>'
-            . '<p>Después de activarla podrá iniciar sesión con su correo corporativo y la contraseña que defina.</p>'
-            . '<p>Si el enlace no funciona, cópielo y péguelo en su navegador: {{link}}</p>';
+        $base = rtrim((string) (env('APP_URL') ?: env('app.frontendUrl')), '/');
+        if ($base === '') {
+            throw ApiException::badRequest('Falta configurar APP_URL (o app.frontendUrl) para generar el enlace de activación.');
+        }
+
+        return $base;
+    }
+
+    /**
+     * Construye la URL de activación normalizando la barra final (evita "//").
+     */
+    public static function enlaceActivacion(string $base, string $token): string
+    {
+        return rtrim($base, '/') . '/activar-cuenta/' . $token;
     }
 
     private function plantillaRechazo(): string
     {
-        return '<p>Estimado(a) representante de <strong>{{razon_social}}</strong>:</p>'
-            . '<p>Lamentablemente su solicitud de afiliación no ha sido aprobada por la Municipalidad de José '
-            . 'Leonardo Ortiz.</p>'
-            . '<p><strong>Motivo:</strong> {{motivo}}</p>'
-            . '<p>Puede volver a enviar su solicitud cuando lo considere.</p>';
+        return '<h2 style="margin:0 0 12px;font-size:18px;color:#0b2a4a;">Solicitud no aprobada</h2>'
+            . '<p style="margin:0 0 12px;">Estimado(a) representante de <strong>{{razon_social}}</strong>:</p>'
+            . '<p style="margin:0 0 12px;">Lamentablemente su solicitud de afiliación no ha sido aprobada por la '
+            . 'Municipalidad Distrital de José Leonardo Ortiz.</p>'
+            . '<p style="margin:0 0 12px;"><strong>Motivo:</strong> {{motivo}}</p>'
+            . '<p style="margin:0;color:#6b7280;font-size:13px;">Puede volver a enviar su solicitud cuando lo considere.</p>';
     }
 }

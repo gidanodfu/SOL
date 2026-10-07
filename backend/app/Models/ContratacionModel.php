@@ -16,6 +16,7 @@ class ContratacionModel extends Model
     protected $allowedFields = [
         'postulacion_id', 'empresa_id', 'oferta_id', 'postulante_id',
         'fecha_contratacion', 'cargo', 'modalidad', 'remuneracion', 'observaciones',
+        'situacion_laboral', 'motivo_situacion', 'fecha_situacion',
     ];
 
     protected $beforeInsert = ['fijarFecha'];

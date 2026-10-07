@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cambiarActivacionPostulacion, cambiarEstadoPostulacion, detallePostulacionEmpresa,
   listarPostulacionesEmpresa, urlCvPostulacion,
 } from '../../services/empresas';
-import { EstadoCarga, Boton, Estado, Mensaje, Selecto } from '../../components/UI';
+import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
-import { Download, UserCheck, UserRound, UserX } from 'lucide-react';
+import { Download, UserCheck, UserX } from 'lucide-react';
 import { ETIQUETA_ESTADO_POSTULACION, TRANSICIONES_POSTULACION } from '../../constants';
+import ProfileImage from '../../components/ProfileImage';
 import { listarOfertasEmpresa } from '../../services/ofertas';
-import { descargarUrl, errorApi, fechaCalendario, fechaHora } from '../../utils';
+import { descargarUrl, errorApi, fechaCalendario, fechaHora, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 const FILTROS = [
   ['', 'Todas'],
   ['pendiente', 'Pendientes'],
   ['en_revision', 'En revisión'],
-  ['preseleccionado', 'Preseleccionados'],
-  ['contactado', 'Contactados'],
   ['seleccionado', 'Seleccionados'],
   ['no_seleccionado', 'No seleccionados'],
 ];
@@ -30,13 +29,26 @@ export default function Postulaciones() {
   const queryClient = useQueryClient();
   const [filtro, setFiltro] = useState('');
   const [ofertaId, setOfertaId] = useState('');
+  const [qInput, setQInput] = useState('');
+  const [q, setQ] = useState('');
   const [seleccionada, setSeleccionada] = useState(null);
+
+  // Debounce: solo se consulta al backend tras 350 ms sin escribir. Evita una
+  // petición por cada carácter; se combina con los demás filtros.
+  useEffect(() => {
+    const t = setTimeout(() => setQ(qInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [qInput]);
 
   const { data: ofertas } = useQuery({ queryKey: ['ofertas-empresa'], queryFn: listarOfertasEmpresa });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['postulaciones-empresa', filtro, ofertaId],
-    queryFn: () => listarPostulacionesEmpresa({ estado: filtro || undefined, oferta_id: ofertaId || undefined }),
+    queryKey: ['postulaciones-empresa', filtro, ofertaId, q],
+    queryFn: () => listarPostulacionesEmpresa({
+      estado: filtro || undefined,
+      oferta_id: ofertaId || undefined,
+      q: q || undefined,
+    }),
   });
 
   const refrescar = () => {
@@ -60,7 +72,14 @@ export default function Postulaciones() {
         )}
       />
 
-      <div style={{ maxWidth: 380, marginBottom: '1.1rem' }}>
+      <div className="post-filtros">
+        <Campo
+          etiqueta="Buscar candidato o puesto"
+          type="search"
+          value={qInput}
+          onChange={(e) => setQInput(e.target.value)}
+          placeholder="Nombre, apellido, DNI o puesto"
+        />
         <Selecto etiqueta="Filtrar por oferta" value={ofertaId} onChange={(e) => setOfertaId(e.target.value)}>
           <option value="">Todas las ofertas</option>
           {ofertas?.map((o) => <option key={o.id} value={String(o.id)}>{o.puesto}</option>)}
@@ -94,7 +113,15 @@ export default function Postulaciones() {
           {data.map((p) => (
             <TarjetaRegistro
               key={p.id}
-              icono={UserRound}
+              media={(
+                <ProfileImage
+                  src={urlArchivo(p.foto_url)}
+                  nombre={`${p.nombres} ${p.apellidos}`}
+                  alt={`Foto de ${p.nombres} ${p.apellidos}`}
+                  variant="person"
+                  size={38}
+                />
+              )}
               titulo={`${p.nombres} ${p.apellidos}`}
               badge={(
                 <>
@@ -181,7 +208,14 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
         </>
       )}
     >
-      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+      <div className="form-fila" style={{ marginBottom: '0.8rem', alignItems: 'center' }}>
+        <ProfileImage
+          src={urlArchivo(p?.foto_url || postulacion.foto_url)}
+          nombre={`${postulacion.nombres} ${postulacion.apellidos}`}
+          alt={`Foto de ${postulacion.nombres} ${postulacion.apellidos}`}
+          variant="person"
+          size={48}
+        />
         <Estado valor={estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
         {activo !== 1 && <span className="badge badge-gray">Postulación desactivada</span>}
       </div>
@@ -201,6 +235,17 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
           { etiqueta: 'Fecha de postulación', valor: fechaHora(detalle?.fecha_postulacion || postulacion.fecha_postulacion) },
         ]}
       />
+
+      <div className="modal-seccion">
+        <h3>Perfil laboral</h3>
+        <FichaDatos
+          items={[
+            { etiqueta: 'Ocupación', valor: p?.ocupacion },
+            { etiqueta: 'Experiencia', valor: p?.experiencia },
+            { etiqueta: 'Estudios / formación', valor: p?.estudios },
+          ]}
+        />
+      </div>
 
       <div className="modal-seccion">
         <h3>Curriculum vitae</h3>

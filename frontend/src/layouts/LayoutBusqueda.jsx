@@ -15,7 +15,7 @@ const NAV = [
   { to: '/postulante/oportunidades', icono: 'ti ti-building-store', texto: 'Ferias y oportunidades', corto: 'Ferias' },
 ];
 
-const panelPorRol = { [ROLES.ADMIN]: '/admin/dashboard', [ROLES.EMPRESA]: '/empresa/dashboard', [ROLES.POSTULANTE]: '/postulante/dashboard' };
+const panelPorRol = { [ROLES.ADMIN]: '/admin/dashboard', [ROLES.EMPRESA]: '/empresa/dashboard', [ROLES.POSTULANTE]: '/postulante/perfil' };
 
 /**
  * Rutas públicas de bolsa de empleo: /postulante/buscar y /postulante/oportunidades

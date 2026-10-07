@@ -5,6 +5,7 @@
 namespace App\Controllers\Api\Empresa;
 
 use App\Controllers\Api\BaseApiController;
+use App\Exceptions\ApiException;
 use App\Services\DashboardService;
 use App\Services\EmpresaService;
 
@@ -39,6 +40,28 @@ class PerfilController extends BaseApiController
             (new DashboardService())->empresa(service('guard')->id(), $desde, $hasta),
             'Indicadores de su empresa.',
         );
+    }
+
+    /**
+     * Foto de perfil de la empresa (solo la propia). Multipart: campo "logo".
+     */
+    public function subirLogo()
+    {
+        $archivo = $this->request->getFile('logo');
+        if ($archivo === null) {
+            throw ApiException::validacion('Debe adjuntar una imagen en el campo "logo".', ['Debe adjuntar una imagen.']);
+        }
+
+        (new EmpresaService())->subirLogo(service('guard')->id(), $archivo);
+
+        return $this->sinContenido('Foto de perfil actualizada.');
+    }
+
+    public function eliminarLogo()
+    {
+        (new EmpresaService())->eliminarLogo(service('guard')->id());
+
+        return $this->sinContenido('Foto de perfil eliminada.');
     }
 
     /**

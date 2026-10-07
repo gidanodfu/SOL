@@ -8,8 +8,10 @@ import { useAuth } from '../../context/AuthContext';
 import { Mensaje } from '../../components/UI';
 import { useToast } from '../../components/Feedbacks';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
-import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES } from '../../constants';
-import { errorApi, fechaCalendario } from '../../utils';
+import ProfileImage from '../../components/ProfileImage';
+import EmpresaModal from '../../components/EmpresaModal';
+import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES, TIPOS_EMPLEO } from '../../constants';
+import { errorApi, fechaCalendario, urlArchivo } from '../../utils';
 import { useClickFuera } from '../../hooks/useClickFuera';
 import { useAccion } from '../../hooks/useAccion';
 
@@ -23,22 +25,11 @@ const OPCIONES_ORDEN = [
 ];
 
 const comoOpciones = (lista) => lista.map((v) => ({ valor: v, etiqueta: v }));
+const OPCIONES_TIPO_EMPLEO = TIPOS_EMPLEO.map((t) => ({ valor: t, etiqueta: ETIQUETA_TIPO_EMPLEO[t] || t }));
 
 function moneda(valor) {
   if (valor == null) return null;
   return `S/ ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2 }).format(Number(valor))}`;
-}
-
-function iconoPorCategoria(nombre) {
-  const n = (nombre || '').toLowerCase();
-  if (n.includes('construc') || n.includes('obra')) return 'ti ti-hammer';
-  if (n.includes('administ') || n.includes('oficin')) return 'ti ti-briefcase';
-  if (n.includes('comer') || n.includes('venta')) return 'ti ti-shopping-cart';
-  if (n.includes('servic') || n.includes('atenc') || n.includes('limpieza')) return 'ti ti-tools';
-  if (n.includes('salud') || n.includes('medic')) return 'ti ti-stethoscope';
-  if (n.includes('educa') || n.includes('docente')) return 'ti ti-school';
-  if (n.includes('transp') || n.includes('chofer') || n.includes('logist')) return 'ti ti-truck';
-  return 'ti ti-briefcase';
 }
 
 export default function BuscarEmpleo() {
@@ -46,6 +37,11 @@ export default function BuscarEmpleo() {
   const [abierto, setAbierto] = useState(null); // pillId abierto
   const [seleccionadaId, setSeleccionadaId] = useState(null);
   const [sinAuto, setSinAuto] = useState(false);
+  const [empresaInfo, setEmpresaInfo] = useState(null);
+  // Palabras clave: se aplican con un pequeño retardo para no consultar en cada tecla.
+  const [texto, setTexto] = useState('');
+  const [q, setQ] = useState('');
+  const [empresa, setEmpresa] = useState('');
   const { usuario } = useAuth();
   const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias });
   const { data: perfil } = useQuery({
@@ -86,14 +82,22 @@ export default function BuscarEmpleo() {
     if (!esMovil) medirSplit();
   }, [esMovil, medirSplit]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setQ(texto.trim()), 350);
+    return () => clearTimeout(t);
+  }, [texto]);
+
   const queryFiltros = useMemo(() => {
     const f = {};
+    if (q) f.q = q;
+    if (empresa.trim()) f.empresa = empresa.trim();
     if (sel.categoria?.valor) f.categoria_id = sel.categoria.valor;
     if (sel.ubicacion?.valor) f.ubicacion = sel.ubicacion.valor;
     if (sel.formacion?.valor) f.formacion = sel.formacion.valor;
     if (sel.experiencia?.valor) f.experiencia = sel.experiencia.valor;
+    if (sel.tipo_empleo?.valor) f.tipo_empleo = sel.tipo_empleo.valor;
     return f;
-  }, [sel]);
+  }, [sel, q, empresa]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['buscar-ofertas', queryFiltros],
@@ -175,6 +179,25 @@ export default function BuscarEmpleo() {
         </div>
       )}
 
+      <div className="busqueda-texto">
+        <i className="ti ti-search" aria-hidden="true" />
+        <input
+          type="search"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="Buscar por puesto, empresa o palabra clave…"
+          aria-label="Buscar ofertas por palabra clave"
+        />
+        <input
+          type="text"
+          className="busqueda-empresa"
+          value={empresa}
+          onChange={(e) => setEmpresa(e.target.value)}
+          placeholder="Empresa"
+          aria-label="Filtrar por empresa"
+        />
+      </div>
+
       <div className="filter-bar">
         <FiltroPill
           icono="ti ti-arrows-sort"
@@ -228,6 +251,16 @@ export default function BuscarEmpleo() {
           onCerrar={() => setAbierto(null)}
           onElegir={elegir('experiencia')}
         />
+        <FiltroPill
+          icono="ti ti-briefcase"
+          titulo="Tipo de empleo"
+          opciones={OPCIONES_TIPO_EMPLEO}
+          valor={sel.tipo_empleo?.valor}
+          abierto={abierto === 'tipo_empleo'}
+          onToggle={toggler('tipo_empleo')}
+          onCerrar={() => setAbierto(null)}
+          onElegir={elegir('tipo_empleo')}
+        />
       </div>
 
       <Mensaje>{error ? errorApi(error) : null}</Mensaje>
@@ -253,6 +286,7 @@ export default function BuscarEmpleo() {
                 oferta={o}
                 seleccionada={o.id === seleccionadaId}
                 onSeleccionar={() => seleccionar(o.id)}
+                onEmpresa={setEmpresaInfo}
               />
             ))}
           </div>
@@ -260,6 +294,8 @@ export default function BuscarEmpleo() {
           <PanelDetalle oferta={ofertaActual} onCerrar={cerrar} perfilIncompleto={perfilIncompleto} />
         </section>
       )}
+
+      <EmpresaModal empresa={empresaInfo} onCerrar={() => setEmpresaInfo(null)} />
     </div>
   );
 }
@@ -315,12 +351,29 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
   );
 }
 
-function JobCard({ oferta, seleccionada, onSeleccionar }) {
+function JobCard({ oferta, seleccionada, onSeleccionar, onEmpresa }) {
+  const empresa = oferta.empresa || { razon_social: oferta.razon_social, ruc: oferta.ruc, logo_url: null };
+
   return (
     <div className={`job-card${seleccionada ? ' seleccionada' : ''}`} onClick={onSeleccionar} role="button" tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSeleccionar(); } }}>
       <div className="job-fila">
-        <div className="job-icon"><i className={iconoPorCategoria(oferta.categoria_nombre)} /></div>
+        <button
+          type="button"
+          className="job-avatar"
+          title="Ver información de la empresa"
+          aria-label={`Ver información de ${empresa.razon_social || 'la empresa'}`}
+          onClick={(e) => { e.stopPropagation(); onEmpresa(empresa); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
+        >
+          <ProfileImage
+            src={urlArchivo(empresa.logo_url)}
+            alt={`Foto de ${empresa.razon_social || 'la empresa'}`}
+            nombre={empresa.razon_social}
+            variant="company"
+            size={44}
+          />
+        </button>
         <div className="job-body">
           <h3>{oferta.puesto}</h3>
           <p className="company">{oferta.razon_social || 'Empresa no indicada'}</p>
@@ -403,7 +456,8 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
       setError(null);
       queryClient.invalidateQueries({ queryKey: ['buscar-ofertas'] });
       queryClient.invalidateQueries({ queryKey: ['oferta-detalle', oferta.id] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-postulante'] });
+      // La actividad laboral vive dentro de /postulante/perfil desde la migración.
+      queryClient.invalidateQueries({ queryKey: ['perfil-postulante'] });
     } catch { /* error visible */ }
   };
 

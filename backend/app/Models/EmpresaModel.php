@@ -17,6 +17,6 @@ class EmpresaModel extends Model
     protected $allowedFields = [
         'user_id', 'ruc', 'razon_social', 'nombre_comercial', 'direccion',
         'telefono', 'email', 'representante', 'info_adicional',
-        'evaluacion_presencial', 'estado',
+        'evaluacion_presencial', 'estado', 'logo_key',
     ];
 }

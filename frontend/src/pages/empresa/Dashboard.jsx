@@ -136,6 +136,8 @@ export default function Dashboard() {
             <p className="vacio">Sin actividad registrada en el periodo seleccionado.</p>
           )}
 
+          {/* Nivel operativo: Actividad reciente (izquierda) y, en la columna
+              derecha, Mis ofertas + Postulaciones apiladas (mismo ancho/estilo). */}
           <div className="dash-grid">
             <section className="list-card">
               <div className="list-card-head">
@@ -145,14 +147,12 @@ export default function Dashboard() {
                 </Link>
               </div>
 
-              {pendientes.length === 0 && (
+              {pendientes.length === 0 ? (
                 <div className="empty-card">
                   <i className="ti ti-circle-check" />
                   <p>No hay postulaciones pendientes por revisar.</p>
                 </div>
-              )}
-
-              {pendientes.length > 0 && (
+              ) : (
                 <div>
                   {pendientes.slice(0, 5).map((p) => (
                     <div className="app-row" key={p.id}>
@@ -171,10 +171,10 @@ export default function Dashboard() {
               )}
             </section>
 
-            <aside className="dash-aside">
+            <div className="dash-col">
               <DonutCard titulo="Mis ofertas" descripcion="Estado actual de tus ofertas" datos={data.ofertas} items={OFERTAS_DONA} />
               <DonutCard titulo="Postulaciones" descripcion="En qué etapa están tus candidatos" datos={postulaciones} items={DONA_ESTADO_POSTULACION} />
-            </aside>
+            </div>
           </div>
         </>
       )}

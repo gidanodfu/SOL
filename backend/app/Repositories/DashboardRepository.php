@@ -32,7 +32,7 @@ class DashboardRepository
             $ofertas[$fila['estado']] = (int) $fila['n'];
         }
 
-        $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'], 0);
+        $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'], 0);
         $builder = $this->db->table('postulaciones')->select('estado, COUNT(*) n')->where('activo', 1);
         if ($desde) {
             $builder->where('fecha_postulacion >=', $desde . ' 00:00:00');
@@ -61,7 +61,7 @@ class DashboardRepository
         if ($hasta) {
             $empresasConProcesos->where('fecha_postulacion <=', $hasta . ' 23:59:59');
         }
-        $empresasConProcesos->whereIn('estado', ['en_revision', 'preseleccionado', 'contactado', 'seleccionado']);
+        $empresasConProcesos->whereIn('estado', ['en_revision', 'seleccionado']);
 
         $seleccionados = $postulaciones['seleccionado'];
         $totalPostulaciones = array_sum($postulaciones);
@@ -80,7 +80,7 @@ class DashboardRepository
             'seleccionados' => $seleccionados,
             'tasa_seleccion'      => $totalPostulaciones > 0 ? round($seleccionados / $totalPostulaciones * 100, 1) : 0,
             'tasa_contratacion'   => $seleccionados > 0 ? round($totalContrataciones / $seleccionados * 100, 1) : 0,
-            'tiempo_promedio_contacto_dias'  => $this->tiempoPromedio('contactado', $desde, $hasta),
+            'tiempo_promedio_revision_dias'  => $this->tiempoPromedio('en_revision', $desde, $hasta),
             'tiempo_promedio_seleccion_dias' => $this->tiempoPromedio('seleccionado', $desde, $hasta),
             // Serie mensual para el gráfico de actividad (últimos 6 meses o el rango).
             'actividad_mensual' => $this->postulacionesPorMes($desde, $hasta),
@@ -179,7 +179,7 @@ class DashboardRepository
             $ofertas[$fila['estado']] = (int) $fila['n'];
         }
 
-        $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'], 0);
+        $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'], 0);
         $builder = $this->db->table('postulaciones')->where('empresa_id', $empresaId)->where('activo', 1);
         if ($desde) {
             $builder->where('fecha_postulacion >=', $desde . ' 00:00:00');
@@ -252,7 +252,7 @@ class DashboardRepository
      */
     public function postulante(int $postulanteId): array
     {
-        $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'preseleccionado', 'contactado', 'seleccionado', 'no_seleccionado'], 0);
+        $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'], 0);
         foreach ($this->db->table('postulaciones')->where('postulante_id', $postulanteId)->where('activo', 1)
             ->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
             $postulaciones[$fila['estado']] = (int) $fila['n'];
@@ -264,6 +264,52 @@ class DashboardRepository
             'postulaciones' => $postulaciones,
             'total_postulaciones' => array_sum($postulaciones),
             'con_cv' => $conCv,
+        ];
+    }
+
+    /**
+     * Estadísticas de empleabilidad (RF-58/RF-60): empleos generados, empresas
+     * que los generan, empleos vigentes por empresa y situación de las
+     * contrataciones. Todo con agregaciones SQL (sin N+1).
+     *
+     * @return array<string, mixed>
+     */
+    public function empleabilidad(): array
+    {
+        $totalOfertas = (int) $this->db->table('ofertas')->countAllResults();
+        $vigentes     = (int) $this->db->table('ofertas')->where('estado', 'publicada')->countAllResults();
+
+        $porEmpresa = $this->db->table('ofertas o')
+            ->select('e.id AS empresa_id, e.razon_social, e.ruc,
+                      COUNT(o.id) AS total_ofertas,
+                      SUM(o.estado = \'publicada\') AS vigentes')
+            ->join('empresas e', 'e.id = o.empresa_id')
+            ->groupBy('e.id, e.razon_social, e.ruc')
+            ->orderBy('total_ofertas', 'DESC')
+            ->limit(100)
+            ->get()
+            ->getResultArray();
+
+        $situaciones = array_fill_keys(['contratado', 'finalizado', 'despedido', 'renuncio'], 0);
+        foreach ($this->db->table('contrataciones')
+            ->select('situacion_laboral, COUNT(*) n')
+            ->groupBy('situacion_laboral')
+            ->get()->getResultArray() as $fila) {
+            $situaciones[$fila['situacion_laboral']] = (int) $fila['n'];
+        }
+
+        return [
+            'ofertas_generadas' => $totalOfertas,
+            'ofertas_vigentes'  => $vigentes,
+            'contrataciones'    => array_sum($situaciones),
+            'empresas'          => array_map(static fn ($r) => [
+                'empresa_id'    => (int) $r['empresa_id'],
+                'razon_social'  => $r['razon_social'],
+                'ruc'           => $r['ruc'],
+                'total_ofertas' => (int) $r['total_ofertas'],
+                'vigentes'      => (int) $r['vigentes'],
+            ], $porEmpresa),
+            'situaciones' => $situaciones,
         ];
     }
 }

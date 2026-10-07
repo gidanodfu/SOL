@@ -5,21 +5,25 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { listarMisPostulaciones, retirarPostulacion } from '../../services/postulante';
 import { EstadoCarga, Boton, Estado, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import ProfileImage from '../../components/ProfileImage';
+import EmpresaModal from '../../components/EmpresaModal';
 import { useToast, useDialogo } from '../../components/Feedbacks';
 import { ETIQUETA_ESTADO_POSTULACION } from '../../constants';
-import { errorApi, fechaHora } from '../../utils';
+import { errorApi, fechaHora, urlArchivo } from '../../utils';
 
 export default function MisPostulaciones() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const { confirmar } = useDialogo();
   const [error, setError] = useState(null);
+  const [empresa, setEmpresa] = useState(null);
 
   const { data, isLoading } = useQuery({ queryKey: ['mis-postulaciones'], queryFn: listarMisPostulaciones });
 
   const refrescar = () => {
     queryClient.invalidateQueries({ queryKey: ['mis-postulaciones'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard-postulante'] });
+    // La actividad laboral vive dentro de /postulante/perfil desde la migración.
+    queryClient.invalidateQueries({ queryKey: ['perfil-postulante'] });
   };
 
   const retirar = async (id) => {
@@ -64,7 +68,22 @@ export default function MisPostulaciones() {
             <h2>Postulaciones registradas</h2>
           </div>
           {data.map((p) => (
-            <div className="fila" key={p.id}>
+            <div
+              className="fila fila-clicable"
+              key={p.id}
+              role="button"
+              tabIndex={0}
+              title="Ver información de la empresa"
+              onClick={() => setEmpresa(p)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEmpresa(p); } }}
+            >
+              <ProfileImage
+                src={urlArchivo(p.logo_url)}
+                alt={`Foto de ${p.razon_social}`}
+                nombre={p.razon_social}
+                variant="company"
+                size={44}
+              />
               <div className="fila-main">
                 <div className="fila-titulo">{p.puesto}</div>
                 <div className="fila-sub">
@@ -78,7 +97,7 @@ export default function MisPostulaciones() {
               </div>
               <div className="fila-accion">
                 {p.activo === 1 ? (
-                  <Boton variante="peligro" onClick={() => retirar(p.id)}>Retirar</Boton>
+                  <Boton variante="peligro" onClick={(e) => { e.stopPropagation(); retirar(p.id); }}>Retirar</Boton>
                 ) : (
                   <span className="badge badge-gray">Retirada</span>
                 )}
@@ -87,6 +106,11 @@ export default function MisPostulaciones() {
           ))}
         </div>
       )}
+
+      <EmpresaModal
+        empresa={empresa ? { ...empresa, antiguedad: empresa.empresa_antiguedad } : null}
+        onCerrar={() => setEmpresa(null)}
+      />
     </div>
   );
 }
