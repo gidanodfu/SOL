@@ -15,11 +15,32 @@ import { dashboardAdmin, exportarReporteAdmin, empleabilidadAdmin } from '../../
 import { Mensaje, EstadoCarga } from '../../components/UI';
 import FiltroPeriodo from '../../components/FiltroPeriodo';
 import StatCard from '../../components/StatCard';
+import DashboardGrid from '../../components/dashboard/DashboardGrid';
+import BarChartCard from '../../components/dashboard/BarChartCard';
+import MetricListCard from '../../components/dashboard/MetricListCard';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION, ETIQUETA_SITUACION_CONTRATACION } from '../../constants';
 import { errorApi } from '../../utils';
 
 const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 const ORDEN_OFERTAS = ['pendiente', 'publicada', 'rechazada', 'borrador', 'cerrada'];
+
+/** Adapta un conteo por estado a los items del gráfico (solo > 0). */
+function filas(datos, orden, diccionario) {
+  return orden
+    .filter((k) => (Number(datos?.[k]) || 0) > 0)
+    .map((k) => ({ etiqueta: diccionario[k] || k, valor: Number(datos[k]) || 0 }));
+}
+
+/** Indicadores de efectividad (sin gráfico) → items de MetricListCard. */
+function indicadores(d) {
+  const totalPost = Object.values(d.postulaciones || {}).reduce((a, b) => a + b, 0);
+  return [
+    { icono: <Percent size={17} />, etiqueta: 'Tasa de selección', sub: `${d.seleccionados} de ${totalPost} postulaciones`, valor: `${d.tasa_seleccion}%`, badge: true, tono: 'badge-green' },
+    { icono: <BadgeCheck size={17} />, etiqueta: 'Tasa de contratación', sub: `${d.contrataciones} de ${d.seleccionados} seleccionados`, valor: `${d.tasa_contratacion}%`, badge: true, tono: 'badge-blue' },
+    { icono: <Clock3 size={17} />, etiqueta: 'Tiempo a revisión', sub: 'días promedio postulación → revisión', valor: d.tiempo_promedio_revision_dias === null ? '—' : `${d.tiempo_promedio_revision_dias} d`, badge: true, tono: 'badge-amber' },
+    { icono: <Timer size={17} />, etiqueta: 'Tiempo a selección', sub: 'días promedio postulación → selección', valor: d.tiempo_promedio_seleccion_dias === null ? '—' : `${d.tiempo_promedio_seleccion_dias} d`, badge: true, tono: 'badge-amber' },
+  ];
+}
 
 export default function Dashboard() {
   const [form, setForm] = useState({ desde: '', hasta: '' });
@@ -83,51 +104,36 @@ export default function Dashboard() {
         <>
           <GrillaKpis d={data} />
 
-          <div className="analytics">
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <h3>Actividad de postulaciones</h3>
-                  <p>Postulaciones recibidas por mes</p>
-                </div>
-              </div>
-              <GraficoMensual serie={data.actividad_mensual} />
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <h3>Postulaciones por estado</h3>
-                  <p>Distribución actual del periodo</p>
-                </div>
-              </div>
-              <FilasProgreso datos={data.postulaciones} orden={ORDEN_POSTULACIONES} diccionario={ETIQUETA_ESTADO_POSTULACION} />
-            </div>
-          </div>
+          {/* Fila principal: tendencia mensual + distribución de postulaciones. */}
+          <DashboardGrid>
+            <BarChartCard
+              titulo="Actividad de postulaciones"
+              descripcion="Postulaciones recibidas por mes"
+              orientation="vertical"
+              items={(data.actividad_mensual || []).map((s) => ({ etiqueta: s.etiqueta, valor: s.total }))}
+              vacio="Sin postulaciones en el periodo."
+            />
+            <BarChartCard
+              titulo="Postulaciones por estado"
+              descripcion="Distribución actual del periodo"
+              items={filas(data.postulaciones, ORDEN_POSTULACIONES, ETIQUETA_ESTADO_POSTULACION)}
+            />
+          </DashboardGrid>
 
           {empleabilidad && <Empleabilidad datos={empleabilidad} />}
 
-          <div className="bottom-grid">
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <h3>Ofertas por estado</h3>
-                  <p>Situación de las ofertas</p>
-                </div>
-              </div>
-              <FilasProgreso datos={data.ofertas} orden={ORDEN_OFERTAS} diccionario={ETIQUETA_ESTADO_OFERTA} />
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <h3>Indicadores de efectividad</h3>
-                  <p>Tasas y tiempos de los procesos</p>
-                </div>
-              </div>
-              <ListaIndicadores d={data} />
-            </div>
-          </div>
+          <DashboardGrid equal>
+            <BarChartCard
+              titulo="Ofertas por estado"
+              descripcion="Situación de las ofertas"
+              items={filas(data.ofertas, ORDEN_OFERTAS, ETIQUETA_ESTADO_OFERTA)}
+            />
+            <MetricListCard
+              titulo="Indicadores de efectividad"
+              descripcion="Tasas y tiempos de los procesos"
+              items={indicadores(data)}
+            />
+          </DashboardGrid>
         </>
       )}
     </div>
@@ -190,127 +196,21 @@ function GrillaKpis({ d }) {
   );
 }
 
-function GraficoMensual({ serie }) {
-  if (!serie || serie.length === 0) {
-    return <p className="vacio">Sin postulaciones en el periodo.</p>;
-  }
-  const max = Math.max(1, ...serie.map((s) => s.total));
-
-  return (
-    <div>
-      <div className="bars">
-        {serie.map((s) => (
-          <div className="bar-col" key={s.mes}>
-            <div className="bar-cap">
-              <div className={`bar${s.total ? '' : ' empty'}`} style={{ height: `${Math.max(3, (s.total / max) * 100)}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="months">
-        {serie.map((s) => <span key={s.mes}>{s.etiqueta}</span>)}
-      </div>
-    </div>
-  );
-}
-
-function FilasProgreso({ datos, orden, diccionario }) {
-  const filas = orden.filter((k) => (Number(datos?.[k]) || 0) > 0);
-  if (filas.length === 0) {
-    return <p className="vacio">Sin registros en el periodo.</p>;
-  }
-  const total = filas.reduce((a, k) => a + (Number(datos[k]) || 0), 0);
-
-  return (
-    <div className="status-list">
-      {filas.map((k) => {
-        const n = Number(datos[k]) || 0;
-        return (
-          <div className="status-row" key={k}>
-            <span className="status-label">{diccionario[k] || k}</span>
-            <div className="progress"><span style={{ width: `${(n / total) * 100}%` }} /></div>
-            <span className="status-number">{n}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ListaIndicadores({ d }) {
-  const filas = [
-    {
-      icono: Percent, etiqueta: 'Tasa de selección',
-      sub: `${d.seleccionados} de ${Object.values(d.postulaciones || {}).reduce((a, b) => a + b, 0)} postulaciones`,
-      valor: `${d.tasa_seleccion}%`, clase: 'success',
-    },
-    {
-      icono: BadgeCheck, etiqueta: 'Tasa de contratación',
-      sub: `${d.contrataciones} de ${d.seleccionados} seleccionados`,
-      valor: `${d.tasa_contratacion}%`, clase: 'process',
-    },
-    {
-      icono: Clock3, etiqueta: 'Tiempo a revisión',
-      sub: 'días promedio postulación → revisión',
-      valor: d.tiempo_promedio_revision_dias === null ? '—' : `${d.tiempo_promedio_revision_dias} d`, clase: 'pending',
-    },
-    {
-      icono: Timer, etiqueta: 'Tiempo a selección',
-      sub: 'días promedio postulación → selección',
-      valor: d.tiempo_promedio_seleccion_dias === null ? '—' : `${d.tiempo_promedio_seleccion_dias} d`, clase: 'pending',
-    },
-  ];
-
-  return filas.map((f) => (
-    <div className="attention" key={f.etiqueta}>
-      <div className="attention-info">
-        <div className="attention-icon"><f.icono size={17} /></div>
-        <div>
-          <strong>{f.etiqueta}</strong>
-          <small>{f.sub}</small>
-        </div>
-      </div>
-      <span className={`badge ${f.clase}`}>{f.valor}</span>
-    </div>
-  ));
-}
-
 /**
- * Estadísticas de empleabilidad (RF-58/RF-60): empleos generados, empresas que
- * los generan, empleos vigentes por empresa y situación de las contrataciones.
- * Todos los datos provienen del backend (sin cálculo de negocio en React).
+ * Estadísticas de empleabilidad (RF-58/RF-60): empleos generados y situación de
+ * las contrataciones. Datos del backend, misma primitive de gráfico compartida.
  */
 function Empleabilidad({ datos }) {
   const situaciones = datos.situaciones || {};
-  return (
-    <div className="bottom-grid empleabilidad" style={{ marginTop: '1rem' }}>
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <h3>Empleos generados</h3>
-            <p>Ofertas publicadas por empresa</p>
-          </div>
-        </div>
-        <FilasProgreso
-          datos={datos.empresas?.reduce((acc, e) => ({ ...acc, [e.razon_social]: e.total_ofertas }), {}) || {}}
-          orden={(datos.empresas || []).map((e) => e.razon_social)}
-          diccionario={{}}
-        />
-      </div>
+  const empresasItems = (datos.empresas || []).map((e) => ({ etiqueta: e.razon_social, valor: e.total_ofertas }));
+  const situacionItems = ['contratado', 'finalizado', 'despedido', 'renuncio']
+    .filter((k) => (Number(situaciones[k]) || 0) > 0)
+    .map((k) => ({ etiqueta: ETIQUETA_SITUACION_CONTRATACION[k] || k, valor: Number(situaciones[k]) || 0 }));
 
-      <div className="card">
-        <div className="card-header">
-          <div>
-            <h3>Situación de contrataciones</h3>
-            <p>Total: {datos.contrataciones}</p>
-          </div>
-        </div>
-        <FilasProgreso
-          datos={situaciones}
-          orden={['contratado', 'finalizado', 'despedido', 'renuncio']}
-          diccionario={ETIQUETA_SITUACION_CONTRATACION}
-        />
-      </div>
-    </div>
+  return (
+    <DashboardGrid equal>
+      <BarChartCard titulo="Empleos generados" descripcion="Ofertas publicadas por empresa" items={empresasItems} vacio="Sin ofertas registradas." />
+      <BarChartCard titulo="Situación de contrataciones" descripcion={`Total: ${datos.contrataciones}`} items={situacionItems} vacio="Sin contrataciones registradas." />
+    </DashboardGrid>
   );
 }

@@ -4,6 +4,7 @@ import { Building2, CalendarDays, ExternalLink, Link2, MapPin, Monitor, Tag } fr
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
+import ActivityImage from '../../components/ActivityImage';
 import {
   ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_FUENTE_OPORTUNIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD,
@@ -93,9 +94,7 @@ export default function Oportunidades() {
             {actividades.data.map((a) => (
               <TarjetaContenido
                 key={a.id}
-                media={a.imagen_url
-                  ? <img className="content-card-media" src={urlArchivo(a.imagen_url)} alt={a.nombre} loading="lazy" />
-                  : <div className="content-card-placeholder"><CalendarDays size={26} aria-hidden="true" /></div>}
+                media={<ActivityImage src={urlArchivo(a.imagen_url)} alt={`Imagen de la actividad ${a.nombre}`} expandible />}
                 badge={(
                   <span className={`badge ${CLASE_ESTADO_ACTIVIDAD[a.estado] || 'badge-gray'}`}>
                     {ETIQUETA_ESTADO_ACTIVIDAD[a.estado] || a.estado}

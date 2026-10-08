@@ -63,4 +63,91 @@ class HtmlSanitizer
 
         return Validador::textoVisible($limpio) === '' ? null : $limpio;
     }
+
+    /**
+     * Extrae URLs http(s) válidas de un contenido enriquecido: primero los
+     * `href` de los <a>, luego las URLs escritas como texto plano. Valida el
+     * esquema, normaliza (sin puntuación final) y elimina duplicados. Única
+     * utilidad de extracción del sistema (la usan los servicios de negocio).
+     *
+     * @return list<string>
+     */
+    public function extraerUrls(?string $html): array
+    {
+        if ($html === null || trim($html) === '') {
+            return [];
+        }
+
+        $encontradas = [];
+
+        // Una sola pasada (izquierda→derecha) que alterna href de <a> y URL de
+        // texto: así se respeta el ORDEN del documento y se toma la primera.
+        $patron = '#<a\b[^>]*href\s*=\s*["\']([^"\']+)["\']|(https?://[^\s<>"\')\]]+)#i';
+        if (preg_match_all($patron, $html, $coincidencias, PREG_SET_ORDER)) {
+            foreach ($coincidencias as $m) {
+                $url = ($m[1] ?? '') !== '' ? $m[1] : ($m[2] ?? '');
+                $this->agregarUrl($encontradas, html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            }
+        }
+
+        return array_values($encontradas);
+    }
+
+    /**
+     * Elimina del contenido la PRIMERA aparición de una URL concreta (la que se
+     * promueve al campo de enlace). No borra otras URLs ni el resto del texto.
+     * Idempotente: si la URL ya no está, el resultado no cambia.
+     *
+     * - Si aparece como `<a href="URL">…</a>`, se conserva el texto interno
+     *   (sin el enlace) y, si ese texto era la propia URL, se elimina.
+     * - Si aparece como texto plano, se elimina solo esa ocurrencia.
+     */
+    public function removerUrl(?string $html, string $url): ?string
+    {
+        if ($html === null || $url === '') {
+            return $html;
+        }
+
+        $q = preg_quote($url, '#');
+
+        // 1) Primera ancla con ese href: se conserva su texto interno (sin enlace).
+        $html = preg_replace_callback(
+            '#<a\b[^>]*href\s*=\s*["\']' . $q . '["\'][^>]*>(.*?)</a>#is',
+            static fn ($m) => trim(strip_tags((string) $m[1])),
+            $html,
+            1,
+        );
+
+        // 2) Primera ocurrencia en texto plano (incluye el texto del ancla anterior).
+        $html = preg_replace('#' . $q . '#', '', (string) $html, 1);
+
+        // 3) Limpieza de espacios y saltos/parrafos vacíos sobrantes.
+        $html = preg_replace('/[ \t]{2,}/', ' ', (string) $html);
+        $html = preg_replace('#\s+</p>#i', '</p>', (string) $html);
+        $html = preg_replace('#<p>\s+#i', '<p>', (string) $html);
+        $html = preg_replace('#(?:<br\s*/?>\s*){3,}#i', '<br><br>', (string) $html);
+        $html = preg_replace('#<p>\s*(<br\s*/?>)?\s*</p>#i', '', (string) $html);
+
+        $html = trim((string) $html);
+
+        return $html === '' ? null : $html;
+    }
+
+    /**
+     * @param array<string, string> $encontradas clave = URL (dedupe)
+     */
+    private function agregarUrl(array &$encontradas, string $url): void
+    {
+        $url = rtrim(trim($url), ".,;:!?)\"'");
+        if ($url === '' || mb_strlen($url) > 255) {
+            return;
+        }
+
+        $esquema = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        if (! in_array($esquema, ['http', 'https'], true) || ! filter_var($url, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        $encontradas[$url] = $url;
+    }
 }

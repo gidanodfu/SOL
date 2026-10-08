@@ -222,6 +222,18 @@ class ActividadService
         // texto visible (10.000), no sobre las etiquetas.
         $datos['descripcion'] = $this->html->limpiar($datos['descripcion'] ?? null);
 
+        // Si el contenido del editor incluye una URL y el campo "enlace" viene
+        // vacío, se promueve la primera URL válida al campo y se ELIMINA solo esa
+        // URL del contenido (el resto se conserva). Un valor manual introducido
+        // por el administrador SIEMPRE tiene prioridad (no se toca el contenido).
+        if (empty($datos['enlace'])) {
+            $urls = $this->html->extraerUrls($datos['descripcion'] ?? null);
+            if (! empty($urls[0])) {
+                $datos['enlace'] = $urls[0];
+                $datos['descripcion'] = $this->html->limpiar($this->html->removerUrl($datos['descripcion'], $urls[0]));
+            }
+        }
+
         Validador::validar($datos, [
             'tipo'         => ['required', 'enum:' . implode(',', self::TIPOS)],
             'nombre'       => ['required', 'max:200'],

@@ -33,7 +33,6 @@ async function copiarTexto(texto) {
 
 export default function SolicitudesEmpresa() {
   const queryClient = useQueryClient();
-  const toast = useToast();
   const [filtro, setFiltro] = useState('');
   const [q, setQ] = useState('');
   const [seleccionada, setSeleccionada] = useState(null);
