@@ -8,6 +8,7 @@ import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import ImagenUploader from '../../components/ImagenUploader';
+import ActivityImage from '../../components/ActivityImage';
 import { useToast } from '../../components/Feedbacks';
 import { CalendarDays, ExternalLink, Pencil } from 'lucide-react';
 import {
@@ -94,7 +95,7 @@ export default function Actividades() {
                 </>
               )}
             >
-              {a.imagen_url && <img className="imagen-mini" src={urlArchivo(a.imagen_url)} alt="" />}
+              <ActivityImage variante="thumb" src={urlArchivo(a.imagen_url)} alt={`Imagen de la actividad ${a.nombre}`} />
               {a.descripcion && (
                 <ContenidoEnriquecido className="contenido-resumen">{a.descripcion}</ContenidoEnriquecido>
               )}
@@ -168,9 +169,7 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
 
       <Mensaje>{error}</Mensaje>
 
-      {actividad.imagen_url && (
-        <img className="imagen-actividad" src={urlArchivo(actividad.imagen_url)} alt={actividad.nombre} />
-      )}
+      <ActivityImage src={urlArchivo(actividad.imagen_url)} alt={`Imagen de la actividad ${actividad.nombre}`} expandible />
 
       <FichaDatos
         items={[
@@ -357,9 +356,6 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
             <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
             <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
           </div>
-          <div className="form-actividad-fila">
-            <Campo etiqueta="Enlace (URL de la convocatoria)" value={form.enlace} onChange={set('enlace')} />
-          </div>
         </div>
       </div>
 
@@ -375,6 +371,10 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
 
       <div className="form-seccion">
         <span className="form-seccion-titulo">Descripción</span>
+        <p className="form-seccion-nota">
+          Enlace de convocatoria: si incluyes una URL en la descripción, el sistema la
+          detectará automáticamente y la utilizará como enlace de la actividad.
+        </p>
         <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
           <EditorTextoEnriquecido
             etiqueta=""

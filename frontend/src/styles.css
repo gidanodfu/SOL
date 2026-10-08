@@ -1687,9 +1687,72 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .emp-modal-cabecera { display: flex; justify-content: center; margin-bottom: 14px; }
 
 /* =====================================================================
-   Tarjetas de gráfico (donas) — compartidas por empresa y postulante.
+   Sistema de dashboard compartido (Admin / Empresa / Postulante).
+   `.chart-card` es la primitive de tarjeta; aquí van bar charts, listas de
+   métricas, actividad y acciones. Sin colores hardcodeados (tokens).
    ===================================================================== */
-/* ---------- Tarjetas de gráfico (donas) ---------- */
+.dash-head-accion { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dash-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 20px; align-items: start; margin-bottom: 20px; }
+.dash-layout--50 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dash-layout > * { min-width: 0; }
+/* Pila vertical de tarjetas dentro de una columna del dashboard. */
+.dash-col { display: grid; gap: 20px; align-content: start; }
+
+/* Barras verticales (series por periodo) */
+.dash-bars { display: flex; align-items: flex-end; height: 200px; gap: 10px; border-bottom: 1px solid var(--line); padding: 0 6px; }
+.dash-bar-col { flex: 1; min-width: 18px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.dash-bar { width: 100%; max-width: 42px; border-radius: 5px 5px 0 0; background: var(--blue); min-height: 2px; }
+.dash-bar.is-empty { background: var(--line); }
+.dash-months { display: flex; justify-content: space-around; gap: 10px; padding-top: 8px; color: var(--text-3); font-size: 11px; }
+.dash-months span { flex: 1; text-align: center; }
+
+/* Distribuciones (fila: etiqueta + barra + valor) */
+.dash-rows { display: flex; flex-direction: column; gap: 14px; }
+.dash-row { display: grid; grid-template-columns: minmax(100px, 160px) 1fr 40px; align-items: center; gap: 12px; }
+.dash-row-label { font-size: 12.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-track { height: 8px; background: var(--gray-bg); border-radius: var(--radius-pill); overflow: hidden; }
+.dash-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--blue); }
+.dash-row-value { font-size: 12.5px; font-weight: 600; text-align: right; color: var(--text-1); }
+
+/* Lista de métricas (sin gráfico) */
+.dash-metrics { display: flex; flex-direction: column; }
+.dash-metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.dash-metric:last-child { border-bottom: none; }
+.dash-metric-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dash-metric-icon { width: 34px; height: 34px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; background: var(--gray-bg); color: var(--text-1); flex: none; }
+.dash-metric-info strong { display: block; font-size: 12.5px; color: var(--ink); }
+.dash-metric-info small { font-size: 11px; color: var(--text-3); }
+.dash-metric-value { font-size: 13px; font-weight: 600; color: var(--text-1); }
+
+/* Actividad reciente */
+.dash-activity { display: flex; flex-direction: column; }
+.dash-activity-row { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.dash-activity-row:last-child { border-bottom: none; }
+.dash-activity-row.accionable { cursor: pointer; border-radius: var(--radius-md); }
+.dash-activity-row.accionable:hover { background: var(--sky); }
+.dash-activity-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--sky); color: var(--enlace); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none; }
+.dash-activity-main { flex: 1; min-width: 0; }
+.dash-activity-main strong { display: block; font-size: 13.5px; color: var(--ink); }
+.dash-activity-main small { font-size: 12px; color: var(--text-2); }
+.dash-activity-meta { text-align: right; flex: none; }
+.dash-activity-meta .fecha { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+
+/* Acciones rápidas */
+.dash-actions { display: flex; flex-direction: column; gap: 10px; }
+.dash-actions .btn { justify-content: flex-start; }
+
+@media (max-width: 1024px) {
+  .dash-layout, .dash-layout--50 { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .dash-row { grid-template-columns: minmax(84px, 120px) 1fr 34px; }
+  .dash-layout { gap: 16px; margin-bottom: 16px; }
+}
+
+/* =====================================================================
+   Tarjeta base compartida de los dashboards (`chart-card`). Los gráficos,
+   listas y acciones del sistema la usan como primitive visual.
+   ===================================================================== */
 .chart-card {
   background: var(--white);
   border-radius: var(--radius);
@@ -1699,43 +1762,6 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .chart-card-head { margin-bottom: 18px; }
 .chart-card-head h2 { font-size: 15px; font-weight: 600; margin: 0 0 3px; color: var(--ink); }
 .chart-card-head p { margin: 0; font-size: 12.5px; color: var(--text-3); }
-
-.chart-body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.donut {
-  width: 112px;
-  height: 112px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.donut-hole {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--white);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.donut-hole b { font-size: 19px; color: var(--ink); line-height: 1; }
-.donut-hole span { font-size: 10px; color: var(--text-3); margin-top: 2px; }
-
-.legend { flex: 1; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
-.legend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.legend-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.legend-name { font-size: 13px; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.legend-count { font-size: 13px; font-weight: 600; color: var(--text-1); flex-shrink: 0; }
-.legend-row.zero .legend-name, .app-empresa .legend-row.zero .legend-count { color: var(--text-3); }
-
-@media (max-width: 560px) {
-  .chart-body { flex-direction: column; align-items: flex-start; }
-  .legend { width: 100%; }
-}
 
 /* =====================================================================
    Registro seleccionable + modal de detalle (admin y empresa)
@@ -1972,7 +1998,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .contenido-enriquecido p { margin: 0 0 0.6rem; }
 .contenido-enriquecido p:last-child { margin-bottom: 0; }
 .contenido-enriquecido ul, .contenido-enriquecido ol { margin: 0 0 0.6rem; padding-left: 1.3rem; }
-.contenido-enriquecido a { color: var(--enlace); text-decoration: underline; }
+.contenido-enriquecido a, .texto-plano a { color: var(--enlace); text-decoration: underline; overflow-wrap: anywhere; }
+.contenido-enriquecido a:hover, .texto-plano a:hover { text-decoration: underline; }
+.contenido-enriquecido a:focus-visible, .texto-plano a:focus-visible { outline: 2px solid var(--enlace); outline-offset: 2px; border-radius: 2px; }
 .texto-plano { white-space: pre-wrap; margin: 0 0 0.7rem; overflow-wrap: anywhere; }
 .bloque-rte { margin-top: 10px; }
 .bloque-rte > b { display: block; margin-bottom: 4px; }
@@ -2084,23 +2112,53 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   .imagen-cargador { grid-template-columns: 1fr; }
 }
 .btn.deshabilitado { opacity: 0.7; pointer-events: none; }
-.imagen-actividad {
+/* Imagen de actividad: frame estable (aspect-ratio) + imagen completa (contain). */
+.activity-image {
   width: 100%;
-  max-height: 280px;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
+  aspect-ratio: 16 / 9;
+  background: var(--gray-bg);
   border: 1px solid var(--line);
-  margin-bottom: 12px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.imagen-mini {
-  width: 72px;
-  height: 52px;
-  object-fit: cover;
+.activity-image img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.activity-image.is-clickable { cursor: zoom-in; }
+.activity-image.is-clickable:focus-visible { outline: 2px solid var(--enlace); outline-offset: 2px; }
+/* Placeholder global de actividad sin imagen (mismo frame que la imagen real). */
+.activity-ph {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  text-align: center;
+}
+.activity-ph-icon {
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sky);
+  color: var(--enlace);
   border: 1px solid var(--line);
   flex: none;
-  margin-bottom: 8px;
 }
+.activity-ph-text { font-size: 12px; color: var(--text-3); }
+.activity-ph--thumb { padding: 0; gap: 0; color: var(--text-3); }
+@media (max-width: 560px) {
+  .activity-ph { gap: 6px; padding: 8px; }
+  .activity-ph-icon { width: 40px; height: 40px; }
+}
+.activity-image--thumb { width: 72px; aspect-ratio: 1 / 1; border-radius: var(--radius-md); margin-bottom: 8px; }
+.activity-image-full { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: var(--radius-md); }
 
 /* Sub-sección interna de un formulario (p. ej. imagen de la actividad) */
 .form-seccion { margin: 1rem 0; }
@@ -2110,6 +2168,13 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   font-weight: 600;
   color: var(--text-2);
   margin-bottom: 6px;
+}
+.form-seccion-nota {
+  display: block;
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 2px 0 10px;
+  line-height: 1.45;
 }
 /* Separador entre sub-secciones consecutivas del mismo formulario */
 .form-seccion + .form-seccion {
@@ -2133,23 +2198,6 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .content-card:hover { border-color: var(--blue); }
-
-.content-card-media {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  background: var(--sky);
-}
-.content-card-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: var(--sky);
-  color: var(--enlace);
-}
 
 .content-card-cab {
   display: flex;

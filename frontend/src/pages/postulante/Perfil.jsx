@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Briefcase, Clock3, FileCheck2, Search, Trash2 } from 'lucide-react';
 import {
@@ -11,7 +10,9 @@ import { Boton, Campo, Mensaje, Tarjeta, EstadoCarga } from '../../components/UI
 import PageHeader from '../../components/PageHeader';
 import CvUploader from '../../components/CvUploader';
 import StatCard from '../../components/StatCard';
-import DonutCard from '../../components/DonutCard';
+import DashboardGrid from '../../components/dashboard/DashboardGrid';
+import BarChartCard from '../../components/dashboard/BarChartCard';
+import QuickActionsCard from '../../components/dashboard/QuickActionsCard';
 import { useToast } from '../../components/Feedbacks';
 import { useAccion } from '../../hooks/useAccion';
 import { DONA_ESTADO_POSTULACION } from '../../constants';
@@ -218,6 +219,7 @@ function ActividadLaboral({ actividad }) {
   const postulaciones = actividad?.postulaciones || {};
   const total = actividad?.total_postulaciones ?? 0;
   const conCv = Boolean(actividad?.con_cv);
+  const estadoItems = DONA_ESTADO_POSTULACION.map((o) => ({ etiqueta: o.etiqueta, valor: postulaciones[o.estado] || 0, color: o.color }));
 
   return (
     <section className="perfil-actividad">
@@ -236,38 +238,22 @@ function ActividadLaboral({ actividad }) {
         />
       </div>
 
-      <div className="dash-grid">
-        {total > 0 ? (
-          <div className="dona-compacta">
-            <DonutCard
-              titulo="Estado de mis postulaciones"
-              descripcion="Distribución de tus postulaciones por etapa"
-              datos={postulaciones}
-              items={DONA_ESTADO_POSTULACION}
-              etiquetaTotal="Postulaciones"
-            />
-          </div>
-        ) : (
-          <Tarjeta titulo="Estado de mis postulaciones">
-            <div className="empty-card">
-              <FileCheck2 size={28} aria-hidden="true" />
-              <p>No tienes postulaciones todavía. Explora las ofertas publicadas y postúlate.</p>
-            </div>
-          </Tarjeta>
-        )}
+      <DashboardGrid equal>
+        <BarChartCard
+          titulo="Estado de mis postulaciones"
+          descripcion="Distribución de tus postulaciones por etapa"
+          items={estadoItems}
+          vacio="No tienes postulaciones todavía. Explora las ofertas publicadas y postúlate."
+        />
 
-        <Tarjeta titulo="Acciones rápidas">
-          <p className="tarjeta-sub">Accesos frecuentes para gestionar tu búsqueda de empleo.</p>
-          <div className="dash-acciones">
-            <Link className="btn btn-primario" to="/postulante/buscar">
-              <Search size={17} aria-hidden="true" />Buscar empleo
-            </Link>
-            <Link className="btn btn-gris" to="/postulante/postulaciones">
-              <FileCheck2 size={17} aria-hidden="true" />Mis postulaciones
-            </Link>
-          </div>
-        </Tarjeta>
-      </div>
+        <QuickActionsCard
+          descripcion="Accesos frecuentes para gestionar tu búsqueda de empleo."
+          acciones={[
+            { to: '/postulante/buscar', texto: 'Buscar empleo', icono: <Search size={17} aria-hidden="true" />, variante: 'primario' },
+            { to: '/postulante/postulaciones', texto: 'Mis postulaciones', icono: <FileCheck2 size={17} aria-hidden="true" />, variante: 'gris' },
+          ]}
+        />
+      </DashboardGrid>
     </section>
   );
 }

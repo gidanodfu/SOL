@@ -48,47 +48,6 @@
   margin-bottom: 22px;
 }
 
-/* ---------- Dashboard: actividad + estado de ofertas, y postulaciones debajo --- */
-.app-empresa .dash-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: 22px;
-  align-items: start;
-  margin-bottom: 22px;
-}
-.app-empresa .dash-grid > * { margin-bottom: 0; }
-/* Columna derecha: "Mis ofertas" + "Postulaciones" apiladas, mismo ancho,
-   borde, radio y padding (son el mismo componente DonutCard/chart-card). */
-.app-empresa .dash-col { display: grid; gap: 22px; align-content: start; }
-
-/* ---------- Filas de actividad (app-*) ---------- */
-.app-empresa .app-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 4px;
-  border-bottom: 1px solid var(--line);
-}
-.app-empresa .app-row:last-of-type { border-bottom: none; }
-.app-empresa .app-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--sky-2);
-  color: var(--enlace);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.app-empresa .app-main { flex: 1; min-width: 0; }
-.app-empresa .app-main .job { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.app-empresa .app-main .who { font-size: 12.5px; color: var(--text-2); margin-top: 1px; }
-.app-empresa .app-meta { text-align: right; flex-shrink: 0; }
-.app-empresa .app-meta .date { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
-
 /* ---------- Filtros de la bandeja de postulaciones ---------- */
 .app-empresa .post-filtros {
   display: grid;
@@ -156,9 +115,6 @@
   /* Cinco KPI en 3 columnas (última fila 3 + 2, sin tarjeta sola). */
   .app-empresa .kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-@media (max-width: 1020px) {
-  .app-empresa .dash-grid { grid-template-columns: 1fr; }
-}
 @media (max-width: 860px) {
   /* Panel móvil superpuesto (reglas generales en styles.css). */
   .app-empresa .sidebar { position: fixed; }
@@ -181,8 +137,6 @@
 
   /* Menos aire vertical entre bloques en móvil. */
   .app-empresa .filters { margin-bottom: 16px; }
-  .app-empresa .dash-grid { gap: 16px; margin-bottom: 16px; }
-  .app-empresa .dash-col { gap: 16px; }
 
   /* Cinco KPI en 2 columnas; el quinto (impar) ocupa la fila completa. */
   .app-empresa .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -198,6 +152,4 @@
   .app-empresa .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   /* Un KPI impar ocupa la fila completa en lugar de dejar un hueco. */
   .app-empresa .kpi-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .app-empresa .app-row { align-items: flex-start; }
-  .app-empresa .app-meta { text-align: left; }
 }

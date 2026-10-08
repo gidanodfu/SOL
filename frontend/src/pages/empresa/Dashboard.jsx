@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardEmpresa, exportarReporteEmpresa } from '../../services/empresas';
 import { listarContratacionesEmpresa } from '../../services/contrataciones';
@@ -8,7 +8,9 @@ import { Mensaje, EstadoCarga } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import FiltroPeriodo from '../../components/FiltroPeriodo';
-import DonutCard from '../../components/DonutCard';
+import DashboardGrid from '../../components/dashboard/DashboardGrid';
+import ActivityCard from '../../components/dashboard/ActivityCard';
+import BarChartCard from '../../components/dashboard/BarChartCard';
 import { DONA_ESTADO_POSTULACION } from '../../constants';
 import { errorApi, fechaHora } from '../../utils';
 
@@ -57,6 +59,9 @@ export default function Dashboard() {
   const totalPostulaciones = Object.values(postulaciones).reduce((suma, n) => suma + n, 0);
   const contratosPeriodo = (contratos || []).length;
   const pendientes = data?.pendientes_recientes || [];
+
+  const ofertasItems = OFERTAS_DONA.map((o) => ({ etiqueta: o.etiqueta, valor: data?.ofertas?.[o.estado] || 0, color: o.color }));
+  const postulacionesItems = DONA_ESTADO_POSTULACION.map((o) => ({ etiqueta: o.etiqueta, valor: postulaciones[o.estado] || 0, color: o.color }));
 
   const aplicar = () => {
     setMensajeExito(null);
@@ -136,46 +141,28 @@ export default function Dashboard() {
             <p className="vacio">Sin actividad registrada en el periodo seleccionado.</p>
           )}
 
-          {/* Nivel operativo: Actividad reciente (izquierda) y, en la columna
-              derecha, Mis ofertas + Postulaciones apiladas (mismo ancho/estilo). */}
-          <div className="dash-grid">
-            <section className="list-card">
-              <div className="list-card-head">
-                <h2>Actividad reciente</h2>
-                <Link to="/empresa/postulaciones" className="see-all">
-                  Ver todas<i className="ti ti-arrow-right" />
-                </Link>
-              </div>
-
-              {pendientes.length === 0 ? (
-                <div className="empty-card">
-                  <i className="ti ti-circle-check" />
-                  <p>No hay postulaciones pendientes por revisar.</p>
-                </div>
-              ) : (
-                <div>
-                  {pendientes.slice(0, 5).map((p) => (
-                    <div className="app-row" key={p.id}>
-                      <div className="app-avatar">{iniciales(`${p.nombres} ${p.apellidos}`)}</div>
-                      <div className="app-main">
-                        <div className="job">{p.puesto}</div>
-                        <div className="who">{p.nombres} {p.apellidos}</div>
-                      </div>
-                      <div className="app-meta">
-                        <div className="date">{fechaHora(p.fecha_postulacion)}</div>
-                        <span className="badge badge-amber">Pendiente</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+          {/* Sistema de dashboard compartido: actividad (principal) + charts. */}
+          <DashboardGrid>
+            <ActivityCard
+              titulo="Actividad reciente"
+              verTodas={{ to: '/empresa/postulaciones' }}
+              items={pendientes.slice(0, 5).map((p) => ({
+                key: p.id,
+                avatar: iniciales(`${p.nombres} ${p.apellidos}`),
+                titulo: p.puesto,
+                sub: `${p.nombres} ${p.apellidos}`,
+                fecha: fechaHora(p.fecha_postulacion),
+                badge: 'Pendiente',
+                badgeClase: 'badge-amber',
+              }))}
+              vacioTexto="No hay postulaciones pendientes por revisar."
+            />
 
             <div className="dash-col">
-              <DonutCard titulo="Mis ofertas" descripcion="Estado actual de tus ofertas" datos={data.ofertas} items={OFERTAS_DONA} />
-              <DonutCard titulo="Postulaciones" descripcion="En qué etapa están tus candidatos" datos={postulaciones} items={DONA_ESTADO_POSTULACION} />
+              <BarChartCard titulo="Mis ofertas" descripcion="Estado actual de tus ofertas" items={ofertasItems} />
+              <BarChartCard titulo="Postulaciones" descripcion="En qué etapa están tus candidatos" items={postulacionesItems} />
             </div>
-          </div>
+          </DashboardGrid>
         </>
       )}
     </div>
