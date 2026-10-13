@@ -40,6 +40,7 @@ export default function EditorTextoEnriquecido({
   etiqueta,
   valor,
   onChange,
+  error,
   placeholder = 'Escribe aquí…',
   max = TEXTO_MAX,
   aviso = TEXTO_AVISO,
@@ -195,7 +196,7 @@ export default function EditorTextoEnriquecido({
   const cercaDelLimite = !superaLimite && vista.caracteres >= aviso;
 
   return (
-    <div className="rte">
+    <div className={`rte${error ? ' rte-error' : ''}`}>
       {etiqueta && <span className="rte-etiqueta">{etiqueta}</span>}
 
       <div className="rte-caja">
@@ -248,6 +249,7 @@ export default function EditorTextoEnriquecido({
       {superaLimite && (
         <span className="rte-mensaje excedido">Superaste el límite de {max} caracteres de texto; reduce el contenido para guardar.</span>
       )}
+      {error && <span className="rte-mensaje excedido" role="alert">{error}</span>}
     </div>
   );
 }

@@ -48,8 +48,7 @@ final class ValidadorTest extends TestCase
     }
 
     public function testCorreoInvalido(): void
-    {
-        try {
+    {        try {
             Validador::validar(['email' => 'no-es-correo'], ['email' => ['email']]);
             $this->fail('Debió lanzar ApiException.');
         } catch (ApiException $e) {
@@ -80,5 +79,32 @@ final class ValidadorTest extends TestCase
             ['password' => 'ClaveSegura1', 'password2' => 'OtraClave1'],
             ['password2' => ['igual:password']],
         );
+    }
+
+    public function testEspaciosCuentanComoVacioEnObligatorio(): void
+    {
+        foreach (['', '   ', "\t\n "] as $soloEspacios) {
+            try {
+                Validador::validar(['puesto' => $soloEspacios], ['puesto' => ['required', 'max:150']]);
+                $this->fail('Un obligatorio con solo espacios debió ser rechazado.');
+            } catch (ApiException $e) {
+                $this->assertSame(422, $e->getHttpCode());
+            }
+        }
+
+        // Texto real (con espacios alrededor) sigue siendo válido.
+        Validador::validar(['puesto' => '  Analista  '], ['puesto' => ['required', 'max:150']]);
+    }
+
+    public function testEspaciosNoDisparanReglasDeFormatoEnCamposOpcionales(): void
+    {
+        // Un opcional con solo espacios se trata como vacío: no evalúa 'email'.
+        $valido = true;
+        try {
+            Validador::validar(['email' => '   '], ['email' => ['email']]);
+        } catch (ApiException) {
+            $valido = false;
+        }
+        $this->assertTrue($valido, 'Un campo opcional con solo espacios no debe evaluarse como formato.');
     }
 }

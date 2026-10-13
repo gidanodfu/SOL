@@ -39,8 +39,11 @@ class PostulanteRepository
         $postulante['telefono'] = $postulante['telefono'] ?: ($postulante['user_telefono'] ?? null);
 
         // La clave interna de la foto no se expone; se entrega la URL del proxy.
+        // El `v` (hash corto de la clave, no la clave) invalida la caché del
+        // navegador cuando la foto cambia, sin exponer datos internos: el proxy
+        // responde con Cache-Control y la URL sería idéntica si no cambiara.
         $postulante['foto_url'] = ! empty($postulante['foto_key'])
-            ? '/api/postulantes/' . $postulante['id'] . '/foto'
+            ? '/api/postulantes/' . $postulante['id'] . '/foto?v=' . substr(sha1((string) $postulante['foto_key']), 0, 10)
             : null;
         unset($postulante['foto_key']);
 

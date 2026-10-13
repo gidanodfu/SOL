@@ -80,11 +80,11 @@ final class Validador
             $etiqueta = ucfirst(str_replace('_', ' ', $campo));
 
             foreach ($reglasCampo as $regla) {
-                if ($regla === 'required' && ($valor === null || $valor === '')) {
+                if ($regla === 'required' && self::esVacio($valor)) {
                     $errores[$campo] = "El campo {$etiqueta} es obligatorio.";
                     break;
                 }
-                if ($valor === null || $valor === '') {
+                if (self::esVacio($valor)) {
                     continue;
                 }
 
@@ -154,5 +154,17 @@ final class Validador
         if ($errores !== []) {
             throw ApiException::validacion('Hay errores en los datos enviados.', array_values($errores));
         }
+    }
+
+    /**
+     * Vacío a efectos de validación: null o cadena compuesta solo por espacios.
+     * Así "   " se trata como vacío (p. ej. en `required`), sin tocar el
+     * contenido legítimo. Otros tipos (0, [], false) NO son vacíos.
+     *
+     * @param mixed $valor
+     */
+    private static function esVacio($valor): bool
+    {
+        return $valor === null || (is_string($valor) && trim($valor) === '');
     }
 }

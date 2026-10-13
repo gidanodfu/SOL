@@ -63,6 +63,14 @@ export const medirTextoEnriquecido = (html) => medirTexto(textoVisible(html));
 /** true si el texto visible supera el límite vigente (10.000 por defecto). */
 export const excedeLimiteTexto = (html, max = TEXTO_MAX) => medirTextoEnriquecido(html).caracteres > max;
 
+/**
+ * true si un contenido enriquecido no tiene texto significativo: "", espacios,
+ * "<p></p>" o "<p><br></p>". Usa el mismo criterio que `HtmlSanitizer::limpiar`
+ * del backend (texto visible sin etiquetas, comparado tras trim), de modo que el
+ * frontend no permite lo que el backend rechazaría.
+ */
+export const textoEnriquecidoVacio = (html) => textoVisible(html).trim() === '';
+
 export const fechaHora = (v) => (v ? new Date(v).toLocaleString('es-PE') : '—');
 export const fecha = (v) => (v ? new Date(v).toLocaleDateString('es-PE') : '—');
 

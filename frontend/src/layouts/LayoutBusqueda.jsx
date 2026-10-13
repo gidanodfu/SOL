@@ -38,7 +38,7 @@ function CabeceroPublico({ usuario }) {
 
   return (
     <div className="app-postulante">
-      <header className="post-header">
+      <header className="post-header post-header-publico">
         <Link to="/postulante/buscar" className="brand">
           <div className="brand-mark">
             {logoError ? 'EM' : <img src={LOGO_URL} alt="Logo MDJLO" onError={() => setLogoError(true)} />}
@@ -49,17 +49,21 @@ function CabeceroPublico({ usuario }) {
           </div>
         </Link>
 
-        <nav className="post-nav">
-          {NAV.map((item) => (
-            <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'active' : '')}>
-              <i className={item.icono} />
-              <span className="nav-text-full">{item.texto}</span>
-              <span className="nav-text-short">{item.corto}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <BotonTema />
+        {/* Zona central: navegación + cambio de tema como UNA sola unidad. Sin
+            agruparlos, el botón de tema sería un 4.º hijo y el grid lo empujaría
+            a una segunda fila accidental. */}
+        <div className="post-center">
+          <nav className="post-nav">
+            {NAV.map((item) => (
+              <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'active' : '')}>
+                <i className={item.icono} />
+                <span className="nav-text-full">{item.texto}</span>
+                <span className="nav-text-short">{item.corto}</span>
+              </NavLink>
+            ))}
+          </nav>
+          <BotonTema />
+        </div>
 
         {usuario ? (
           <div className="guest-actions">
