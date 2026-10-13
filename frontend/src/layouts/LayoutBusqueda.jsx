@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
 import BotonTema from '../components/BotonTema';
 import { ROLES } from '../constants';
 import { Cargando } from '../routes/Guardas';
 import { LayoutPostulante } from './LayoutPostulante';
-
-const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
-
-const NAV = [
-  { to: '/postulante/buscar', icono: 'ti ti-search', texto: 'Buscar empleo', corto: 'Buscar' },
-  { to: '/postulante/oportunidades', icono: 'ti ti-building-store', texto: 'Ferias y oportunidades', corto: 'Ferias' },
-];
+import { NavbarPostulante } from './NavbarPostulante';
 
 const panelPorRol = { [ROLES.ADMIN]: '/admin/dashboard', [ROLES.EMPRESA]: '/empresa/dashboard', [ROLES.POSTULANTE]: '/postulante/perfil' };
 
@@ -21,7 +14,7 @@ const panelPorRol = { [ROLES.ADMIN]: '/admin/dashboard', [ROLES.EMPRESA]: '/empr
  * Rutas públicas de bolsa de empleo: /postulante/buscar y /postulante/oportunidades
  * se pueden ver sin iniciar sesión. Si quien navega es un postulante autenticado se
  * muestra el mismo cabecero de postulante; en caso contrario un cabecero público con
- * acceso a iniciar sesión o registrarse.
+ * acceso a iniciar sesión o registrarse. Ambas variantes comparten NavbarPostulante.
  */
 export function LayoutBusqueda() {
   const { usuario, cargando } = useAuth();
@@ -34,36 +27,10 @@ export function LayoutBusqueda() {
 }
 
 function CabeceroPublico({ usuario }) {
-  const [logoError, setLogoError] = useState(false);
-
   return (
     <div className="app-postulante">
-      <header className="post-header post-header-publico">
-        <Link to="/postulante/buscar" className="brand">
-          <div className="brand-mark">
-            {logoError ? 'EM' : <img src={LOGO_URL} alt="Logo MDJLO" onError={() => setLogoError(true)} />}
-          </div>
-          <div className="brand-text">
-            <div className="name">Empleo MDJLO</div>
-            <div className="tag1">Sistema de intermediación laboral</div>
-          </div>
-        </Link>
-
-        {/* Zona central: navegación + cambio de tema como UNA sola unidad. Sin
-            agruparlos, el botón de tema sería un 4.º hijo y el grid lo empujaría
-            a una segunda fila accidental. */}
-        <div className="post-center">
-          <nav className="post-nav">
-            {NAV.map((item) => (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'active' : '')}>
-                <i className={item.icono} />
-                <span className="nav-text-full">{item.texto}</span>
-                <span className="nav-text-short">{item.corto}</span>
-              </NavLink>
-            ))}
-          </nav>
-          <BotonTema />
-        </div>
+      <NavbarPostulante>
+        <BotonTema />
 
         {usuario ? (
           <div className="guest-actions">
@@ -88,7 +55,7 @@ function CabeceroPublico({ usuario }) {
             </Link>
           </div>
         )}
-      </header>
+      </NavbarPostulante>
 
       <main className="post-main">
         <Outlet />
