@@ -73,12 +73,21 @@ src/
   renueva el token en `401` y redirige a `/login` si la sesión expiró.
 - **Metadescripciones**: `SeoMeta` actualiza `<title>` y `<meta name="description">` por
   ruta en el cliente (SPA sin SSR).
-- **Estado vacío del detalle de oferta** (`pages/postulante/BuscarEmpleo.jsx`, clases
-  `.panel-vacio` / `.panel-vacio-icono` en `postulante.css`): adaptación del componente
-  `Empty` de shadcn/ui (referencias: <https://ui.shadcn.com/docs/components/base/empty> y la
-  colección <https://21st.dev/community/components/explore/shadcn-empty-state>) al CSS propio
-  y a los tokens de Empleo MDJLO (`--sky`, `--blue`, `--ink`, `--text-2/3`). Compone icono
-  (`lucide-react` `Briefcase`) en contenedor suave + título + descripción + indicación, sin
-  dependencias nuevas (el proyecto **no** usa Tailwind ni shadcn). Cubre solo el caso "detalle
-  sin oferta seleccionada"; la carga inicial, el error de consulta y el "sin resultados" se
-  manejan por separado en la misma página.
+- **Estado vacío compuesto (`Empty`)**: `components/Empty.jsx` implementa, en JSX + CSS
+  propio, la composición del componente `Empty` de shadcn/ui (`Empty`, `EmptyHeader`,
+  `EmptyMedia`, `EmptyTitle`, `EmptyDescription`, `EmptyContent`). Referencias:
+  <https://ui.shadcn.com/docs/components/base/empty> y
+  <https://21st.dev/community/components/explore/shadcn-empty-state>. **Sin dependencias
+  nuevas** (el proyecto no usa Tailwind, shadcn, `class-variance-authority` ni el alias
+  `@/`). Los estilos viven en `styles.css` (clases `.empty`, `.empty-*`) y usan los tokens
+  del tema, por lo que respetan modo claro/oscuro y son reutilizables. `EmptyMedia
+  variant="icon"` omite a propósito las capas decorativas rotadas del original.
+  - Uso actual: panel **«Detalle de la oferta»** en
+    `pages/postulante/BuscarEmpleo.jsx` (icono `Briefcase` de `lucide-react` + título +
+    descripción + indicación), centrado por `.panel-caja-vacia` (`postulante.css`).
+  - Cubre solo el caso *detalle sin oferta seleccionada*. La **carga inicial**
+    (`Buscando ofertas…`), el **error** de consulta y el **sin resultados** se manejan por
+    separado en la misma página (`EstadoCarga`/`Mensaje`/`empty-note`) y no se sustituyen
+    por este estado vacío.
+  - Reutilización: para otro módulo, envolver el contenido con
+    `<Empty><EmptyHeader><EmptyMedia variant="icon">…</EmptyMedia><EmptyTitle>…</EmptyTitle><EmptyDescription>…</EmptyDescription></EmptyHeader><EmptyContent>…</EmptyContent></Empty>`.

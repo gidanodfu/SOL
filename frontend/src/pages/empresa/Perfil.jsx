@@ -57,14 +57,19 @@ export default function Perfil() {
           <div className="list-card-head">
             <h2>Datos de la empresa</h2>
           </div>
-          <div className="descripcion">
-            <div><b>RUC</b>{data.ruc}</div>
-            <div><b>Razón social</b>{data.razon_social}</div>
-            <div><b>Nombre comercial</b>{data.nombre_comercial || '—'}</div>
-            <div><b>Dirección</b>{data.direccion || '—'}</div>
-            <div><b>Representante</b>{data.representante || '—'}</div>
-            <div><b>Usuario</b>{data.username}</div>
-            <div><b>Estado</b>{data.estado === 'activo' ? 'Activa' : 'Inactiva'}</div>
+          {/* Foto de identidad (compacta) + datos en rejilla, patrón de la
+              tarjeta «Mi perfil laboral» del postulante. */}
+          <div className="empresa-perfil">
+            <FotoEmpresa data={data} />
+            <div className="descripcion">
+              <div><b>RUC</b>{data.ruc}</div>
+              <div><b>Razón social</b>{data.razon_social}</div>
+              <div><b>Nombre comercial</b>{data.nombre_comercial || '—'}</div>
+              <div><b>Dirección</b>{data.direccion || '—'}</div>
+              <div><b>Representante</b>{data.representante || '—'}</div>
+              <div><b>Usuario</b>{data.username}</div>
+              <div><b>Estado</b>{data.estado === 'activo' ? 'Activa' : 'Inactiva'}</div>
+            </div>
           </div>
         </div>
       )}
@@ -85,15 +90,14 @@ export default function Perfil() {
           <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar cambios</Boton>
         </div>
       )}
-
-      {data && <FotoEmpresa data={data} />}
     </div>
   );
 }
 
 /**
- * Foto de perfil de la empresa (única imagen de identidad). Reutiliza
- * ImagenUploader; el binario vive en Storage normalizado a 800x800.
+ * Foto de identidad de la empresa (única imagen). Bloque compacto que acompaña a
+ * los datos en la misma tarjeta; reutiliza ImagenUploader (variante compacta).
+ * El binario vive en Storage normalizado a 800x800.
  */
 function FotoEmpresa({ data }) {
   const queryClient = useQueryClient();
@@ -115,8 +119,10 @@ function FotoEmpresa({ data }) {
 
   return (
     <ImagenUploader
-      titulo="Foto de perfil de la empresa"
-      descripcion="Se muestra en la bolsa de empleo, en tu panel y en el detalle municipal."
+      variante="compacta"
+      variant="company"
+      nombre={data.razon_social}
+      alt={`Logotipo de ${data.razon_social || 'la empresa'}`}
       url={urlArchivo(data.logo_url)}
       cargando={cargando}
       onSubir={(f) => hacer(() => subirLogoEmpresa(f))}

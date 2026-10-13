@@ -153,3 +153,18 @@
   /* Un KPI impar ocupa la fila completa en lugar de dejar un hueco. */
   .app-empresa .kpi-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
+
+/* ---------- Perfil de la empresa: foto compacta + datos ---------- */
+/* La foto de identidad ocupa una columna estrecha y los datos aprovechan el
+   resto en la rejilla `.descripcion` (patrón de «Mi perfil laboral»). */
+.app-empresa .empresa-perfil {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 20px 26px;
+  align-items: start;
+}
+/* Tablet/móvil: la foto pasa encima y los datos debajo, sin forzar la rejilla. */
+@media (max-width: 860px) {
+  .app-empresa .empresa-perfil { grid-template-columns: 1fr; }
+  .app-empresa .empresa-perfil > .imagen-compacta { justify-self: center; }
+}
