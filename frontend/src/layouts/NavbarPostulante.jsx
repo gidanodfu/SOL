@@ -15,7 +15,8 @@ const NAV = [
 
 /**
  * Cabecera del portal del postulante, compartida por el visitante y el usuario
- * autenticado. Estructura única: logo · buscador · navegación · acciones.
+ * autenticado. Estructura única en una sola fila:
+ * logo + identidad · buscador · navegación · acciones.
  * Las acciones (visitante o menú de usuario) se inyectan como children, de modo
  * que ambas variantes comparten la composición y el buscador sin mezclar los
  * flujos de autenticación.
@@ -25,11 +26,15 @@ export function NavbarPostulante({ children }) {
 
   return (
     <header className="post-header">
-      <Link to="/postulante/buscar" className="brand" aria-label="Empleo MDJLO — inicio">
+      <Link to="/postulante/buscar" className="brand" aria-label="Empleo MDJLO — sistema de intermediación laboral">
         <span className="brand-mark">
           {logoError
             ? 'EM'
             : <img src={LOGO_URL} alt="Municipalidad Distrital de José Leonardo Ortiz" onError={() => setLogoError(true)} />}
+        </span>
+        <span className="brand-text">
+          <span className="name">Empleo MDJLO</span>
+          <span className="tag1">Sistema de intermediación laboral</span>
         </span>
       </Link>
 
