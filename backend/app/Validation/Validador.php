@@ -126,6 +126,16 @@ final class Validador
                         $errores[$campo] = "El campo {$etiqueta} no debe superar " . substr($regla, 10) . ' caracteres de texto.';
                         break 2;
 
+                    // URL http(s) válida y segura (sin esquemas peligrosos).
+                    case $regla === 'url' && ! self::esUrlHttps((string) $valor):
+                        $errores[$campo] = "El campo {$etiqueta} debe ser una URL válida con http o https.";
+                        break 2;
+
+                    // URL cuyo host debe ser el dominio indicado o un subdominio suyo.
+                    case str_starts_with($regla, 'url_dominio:') && ! self::dominioPermitido((string) $valor, substr($regla, 12)):
+                        $errores[$campo] = "El campo {$etiqueta} debe ser un enlace de la red social correspondiente.";
+                        break 2;
+
                     case str_starts_with($regla, 'regex:'):
                         if (preg_match(substr($regla, 6), (string) $valor) !== 1) {
                             $errores[$campo] = "El campo {$etiqueta} no tiene un formato válido.";
@@ -166,5 +176,53 @@ final class Validador
     private static function esVacio($valor): bool
     {
         return $valor === null || (is_string($valor) && trim($valor) === '');
+    }
+
+    /**
+     * URL absoluta http(s) válida y de longitud razonable. Rechaza esquemas
+     * peligrosos (javascript:, data:, file:) y valores que no son URL.
+     */
+    public static function esUrlHttps(string $valor): bool
+    {
+        if ($valor === '' || mb_strlen($valor) > 255) {
+            return false;
+        }
+
+        $esquema = strtolower((string) parse_url($valor, PHP_URL_SCHEME));
+        if (! in_array($esquema, ['http', 'https'], true)) {
+            return false;
+        }
+
+        return filter_var($valor, FILTER_VALIDATE_URL) !== false;
+    }
+
+    /**
+     * Comprueba que la URL sea http(s) y que su host sea exactamente uno de los
+     * dominios indicados (CSV) o un subdominio legítimo suyo. Compara sobre el
+     * host real, no sobre el texto, de modo que "instagram.com.ejemplo.com" no
+     * se acepta para el dominio "instagram.com".
+     */
+    public static function dominioPermitido(string $valor, string $dominios): bool
+    {
+        if (! self::esUrlHttps($valor)) {
+            return false;
+        }
+
+        $host = strtolower((string) parse_url($valor, PHP_URL_HOST));
+        if ($host === '') {
+            return false;
+        }
+
+        foreach (explode(',', $dominios) as $dominio) {
+            $dominio = strtolower(trim($dominio));
+            if ($dominio === '') {
+                continue;
+            }
+            if ($host === $dominio || str_ends_with($host, '.' . $dominio)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

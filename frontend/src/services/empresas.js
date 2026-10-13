@@ -10,6 +10,9 @@ export const resetPasswordEmpresa = (id, password) => api.put(`/admin/empresas/$
 
 export const perfilEmpresa = () => api.get('/empresa/perfil').then((r) => r.data.data);
 export const actualizarPerfilEmpresa = (datos) => api.put('/empresa/perfil', datos).then((r) => r.data.data);
+/* Presencia digital (sitio web y redes) en endpoint propio: no comparte payload
+   con "datos de contacto" para que uno no sobrescriba al otro. */
+export const actualizarPresenciaEmpresa = (datos) => api.put('/empresa/perfil/presencia', datos).then((r) => r.data.data);
 
 /* Foto de perfil de la propia empresa (logo). El binario vive en Storage. */
 export const subirLogoEmpresa = (archivo) => {

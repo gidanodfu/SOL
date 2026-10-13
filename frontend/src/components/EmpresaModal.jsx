@@ -2,18 +2,17 @@
 import Modal from './Modal';
 import FichaDatos from './FichaDatos';
 import ProfileImage from './ProfileImage';
+import PresenciaDigital from './RedesSociales';
 import { urlArchivo } from '../utils';
 
 /**
  * Modal único de información de empresa (reutilizado en "Buscar empleo" y en
- * "Mis postulaciones"). Muestra solo información empresarial pública:
- * foto, nombre comercial, razón social, RUC, ubicación, contacto y antigüedad.
- * No navega a otra página.
+ * "Mis postulaciones"). Muestra solo información empresarial pública: foto,
+ * nombre comercial, razón social, RUC, ubicación, antigüedad y presencia digital.
+ * Por privacidad NO incluye teléfono ni correo (el backend tampoco los entrega
+ * al rol postulante). No navega a otra página.
  */
 export default function EmpresaModal({ empresa, onCerrar }) {
-  const telefono = empresa?.telefono ?? empresa?.empresa_telefono;
-  const correo = empresa?.email ?? empresa?.empresa_email;
-
   return (
     <Modal
       abierto={Boolean(empresa)}
@@ -39,11 +38,10 @@ export default function EmpresaModal({ empresa, onCerrar }) {
               { etiqueta: 'Razón social', valor: empresa.razon_social },
               { etiqueta: 'RUC', valor: empresa.ruc },
               { etiqueta: 'Ubicación', valor: empresa.direccion },
-              { etiqueta: 'Teléfono', valor: telefono },
-              { etiqueta: 'Correo', valor: correo },
               { etiqueta: 'Antigüedad en la plataforma', valor: empresa.antiguedad },
             ]}
           />
+          <PresenciaDigital datos={empresa} />
           {empresa.info_adicional && (
             <div className="modal-seccion">
               <h3>Información adicional</h3>

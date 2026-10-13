@@ -2,20 +2,26 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  actualizarPerfilEmpresa, eliminarLogoEmpresa, perfilEmpresa, subirLogoEmpresa,
+  actualizarPerfilEmpresa, actualizarPresenciaEmpresa, eliminarLogoEmpresa, perfilEmpresa, subirLogoEmpresa,
 } from '../../services/empresas';
 import { EstadoCarga, Boton, Campo, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import ImagenUploader from '../../components/ImagenUploader';
+import { CAMPOS_PRESENCIA } from '../../components/RedesSociales';
 import { useToast } from '../../components/Feedbacks';
 import { useAccion } from '../../hooks/useAccion';
-import { errorApi, esTelefonoValido, soloDigitos, urlArchivo } from '../../utils';
+import { dominioPermitido, errorApi, esEnlaceSeguro, esTelefonoValido, soloDigitos, urlArchivo } from '../../utils';
 
 export default function Perfil() {
   const { data, isLoading } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa });
   const [form, setForm] = useState(null);
+  const [presencia, setPresencia] = useState(null);
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { ejecutar, enviando, error, setError } = useAccion(() => actualizarPerfilEmpresa(form));
+  const {
+    ejecutar: guardarPresencia, enviando: guardandoPresencia, error: errorPresencia, setError: setErrorPresencia,
+  } = useAccion(() => actualizarPresenciaEmpresa(presencia));
 
   useEffect(() => {
     if (data) setForm({
@@ -24,6 +30,18 @@ export default function Perfil() {
       telefono: data.telefono || '',
       email: data.email || '',
       representante: data.representante || '',
+    });
+  }, [data]);
+
+  // Presencia digital (sitio web y redes) en su propio estado: su guardado no
+  // comparte payload con los datos de contacto.
+  useEffect(() => {
+    if (data) setPresencia({
+      website_url: data.website_url || '',
+      instagram_url: data.instagram_url || '',
+      facebook_url: data.facebook_url || '',
+      tiktok_url: data.tiktok_url || '',
+      x_url: data.x_url || '',
     });
   }, [data]);
 
@@ -38,6 +56,39 @@ export default function Perfil() {
       await ejecutar();
       queryClient.invalidateQueries({ queryKey: ['perfil-empresa'] });
       setError(null);
+    } catch {
+      // El error se muestra a través de useAccion.
+    }
+  };
+
+  const guardarPresenciaDigital = async () => {
+    const dominiosPorCampo = {
+      website_url: null,
+      instagram_url: ['instagram.com'],
+      facebook_url: ['facebook.com', 'fb.com'],
+      tiktok_url: ['tiktok.com'],
+      x_url: ['x.com', 'twitter.com'],
+    };
+
+    for (const { clave, etiqueta } of CAMPOS_PRESENCIA) {
+      const valor = (presencia[clave] || '').trim();
+      if (valor === '') continue;
+      if (!esEnlaceSeguro(valor)) {
+        setErrorPresencia(`${etiqueta}: usa una URL completa que empiece por https://`);
+        return;
+      }
+      const dominios = dominiosPorCampo[clave];
+      if (dominios && !dominioPermitido(valor, dominios)) {
+        setErrorPresencia(`${etiqueta}: el enlace no corresponde a un dominio válido de esa red.`);
+        return;
+      }
+    }
+
+    try {
+      await guardarPresencia();
+      queryClient.invalidateQueries({ queryKey: ['perfil-empresa'] });
+      setErrorPresencia(null);
+      toast.success('Presencia digital actualizada.');
     } catch {
       // El error se muestra a través de useAccion.
     }
@@ -88,6 +139,33 @@ export default function Perfil() {
             <Campo etiqueta="Correo electrónico" type="email" value={form.email} onChange={set('email')} />
           </div>
           <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar cambios</Boton>
+        </div>
+      )}
+
+      {presencia && (
+        <div className="list-card">
+          <div className="list-card-head">
+            <h2>Presencia digital</h2>
+          </div>
+          <p className="tarjeta-sub">
+            Agrega el sitio web y las redes sociales de tu empresa para que los postulantes conozcan mejor tu organización.
+          </p>
+          <Mensaje>{errorPresencia}</Mensaje>
+          <div className="form-malla">
+            {CAMPOS_PRESENCIA.map(({ clave, etiqueta, placeholder }) => (
+              <Campo
+                key={clave}
+                etiqueta={etiqueta}
+                type="url"
+                placeholder={placeholder}
+                value={presencia[clave]}
+                onChange={(e) => setPresencia({ ...presencia, [clave]: e.target.value })}
+              />
+            ))}
+          </div>
+          <Boton variante="primario" cargando={guardandoPresencia} onClick={guardarPresenciaDigital}>
+            Guardar presencia digital
+          </Boton>
         </div>
       )}
     </div>

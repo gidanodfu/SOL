@@ -375,6 +375,37 @@ class EmpresaService
     }
 
     /**
+     * Presencia digital de la propia empresa (sitio web y redes sociales).
+     * Endpoint independiente del de contacto para que ninguno sobrescriba al
+     * otro por enviar objetos parciales. Todos los campos son opcionales.
+     *
+     * @param array<string, mixed> $datos
+     */
+    public function actualizarPresencia(int $userId, array $datos): void
+    {
+        $empresa = $this->exigirPropia($userId);
+
+        Validador::validar($datos, [
+            'website_url'   => ['max:255', 'url'],
+            // Dominios oficiales (o subdominios legítimos) por red.
+            'instagram_url' => ['max:255', 'url_dominio:instagram.com'],
+            'facebook_url'  => ['max:255', 'url_dominio:facebook.com,fb.com'],
+            'tiktok_url'    => ['max:255', 'url_dominio:tiktok.com'],
+            'x_url'         => ['max:255', 'url_dominio:x.com,twitter.com'],
+        ]);
+
+        $limpiar = static fn ($v): ?string => (is_string($v) && trim($v) !== '') ? trim($v) : null;
+
+        $this->empresas->update((int) $empresa['id'], [
+            'website_url'   => $limpiar($datos['website_url'] ?? null),
+            'instagram_url' => $limpiar($datos['instagram_url'] ?? null),
+            'facebook_url'  => $limpiar($datos['facebook_url'] ?? null),
+            'tiktok_url'    => $limpiar($datos['tiktok_url'] ?? null),
+            'x_url'         => $limpiar($datos['x_url'] ?? null),
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function exigirExistente(int $id): array

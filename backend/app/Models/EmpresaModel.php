@@ -18,5 +18,6 @@ class EmpresaModel extends Model
         'user_id', 'ruc', 'razon_social', 'nombre_comercial', 'direccion',
         'telefono', 'email', 'representante', 'info_adicional',
         'evaluacion_presencial', 'estado', 'logo_key',
+        'website_url', 'instagram_url', 'facebook_url', 'tiktok_url', 'x_url',
     ];
 }

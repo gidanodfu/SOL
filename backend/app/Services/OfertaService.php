@@ -91,12 +91,23 @@ class OfertaService
             'logo_url'         => ! empty($fila['empresa_logo_key']) ? '/api/empresas/' . $empresaId . '/logo' : null,
             'fecha_alta'       => $fila['empresa_created_at'] ?? null,
             'antiguedad'       => AntiguedadService::texto($fila['empresa_created_at'] ?? null),
+            // Presencia digital pública (el contacto privado no se incluye).
+            'website_url'      => $fila['empresa_website_url'] ?? null,
+            'instagram_url'    => $fila['empresa_instagram_url'] ?? null,
+            'facebook_url'     => $fila['empresa_facebook_url'] ?? null,
+            'tiktok_url'       => $fila['empresa_tiktok_url'] ?? null,
+            'x_url'            => $fila['empresa_x_url'] ?? null,
         ];
         unset(
             $fila['empresa_nombre_comercial'],
             $fila['empresa_direccion'],
             $fila['empresa_created_at'],
             $fila['empresa_logo_key'],
+            $fila['empresa_website_url'],
+            $fila['empresa_instagram_url'],
+            $fila['empresa_facebook_url'],
+            $fila['empresa_tiktok_url'],
+            $fila['empresa_x_url'],
         );
 
         return $fila;

@@ -6,6 +6,7 @@ import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjet
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ProfileImage from '../../components/ProfileImage';
+import PresenciaDigital from '../../components/RedesSociales';
 import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, KeyRound, Power } from 'lucide-react';
 import { errorApi, fecha, fechaCalendario, soloDigitos, urlArchivo } from '../../utils';
@@ -246,6 +247,8 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
           { etiqueta: 'Antigüedad en la plataforma', valor: empresa.antiguedad },
         ]}
       />
+
+      <PresenciaDigital datos={empresa} />
 
       {empresa.info_adicional && (
         <div className="modal-seccion">

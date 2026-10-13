@@ -34,6 +34,15 @@ MySQL es la fuente de verdad.
   (ENUM); no existe tabla de roles. Auth JWT + refresh, filtros `jwt` y `rol:` por ruta;
   bloqueo inmediato al desactivar la cuenta. Un administrador **no puede desactivar su
   propia cuenta** (validado en backend y reflejado en la UI).
+- **Presencia digital de empresas**: la propia empresa configura sitio web e
+  Instagram/Facebook/TikTok/X desde `/empresa/perfil` (tarjeta «Presencia digital»,
+  `PUT /empresa/perfil/presencia`, separado del endpoint de datos de contacto para que uno
+  no sobrescriba al otro). Los enlaces se muestran (sitio web arriba, luego solo las redes
+  configuradas) en los modales de empresa de Postulante y Administración. Validación de URL
+  en cliente y servidor (solo `http(s)`; cada red exige su dominio oficial o un subdominio).
+  **Privacidad**: el teléfono y el correo de la empresa **no se entregan al rol
+  `postulante`** (se excluyen en el backend y no se muestran en su modal); el rol `admin`
+  sí los conserva.
 - **Auto-registro de empresas**: solicitud pública con RUC verificado en SUNAT
   (`sunat.token`); el admin aprueba/rechaza desde una bandeja y la cuenta se activa con un
   enlace de un solo uso (`/activar-cuenta`). El login usa el correo corporativo (el RUC

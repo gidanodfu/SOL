@@ -91,3 +91,20 @@ src/
     por este estado vacío.
   - Reutilización: para otro módulo, envolver el contenido con
     `<Empty><EmptyHeader><EmptyMedia variant="icon">…</EmptyMedia><EmptyTitle>…</EmptyTitle><EmptyDescription>…</EmptyDescription></EmptyHeader><EmptyContent>…</EmptyContent></Empty>`.
+- **Presencia digital de empresa** (`components/RedesSociales.jsx`): componente
+  `PresenciaDigital` (sitio web + Instagram/Facebook/TikTok/X) reutilizado en el modal público
+  del postulante (`EmpresaModal`) y en el modal administrativo (`pages/admin/Empresas.jsx`).
+  Los logotipos son **SVG locales** (rutas de [simple-icons](https://simpleicons.org/), CC0)
+  incluidos a mano: **sin dependencias nuevas**. `CAMPOS_PRESENCIA` define los campos del
+  formulario de `/empresa/perfil` (tarjeta «Presencia digital»). El sitio web se muestra
+  arriba (etiqueta = dominio) y solo las redes configuradas; si no hay nada, el bloque no se
+  renderiza. Los enlaces abren en pestaña nueva con `rel="noopener noreferrer"` y nunca se
+  renderiza una URL cuyo protocolo no sea `http(s)`.
+- **Privacidad de contacto de empresa**: el teléfono y el correo de la empresa **no** se
+  entregan al rol `postulante`. El control es del backend (p. ej. se excluyen en
+  `PostulacionRepository::dePostulante` y en el bloque `empresa` de las ofertas públicas), no
+  solo de la UI. El rol `admin` sí los conserva.
+- **Validación de URLs** (frontend y backend): solo `http(s)`; para cada red social el host
+  debe ser el dominio oficial o un subdominio suyo (comparación por `host` real, no por
+  texto). Helpers: `Validador::esUrlHttps`/`dominioPermitido` (PHP) y `dominioPermitido`
+  (`utils.js`).

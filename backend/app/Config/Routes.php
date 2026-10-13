@@ -135,6 +135,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     $routes->group('empresa', ['namespace' => 'App\Controllers\Api\Empresa', 'filter' => ['jwt', 'rol:empresa']], static function ($routes) {
         $routes->get('perfil', 'PerfilController::index');
         $routes->put('perfil', 'PerfilController::update');
+        // Presencia digital (sitio web y redes) en endpoint propio: no comparte
+        // payload con "datos de contacto" para que uno no sobrescriba al otro.
+        $routes->put('perfil/presencia', 'PerfilController::presencia');
         $routes->post('perfil/logo', 'PerfilController::subirLogo');
         $routes->delete('perfil/logo', 'PerfilController::eliminarLogo');
         $routes->get('dashboard', 'PerfilController::dashboard');

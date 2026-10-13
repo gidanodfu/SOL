@@ -140,7 +140,12 @@ class OfertaRepository
                       empresas.ruc, empresas.razon_social,
                       empresas.id AS empresa_id, empresas.nombre_comercial AS empresa_nombre_comercial,
                       empresas.direccion AS empresa_direccion, empresas.created_at AS empresa_created_at,
-                      empresas.logo_key AS empresa_logo_key')
+                      empresas.logo_key AS empresa_logo_key,
+                      empresas.website_url AS empresa_website_url,
+                      empresas.instagram_url AS empresa_instagram_url,
+                      empresas.facebook_url AS empresa_facebook_url,
+                      empresas.tiktok_url AS empresa_tiktok_url,
+                      empresas.x_url AS empresa_x_url')
             ->join('categorias', 'categorias.id = ofertas.categoria_id', 'LEFT')
             ->join('empresas', 'empresas.id = ofertas.empresa_id', 'LEFT');
     }
