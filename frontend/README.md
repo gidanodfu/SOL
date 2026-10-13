@@ -73,3 +73,12 @@ src/
   renueva el token en `401` y redirige a `/login` si la sesión expiró.
 - **Metadescripciones**: `SeoMeta` actualiza `<title>` y `<meta name="description">` por
   ruta en el cliente (SPA sin SSR).
+- **Estado vacío del detalle de oferta** (`pages/postulante/BuscarEmpleo.jsx`, clases
+  `.panel-vacio` / `.panel-vacio-icono` en `postulante.css`): adaptación del componente
+  `Empty` de shadcn/ui (referencias: <https://ui.shadcn.com/docs/components/base/empty> y la
+  colección <https://21st.dev/community/components/explore/shadcn-empty-state>) al CSS propio
+  y a los tokens de Empleo MDJLO (`--sky`, `--blue`, `--ink`, `--text-2/3`). Compone icono
+  (`lucide-react` `Briefcase`) en contenedor suave + título + descripción + indicación, sin
+  dependencias nuevas (el proyecto **no** usa Tailwind ni shadcn). Cubre solo el caso "detalle
+  sin oferta seleccionada"; la carga inicial, el error de consulta y el "sin resultados" se
+  manejan por separado en la misma página.

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Briefcase } from 'lucide-react';
 import { detalleOferta, listarOfertas, perfilPostulante, postular } from '../../services/postulante';
 import { listarCategorias } from '../../services/categorias';
 import { useAuth } from '../../context/AuthContext';
@@ -380,11 +381,22 @@ function PanelDetalle({ oferta, onCerrar, perfilIncompleto }) {
   return (
     <aside ref={ref} className={`panel-detalle${oferta ? ' abierto' : ''}`}>
       {oferta ? <DetalleOferta key={oferta.id} oferta={oferta} onCerrar={onCerrar} perfilIncompleto={perfilIncompleto} /> : (
-        <div className="panel-caja">
+        <div className="panel-caja panel-caja-vacia">
           <div className="panel-head">
             <h3>Detalle de la oferta</h3>
           </div>
-          <p className="panel-placeholder">Selecciona una oferta de la lista para ver sus detalles.</p>
+          {/* Estado vacío (sin oferta seleccionada). Adaptación del patrón `Empty`
+              de shadcn/ui a los tokens de Empleo MDJLO; ver frontend/README.md. */}
+          <div className="panel-vacio">
+            <span className="panel-vacio-icono" aria-hidden="true">
+              <Briefcase size={26} />
+            </span>
+            <h4 className="panel-vacio-titulo">Encuentra tu próxima oportunidad</h4>
+            <p className="panel-vacio-texto">
+              Selecciona una oferta de la lista para conocer sus funciones, requisitos, ubicación y condiciones laborales.
+            </p>
+            <p className="panel-vacio-hint">Selecciona una oferta para comenzar</p>
+          </div>
         </div>
       )}
     </aside>
