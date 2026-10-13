@@ -82,7 +82,10 @@
 }
 .app-postulante .post-nav a:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 .app-postulante .post-nav a.active { background: var(--blue); color: #fff; }
-.app-postulante .post-nav a i { vertical-align: -2px; margin-right: 6px; }
+.app-postulante .post-nav a i,
+.app-postulante .post-nav a svg { vertical-align: -2px; margin-right: 6px; }
+/* Iconos Lucide (SVG): el tamaño escala con el texto del enlace (1em). */
+.app-postulante .post-nav a svg { width: 1.05em; height: 1.05em; }
 .app-postulante .nav-text-full { display: inline; }
 .app-postulante .nav-text-short { display: none; }
 
@@ -645,7 +648,8 @@
   .app-postulante .nav-text-full { display: none; }
   .app-postulante .nav-text-short { display: inline; }
   .app-postulante .post-nav a { font-size: 12.5px; padding: 8px 10px; }
-  .app-postulante .post-nav a i { margin-right: 4px; }
+  .app-postulante .post-nav a i,
+  .app-postulante .post-nav a svg { margin-right: 4px; }
 }
 @media (max-width: 560px) {
   .app-postulante .post-main { padding: 14px 12px 22px; }
@@ -662,6 +666,7 @@
 @media (max-width: 400px) {
   .app-postulante .post-nav a { font-size: 11px; padding: 6px 8px; }
   .app-postulante .post-nav a i { font-size: 13px; margin-right: 3px; }
+  .app-postulante .post-nav a svg { margin-right: 3px; }
   .app-postulante .pill-btn { font-size: 12px; padding: 8px 12px; }
   .app-postulante .pill-btn i { font-size: 14px; }
 }
