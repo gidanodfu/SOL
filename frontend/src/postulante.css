@@ -785,40 +785,9 @@
   font-size: 16px;
 }
 .app-postulante .panel-close:hover { background: var(--line); color: var(--text-1); }
-/* Estado vacío del panel de detalle (sin oferta seleccionada). Adaptación del
-   patrón `Empty` de shadcn/ui (icono en contenedor suave + título + descripción)
-   usando los tokens de Empleo MDJLO, sin dependencias nuevas. */
+/* Panel de detalle sin selección: deja que el componente `Empty` (styles.css)
+   ocupe y centre el espacio interior. */
 .app-postulante .panel-caja-vacia { height: 100%; display: flex; flex-direction: column; }
-.app-postulante .panel-vacio {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 10px;
-  flex: 1 1 auto;
-  padding: 40px 18px;
-}
-.app-postulante .panel-vacio-icono {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-lg);
-  background: var(--sky);
-  color: var(--blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 2px;
-}
-.app-postulante .panel-vacio-titulo { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--ink); }
-.app-postulante .panel-vacio-texto {
-  margin: 0;
-  max-width: 300px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-2);
-}
-.app-postulante .panel-vacio-hint { margin: 2px 0 0; font-size: 12px; color: var(--text-3); }
 .app-postulante .panel-cabeza { flex-shrink: 0; }
 .app-postulante .panel-contenido { min-height: 0; }
 .app-postulante .panel-detalle .job-detalle { margin-top: 14px; }

@@ -11,6 +11,7 @@ import { useToast } from '../../components/Feedbacks';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import ProfileImage from '../../components/ProfileImage';
 import EmpresaModal from '../../components/EmpresaModal';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '../../components/Empty';
 import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES, TIPOS_EMPLEO } from '../../constants';
 import { errorApi, fechaCalendario, urlArchivo } from '../../utils';
 import { useClickFuera } from '../../hooks/useClickFuera';
@@ -385,18 +386,20 @@ function PanelDetalle({ oferta, onCerrar, perfilIncompleto }) {
           <div className="panel-head">
             <h3>Detalle de la oferta</h3>
           </div>
-          {/* Estado vacío (sin oferta seleccionada). Adaptación del patrón `Empty`
-              de shadcn/ui a los tokens de Empleo MDJLO; ver frontend/README.md. */}
-          <div className="panel-vacio">
-            <span className="panel-vacio-icono" aria-hidden="true">
-              <Briefcase size={26} />
-            </span>
-            <h4 className="panel-vacio-titulo">Encuentra tu próxima oportunidad</h4>
-            <p className="panel-vacio-texto">
-              Selecciona una oferta de la lista para conocer sus funciones, requisitos, ubicación y condiciones laborales.
-            </p>
-            <p className="panel-vacio-hint">Selecciona una oferta para comenzar</p>
-          </div>
+          {/* Estado vacío (sin oferta seleccionada). Componente `Empty` adaptado
+              del patrón de shadcn/ui; ver frontend/README.md. */}
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon" aria-hidden="true">
+                <Briefcase size={26} />
+              </EmptyMedia>
+              <EmptyTitle>Encuentra tu próxima oportunidad</EmptyTitle>
+              <EmptyDescription>
+                Selecciona una oferta de la lista para conocer sus funciones, requisitos, ubicación y condiciones laborales.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>Selecciona una oferta para comenzar</EmptyContent>
+          </Empty>
         </div>
       )}
     </aside>

@@ -675,6 +675,46 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .empty-card p { margin: 0; font-size: 13.5px; }
 .empty-card b { font-weight: 600; }
 
+/* Estado vacío compuesto `Empty` (patrón de shadcn/ui adaptado a SOL).
+   Clases reutilizables; usan tokens del tema (claro/oscuro). */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 40px 24px;
+  text-align: center;
+}
+.empty-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+}
+.empty-media { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.empty-media-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-lg);
+  background: var(--sky);
+  color: var(--blue);
+}
+.empty-title { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--ink); }
+.empty-description { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
 /* ---------- Estado de carga ---------- */
 .estado-carga {
   display: flex;
@@ -2116,6 +2156,13 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 @media (max-width: 560px) {
   .imagen-cargador { grid-template-columns: 1fr; }
 }
+
+/* Variante compacta del cargador: avatar + botones en una columna angosta,
+   para acompañar otros datos dentro de la misma tarjeta. */
+.imagen-compacta { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 132px; max-width: 100%; }
+.imagen-compacta .imagen-compacta-media { border-radius: var(--radius-lg); }
+.imagen-compacta-acciones { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.imagen-compacta-acciones .btn { width: 100%; justify-content: center; }
 .btn.deshabilitado { opacity: 0.7; pointer-events: none; }
 /* Imagen de actividad: frame estable (aspect-ratio) + imagen completa (contain). */
 .activity-image {
