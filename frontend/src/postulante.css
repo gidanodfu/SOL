@@ -26,7 +26,7 @@
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   /* Superficie flotante contenida: no toca los bordes del viewport, centrada,
      con extremos redondeados (misma familia que el shell de Admin/Empresa). */
   width: var(--post-shell-w);
@@ -62,9 +62,6 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  /* Anclada a la derecha junto a las acciones: el buscador (flexible) queda
-     entre el logo y este grupo. */
-  margin-left: auto;
   /* Grupo de navegación contenido (una sola unidad, no tarjetas sueltas). */
   padding: 4px;
   background: rgba(255, 255, 255, 0.07);
@@ -77,7 +74,7 @@
   text-decoration: none;
   font-size: 13.5px;
   font-weight: 500;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-radius: var(--radius-md);
   white-space: nowrap;
   flex-shrink: 0;
@@ -96,7 +93,7 @@
   gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
-  max-width: 640px;
+  max-width: 560px;
   height: 42px;
   padding: 0 14px;
   background: rgba(255, 255, 255, 0.1);
@@ -122,8 +119,9 @@
 .app-postulante .post-acciones {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .app-postulante .user-menu {
@@ -513,7 +511,7 @@
 .app-postulante .guest-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 .app-postulante .guest-saludo {
@@ -787,7 +785,40 @@
   font-size: 16px;
 }
 .app-postulante .panel-close:hover { background: var(--line); color: var(--text-1); }
-.app-postulante .panel-placeholder { color: var(--text-3); text-align: center; padding: 40px 10px; font-size: 13px; margin: 0; }
+/* Estado vacío del panel de detalle (sin oferta seleccionada). Adaptación del
+   patrón `Empty` de shadcn/ui (icono en contenedor suave + título + descripción)
+   usando los tokens de Empleo MDJLO, sin dependencias nuevas. */
+.app-postulante .panel-caja-vacia { height: 100%; display: flex; flex-direction: column; }
+.app-postulante .panel-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  padding: 40px 18px;
+}
+.app-postulante .panel-vacio-icono {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-lg);
+  background: var(--sky);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+.app-postulante .panel-vacio-titulo { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--ink); }
+.app-postulante .panel-vacio-texto {
+  margin: 0;
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.app-postulante .panel-vacio-hint { margin: 2px 0 0; font-size: 12px; color: var(--text-3); }
 .app-postulante .panel-cabeza { flex-shrink: 0; }
 .app-postulante .panel-contenido { min-height: 0; }
 .app-postulante .panel-detalle .job-detalle { margin-top: 14px; }
