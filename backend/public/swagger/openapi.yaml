@@ -1637,6 +1637,38 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorInterno'
 
+  /api/empresa/perfil/presencia:
+    put:
+      tags: [Empresa]
+      operationId: empresaActualizarPresencia
+      summary: Actualizar presencia digital de la empresa
+      description: |
+        Sitio web y redes sociales de la propia empresa. Endpoint separado del de datos de
+        contacto para que un guardado parcial no sobrescriba al otro. Todos los campos son
+        opcionales; los no enviados se guardan como NULL. Solo se aceptan URLs `http(s)` y
+        cada red exige su dominio oficial (o un subdominio legítimo).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmpresaPresenciaBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
   /api/empresa/dashboard:
     get:
       tags: [Empresa]
@@ -3992,6 +4024,22 @@ components:
         info_adicional:
           type: string
           nullable: true
+        website_url:
+          type: string
+          nullable: true
+          description: Sitio web oficial (http/https).
+        instagram_url:
+          type: string
+          nullable: true
+        facebook_url:
+          type: string
+          nullable: true
+        tiktok_url:
+          type: string
+          nullable: true
+        x_url:
+          type: string
+          nullable: true
         evaluacion_presencial:
           type: integer
           enum: [0, 1]
@@ -4122,6 +4170,35 @@ components:
         representante:
           type: string
           maxLength: 150
+
+    EmpresaPresenciaBody:
+      type: object
+      properties:
+        website_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: Sitio web oficial (http/https).
+        instagram_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL de instagram.com o un subdominio suyo.
+        facebook_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL de facebook.com / fb.com o un subdominio suyo.
+        tiktok_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL de tiktok.com o un subdominio suyo.
+        x_url:
+          type: string
+          format: uri
+          maxLength: 255
+          description: URL de x.com / twitter.com o un subdominio suyo.
 
     # ----------------------- Ofertas -----------------------
     Oferta:

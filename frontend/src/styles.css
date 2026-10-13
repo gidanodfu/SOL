@@ -1730,6 +1730,57 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .profile-image-inicial { font-weight: 700; color: var(--enlace); line-height: 1; }
 .emp-modal-cabecera { display: flex; justify-content: center; margin-bottom: 14px; }
 
+/* ---------- Presencia digital (sitio web + redes sociales) ---------- */
+.presencia-digital {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.presencia-titulo {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.presencia-web {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--blue);
+  font-weight: 600;
+  font-size: 13.5px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.presencia-web span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.presencia-web:hover { border-color: var(--blue); background: var(--sky); }
+.presencia-redes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.presencia-red {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
+  background: var(--white);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.presencia-red:hover { color: var(--blue); border-color: var(--blue); background: var(--sky); }
+.presencia-red:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
 /* =====================================================================
    Sistema de dashboard compartido (Admin / Empresa / Postulante).
    `.chart-card` es la primitive de tarjeta; aquí van bar charts, listas de

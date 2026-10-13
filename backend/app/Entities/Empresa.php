@@ -26,5 +26,10 @@ class Empresa extends Entity
         'info_adicional'        => '?string',
         'evaluacion_presencial' => 'boolean',
         'estado'                => 'string',
+        'website_url'           => '?string',
+        'instagram_url'         => '?string',
+        'facebook_url'          => '?string',
+        'tiktok_url'            => '?string',
+        'x_url'                 => '?string',
     ];
 }

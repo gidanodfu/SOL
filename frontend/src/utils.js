@@ -28,6 +28,18 @@ export const esEnlaceSeguro = (url) => {
   }
 };
 
+/**
+ * El host de la URL debe ser uno de los dominios indicados o un subdominio
+ * legítimo suyo (comparación sobre el host real, no sobre el texto). Evita
+ * aceptar "instagram.com.ejemplo.com" como Instagram.
+ */
+export const dominioPermitido = (url, dominios) => {
+  if (!esEnlaceSeguro(url)) return false;
+  let host = '';
+  try { host = new URL(String(url)).hostname.toLowerCase(); } catch { return false; }
+  return dominios.some((d) => host === d || host.endsWith(`.${d}`));
+};
+
 /* ---------- Texto enriquecido (RTE) ---------- */
 
 export const TEXTO_MAX = 10000;

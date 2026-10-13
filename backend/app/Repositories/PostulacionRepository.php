@@ -27,8 +27,8 @@ class PostulacionRepository
             ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
                       of.puesto, of.ubicacion, of.remuneracion, of.fecha_cierre,
                       emp.id AS empresa_id, emp.razon_social, emp.nombre_comercial, emp.ruc,
-                      emp.direccion, emp.telefono AS empresa_telefono, emp.email AS empresa_email,
-                      emp.info_adicional, emp.logo_key, emp.created_at AS empresa_created_at,
+                      emp.direccion, emp.info_adicional, emp.logo_key, emp.created_at AS empresa_created_at,
+                      emp.website_url, emp.instagram_url, emp.facebook_url, emp.tiktok_url, emp.x_url,
                       cat.nombre AS categoria_nombre')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->join('empresas emp', 'emp.id = p.empresa_id')

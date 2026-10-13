@@ -31,6 +31,17 @@ class PerfilController extends BaseApiController
         return $this->sinContenido('Datos de su empresa actualizados.');
     }
 
+    /**
+     * Presencia digital de la empresa (sitio web y redes sociales). Autoriza
+     * por sesión (solo el perfil propio).
+     */
+    public function presencia()
+    {
+        (new EmpresaService())->actualizarPresencia(service('guard')->id(), $this->cuerpo());
+
+        return $this->sinContenido('Presencia digital actualizada.');
+    }
+
     public function dashboard()
     {
         $desde = $this->request->getGet('desde') ?: null;
