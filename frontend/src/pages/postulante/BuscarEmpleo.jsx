@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { detalleOferta, listarOfertas, perfilPostulante, postular } from '../../services/postulante';
 import { listarCategorias } from '../../services/categorias';
@@ -38,10 +38,9 @@ export default function BuscarEmpleo() {
   const [seleccionadaId, setSeleccionadaId] = useState(null);
   const [sinAuto, setSinAuto] = useState(false);
   const [empresaInfo, setEmpresaInfo] = useState(null);
-  // Palabras clave: se aplican con un pequeño retardo para no consultar en cada tecla.
-  const [texto, setTexto] = useState('');
-  const [q, setQ] = useState('');
-  const [empresa, setEmpresa] = useState('');
+  // Palabra clave: vive en la URL (?q=) y la comparte el buscador de la navbar.
+  const [searchParams] = useSearchParams();
+  const q = (searchParams.get('q') || '').trim();
   const { usuario } = useAuth();
   const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias });
   const { data: perfil } = useQuery({
@@ -82,22 +81,16 @@ export default function BuscarEmpleo() {
     if (!esMovil) medirSplit();
   }, [esMovil, medirSplit]);
 
-  useEffect(() => {
-    const t = setTimeout(() => setQ(texto.trim()), 350);
-    return () => clearTimeout(t);
-  }, [texto]);
-
   const queryFiltros = useMemo(() => {
     const f = {};
     if (q) f.q = q;
-    if (empresa.trim()) f.empresa = empresa.trim();
     if (sel.categoria?.valor) f.categoria_id = sel.categoria.valor;
     if (sel.ubicacion?.valor) f.ubicacion = sel.ubicacion.valor;
     if (sel.formacion?.valor) f.formacion = sel.formacion.valor;
     if (sel.experiencia?.valor) f.experiencia = sel.experiencia.valor;
     if (sel.tipo_empleo?.valor) f.tipo_empleo = sel.tipo_empleo.valor;
     return f;
-  }, [sel, q, empresa]);
+  }, [sel, q]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['buscar-ofertas', queryFiltros],
@@ -178,25 +171,6 @@ export default function BuscarEmpleo() {
           <Link to="/postulante/perfil">Completar mi perfil</Link>
         </div>
       )}
-
-      <div className="busqueda-texto">
-        <i className="ti ti-search" aria-hidden="true" />
-        <input
-          type="search"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder="Buscar por puesto, empresa o palabra clave…"
-          aria-label="Buscar ofertas por palabra clave"
-        />
-        <input
-          type="text"
-          className="busqueda-empresa"
-          value={empresa}
-          onChange={(e) => setEmpresa(e.target.value)}
-          placeholder="Empresa"
-          aria-label="Filtrar por empresa"
-        />
-      </div>
 
       <div className="filter-bar">
         <FiltroPill
