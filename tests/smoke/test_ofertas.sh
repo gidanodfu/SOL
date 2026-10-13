@@ -24,7 +24,7 @@ paso "1. listar mis ofertas (empresa)"
 curl -s "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;[print(" -",o["id"],o["puesto"],o["estado"]) for o in json.load(sys.stdin)["data"]]'
 
 paso "2. crear oferta => pendiente de revisión"
-C=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Asistente contable","categoria_id":1,"tipo_empleo":"tiempo_completo","ubicacion":"Chiclayo","vacantes":1,"descripcion":"Apoyo en área contable","requisitos":"Contabilidad técnica","habilidades":["Excel","Sunat"],"remuneracion":"1200.50","fecha_cierre":"2026-12-31"}')
+C=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Asistente contable","categoria_id":1,"tipo_empleo":"tiempo_completo","ubicacion":"Chiclayo","vacantes":1,"descripcion":"Apoyo en área contable","funciones":"Registrar operaciones contables","requisitos":"Contabilidad técnica","habilidades":["Excel","Sunat"],"remuneracion":"1200.50","fecha_cierre":"2026-12-31"}')
 ID2=$(echo "$C" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s "$B/api/empresa/ofertas/$ID2" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado:",d["estado"])'
 
@@ -41,19 +41,19 @@ curl -s "$B/api/ofertas" | python3 -c 'import sys,json;d=json.load(sys.stdin)["d
 curl -s "$B/api/admin/ofertas/$ID2" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado:",d["estado"],"| publicacion:",d["fecha_publicacion"],"| habilidades:",d["habilidades"])'
 
 paso "6. editar una oferta ya publicada la devuelve a revisión"
-curl -s -o /dev/null -w "editar http:%{http_code}\n" -X PUT "$B/api/empresa/ofertas/$ID2" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Asistente contable v2","vacantes":1}'
+curl -s -o /dev/null -w "editar http:%{http_code}\n" -X PUT "$B/api/empresa/ofertas/$ID2" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Asistente contable v2","vacantes":1,"descripcion":"Apoyo actualizado","funciones":"Registrar operaciones"}'
 curl -s "$B/api/empresa/ofertas/$ID2" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;print("estado:",json.load(sys.stdin)["data"]["estado"])'
 curl -s -o /dev/null -w "reaprobar http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$ID2/aprobar" -H "Authorization: Bearer $TA"
 
 paso "7. nueva oferta id3: rechazo municipal con motivo"
-ID3=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Vendedor","vacantes":2}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+ID3=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Vendedor","vacantes":2,"descripcion":"Venta de productos","funciones":"Atender al público"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s -o /dev/null -w "rechazar sin motivo => 422 http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$ID3/rechazar" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{}'
 curl -s -o /dev/null -w "rechazar http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$ID3/rechazar" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"motivo":"Información incompleta"}'
 curl -s "$B/api/empresa/ofertas/$ID3" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado:",d["estado"],"| motivo:",d["motivo_rechazo"])'
 curl -s "$B/api/ofertas" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("visible:",any(o["id"]==int("'$ID3'") for o in d))'
 
 paso "8. la empresa corrige, reenvía a revisión y el admin aprueba"
-curl -s -o /dev/null -w "editar rechazada http:%{http_code}\n" -X PUT "$B/api/empresa/ofertas/$ID3" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Vendedor de tienda","vacantes":2}'
+curl -s -o /dev/null -w "editar rechazada http:%{http_code}\n" -X PUT "$B/api/empresa/ofertas/$ID3" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Vendedor de tienda","vacantes":2,"descripcion":"Venta en tienda","funciones":"Atender clientes"}'
 curl -s -o /dev/null -w "enviar-revision http:%{http_code}\n" -X PUT "$B/api/empresa/ofertas/$ID3/enviar-revision" -H "Authorization: Bearer $TE"
 curl -s -o /dev/null -w "aprobar http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$ID3/aprobar" -H "Authorization: Bearer $TA"
 curl -s "$B/api/empresa/ofertas/$ID3" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado:",d["estado"],"puesto:",d["puesto"])'

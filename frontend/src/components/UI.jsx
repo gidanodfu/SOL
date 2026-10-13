@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
-export function Campo({ etiqueta, ...props }) {
+export function Campo({ etiqueta, error, ...props }) {
   return (
-    <label className="campo">
+    <label className={`campo${error ? ' campo-error' : ''}`}>
       <span>{etiqueta}</span>
-      <input {...props} />
+      <input {...props} aria-invalid={error ? true : undefined} />
+      {error && <span className="campo-mensaje" role="alert">{error}</span>}
     </label>
   );
 }
 
-export function Selecto({ etiqueta, children, ...props }) {
+export function Selecto({ etiqueta, error, children, ...props }) {
   return (
-    <label className="campo">
+    <label className={`campo${error ? ' campo-error' : ''}`}>
       <span>{etiqueta}</span>
-      <select {...props}>{children}</select>
+      <select {...props} aria-invalid={error ? true : undefined}>{children}</select>
+      {error && <span className="campo-mensaje" role="alert">{error}</span>}
     </label>
   );
 }

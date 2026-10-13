@@ -538,6 +538,22 @@
   border-color: var(--primario-hover);
 }
 
+/* Cabecero público: la navegación y el botón de tema forman UNA zona central,
+   para encajar en las tres áreas del grid (marca · centro · acciones). Sin
+   agruparlos, el botón de tema es un 4.º hijo y el grid lo empuja a una
+   segunda fila accidental. */
+.app-postulante .post-header-publico .post-center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.app-postulante .post-header-publico .guest-actions { justify-self: end; }
+
+/* Avatar del postulante en la navbar (misma imagen del perfil, recorte circular). */
+.app-postulante .user-block .user-avatar { border-radius: 50%; }
+
 /* ---------- Aviso de perfil incompleto para poder postular ---------- */
 .app-postulante .perfil-incompleto {
   display: flex;
@@ -623,6 +639,19 @@
     flex: 0 0 100%;
   }
   .app-postulante .post-nav a { flex: 1 1 0; justify-content: center; text-align: center; }
+  /* En el cabecero público la nav vive dentro de la zona central: se mueve el
+     grupo completo (nav + tema), no la nav por separado. */
+  .app-postulante .post-header-publico .post-center {
+    order: 3;
+    width: 100%;
+    flex: 0 0 100%;
+    justify-content: center;
+  }
+  .app-postulante .post-header-publico .post-center .post-nav {
+    order: 0;
+    width: auto;
+    flex: 0 1 auto;
+  }
 }
 @media (max-width: 1024px) {
   .app-postulante .post-header { padding: 14px 20px; }
@@ -657,6 +686,32 @@
   .app-postulante .post-nav a i { font-size: 13px; margin-right: 3px; }
   .app-postulante .pill-btn { font-size: 12px; padding: 8px 12px; }
   .app-postulante .pill-btn i { font-size: 14px; }
+}
+/* Móvil: el cabecero público se apila en columnas deliberadas
+   (identidad · navegación · acciones), sin saltos de fila accidentales ni
+   controles fuera del viewport. No aplica al cabecero del postulante. */
+@media (max-width: 700px) {
+  .app-postulante .post-header-publico {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .app-postulante .post-header-publico .post-center {
+    order: 0;
+    flex: 0 0 auto;
+    width: 100%;
+  }
+  .app-postulante .post-header-publico .guest-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .app-postulante .post-header-publico .guest-link {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
 }
 
 /* ========== Mobile: postulaciones como tarjetas y filtros en 2 columnas ====== */

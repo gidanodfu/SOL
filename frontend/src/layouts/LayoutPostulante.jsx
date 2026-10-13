@@ -5,8 +5,10 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, IdCard, Palette, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
+import ProfileImage from '../components/ProfileImage';
 import { perfilPostulante } from '../services/postulante';
 import { useClickFuera } from '../hooks/useClickFuera';
+import { urlArchivo } from '../utils';
 
 // Logo local de la aplicación (mismo asset del favicon); sin dependencias externas.
 const LOGO_URL = '/favicon.jpeg';
@@ -34,7 +36,6 @@ export function LayoutPostulante() {
 
   const nombres = perfil?.nombres || usuario?.nombres || 'Postulante';
   const quien = (nombres || '').split(/\s+/)[0] || 'Postulante';
-  const inicial = (quien[0] || 'P').toUpperCase();
 
   return (
     <div className="app-postulante">
@@ -72,7 +73,13 @@ export function LayoutPostulante() {
               <span className="who">{quien}</span>
               <span className="role">Postulante</span>
             </span>
-            <span className="avatar">{inicial}</span>
+            <ProfileImage
+              className="user-avatar"
+              src={urlArchivo(perfil?.foto_url)}
+              nombre={quien}
+              alt={`Foto de perfil de ${quien}`}
+              size={36}
+            />
             <span className="user-chevron" aria-hidden="true">
               {menuAbierto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </span>

@@ -61,7 +61,7 @@ echo "== 12. enlace reutilizado => 401 =="
 curl -s -o /dev/null -w "%{http_code}\n" "$B/api/activar-cuenta/$TOKEN"
 
 echo "== 13. oferta: crear (queda pendiente) y aprobar por la Municipalidad =="
-OID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Analista contable","categoria_id":2,"ubicacion":"Lima","vacantes":1,"remuneracion":2500,"habilidades":["Excel"]}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+OID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Analista contable","categoria_id":2,"ubicacion":"Lima","vacantes":1,"remuneracion":2500,"descripcion":"Análisis contable","funciones":"Elaborar estados financieros","habilidades":["Excel"]}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s "$B/api/empresa/ofertas/$OID" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado inicial:",d["estado"])'
 curl -s -o /dev/null -w "aprobar admin http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$OID/aprobar" -H "Authorization: Bearer $TA"
 curl -s "$B/api/empresa/ofertas/$OID" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("estado:",d["estado"],"| publicado:",d.get("fecha_publicacion"))'

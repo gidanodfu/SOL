@@ -393,8 +393,8 @@ class OfertaService
 
         Validador::validar($datos, [
             'puesto'                 => ['required', 'max:150'],
-            'descripcion'            => ['texto_max:10000'],
-            'funciones'              => ['texto_max:10000'],
+            'descripcion'            => ['required', 'texto_max:10000'],
+            'funciones'              => ['required', 'texto_max:10000'],
             'requisitos'             => ['texto_max:10000'],
             'formacion_requerida'    => ['max:200'],
             'experiencia_requerida'  => ['max:200'],
@@ -405,7 +405,8 @@ class OfertaService
             'categoria_id'           => ['regex:/^\d+$/'],
         ]);
 
-        if (empty($datos['vacantes']) || (int) $datos['vacantes'] < 1) {
+        // Entero puro, no solo "(int) >= 1": "3abc" no es una cantidad válida.
+        if (! isset($datos['vacantes']) || ! preg_match('/^\d+$/', (string) $datos['vacantes']) || (int) $datos['vacantes'] < 1) {
             throw ApiException::validacion('Indique al menos una vacante.', ['Indique al menos una vacante.']);
         }
         if (! empty($datos['fecha_cierre'])) {

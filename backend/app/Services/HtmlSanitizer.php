@@ -61,7 +61,7 @@ class HtmlSanitizer
 
         $limpio = trim($this->sanitizador->sanitize($html));
 
-        return Validador::textoVisible($limpio) === '' ? null : $limpio;
+        return trim(Validador::textoVisible($limpio)) === '' ? null : $limpio;
     }
 
     /**

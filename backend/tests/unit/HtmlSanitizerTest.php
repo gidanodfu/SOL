@@ -61,8 +61,19 @@ final class HtmlSanitizerTest extends TestCase
     public function testContenidoVacioEsNull(): void
     {
         $this->assertNull($this->sanitizer->limpiar('<p><br></p>'));
+        $this->assertNull($this->sanitizer->limpiar('<p></p>'));
+        // Solo etiquetas/espacios: no es contenido significativo.
+        $this->assertNull($this->sanitizer->limpiar('<p>   </p>'));
+        $this->assertNull($this->sanitizer->limpiar('   '));
+        $this->assertNull($this->sanitizer->limpiar('<ul><li><br></li></ul>'));
         $this->assertNull($this->sanitizer->limpiar(''));
         $this->assertNull($this->sanitizer->limpiar(null));
+    }
+
+    public function testContenidoConTextoSignificativoNoEsVacio(): void
+    {
+        $this->assertSame('<p>Atender a los clientes.</p>', $this->sanitizer->limpiar('<p>Atender a los clientes.</p>'));
+        $this->assertSame('<ul><li>uno</li><li>dos</li></ul>', $this->sanitizer->limpiar('<ul><li>uno</li><li>dos</li></ul>'));
     }
 
     public function testLongitudCuentaSoloElTextoVisible(): void

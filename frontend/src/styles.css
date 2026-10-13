@@ -572,6 +572,10 @@ tbody tr:last-child td { border-bottom: 0; }
 .campo input,
 .campo select { height: 2.5rem; }
 .campo span { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+/* Validación por campo: borde y mensaje (mismo tono que los errores de la API). */
+.campo-error input,
+.campo-error select { border-color: var(--red-tx); }
+.campo-mensaje { font-size: 12px; font-weight: 500; color: var(--red-tx); }
 input, select, textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
@@ -1889,6 +1893,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
    ===================================================================== */
 .rte { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.9rem; }
 .rte-etiqueta { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.rte-error .rte-caja { border-color: var(--red-tx); }
 .rte-caja {
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);

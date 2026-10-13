@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -15,7 +15,7 @@ import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { useToast } from '../../components/Feedbacks';
 import { Briefcase, Lock, Pencil, Plus, Send, X } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, TIPOS_EMPLEO } from '../../constants';
-import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaCalendario } from '../../utils';
+import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaCalendario, textoEnriquecidoVacio } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 // El editor (TiPTap) se carga solo cuando se abre el formulario de oferta.
@@ -258,9 +258,15 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
         },
   );
   const [error, setError] = useState(null);
+  const [errores, setErrores] = useState({});
+  const guardando = useRef(false);
   const { ejecutar, enviando } = useAccion(() => (esNueva ? crearOferta(convertir(form)) : actualizarOferta(inicial.id, convertir(form))));
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const set = (k) => (e) => {
+    const { value } = e.target;
+    setForm((previo) => ({ ...previo, [k]: value }));
+    setErrores((previo) => (previo[k] ? { ...previo, [k]: '' } : previo));
+  };
 
   // Si una oferta anterior guarda un texto fuera de las opciones actuales, se
   // agrega como opción para no perder el valor al editarla.
@@ -269,6 +275,16 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
   const experiencias = lista(OPCIONES_EXPERIENCIA_REQUERIDA, form.experiencia_requerida);
 
   const guardar = async () => {
+    // Campos obligatorios (RF-22): puesto, vacantes y los editores Descripción y
+    // Funciones. Un editor con solo etiquetas/espacios cuenta como vacío, igual que
+    // en el backend.
+    const nuevos = {};
+    if (!form.puesto.trim()) nuevos.puesto = 'El puesto es obligatorio.';
+    const vacantes = Number(form.vacantes);
+    if (!Number.isInteger(vacantes) || vacantes < 1) nuevos.vacantes = 'Indique al menos una vacante.';
+    if (textoEnriquecidoVacio(form.descripcion)) nuevos.descripcion = 'La descripción del puesto es obligatoria.';
+    if (textoEnriquecidoVacio(form.funciones)) nuevos.funciones = 'Las funciones del puesto son obligatorias.';
+
     // Mismo límite que el backend: 10.000 caracteres de TEXTO visible.
     const excedidos = [
       ['Descripción', form.descripcion],
@@ -276,21 +292,41 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
       ['Requisitos', form.requisitos],
     ].filter(([, texto]) => excedeLimiteTexto(texto));
 
+    if (Object.keys(nuevos).length > 0) {
+      setErrores(nuevos);
+      setError(excedidos.length > 0 ? `El texto de ${excedidos.map(([nombre]) => nombre).join(', ')} supera el límite de ${TEXTO_MAX} caracteres.` : null);
+      // Lleva el foco al primer campo inválido (incluye el editor enriquecido).
+      requestAnimationFrame(() => {
+        const primero = document.querySelector('.campo-error input, .campo-error select, .rte-error [contenteditable="true"]');
+        primero?.focus?.();
+        primero?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      });
+      return;
+    }
     if (excedidos.length > 0) {
       setError(`El texto de ${excedidos.map(([nombre]) => nombre).join(', ')} supera el límite de ${TEXTO_MAX} caracteres.`);
       return;
     }
 
+    setErrores({});
+    setError(null);
+    if (guardando.current) return; // evita envíos duplicados por doble clic
+    guardando.current = true;
     try {
       await ejecutar();
       alGuardar(esNueva ? 'Oferta guardada y enviada a revisión municipal.' : 'Cambios guardados.');
     } catch (e) {
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
+    } finally {
+      guardando.current = false;
     }
   };
 
-  const setRte = (campo) => (html) => setForm((previo) => ({ ...previo, [campo]: html }));
+  const setRte = (campo) => (html) => {
+    setForm((previo) => ({ ...previo, [campo]: html }));
+    setErrores((previo) => (previo[campo] ? { ...previo, [campo]: '' } : previo));
+  };
 
   return (
     <div className="list-card">
@@ -299,7 +335,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
       </div>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
-        <Campo etiqueta="Puesto *" value={form.puesto} onChange={set('puesto')} />
+        <Campo etiqueta="Puesto *" value={form.puesto} onChange={set('puesto')} error={errores.puesto} />
         <Selecto etiqueta="Categoría" value={form.categoria_id} onChange={set('categoria_id')}>
           <option value="">Sin categoría</option>
           {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -308,7 +344,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
           {TIPOS_EMPLEO.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_EMPLEO[t]}</option>)}
         </Selecto>
         <Campo etiqueta="Ubicación / lugar de trabajo" value={form.ubicacion} onChange={set('ubicacion')} />
-        <Campo etiqueta="Número de vacantes *" type="number" min="1" value={form.vacantes} onChange={set('vacantes')} />
+        <Campo etiqueta="Número de vacantes *" type="number" min="1" value={form.vacantes} onChange={set('vacantes')} error={errores.vacantes} />
         <Campo etiqueta="Salario (S/, opcional)" type="number" value={form.remuneracion} onChange={set('remuneracion')} />
         <Selecto etiqueta="Formación requerida" value={form.formacion_requerida} onChange={set('formacion_requerida')}>
           <option value="">Seleccione…</option>
@@ -326,12 +362,14 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
           etiqueta="Descripción del puesto"
           valor={form.descripcion}
           onChange={setRte('descripcion')}
+          error={errores.descripcion}
           placeholder="Describe el puesto, el equipo y el contexto del trabajo…"
         />
         <EditorTextoEnriquecido
           etiqueta="Funciones"
           valor={form.funciones}
           onChange={setRte('funciones')}
+          error={errores.funciones}
           placeholder="Enumera las funciones del puesto (puedes usar viñetas)…"
         />
         <EditorTextoEnriquecido
