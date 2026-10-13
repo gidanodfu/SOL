@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { CalendarDays, House } from 'lucide-react';
 import BuscadorNavbar from '../components/BuscadorNavbar';
 
 // Logotipo local de la aplicación (mismo asset del favicon); sin dependencias externas.
 const LOGO_URL = '/favicon.jpeg';
 
 const NAV = [
-  { to: '/postulante/buscar', icono: 'ti ti-search', texto: 'Empleo', corto: 'Empleo' },
-  { to: '/postulante/oportunidades', icono: 'ti ti-building-store', texto: 'Ferias y oportunidades', corto: 'Ferias' },
+  { to: '/postulante/buscar', Icono: House, texto: 'Inicio', corto: 'Inicio' },
+  { to: '/postulante/oportunidades', Icono: CalendarDays, texto: 'Ferias y oportunidades', corto: 'Ferias' },
   { to: '/postulante/postulaciones', icono: 'ti ti-file-check', texto: 'Mis postulaciones', corto: 'Postulaciones' },
 ];
 
@@ -37,7 +38,7 @@ export function NavbarPostulante({ children }) {
       <nav className="post-nav">
         {NAV.map((item) => (
           <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'active' : '')}>
-            <i className={item.icono} />
+            {item.Icono ? <item.Icono aria-hidden="true" /> : <i className={item.icono} />}
             <span className="nav-text-full">{item.texto}</span>
             <span className="nav-text-short">{item.corto}</span>
           </NavLink>
