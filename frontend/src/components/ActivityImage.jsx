@@ -12,7 +12,8 @@ import ActivityImagePlaceholder from './ActivityImagePlaceholder';
  * Props:
  * - src: URL ya resuelta (usar urlArchivo para rutas relativas de la API)
  * - alt: texto alternativo descriptivo
- * - variante: 'media' (frame 16/9, ancho completo) | 'thumb' (miniatura compacta)
+ * - variante: 'media' (frame 16/9, ancho completo) | 'thumb' (miniatura 72px) |
+ *   'tarjeta' (miniatura lateral 148×111 para tarjetas horizontales)
  * - expandible: si es true, al pulsar abre un lightbox (Modal existente)
  * - className: clases extra opcionales
  *

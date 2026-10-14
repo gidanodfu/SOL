@@ -11,10 +11,10 @@ import { CalendarDays } from 'lucide-react';
  * añade el texto contextual.
  */
 export default function ActivityImagePlaceholder({ variante = 'media', etiqueta = 'Actividad municipal' }) {
-  if (variante === 'thumb') {
+  if (variante === 'thumb' || variante === 'tarjeta') {
     return (
-      <span className="activity-ph activity-ph--thumb" role="img" aria-label="Actividad municipal sin imagen">
-        <CalendarDays size={22} aria-hidden="true" />
+      <span className={`activity-ph activity-ph--${variante}`} role="img" aria-label="Actividad municipal sin imagen">
+        <CalendarDays size={variante === 'tarjeta' ? 30 : 22} aria-hidden="true" />
       </span>
     );
   }

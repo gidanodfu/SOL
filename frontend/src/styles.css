@@ -1901,6 +1901,17 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .record-card-meta b { color: var(--text-1); font-weight: 600; }
 .record-card-cuerpo { margin-top: 10px; }
 
+/* Tarjeta de registro con media lateral: imagen/placeholder a la izquierda y
+   datos a la derecha, en la misma fila (la imagen nunca va debajo). */
+.record-card--lateral {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.record-card-lateral { flex: none; }
+.record-card-principal { min-width: 0; }
+
 /* ---------- Modal ---------- */
 .modal-overlay {
   position: fixed;
@@ -2262,6 +2273,23 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   .activity-ph-icon { width: 40px; height: 40px; }
 }
 .activity-image--thumb { width: 72px; aspect-ratio: 1 / 1; border-radius: var(--radius-md); margin-bottom: 8px; }
+/* Miniatura lateral de las tarjetas de actividad (imagen o placeholder),
+   dimensiones estables; la imagen se muestra completa (contain) para no
+   recortar carteles/flyers. */
+.activity-image--tarjeta {
+  width: 148px;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  margin-bottom: 0;
+}
+.activity-ph--tarjeta { padding: 0; gap: 0; color: var(--text-3); }
+@media (max-width: 560px) {
+  .record-card--lateral { gap: 12px; }
+  .activity-image--tarjeta { width: 108px; }
+}
+@media (max-width: 420px) {
+  .activity-image--tarjeta { width: 96px; }
+}
 .activity-image-full { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: var(--radius-md); }
 
 /* Sub-sección interna de un formulario (p. ej. imagen de la actividad) */
@@ -2602,6 +2630,13 @@ html[data-motion="reduced"] *::after {
   .app-admin .record-card-badge { margin-left: 0; }
   .app-empresa .record-card-meta,
   .app-admin .record-card-meta { justify-content: center; }
+
+  /* Tarjeta con media lateral (actividades): el contenido va a la izquierda,
+     no centrado, para no desordenar título/badge/meta junto a la imagen. */
+  .app-admin .record-card--lateral { text-align: left; }
+  .app-admin .record-card--lateral .record-card-cabecera { justify-content: flex-start; }
+  .app-admin .record-card--lateral .record-card-badge { margin-left: auto; }
+  .app-admin .record-card--lateral .record-card-meta { justify-content: flex-start; }
 
   /* Tarjetas de estadística centradas */
   .app-empresa .stat-col,
