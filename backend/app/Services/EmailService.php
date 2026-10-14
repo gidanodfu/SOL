@@ -59,31 +59,74 @@ class EmailService
     }
 
     /**
-     * Layout HTML común (tabla + estilos inline + tarjeta rounded), compatible
-     * con clientes de correo. Sin JavaScript, sin CSS externo, ancho máximo 600.
+     * Layout HTML común (tablas + estilos inline + tarjeta rounded, máx. 600 px),
+     * compatible con Gmail/Outlook: sin JavaScript, sin CSS externo y con un
+     * encabezado institucional configurable (logo, nombre y subtítulo).
      */
     public function layout(string $contenidoHtml): string
     {
-        $anio = date('Y');
+        $anio      = date('Y');
+        $marca     = $this->marca();
+        $subtitulo = $this->subtitulo();
+        $logo      = $this->logoUrl();
+
+        // El logo es opcional: si no hay URL, el nombre institucional mantiene la
+        // cabecera comprensible (imágenes bloqueadas o inaccesibles). Va centrado.
+        $logoHtml = $logo !== null
+            ? '<tr><td align="center" style="padding:0 0 12px;">'
+                . '<img src="' . htmlspecialchars($logo, ENT_QUOTES) . '" alt="Municipalidad Distrital de José Leonardo Ortiz" width="64" height="64" style="display:block;width:64px;height:64px;margin:0 auto;border-radius:12px;background:#ffffff;object-fit:contain;">'
+                . '</td></tr>'
+            : '';
+
+        $cabecera = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
+            . $logoHtml
+            . '<tr><td align="center">'
+            . '<div class="dm-brand" style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:.3px;line-height:1.25;">' . htmlspecialchars($marca, ENT_QUOTES) . '</div>'
+            . '<div style="color:#9fb6cf;font-size:12px;margin-top:4px;line-height:1.3;">' . htmlspecialchars($subtitulo, ENT_QUOTES) . '</div>'
+            . '</td></tr></table>';
 
         return '<!doctype html><html lang="es"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            . '<title>Empleo MDJLO</title></head>'
-            . '<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;">'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px;">'
-            . '<tr><td align="center">'
+            . '<meta name="color-scheme" content="light only">'
+            . '<title>' . htmlspecialchars($marca, ENT_QUOTES) . '</title>'
+            . '<style>@media (max-width:600px){.dm-pad{padding-left:20px !important;padding-right:20px !important;}.dm-title{font-size:20px !important;}.dm-brand{font-size:17px !important;}}</style>'
+            . '</head>'
+            . '<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;">'
+            . '<tr><td align="center" style="padding:28px 12px;">'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">'
-            . '<tr><td style="background:#0b2a4a;padding:22px 28px;">'
-            . '<div style="color:#ffffff;font-size:18px;font-weight:bold;letter-spacing:.3px;">Empleo MDJLO</div>'
-            . '<div style="color:#9fb6cf;font-size:12px;margin-top:2px;">Sistema de intermediación laboral</div>'
-            . '</td></tr>'
-            . '<tr><td style="padding:28px;color:#1f2937;font-size:15px;line-height:1.6;">'
-            . $contenidoHtml
-            . '</td></tr>'
-            . '<tr><td style="padding:18px 28px;background:#f6f8fb;border-top:1px solid #e2e8f0;color:#8895a7;font-size:12px;text-align:center;">'
-            . '© ' . $anio . ' Municipalidad Distrital de José Leonardo Ortiz — Empleo MDJLO'
+            . '<tr><td class="dm-pad" style="background:#0b2a4a;padding:26px 28px;">' . $cabecera . '</td></tr>'
+            . '<tr><td class="dm-pad" style="padding:30px 28px;color:#1f2937;font-size:15px;line-height:1.6;">' . $contenidoHtml . '</td></tr>'
+            . '<tr><td class="dm-pad" style="padding:18px 28px;background:#f6f8fb;border-top:1px solid #e2e8f0;color:#8895a7;font-size:12px;text-align:center;line-height:1.6;">'
+            . htmlspecialchars($marca, ENT_QUOTES) . ' — Municipalidad Distrital de José Leonardo Ortiz'
+            . '<br>Correo automático. Por seguridad, no comparta su enlace de activación.'
+            . '<br>© ' . $anio
             . '</td></tr>'
             . '</table></td></tr></table></body></html>';
+    }
+
+    /** Nombre visible de la marca (EMAIL_BRAND_NAME → RESEND_FROM_NAME → defecto). */
+    private function marca(): string
+    {
+        $nombre = trim((string) (env('EMAIL_BRAND_NAME') ?: env('RESEND_FROM_NAME') ?: ''));
+
+        return $nombre !== '' ? $nombre : 'Empleo MDJLO';
+    }
+
+    /** Subtítulo institucional del correo (configurable, con valor por defecto). */
+    private function subtitulo(): string
+    {
+        $subtitulo = trim((string) env('EMAIL_BRAND_SUBTITLE'));
+
+        return $subtitulo !== '' ? $subtitulo : 'Sistema de intermediación laboral';
+    }
+
+    /** URL absoluta (http/https) del logo institucional; null si no está configurada. */
+    private function logoUrl(): ?string
+    {
+        $url = trim((string) env('EMAIL_LOGO_URL'));
+
+        return $url !== '' && preg_match('#^https?://#i', $url) === 1 ? $url : null;
     }
 
     /**
@@ -99,6 +142,7 @@ class EmailService
             $para,
             'Tu empresa ha sido habilitada — Empleo MDJLO',
             $this->layout($this->contenidoActivacion($link, $datos)),
+            $this->contenidoActivacionTexto($link, $datos),
         );
     }
 
@@ -117,24 +161,55 @@ class EmailService
         $linkSeguro = $e($link);
         $dias       = $e($datos['expira_dias'] ?? '7');
 
-        return '<h1 style="margin:0 0 18px;font-size:22px;line-height:1.3;color:#0b2a4a;text-align:center;">Tu empresa ha sido habilitada</h1>'
+        return '<div style="text-align:center;margin:0 0 12px;">'
+            . '<span style="display:inline-block;background:#e6f1fb;color:#0c447c;font-size:11px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;border-radius:999px;padding:5px 14px;">Afiliación aprobada</span>'
+            . '</div>'
+            . '<h1 class="dm-title" style="margin:0 0 16px;font-size:23px;line-height:1.3;color:#0b2a4a;text-align:center;">Tu empresa ha sido habilitada</h1>'
             . '<p style="margin:0 0 14px;">Estimado(a) representante:</p>'
-            . '<p style="margin:0 0 18px;">La Municipalidad Distrital de José Leonardo Ortiz ha <strong>aprobado</strong> '
-            . 'la afiliación de su empresa al Sistema de Empleo. Su cuenta de empresa ya fue creada.</p>'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#f6f8fb;border:1px solid #e2e8f0;border-radius:12px;">'
-            . '<tr><td style="padding:18px 20px;font-size:14px;color:#1f2937;line-height:1.9;">'
-            . '<div><strong>Empresa:</strong> ' . $razon . '</div>'
-            . '<div><strong>RUC:</strong> ' . $ruc . '</div>'
-            . '<div><strong>Estado:</strong> Afiliación aprobada</div>'
+            . '<p style="margin:0 0 20px;">La Municipalidad Distrital de José Leonardo Ortiz ha <strong>aprobado</strong> '
+            . 'la afiliación de su empresa al Sistema de Empleo. Su cuenta de empresa ya fue creada; solo falta '
+            . 'que defina su contraseña para empezar a operar.</p>'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#f6f8fb;border:1px solid #e2e8f0;border-radius:12px;">'
+            . '<tr><td style="padding:18px 20px;font-size:14px;color:#1f2937;line-height:2;">'
+            . '<div><strong style="color:#64748b;">Empresa:</strong> ' . $razon . '</div>'
+            . '<div><strong style="color:#64748b;">RUC:</strong> ' . $ruc . '</div>'
+            . '<div><strong style="color:#64748b;">Estado de la afiliación:</strong> <span style="color:#15803d;font-weight:bold;">Aprobada</span></div>'
             . '</td></tr></table>'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:0 0 20px;">'
-            . '<a href="' . $linkSeguro . '" style="display:inline-block;padding:14px 30px;background:#1857a8;color:#ffffff;'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:0 0 8px;">'
+            . '<a href="' . $linkSeguro . '" style="display:inline-block;padding:15px 32px;background:#1857a8;color:#ffffff;'
             . 'font-size:15px;font-weight:bold;text-decoration:none;border-radius:12px;">Activar mi cuenta</a>'
             . '</td></tr></table>'
-            . '<p style="margin:0 0 16px;color:#6b7280;font-size:13px;text-align:center;">Este enlace es personal y de un solo uso. Caduca en ' . $dias . ' días.</p>'
+            . '<p style="margin:16px 0 20px;color:#6b7280;font-size:13px;text-align:center;">Este enlace es personal y de un solo uso. Caduca en ' . $dias . ' días.</p>'
             . '<p style="margin:0 0 6px;color:#6b7280;font-size:13px;">Si el botón no funciona, copie y pegue este enlace en su navegador:</p>'
-            . '<p style="margin:0 0 16px;word-break:break-all;color:#1857a8;font-size:13px;">' . $linkSeguro . '</p>'
-            . '<p style="margin:0;color:#6b7280;font-size:13px;">Por seguridad, no comparta este enlace. Si no solicitó esta afiliación, ignore este correo.</p>';
+            . '<p style="margin:0 0 18px;word-break:break-all;color:#1857a8;font-size:13px;">' . $linkSeguro . '</p>'
+            . '<p style="margin:0;padding-top:16px;border-top:1px solid #e2e8f0;color:#6b7280;font-size:13px;">'
+            . 'Por seguridad, no comparta este enlace con nadie. Si no solicitó esta afiliación, puede ignorar este correo.</p>';
+    }
+
+    /**
+     * Versión en texto plano del correo de activación (accesibilidad y clientes
+     * que no renderizan HTML). Incluye el enlace completo.
+     *
+     * @param array<string, mixed> $datos
+     */
+    public function contenidoActivacionTexto(string $link, array $datos): string
+    {
+        $razon = (string) ($datos['razon_social'] ?? '');
+        $ruc   = (string) ($datos['ruc'] ?? '');
+        $dias  = (string) ($datos['expira_dias'] ?? '7');
+
+        return $this->marca() . " — Municipalidad Distrital de José Leonardo Ortiz\n"
+            . "Sistema de intermediación laboral\n\n"
+            . "Tu empresa ha sido habilitada\n\n"
+            . "Estimado(a) representante:\n\n"
+            . "La Municipalidad Distrital de José Leonardo Ortiz ha aprobado la afiliación de su empresa al\n"
+            . "Sistema de Empleo. Su cuenta de empresa ya fue creada; solo falta que defina su contraseña.\n\n"
+            . "Empresa: {$razon}\n"
+            . "RUC: {$ruc}\n"
+            . "Estado de la afiliación: Aprobada\n\n"
+            . "Active su cuenta con este enlace (personal, de un solo uso, caduca en {$dias} días):\n"
+            . $link . "\n\n"
+            . "Por seguridad, no comparta este enlace. Si no solicitó esta afiliación, ignore este correo.\n";
     }
 
     /**
@@ -155,13 +230,13 @@ class EmailService
         return $this->enviar($para, $asunto, $cuerpo);
     }
 
-    public function enviar(string $para, string $asunto, string $cuerpoHtml): bool
+    public function enviar(string $para, string $asunto, string $cuerpoHtml, ?string $cuerpoTexto = null): bool
     {
         if ($this->usarResend()) {
-            return $this->enviarResend($para, $asunto, $cuerpoHtml);
+            return $this->enviarResend($para, $asunto, $cuerpoHtml, $cuerpoTexto);
         }
 
-        return $this->enviarSmtp($para, $asunto, $cuerpoHtml);
+        return $this->enviarSmtp($para, $asunto, $cuerpoHtml, $cuerpoTexto);
     }
 
     protected function usarResend(): bool
@@ -206,18 +281,23 @@ class EmailService
         return Resend::client($apiKey);
     }
 
-    private function enviarResend(string $para, string $asunto, string $cuerpoHtml): bool
+    private function enviarResend(string $para, string $asunto, string $cuerpoHtml, ?string $cuerpoTexto = null): bool
     {
         $this->ultimoError = null;
 
         try {
             $resend = $this->crearCliente($this->apiKey());
-            $resultado = $resend->emails->send([
+            $payload = [
                 'from'    => $this->remitente(),
                 'to'      => [$para],
                 'subject' => $asunto,
                 'html'    => $cuerpoHtml,
-            ]);
+            ];
+            if ($cuerpoTexto !== null && trim($cuerpoTexto) !== '') {
+                $payload['text'] = $cuerpoTexto;
+            }
+
+            $resultado = $resend->emails->send($payload);
 
             // El Resource de Resend implementa __get (no __isset): se accede
             // directamente al atributo, no con isset()/??.
@@ -245,7 +325,7 @@ class EmailService
         }
     }
 
-    private function enviarSmtp(string $para, string $asunto, string $cuerpoHtml): bool
+    private function enviarSmtp(string $para, string $asunto, string $cuerpoHtml, ?string $cuerpoTexto = null): bool
     {
         $host = (string) env('email.host');
         if ($host === '' || (string) env('email.fromEmail') === '') {
@@ -276,6 +356,9 @@ class EmailService
         $email->setTo($para);
         $email->setSubject($asunto);
         $email->setMessage($cuerpoHtml);
+        if ($cuerpoTexto !== null && trim($cuerpoTexto) !== '') {
+            $email->setAltMessage($cuerpoTexto);
+        }
 
         if ($email->send()) {
             return true;

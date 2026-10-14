@@ -657,6 +657,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .alerta { padding: 0.7rem 1rem; border-radius: var(--radius-md); margin: 0.8rem 0; font-size: 0.88rem; }
 .alerta-error { background: var(--red-bg); color: var(--red-tx); border: 1px solid #f5c6c2; }
 .alerta-exito { background: var(--green-bg); color: var(--green-tx); border: 1px solid #c8e4b4; }
+.alerta-registro { display: flex; flex-direction: column; gap: 6px; }
+.alerta-registro p { margin: 0; }
 
 /* Estados vacíos / carga — texto centrado atenuado (mismo patrón en todos los módulos) */
 .vacio,
@@ -823,7 +825,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  object-fit: cover;
+  background: #ffffff;
+  object-fit: contain;
   margin-bottom: 1.1rem;
 }
 .login-municipio-nombre {
