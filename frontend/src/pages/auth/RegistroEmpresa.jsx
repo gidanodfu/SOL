@@ -75,7 +75,7 @@ export default function RegistroEmpresa() {
         representante: form.representante,
         turnstile_token: turnstileToken,
       });
-      setOk('Solicitud enviada. La Municipalidad revisará sus datos y le notificará el resultado al correo indicado.');
+      setOk(true);
       setForm((f) => ({ ...f, email: '', telefono: '', representante: '' }));
     } catch (err) {
       const det = err?.response?.data?.errors;
@@ -103,7 +103,14 @@ export default function RegistroEmpresa() {
           </p>
 
           <Mensaje>{error}</Mensaje>
-          <Mensaje tipo="exito">{ok}</Mensaje>
+          {ok && (
+            <div className="alerta alerta-exito alerta-registro">
+              <strong>Solicitud enviada correctamente</strong>
+              <p>Hemos recibido tu solicitud de afiliación al Sistema de Empleo MDJLO. La Municipalidad revisará la información y te notificará el resultado por correo electrónico.</p>
+              <p>Revisa tu bandeja de entrada y, si no encuentras nuestro mensaje, comprueba también las carpetas de spam o correo no deseado.</p>
+              <p>Si la solicitud ya fue enviada, no necesitas registrarte nuevamente.</p>
+            </div>
+          )}
 
           <form onSubmit={enviar}>
             <div className="login-campo">
