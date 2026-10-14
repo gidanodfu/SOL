@@ -25,10 +25,14 @@ class OfertaService
 {
     public const TIPOS_EMPLEO = ['tiempo_completo', 'medio_tiempo', 'por_horas', 'practicas', 'freelance', 'remoto'];
 
-    private const ESTADOS_ADMIN = ['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada'];
+    private const ESTADOS_ADMIN = ['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada', 'observada'];
 
-    /** Estados editables por la empresa: cualquiera que no esté cerrado. */
-    private const EDITABLE = ['borrador', 'pendiente', 'publicada', 'rechazada'];
+    /**
+     * Estados editables por la empresa. `rechazada` NO es editable (decisión
+     * terminal) y `cerrada` tampoco. `observada` sí: la empresa corrige y la
+     * oferta vuelve a revisión al guardar.
+     */
+    private const EDITABLE = ['borrador', 'pendiente', 'publicada', 'observada'];
 
     private OfertaModel $ofertas;
 
@@ -192,16 +196,18 @@ class OfertaService
     {
         $oferta = $this->exigirPropia($empresaId, $id);
 
+        // `rechazada` (terminal) y `cerrada` no son editables por la empresa;
+        // tampoco por una petición directa a la API.
         if (! in_array($oferta['estado'], self::EDITABLE, true)) {
-            throw ApiException::conflicto('Solo puede editar ofertas en borrador o publicadas.');
+            throw ApiException::conflicto('La oferta no se puede editar en su estado actual.');
         }
 
         $datos = $this->validar($datos);
 
-        // Control del flujo: editar una oferta ya aprobada la devuelve a revisión
-        // municipal, para que el contenido publicado no pueda alterarse sin
-        // una nueva aprobación.
-        $vuelveARevision = $oferta['estado'] === 'publicada';
+        // Control del flujo: editar una oferta publicada o corregir una oferta
+        // observada la devuelve a revisión municipal. Corregir una observación
+        // NO es aprobarla: solo la aprobación municipal la publica.
+        $vuelveARevision = in_array($oferta['estado'], ['publicada', 'observada'], true);
 
         $this->ofertas->update($id, [
             'categoria_id'          => $datos['categoria_id'] ?? null,
@@ -218,6 +224,8 @@ class OfertaService
             'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
             'estado'                => $vuelveARevision ? 'pendiente' : $oferta['estado'],
             'fecha_publicacion'     => $vuelveARevision ? null : $oferta['fecha_publicacion'],
+            // La observación NO se borra al guardar el formulario: el admin la
+            // conserva al re-revisar. Solo se limpian las marcas de aprobación.
             'motivo_rechazo'        => $vuelveARevision ? null : $oferta['motivo_rechazo'],
             'validado_por'          => $vuelveARevision ? null : $oferta['validado_por'],
             'fecha_validacion'      => $vuelveARevision ? null : $oferta['fecha_validacion'],
@@ -233,8 +241,9 @@ class OfertaService
     {
         $oferta = $this->exigirPropia($empresaId, $id);
 
-        if (! in_array($oferta['estado'], ['borrador', 'rechazada'], true)) {
-            throw ApiException::conflicto('La oferta ya está en revisión o publicada.');
+        // `rechazada` es terminal: no se reenvía a revisión.
+        if ($oferta['estado'] !== 'borrador') {
+            throw ApiException::conflicto('Solo puede enviar a revisión una oferta en borrador.');
         }
 
         $this->ofertas->update($id, [
@@ -315,13 +324,18 @@ class OfertaService
             'motivo_rechazo'    => null,
             'validado_por'      => $adminId,
             'fecha_validacion'  => date('Y-m-d H:i:s'),
+            // La observación queda resuelta al aprobarse.
+            'observacion'       => null,
+            'observado_por'     => null,
+            'fecha_observacion' => null,
         ]);
         $this->auditoria->registrar($adminId, 'aprobar_oferta', 'oferta', $id, ['puesto' => $oferta['puesto']]);
     }
 
     /**
-     * Rechazo municipal (pendiente → rechazada). El motivo queda visible para la
-     * empresa, que puede corregir y reenviar a revisión.
+     * Rechazo municipal DEFINITIVO (pendiente/observada/publicada → rechazada).
+     * El motivo queda visible para la empresa; la oferta queda bloqueada para
+     * edición y publicación (decisión terminal).
      *
      * @param array<string, mixed> $datos
      */
@@ -335,17 +349,64 @@ class OfertaService
         if ($oferta === null) {
             throw ApiException::noEncontrado('La oferta no existe.');
         }
-        if ($oferta['estado'] !== 'pendiente') {
-            throw ApiException::conflicto('Solo puede rechazar ofertas pendientes de revisión.');
+        if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
+            throw ApiException::conflicto('No se puede rechazar una oferta en su estado actual.');
         }
 
         $this->ofertas->update($id, [
-            'estado'           => 'rechazada',
-            'motivo_rechazo'   => mb_substr((string) $datos['motivo'], 0, 255),
-            'validado_por'     => $adminId,
-            'fecha_validacion' => date('Y-m-d H:i:s'),
+            'estado'            => 'rechazada',
+            'motivo_rechazo'    => mb_substr((string) $datos['motivo'], 0, 255),
+            'fecha_publicacion' => null,
+            'validado_por'      => $adminId,
+            'fecha_validacion'  => date('Y-m-d H:i:s'),
         ]);
         $this->auditoria->registrar($adminId, 'rechazar_oferta', 'oferta', $id, ['puesto' => $oferta['puesto']]);
+    }
+
+    /**
+     * Observación municipal (RN-19): registra las correcciones que la empresa
+     * debe aplicar y deja la oferta NO publicada (`observada`). Desde ese estado
+     * la empresa puede corregir; al guardar, la oferta vuelve a revisión. No es
+     * aprobación ni rechazo.
+     *
+     * @param array<string, mixed> $datos
+     */
+    public function observar(int $adminId, int $id, array $datos): void
+    {
+        Validador::validar($datos, [
+            'observacion' => ['required', 'max:1000'],
+        ]);
+
+        $oferta = $this->repository->detalle($id);
+        if ($oferta === null) {
+            throw ApiException::noEncontrado('La oferta no existe.');
+        }
+        if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
+            throw ApiException::conflicto('No se puede observar una oferta en su estado actual.');
+        }
+
+        // Estado + observación se guardan de forma consistente.
+        $this->ofertas->db->transStart();
+        $this->ofertas->update($id, [
+            'estado'            => 'observada',
+            'observacion'       => trim((string) $datos['observacion']),
+            'observado_por'     => $adminId,
+            'fecha_observacion' => date('Y-m-d H:i:s'),
+            // Deja de estar publicada y limpia marcas de aprobación/rechazo.
+            'fecha_publicacion' => null,
+            'motivo_rechazo'    => null,
+            'validado_por'      => null,
+            'fecha_validacion'  => null,
+        ]);
+        $this->auditoria->registrar($adminId, 'observar_oferta', 'oferta', $id, [
+            'puesto'      => $oferta['puesto'],
+            'observacion' => mb_substr(trim((string) $datos['observacion']), 0, 255),
+        ]);
+        $this->ofertas->db->transComplete();
+
+        if (! $this->ofertas->db->transStatus()) {
+            throw ApiException::conflicto('No se pudo registrar la observación.');
+        }
     }
 
     /**

@@ -560,6 +560,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .badge-borrador, .badge-cerrada, .badge-no_seleccionado, .badge-inactivo,
 .badge-cancelado, .badge-finalizado { background: var(--gray-bg); color: var(--gray-tx); }
 .badge-rechazada { background: var(--red-bg); color: var(--red-tx); }
+.badge-observada { background: var(--blue-bg2); color: var(--blue-tx); }
 
 /* Situación laboral de la contratación (RF-58) */
 .badge-contratado { background: var(--green-bg); color: var(--green-tx); }

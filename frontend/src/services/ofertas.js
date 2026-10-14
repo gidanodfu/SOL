@@ -14,4 +14,5 @@ export const listarOfertasAdmin = (params = {}) => api.get('/admin/ofertas', { p
 export const detalleOfertaAdmin = (id) => api.get(`/admin/ofertas/${id}`).then((r) => r.data.data);
 export const aprobarOfertaAdmin = (id) => api.put(`/admin/ofertas/${id}/aprobar`).then((r) => r.data.data);
 export const rechazarOfertaAdmin = (id, motivo) => api.put(`/admin/ofertas/${id}/rechazar`, { motivo }).then((r) => r.data.data);
+export const observarOfertaAdmin = (id, observacion) => api.put(`/admin/ofertas/${id}/observar`, { observacion }).then((r) => r.data.data);
 export const cerrarOfertaAdmin = (id) => api.put(`/admin/ofertas/${id}/cerrar`).then((r) => r.data.data);

@@ -3544,10 +3544,11 @@ paths:
     put:
       tags: [Admin]
       operationId: adminOfertaRechazar
-      summary: Rechazar una oferta pendiente
+      summary: Rechazar una oferta (definitivo)
       description: |
-        Transición `pendiente → rechazada`. El `motivo` es obligatorio (máx. 255) y queda
-        visible para la empresa, que puede corregir y reenviar a revisión. Solo rol `admin`.
+        Transición `pendiente|observada|publicada → rechazada`. El `motivo` es obligatorio
+        (máx. 255). La oferta queda BLOQUEADA: no se puede editar, publicar ni reenviar a
+        revisión. Solo rol `admin`.
       security:
         - bearerAuth: []
       parameters:
@@ -3564,6 +3565,48 @@ paths:
                   type: string
                   maxLength: 255
                   example: Información incompleta
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/ofertas/{id}/observar:
+    put:
+      tags: [Admin]
+      operationId: adminOfertaObservar
+      summary: Observar una oferta (correcciones requeridas)
+      description: |
+        Transición a `observada`: registra las correcciones que la empresa debe aplicar y
+        deja la oferta NO publicada (si estaba publicada, deja de estarlo). La empresa puede
+        editar la oferta y, al guardar, vuelve a `pendiente` conservando la observación.
+        No es aprobación ni rechazo. Solo rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [observacion]
+              properties:
+                observacion:
+                  type: string
+                  maxLength: 1000
+                  example: Falta detallar las funciones y corregir la remuneración.
       responses:
         '200':
           $ref: '#/components/responses/OkVacio200'
@@ -3658,7 +3701,7 @@ components:
       description: Filtro por estado de la oferta. Se valida (valor inválido responde 422).
       schema:
         type: string
-        enum: [borrador, pendiente, publicada, rechazada, cerrada]
+        enum: [borrador, pendiente, publicada, rechazada, observada, cerrada]
     EstadoActividad:
       name: estado
       in: query
@@ -4252,7 +4295,7 @@ components:
           format: date
         estado:
           type: string
-          enum: [borrador, pendiente, publicada, rechazada, cerrada]
+          enum: [borrador, pendiente, publicada, rechazada, observada, cerrada]
         motivo_rechazo:
           type: string
           nullable: true
@@ -4260,6 +4303,16 @@ components:
           type: integer
           nullable: true
         fecha_validacion:
+          type: string
+          nullable: true
+        observacion:
+          type: string
+          nullable: true
+          description: Observaciones del administrador (estado `observada`).
+        observado_por:
+          type: integer
+          nullable: true
+        fecha_observacion:
           type: string
           nullable: true
         created_at:

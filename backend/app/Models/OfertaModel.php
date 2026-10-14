@@ -19,5 +19,6 @@ class OfertaModel extends Model
         'formacion_requerida', 'experiencia_requerida', 'tipo_empleo', 'ubicacion',
         'remuneracion', 'vacantes', 'fecha_publicacion', 'fecha_cierre', 'estado',
         'motivo_rechazo', 'validado_por', 'fecha_validacion',
+        'observacion', 'observado_por', 'fecha_observacion',
     ];
 }
