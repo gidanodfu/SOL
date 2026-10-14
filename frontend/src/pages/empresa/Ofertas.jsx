@@ -164,13 +164,10 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
     pendiente: (
       <Boton variante="gris" onClick={() => alEditar(oferta)}><Pencil size={16} aria-hidden="true" />Editar</Boton>
     ),
-    rechazada: (
-      <>
-        <Boton variante="gris" onClick={() => alEditar(oferta)}><Pencil size={16} aria-hidden="true" />Editar</Boton>
-        <Boton variante="primario" cargando={enviando} onClick={() => actuar(() => enviarOfertaARevision(oferta.id), 'Oferta reenviada a revisión municipal.')}>
-          <Send size={16} aria-hidden="true" />Reenviar a revisión
-        </Boton>
-      </>
+    observada: (
+      <Boton variante="primario" onClick={() => alEditar(oferta)}>
+        <Pencil size={16} aria-hidden="true" />Corregir oferta
+      </Boton>
     ),
     publicada: (
       <>
@@ -180,6 +177,8 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
         </Boton>
       </>
     ),
+    // `rechazada` es terminal: sin acciones de edición ni publicación.
+    rechazada: null,
     cerrada: null,
   }[o.estado] || null;
 
@@ -196,6 +195,8 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
         <Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
         {o.estado === 'pendiente' && <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>En revisión municipal: aún no es visible para los postulantes.</span>}
         {o.estado === 'publicada' && <span style={{ color: 'var(--green-tx)', fontSize: '0.85rem' }}>Publicada: visible para los postulantes.</span>}
+        {o.estado === 'observada' && <span style={{ color: 'var(--blue-tx)', fontSize: '0.85rem' }}>Observada: la Municipalidad solicitó correcciones. Corrige y guarda; la oferta volverá a revisión y NO se publica automáticamente.</span>}
+        {o.estado === 'rechazada' && <span style={{ color: 'var(--red-tx)', fontSize: '0.85rem' }}>Rechazada: la oferta está bloqueada para edición y publicación.</span>}
       </div>
 
       <Mensaje>{error}</Mensaje>
@@ -216,6 +217,12 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
         ]}
       />
 
+      {o.observacion && (
+        <div className="modal-seccion">
+          <h3>Observaciones de la Municipalidad</h3>
+          <p className="modal-texto" style={{ color: 'var(--blue-tx)' }}>{o.observacion}</p>
+        </div>
+      )}
       {o.motivo_rechazo && (
         <div className="modal-seccion">
           <h3>Motivo de rechazo</h3>

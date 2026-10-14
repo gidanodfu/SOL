@@ -41,6 +41,13 @@ class OfertasController extends BaseApiController
         return $this->sinContenido('Oferta rechazada.');
     }
 
+    public function observar($id)
+    {
+        (new OfertaService())->observar(service('guard')->id(), (int) $id, $this->cuerpo());
+
+        return $this->sinContenido('Oferta observada. La empresa debe corregirla.');
+    }
+
     public function cerrar($id)
     {
         (new OfertaService())->cerrarComoAdmin(service('guard')->id(), (int) $id);

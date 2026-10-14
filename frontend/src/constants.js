@@ -11,7 +11,7 @@ export const ROLES = {
   POSTULANTE: 'postulante',
 };
 
-export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'rechazada', 'cerrada'];
+export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'rechazada', 'observada', 'cerrada'];
 export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 
 /** Situación laboral posterior de una contratación (RF-58). Máximo 4 estados. */
@@ -43,6 +43,7 @@ export const ETIQUETA_ESTADO_OFERTA = {
   pendiente: 'Pendiente de revisión',
   publicada: 'Publicada',
   rechazada: 'Rechazada',
+  observada: 'Observada',
   cerrada: 'Cerrada',
 };
 

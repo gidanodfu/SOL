@@ -22,7 +22,7 @@ import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION, ETIQUETA_SITUACION
 import { errorApi } from '../../utils';
 
 const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
-const ORDEN_OFERTAS = ['pendiente', 'publicada', 'rechazada', 'borrador', 'cerrada'];
+const ORDEN_OFERTAS = ['pendiente', 'observada', 'publicada', 'rechazada', 'borrador', 'cerrada'];
 
 /** Adapta un conteo por estado a los items del gráfico (solo > 0). */
 function filas(datos, orden, diccionario) {

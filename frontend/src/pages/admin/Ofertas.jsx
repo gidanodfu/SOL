@@ -6,6 +6,7 @@ import {
   cerrarOfertaAdmin,
   detalleOfertaAdmin,
   listarOfertasAdmin,
+  observarOfertaAdmin,
   rechazarOfertaAdmin,
 } from '../../services/ofertas';
 import { EstadoCarga, Boton, Estado, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
@@ -13,7 +14,7 @@ import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { useDialogo, useToast } from '../../components/Feedbacks';
-import { Check, Eye, Lock, XCircle } from 'lucide-react';
+import { Check, Eye, Lock, MessageSquareWarning, XCircle } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO } from '../../constants';
 import { errorApi, fechaCalendario, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
@@ -21,6 +22,7 @@ import { useAccion } from '../../hooks/useAccion';
 const FILTROS = [
   ['', 'Todas'],
   ['pendiente', 'Pendientes'],
+  ['observada', 'Observadas'],
   ['publicada', 'Publicadas'],
   ['rechazada', 'Rechazadas'],
   ['cerrada', 'Cerradas'],
@@ -47,8 +49,9 @@ export default function Ofertas() {
   return (
     <Tarjeta titulo="Revisión de ofertas laborales">
       <p style={{ color: 'var(--gris)', fontSize: '0.85rem', marginBottom: '0.6rem' }}>
-        Las empresas envían sus ofertas a revisión municipal. Apruébalas para publicarlas
-        en la bolsa de empleo o recházalas indicando el motivo. También puedes cerrar una
+        Las empresas envían sus ofertas a revisión municipal. Apruébalas para publicarlas en
+        la bolsa de empleo, <b>obsérvalas</b> para que la empresa corrija (no se publican) o
+        <b> recházalas</b> definitivamente (quedan bloqueadas). También puedes cerrar una
         oferta publicada.
       </p>
       <div className="form-fila filtros" style={{ marginBottom: '0.8rem' }}>
@@ -141,7 +144,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
   const rechazar = async () => {
     const motivo = await pedirTexto({
       titulo: 'Rechazar oferta',
-      mensaje: 'El motivo se muestra a la empresa.',
+      mensaje: 'La oferta quedará bloqueada para edición y publicación. El motivo se muestra a la empresa.',
       etiqueta: 'Motivo del rechazo',
       min: 1,
       textoConfirmar: 'Rechazar',
@@ -149,6 +152,19 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
     });
     if (!motivo) return;
     accion(() => rechazarOfertaAdmin(oferta.id, motivo), 'Oferta rechazada.');
+  };
+
+  const observar = async () => {
+    const observacion = await pedirTexto({
+      titulo: 'Observar oferta',
+      mensaje: 'Indica qué debe corregir la empresa. La oferta NO se publica y vuelve a revisión cuando la empresa la corrija.',
+      etiqueta: 'Observaciones para la empresa',
+      min: 1,
+      textoConfirmar: 'Observar',
+      variante: 'primario',
+    });
+    if (!observacion) return;
+    accion(() => observarOfertaAdmin(oferta.id, observacion), 'Oferta observada.');
   };
 
   const accion = async (fn, mensaje) => {
@@ -161,21 +177,41 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
     }
   };
 
+  const botonObservar = (
+    <Boton variante="gris" cargando={enviando} onClick={observar}>
+      <MessageSquareWarning size={16} aria-hidden="true" />Observar
+    </Boton>
+  );
+  const botonRechazar = (
+    <Boton variante="peligro" cargando={enviando} onClick={rechazar}>
+      <XCircle size={16} aria-hidden="true" />Rechazar
+    </Boton>
+  );
+
   const acciones = {
     pendiente: (
       <>
         <Boton variante="exito" cargando={enviando} onClick={aprobar}>
           <Check size={16} aria-hidden="true" />Aprobar
         </Boton>
-        <Boton variante="peligro" cargando={enviando} onClick={rechazar}>
-          <XCircle size={16} aria-hidden="true" />Rechazar
-        </Boton>
+        {botonObservar}
+        {botonRechazar}
+      </>
+    ),
+    observada: (
+      <>
+        {botonObservar}
+        {botonRechazar}
       </>
     ),
     publicada: (
-      <Boton variante="peligro" cargando={enviando} onClick={() => accion(() => cerrarOfertaAdmin(oferta.id), 'Oferta cerrada.')}>
-        <Lock size={16} aria-hidden="true" />Cerrar
-      </Boton>
+      <>
+        {botonObservar}
+        {botonRechazar}
+        <Boton variante="peligro" cargando={enviando} onClick={() => accion(() => cerrarOfertaAdmin(oferta.id), 'Oferta cerrada.')}>
+          <Lock size={16} aria-hidden="true" />Cerrar
+        </Boton>
+      </>
     ),
   }[o.estado] || null;
 
@@ -191,6 +227,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
         {o.fecha_validacion && <span style={{ color: 'var(--text-3)', fontSize: '0.82rem' }}>Revisada el {fechaHora(o.fecha_validacion)}</span>}
+        {o.fecha_observacion && <span style={{ color: 'var(--blue-tx)', fontSize: '0.82rem' }}>Observada el {fechaHora(o.fecha_observacion)}</span>}
       </div>
 
       <Mensaje>{error}</Mensaje>
@@ -212,6 +249,12 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
         ]}
       />
 
+      {o.observacion && (
+        <div className="modal-seccion">
+          <h3>Observaciones a corregir</h3>
+          <p className="modal-texto" style={{ color: 'var(--blue-tx)' }}>{o.observacion}</p>
+        </div>
+      )}
       {o.motivo_rechazo && (
         <div className="modal-seccion">
           <h3>Motivo de rechazo</h3>

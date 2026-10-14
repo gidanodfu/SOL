@@ -111,6 +111,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         // Revisión municipal: aprobar publica; rechazar deja la oferta no visible.
         $routes->put('ofertas/(:num)/aprobar', 'OfertasController::aprobar/$1');
         $routes->put('ofertas/(:num)/rechazar', 'OfertasController::rechazar/$1');
+        $routes->put('ofertas/(:num)/observar', 'OfertasController::observar/$1');
         $routes->put('ofertas/(:num)/cerrar', 'OfertasController::cerrar/$1');
 
         $routes->get('actividades', 'ActividadesController::index');

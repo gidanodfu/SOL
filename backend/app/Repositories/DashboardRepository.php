@@ -27,7 +27,7 @@ class DashboardRepository
         $empresas    = $this->db->table('empresas')->select("COUNT(*) total, SUM(estado = 'activo') activas")->get()->getRowArray();
         $postulantes = $this->db->table('users')->where('rol', 'postulante')->where('estado', 'activo')->countAllResults();
 
-        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada'], 0);
+        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada', 'observada'], 0);
         foreach ($this->db->table('ofertas')->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
             $ofertas[$fila['estado']] = (int) $fila['n'];
         }
@@ -173,7 +173,7 @@ class DashboardRepository
      */
     public function empresa(int $empresaId, ?string $desde = null, ?string $hasta = null): array
     {
-        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada'], 0);
+        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada', 'observada'], 0);
         foreach ($this->db->table('ofertas')->where('empresa_id', $empresaId)
             ->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
             $ofertas[$fila['estado']] = (int) $fila['n'];
@@ -233,13 +233,15 @@ class DashboardRepository
 
     /**
      * Conteos de atención pendiente de una empresa (indicadores de la sidebar):
-     * ofertas rechazadas que requieren acción y postulaciones por revisar.
+     * ofertas observadas que requieren corrección y postulaciones por revisar.
      *
-     * @return array{ofertas_rechazadas: int, postulaciones: int}
+     * @return array{ofertas_observadas: int, ofertas_rechazadas: int, postulaciones: int}
      */
     public function pendientesEmpresa(int $empresaId): array
     {
         return [
+            'ofertas_observadas' => (int) $this->db->table('ofertas')
+                ->where('empresa_id', $empresaId)->where('estado', 'observada')->countAllResults(),
             'ofertas_rechazadas' => (int) $this->db->table('ofertas')
                 ->where('empresa_id', $empresaId)->where('estado', 'rechazada')->countAllResults(),
             'postulaciones' => (int) $this->db->table('postulaciones')

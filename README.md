@@ -47,11 +47,16 @@ MySQL es la fuente de verdad.
   (`sunat.token`); el admin aprueba/rechaza desde una bandeja y la cuenta se activa con un
   enlace de un solo uso (`/activar-cuenta`). El login usa el correo corporativo (el RUC
   también funciona).
-- **Ofertas laborales**: toda oferta nace **pendiente de revisión municipal**; el admin la
-  aprueba (pasa a `publicada`, recién visible y postulable) o la rechaza con motivo. La
-  empresa envía a revisión y puede reenviar tras correcciones; editar una oferta publicada
-  la devuelve a revisión. Estados: `pendiente → publicada|rechazada → cerrada`
-  (`borrador` solo para datos heredados).
+- **Ofertas laborales**: toda oferta nace **pendiente de revisión municipal**. El admin puede
+  **aprobar** (pasa a `publicada`, recién visible y postulable), **observar** (pasa a
+  `observada`: registra las correcciones requeridas y deja la oferta NO publicada; la empresa
+  la edita y al guardar vuelve a `pendiente` conservando la observación) o **rechazar**
+  definitivamente (`rechazada`: bloqueada para edición y publicación, terminal). Editar una
+  oferta publicada también la devuelve a revisión. La empresa puede editar `borrador`,
+  `pendiente`, `publicada` y `observada`, pero **no** `rechazada` ni `cerrada`. Estados:
+  `borrador|pendiente → publicada|observada|rechazada → cerrada` (`borrador` solo heredado).
+  Endpoints: `PUT /api/admin/ofertas/{id}/aprobar|observar|rechazar|cerrar` y
+  `PUT /api/empresa/ofertas/{id}/enviar-revision|cerrar`.
 - **Modo oscuro**: tema claro/oscuro global (admin, empresa, postulante y público) con una
   única fuente (`ThemeContext` + variables CSS) y preferencia persistida; botón con iconos
   Lucide en el sidebar y las cabeceras.

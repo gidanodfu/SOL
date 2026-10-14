@@ -55,7 +55,8 @@ export function LayoutEmpresa() {
     refetchOnWindowFocus: true,
   });
   const indicadores = {
-    '/empresa/ofertas': (pendientes?.ofertas_rechazadas || 0) > 0,
+    // Ofertas que requieren corrección de la empresa (observadas).
+    '/empresa/ofertas': (pendientes?.ofertas_observadas || 0) > 0,
     '/empresa/postulaciones': (pendientes?.postulaciones || 0) > 0,
   };
 
