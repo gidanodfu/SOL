@@ -61,25 +61,17 @@ class EmailService
     /**
      * Layout HTML común (tablas + estilos inline + tarjeta rounded, máx. 600 px),
      * compatible con Gmail/Outlook: sin JavaScript, sin CSS externo y con un
-     * encabezado institucional configurable (logo, nombre y subtítulo).
+     * encabezado institucional de solo texto (nombre y subtítulo).
      */
     public function layout(string $contenidoHtml): string
     {
         $anio      = date('Y');
         $marca     = $this->marca();
         $subtitulo = $this->subtitulo();
-        $logo      = $this->logoUrl();
 
-        // El logo es opcional: si no hay URL, el nombre institucional mantiene la
-        // cabecera comprensible (imágenes bloqueadas o inaccesibles). Va centrado.
-        $logoHtml = $logo !== null
-            ? '<tr><td align="center" style="padding:0 0 12px;">'
-                . '<img src="' . htmlspecialchars($logo, ENT_QUOTES) . '" alt="Municipalidad Distrital de José Leonardo Ortiz" width="64" height="64" style="display:block;width:64px;height:64px;margin:0 auto;border-radius:12px;background:#ffffff;object-fit:contain;">'
-                . '</td></tr>'
-            : '';
-
+        // Encabezado SOLO texto (sin imágenes ni logos): evita iconos rotos y
+        // cualquier dependencia de una URL externa.
         $cabecera = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">'
-            . $logoHtml
             . '<tr><td align="center">'
             . '<div class="dm-brand" style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:.3px;line-height:1.25;">' . htmlspecialchars($marca, ENT_QUOTES) . '</div>'
             . '<div style="color:#9fb6cf;font-size:12px;margin-top:4px;line-height:1.3;">' . htmlspecialchars($subtitulo, ENT_QUOTES) . '</div>'
@@ -95,7 +87,7 @@ class EmailService
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;">'
             . '<tr><td align="center" style="padding:28px 12px;">'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">'
-            . '<tr><td class="dm-pad" style="background:#0b2a4a;padding:26px 28px;">' . $cabecera . '</td></tr>'
+            . '<tr><td class="dm-pad" style="background:#0b2a4a;padding:24px 28px;">' . $cabecera . '</td></tr>'
             . '<tr><td class="dm-pad" style="padding:30px 28px;color:#1f2937;font-size:15px;line-height:1.6;">' . $contenidoHtml . '</td></tr>'
             . '<tr><td class="dm-pad" style="padding:18px 28px;background:#f6f8fb;border-top:1px solid #e2e8f0;color:#8895a7;font-size:12px;text-align:center;line-height:1.6;">'
             . htmlspecialchars($marca, ENT_QUOTES) . ' — Municipalidad Distrital de José Leonardo Ortiz'
@@ -119,14 +111,6 @@ class EmailService
         $subtitulo = trim((string) env('EMAIL_BRAND_SUBTITLE'));
 
         return $subtitulo !== '' ? $subtitulo : 'Sistema de intermediación laboral';
-    }
-
-    /** URL absoluta (http/https) del logo institucional; null si no está configurada. */
-    private function logoUrl(): ?string
-    {
-        $url = trim((string) env('EMAIL_LOGO_URL'));
-
-        return $url !== '' && preg_match('#^https?://#i', $url) === 1 ? $url : null;
     }
 
     /**
