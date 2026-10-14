@@ -82,6 +82,7 @@ export default function Actividades() {
           {data.map((a) => (
             <TarjetaRegistro
               key={a.id}
+              lateral={<ActivityImage variante="tarjeta" src={urlArchivo(a.imagen_url)} alt={`Imagen de la actividad ${a.nombre}`} />}
               icono={CalendarDays}
               titulo={a.nombre}
               badge={<Estado valor={a.estado} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />}
@@ -95,7 +96,6 @@ export default function Actividades() {
                 </>
               )}
             >
-              <ActivityImage variante="thumb" src={urlArchivo(a.imagen_url)} alt={`Imagen de la actividad ${a.nombre}`} />
               {a.descripcion && (
                 <ContenidoEnriquecido className="contenido-resumen">{a.descripcion}</ContenidoEnriquecido>
               )}
