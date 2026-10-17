@@ -517,6 +517,12 @@
 }
 
 /* ---------- Cabecero público de la bolsa de empleo (sin sesión) ---------- */
+.app-postulante .cabecero-publico {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .app-postulante .guest-actions {
   display: flex;
   align-items: center;
@@ -689,11 +695,75 @@
   .app-postulante .post-header > .brand { order: 1; }
   /* La zona de acciones comparte la fila del logo pero puede encoger y envolver
      (p. ej. los tres botones de visitante en pantallas de 360 px). */
-  .app-postulante .post-acciones { order: 2; flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+  .app-postulante .post-acciones { order: 2; flex: 1 1 auto; min-width: 0; justify-content: flex-start; }
   .app-postulante .post-buscador { order: 3; flex: 1 1 100%; max-width: none; height: 44px; }
   .app-postulante .post-nav { order: 4; flex: 1 1 100%; }
   .app-postulante .post-nav a { flex: 1 1 0; justify-content: center; text-align: center; }
-  .app-postulante .post-acciones .guest-actions { flex-shrink: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .app-postulante .post-acciones .guest-actions { flex-shrink: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-start; }
+}
+
+/* Encabezado público sin sesión: identidad + tema, empresa, acceso/registro,
+   buscador y navegación. Solo aplica a .publica; Admin/Empresa y el header
+   autenticado conservan su composición. */
+@media (max-width: 640px) {
+  .app-postulante .post-header.publica {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "marca tema"
+      "empresa empresa"
+      "acceso registro"
+      "buscador buscador"
+      "nav nav";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 10px;
+  }
+  .app-postulante .post-header.publica > .brand { grid-area: marca; min-width: 0; }
+  .app-postulante .post-header.publica > .post-acciones { display: contents; }
+  .app-postulante .post-header.publica .cabecero-publico.publicas { display: contents; }
+  .app-postulante .post-header.publica .cabecero-publico.publicas > .btn-tema {
+    grid-area: tema;
+    justify-self: end;
+    align-self: center;
+  }
+  .app-postulante .post-header.publica .guest-actions.publicas {
+    grid-column: 1 / -1;
+    grid-row: 2 / span 2;
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: center;
+    justify-self: center;
+    gap: 10px;
+  }
+  .app-postulante .post-header.publica .guest-actions.publicas .guest-link {
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+  .app-postulante .post-header.publica .guest-actions.publicas .guest-link:nth-child(1) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+  }
+  .app-postulante .post-header.publica .guest-actions.publicas .guest-link:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .app-postulante .post-header.publica .guest-actions.publicas .guest-link:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .app-postulante .post-header.publica > .post-buscador {
+    grid-area: buscador;
+    width: 100%;
+    max-width: none;
+    height: 44px;
+  }
+  .app-postulante .post-header.publica > .post-nav {
+    grid-area: nav;
+    width: 100%;
+  }
 }
 
 /* ========== Mobile: postulaciones como tarjetas y filtros en 2 columnas ====== */
