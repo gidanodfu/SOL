@@ -11,6 +11,18 @@ export const ROLES = {
   POSTULANTE: 'postulante',
 };
 
+/** Destino público por defecto cuando no hay sesión o el rol no es reconocido. */
+export const RUTA_INICIO_PUBLICA = '/postulante/buscar';
+
+/** Panel inicial por rol; es la única fuente de esta resolución en el frontend. */
+export const PANEL_POR_ROL = {
+  [ROLES.ADMIN]: '/admin/dashboard',
+  [ROLES.EMPRESA]: '/empresa/dashboard',
+  [ROLES.POSTULANTE]: '/postulante/dashboard',
+};
+
+export const rutaPanel = (rol, porDefecto = RUTA_INICIO_PUBLICA) => PANEL_POR_ROL[rol] || porDefecto;
+
 export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'rechazada', 'observada', 'cerrada'];
 export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 

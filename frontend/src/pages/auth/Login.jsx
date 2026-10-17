@@ -6,11 +6,10 @@ import { useTema } from '../../context/ThemeContext';
 import { Mensaje } from '../../components/UI';
 import GoogleButton from '../../components/GoogleButton';
 import Turnstile from '../../components/Turnstile';
-import { ROLES } from '../../constants';
+import { ROLES, RUTA_INICIO_PUBLICA, rutaPanel } from '../../constants';
 import { errorApi } from '../../utils';
 
 const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
-const destinoPorRol = { admin: '/admin/dashboard', empresa: '/empresa/dashboard', postulante: '/postulante/buscar' };
 
 export default function Login() {
   const { login, loginGoogle } = useAuth();
@@ -32,7 +31,9 @@ export default function Login() {
 
   const destinoPostLogin = (usuario) => {
     const desde = location.state?.from;
-    return usuario.rol === 'postulante' && desde ? desde : destinoPorRol[usuario.rol] || '/';
+    // El postulante conserva el destino previo o cae en la bolsa pública.
+    if (usuario.rol === ROLES.POSTULANTE) return desde || RUTA_INICIO_PUBLICA;
+    return rutaPanel(usuario.rol);
   };
 
   const enviar = async (e) => {
