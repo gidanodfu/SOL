@@ -27,32 +27,34 @@ export function LayoutBusqueda() {
 function CabeceroPublico({ usuario }) {
   return (
     <div className="app-postulante">
-      <NavbarPostulante>
-        <BotonTema />
+      <NavbarPostulante className={usuario ? '' : 'publica'}>
+        <div className={`cabecero-publico${usuario ? '' : ' publicas'}`}>
+          <BotonTema />
 
-        {usuario ? (
-          <div className="guest-actions">
-            <span className="guest-saludo">
-              {usuario.nombres || 'Usuario'}
-            </span>
-            <Link to={rutaPanel(usuario.rol)} className="guest-link solid">
-              <i className="ti ti-layout-grid" /> Mi panel
-            </Link>
-            <BotonSalir className="guest-link" />
-          </div>
-        ) : (
-          <div className="guest-actions">
-            <Link to="/registro-empresa" className="guest-link" title="Registro de empresa">
-              Soy una empresa
-            </Link>
-            <Link to="/login" className="guest-link solid">
-              Iniciar sesión
-            </Link>
-            <Link to="/registro" className="guest-link solid">
-              Registrarme
-            </Link>
-          </div>
-        )}
+          {usuario ? (
+            <div className="guest-actions">
+              <span className="guest-saludo">
+                {usuario.nombres || 'Usuario'}
+              </span>
+              <Link to={rutaPanel(usuario.rol)} className="guest-link solid">
+                <i className="ti ti-layout-grid" /> Mi panel
+              </Link>
+              <BotonSalir className="guest-link" />
+            </div>
+          ) : (
+            <div className="guest-actions publicas">
+              <Link to="/registro-empresa" className="guest-link" title="Registro de empresa">
+                Soy una empresa
+              </Link>
+              <Link to="/login" className="guest-link solid">
+                Iniciar sesión
+              </Link>
+              <Link to="/registro" className="guest-link solid">
+                Registrarme
+              </Link>
+            </div>
+          )}
+        </div>
       </NavbarPostulante>
 
       <main className="post-main">

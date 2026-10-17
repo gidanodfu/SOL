@@ -21,11 +21,11 @@ const NAV = [
  * que ambas variantes comparten la composición y el buscador sin mezclar los
  * flujos de autenticación.
  */
-export function NavbarPostulante({ children }) {
+export function NavbarPostulante({ children, className = '' }) {
   const [logoError, setLogoError] = useState(false);
 
   return (
-    <header className="post-header">
+    <header className={`post-header${className ? ` ${className}` : ''}`}>
       <Link to="/postulante/buscar" className="brand" aria-label="Empleo MDJLO — sistema de intermediación laboral">
         <span className="brand-mark">
           {logoError
