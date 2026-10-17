@@ -3,12 +3,10 @@ import { Link, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
 import BotonTema from '../components/BotonTema';
-import { ROLES } from '../constants';
+import { ROLES, rutaPanel } from '../constants';
 import { Cargando } from '../routes/Guardas';
 import { LayoutPostulante } from './LayoutPostulante';
 import { NavbarPostulante } from './NavbarPostulante';
-
-const panelPorRol = { [ROLES.ADMIN]: '/admin/dashboard', [ROLES.EMPRESA]: '/empresa/dashboard', [ROLES.POSTULANTE]: '/postulante/perfil' };
 
 /**
  * Rutas públicas de bolsa de empleo: /postulante/buscar y /postulante/oportunidades
@@ -37,7 +35,7 @@ function CabeceroPublico({ usuario }) {
             <span className="guest-saludo">
               {usuario.nombres || 'Usuario'}
             </span>
-            <Link to={panelPorRol[usuario.rol] || '/'} className="guest-link solid">
+            <Link to={rutaPanel(usuario.rol)} className="guest-link solid">
               <i className="ti ti-layout-grid" /> Mi panel
             </Link>
             <BotonSalir className="guest-link" />

@@ -53,7 +53,9 @@ api.interceptors.response.use(
 
     if (response?.status === 401) {
       tokens.limpiar();
-      if (!esAutenticacion) window.location.assign('/login');
+      // La restauración inicial la resuelve AuthContext: si falla, la raíz debe
+      // continuar como visitante pública, sin forzar /login.
+      if (!esAutenticacion && !config?._sinRedireccionLogin) window.location.assign('/login');
     }
     return Promise.reject(error);
   },

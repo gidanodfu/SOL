@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { RutaProtegida, RutaPublica } from './Guardas';
+import { Cargando, RutaProtegida, RutaPublica } from './Guardas';
 import { LayoutApp } from '../layouts/AppLayout';
 import { LayoutBusqueda } from '../layouts/LayoutBusqueda';
 import { useAuth } from '../context/AuthContext';
-import { ROLES } from '../constants';
+import { ROLES, rutaPanel } from '../constants';
 
 import Login from '../pages/auth/Login';
 import Registro from '../pages/auth/Registro';
@@ -33,6 +33,10 @@ import Temas from '../pages/configuracion/Temas';
 export function Rutas() {
   return (
     <Routes>
+      {/* La raíz es pública: resuelve visitante o panel según la sesión ya
+          restaurada por AuthContext. Nunca depende del hostname. */}
+      <Route path="/" element={<Inicio />} />
+
       <Route path="/login" element={<RutaPublica><Login /></RutaPublica>} />
       <Route path="/registro" element={<RutaPublica><Registro /></RutaPublica>} />
       <Route path="/registro-empresa" element={<RegistroEmpresa />} />
@@ -46,15 +50,12 @@ export function Rutas() {
       </Route>
 
       <Route
-        path="/"
         element={
           <RutaProtegida>
             <LayoutApp />
           </RutaProtegida>
         }
       >
-        <Route index element={<Inicio />} />
-
         <Route element={<RutaProtegida roles={[ROLES.ADMIN]}><Outlet /></RutaProtegida>}>
           <Route path="admin/dashboard" element={<DashboardAdmin />} />
           <Route path="admin/usuarios" element={<UsuariosAdmin />} />
@@ -99,7 +100,11 @@ export function Rutas() {
 }
 
 function Inicio() {
-  const { usuario } = useAuth();
-  const destino = { admin: '/admin/dashboard', empresa: '/empresa/dashboard', postulante: '/postulante/buscar' };
-  return <Navigate to={destino[usuario?.rol] || '/login'} replace />;
+  const { usuario, cargando } = useAuth();
+
+  // La sesión se está restaurando (incluido el refresh): no redirigir todavía.
+  if (cargando) return <Cargando />;
+
+  // Sin sesión válida, o con un rol no reconocido, se continúa como visitante.
+  return <Navigate to={rutaPanel(usuario?.rol)} replace />;
 }
