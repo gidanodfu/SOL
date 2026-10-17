@@ -877,6 +877,23 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   padding-left: 2.3rem;
 }
 
+/* Google Identity Services inserta su iframe con 10px extra por lado
+   (padding 2px 10px + margin -2px -10px). El contenedor recorta ese margen
+   para que no aparezca una superficie blanca alrededor del botón. */
+.google-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 0 0.2rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+}
+.google-button:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
 /* Campos */
 .login-campo {
   margin-bottom: 1.15rem;
@@ -1268,9 +1285,10 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 
 .side-link {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 13px;
+  column-gap: 13px;
   width: 100%;
   padding: 13px 12px;
   margin-bottom: 4px;
@@ -1286,16 +1304,18 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   transition: background 0.2s, color 0.2s, padding 0.18s ease;
 }
 
+.side-link > svg { justify-self: center; }
+.side-link-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .side-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 .side-link:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
-.side-link.active { background: var(--blue); color: #fff; font-weight: 600; }
+.side-link.active { background: var(--blue); color: #fff; }
 
 /* Indicador de atención pendiente (solo si hay pendientes reales). */
 .side-punto {
+  grid-column: 3;
+  justify-self: end;
   width: 9px;
   height: 9px;
-  margin-left: auto;
-  flex: none;
   border-radius: 50%;
   background: var(--red-c);
   box-shadow: 0 0 0 2px var(--navy);
@@ -1382,7 +1402,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 /* Contraído: la marca desaparece y el botón de expandir ocupa la cabecera. */
 .sidebar.colapsado .side-brand { display: none; }
 .sidebar.colapsado .side-nav { padding: 18px 12px; }
-.sidebar.colapsado .side-link { justify-content: center; padding: 13px 0; }
+.sidebar.colapsado .side-link {
+  grid-template-columns: 18px;
+  justify-content: center;
+  padding: 13px 0;
+}
 .sidebar.colapsado .side-foot { padding: 12px; }
 .sidebar.colapsado .side-user {
   justify-content: center;
@@ -1569,7 +1593,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   }
   .sidebar.colapsado .side-brand { display: flex; flex: 1; justify-content: flex-start; }
   .sidebar.colapsado .side-nav { padding: 18px 12px; }
-  .sidebar.colapsado .side-link { justify-content: flex-start; padding: 13px 12px; }
+  .sidebar.colapsado .side-link {
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    justify-content: stretch;
+    padding: 13px 12px;
+  }
   .sidebar.colapsado .side-foot { padding: 14px 12px; }
   .sidebar.colapsado .side-user {
     justify-content: flex-start;
