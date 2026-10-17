@@ -81,7 +81,7 @@ export default function GoogleButton({ modo = 'login', onCredencial, etiqueta = 
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '0 0 0.2rem' }}>
+    <div className="google-button">
       <div ref={contenedor} />
     </div>
   );
