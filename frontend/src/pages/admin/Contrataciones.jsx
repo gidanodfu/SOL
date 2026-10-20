@@ -44,7 +44,7 @@ export default function Contrataciones() {
                 <tr key={c.id}>
                   <td className="col-fecha" data-label="Fecha">{fechaCalendario(c.fecha_contratacion)}</td>
                   <td data-label="Empresa">{c.razon_social}<br /><small style={{ color: 'var(--gris)' }}>RUC {c.ruc}</small></td>
-                  <td data-label="Contratado">{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>DNI {c.dni}</small></td>
+                  <td data-label="Contratado">{c.nombres} {c.apellidos}<br /><small style={{ color: 'var(--gris)' }}>{c.tipo_documento === 'CE' ? 'Carnet de extranjería' : 'DNI'} {c.dni}</small></td>
                   <td data-label="Oferta / cargo">{c.puesto}<br /><small style={{ color: 'var(--gris)' }}>{c.cargo}</small></td>
                   <td data-label="Modalidad">{c.modalidad || '—'}</td>
                   <td className="col-monto" data-label="Remuneración">{c.remuneracion ? `S/ ${c.remuneracion}` : '—'}</td>

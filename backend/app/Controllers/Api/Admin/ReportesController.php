@@ -87,7 +87,7 @@ class ReportesController extends BaseApiController
         $filas[] = ['Tiempo promedio a seleccion (dias)', $indicadores['tiempo_promedio_seleccion_dias'] ?? 'sin datos'];
         $filas[] = [];
         $filas[] = ['Contrataciones del periodo', ''];
-        $filas[] = ['Fecha', 'Empresa', 'RUC', 'Contratado', 'DNI', 'Oferta', 'Cargo', 'Modalidad', 'Remuneracion'];
+        $filas[] = ['Fecha', 'Empresa', 'RUC', 'Contratado', 'Documento', 'Oferta', 'Cargo', 'Modalidad', 'Remuneracion'];
 
         foreach ($contrataciones as $c) {
             $filas[] = [
@@ -95,7 +95,7 @@ class ReportesController extends BaseApiController
                 $c['razon_social'],
                 $c['ruc'],
                 $c['nombres'] . ' ' . $c['apellidos'],
-                $c['dni'],
+                (($c['tipo_documento'] ?? 'DNI') . ' ' . $c['dni']),
                 $c['puesto'],
                 $c['cargo'],
                 $c['modalidad'] ?? '',

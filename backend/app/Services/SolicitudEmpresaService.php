@@ -242,6 +242,7 @@ class SolicitudEmpresaService
         if ($empresa === null) {
             throw ApiException::conflicto('La cuenta de la empresa no existe.');
         }
+        $this->exigirNoActivada($empresa);
 
         $link = $this->nuevoEnlace((int) $empresa['user_id']);
 
@@ -266,6 +267,7 @@ class SolicitudEmpresaService
         if ($empresa === null) {
             throw ApiException::conflicto('La cuenta de la empresa no existe.');
         }
+        $this->exigirNoActivada($empresa);
 
         $link    = $this->nuevoEnlace((int) $empresa['user_id']);
         $enviado = $this->enviarCorreoActivacion($solicitud, $link);
@@ -311,6 +313,8 @@ class SolicitudEmpresaService
         if ($empresa === null) {
             throw ApiException::noAutorizado('El enlace es inválido.');
         }
+        $this->exigirCuentaLocal((int) $empresa['user_id']);
+        $this->exigirNoActivada($empresa);
 
         return [
             'razon_social' => $empresa['razon_social'],
@@ -337,15 +341,30 @@ class SolicitudEmpresaService
         if ($empresa === null) {
             throw ApiException::noAutorizado('El enlace es inválido.');
         }
+        $this->exigirCuentaLocal($userId);
+        $this->exigirNoActivada($empresa);
 
         $this->solicitudes->db->transStart();
+
+        // Consumo atómico del token: dos solicitudes simultáneas no pueden
+        // activar la misma cuenta con el mismo enlace.
+        $this->activaciones
+            ->where('id', (int) $activacion['id'])
+            ->where('usado', 0)
+            ->set('usado', 1)
+            ->set('usado_en', date('Y-m-d H:i:s'))
+            ->update();
+
+        if ($this->activaciones->db->affectedRows() !== 1) {
+            $this->solicitudes->db->transRollback();
+            throw ApiException::conflicto('El enlace ya fue utilizado. Solicite uno nuevo.');
+        }
 
         $this->users->update($userId, [
             'password_hash' => password_hash((string) $datos['password'], PASSWORD_DEFAULT),
             'estado'        => 'activo',
         ]);
         $this->empresas->update((int) $empresa['id'], ['estado' => 'activo']);
-        $this->activaciones->update((int) $activacion['id'], ['usado' => 1]);
 
         $this->solicitudes->db->transComplete();
 
@@ -367,6 +386,48 @@ class SolicitudEmpresaService
         }
 
         return $solicitud;
+    }
+
+    private function exigirCuentaLocal(int $userId): void
+    {
+        $usuario = $this->users->find($userId);
+        if ($usuario !== null && ($usuario->proveedor ?? 'local') === 'google') {
+            throw ApiException::prohibido('Esta cuenta se autentica con Google y no admite contraseña local.');
+        }
+    }
+
+    /**
+     * Una cuenta está activada si su empresa está activa o si algún enlace fue
+     * realmente consumido. `usado=1` sin `usado_en` es solo una revocación.
+     *
+     * @param array<string, mixed> $empresa
+     */
+    private function empresaActivada(array $empresa): bool
+    {
+        if (($empresa['estado'] ?? '') === 'activo') {
+            return true;
+        }
+
+        $usuario = $this->users->find((int) $empresa['user_id']);
+        if ($usuario !== null && $usuario->estado === 'activo') {
+            return true;
+        }
+
+        return $this->activaciones
+            ->where('user_id', (int) $empresa['user_id'])
+            ->where('usado', 1)
+            ->where('usado_en IS NOT NULL', null, false)
+            ->countAllResults() > 0;
+    }
+
+    /**
+     * @param array<string, mixed> $empresa
+     */
+    private function exigirNoActivada(array $empresa): void
+    {
+        if ($this->empresaActivada($empresa)) {
+            throw ApiException::conflicto('La cuenta ya está activada.');
+        }
     }
 
     /**

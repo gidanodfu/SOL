@@ -47,7 +47,7 @@ class PostulacionRepository
         $builder = $this->db->table('postulaciones p')
             ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
                       of.puesto, of.ubicacion, of.estado AS oferta_estado, of.fecha_cierre,
-                      po.id AS postulante_id, po.dni, po.nombres, po.apellidos, po.telefono, po.foto_key')
+                      po.id AS postulante_id, po.tipo_documento, po.dni, po.nombres, po.apellidos, po.telefono, po.foto_key')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->join('postulantes po', 'po.id = p.postulante_id')
             ->where('p.empresa_id', $empresaId)
@@ -94,7 +94,7 @@ class PostulacionRepository
     {
         $fila = $this->db->table('postulaciones p')
             ->select('p.*, of.puesto, of.ubicacion, of.fecha_cierre, of.remuneracion, of.estado AS oferta_estado,
-                      po.dni')
+                      po.tipo_documento, po.dni')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->join('postulantes po', 'po.id = p.postulante_id')
             ->where('p.id', $id)

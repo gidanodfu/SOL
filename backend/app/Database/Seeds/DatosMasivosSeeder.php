@@ -174,6 +174,7 @@ class DatosMasivosSeeder extends Seeder
 
             $this->db->table('postulantes')->insert([
                 'user_id'          => $userId,
+                'tipo_documento'   => 'DNI',
                 'dni'              => $dni,
                 'nombres'          => $nombres,
                 'apellidos'        => $apellido1 . ' ' . $apellido2,

@@ -211,6 +211,10 @@ class EmpresaService
     public function resetearContrasena(int $adminId, int $id, string $password): void
     {
         $empresa = $this->exigirExistente($id);
+        $usuario = $this->users->find((int) $empresa['user_id']);
+        if ($usuario !== null && ($usuario->proveedor ?? 'local') === 'google') {
+            throw ApiException::prohibido('Esta cuenta se autentica con Google y no admite contraseña local.');
+        }
 
         Validador::validar(['password' => $password], [
             'password' => ['required', 'min:8'],

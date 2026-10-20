@@ -6,7 +6,7 @@ import {
   actualizarPerfilPostulante, eliminarFotoPostulante, perfilPostulante, subirFotoPostulante,
 } from '../../services/postulante';
 import ProfileImage from '../../components/ProfileImage';
-import { Boton, Campo, Mensaje, Tarjeta, EstadoCarga } from '../../components/UI';
+import { Boton, Campo, Mensaje, Selecto, Tarjeta, EstadoCarga } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import CvUploader from '../../components/CvUploader';
 import StatCard from '../../components/StatCard';
@@ -14,6 +14,7 @@ import DashboardGrid from '../../components/dashboard/DashboardGrid';
 import BarChartCard from '../../components/dashboard/BarChartCard';
 import QuickActionsCard from '../../components/dashboard/QuickActionsCard';
 import { useToast } from '../../components/Feedbacks';
+import { useAuth } from '../../context/AuthContext';
 import { useAccion } from '../../hooks/useAccion';
 import { DONA_ESTADO_POSTULACION } from '../../constants';
 import { esTelefonoValido, errorApi, soloDigitos, urlArchivo } from '../../utils';
@@ -46,7 +47,7 @@ export default function Perfil() {
                 <div className="perfil-identidad">
                   <FotoPerfil fotoUrl={data.foto_url} inicial={(data.nombres || 'P').trim().charAt(0).toUpperCase()} />
                   <div className="descripcion perfil-datos">
-                    <div><b>DNI</b>{data.dni || '—'}</div>
+                    <div><b>{data.tipo_documento === 'CE' ? 'Carnet de extranjería' : 'DNI'}</b>{data.numero_documento || data.dni || '—'}</div>
                     <div><b>Nombres</b>{data.nombres} {data.apellidos}</div>
                     <div><b>Distrito</b>{data.distrito || '—'}</div>
                     <div><b>Teléfono</b>{data.telefono || '—'}</div>
@@ -146,11 +147,12 @@ function FotoPerfil({ fotoUrl, inicial }) {
 }
 
 /**
- * Edición de datos personales. El DNI NO se incluye en el formulario ni en el
- * payload: es inmutable (el backend también lo ignora si se enviara).
+ * Edición de datos personales. El documento de una cuenta local es inmutable;
+ * las cuentas Google pueden completar o corregir su DNI/carnet de extranjería.
  */
 function EdicionBasica({ perfil }) {
   const queryClient = useQueryClient();
+  const { refrescarUsuario } = useAuth();
   const { ejecutar, enviando, error, setError } = useAccion(actualizarPerfilPostulante);
   const [form, setForm] = useState(null);
 
@@ -166,21 +168,44 @@ function EdicionBasica({ perfil }) {
       ocupacion: perfil.ocupacion || '',
       experiencia: perfil.experiencia || '',
       estudios: perfil.estudios || '',
+      tipo_documento: perfil.tipo_documento || 'DNI',
+      numero_documento: perfil.numero_documento || perfil.dni || '',
     });
   }, [perfil]);
 
   if (!form) return null;
 
+  // Un DNI de una cuenta local identifica la cuenta desde el registro y no se
+  // edita. Las cuentas Google pueden completar o corregir su documento.
+  const documentoBloqueado = Boolean(perfil.dni) && perfil.proveedor !== 'google';
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const cambiarDocumento = (e) => {
+    const tipo = e.target.value;
+    setForm({
+      ...form,
+      tipo_documento: tipo,
+      numero_documento: soloDigitos(form.numero_documento),
+    });
+  };
 
   const guardar = async () => {
     if (!esTelefonoValido(form.telefono)) {
       setError('El teléfono debe tener 9 u 11 dígitos.');
       return;
     }
+    if (form.numero_documento && form.tipo_documento === 'DNI' && !/^\d{8}$/.test(form.numero_documento)) {
+      setError('El DNI debe tener 8 dígitos.');
+      return;
+    }
+    if (form.numero_documento && form.tipo_documento === 'CE' && !/^\d{9,12}$/.test(form.numero_documento)) {
+      setError('El carnet de extranjería debe tener entre 9 y 12 dígitos.');
+      return;
+    }
     try {
       await ejecutar(form);
       queryClient.invalidateQueries({ queryKey: ['perfil-postulante'] });
+      refrescarUsuario().catch(() => {});
       setError(null);
     } catch { /* el error se muestra a través de useAccion */ }
   };
@@ -191,6 +216,21 @@ function EdicionBasica({ perfil }) {
       <div className="form-malla">
         <Campo etiqueta="Nombres" value={form.nombres} onChange={set('nombres')} />
         <Campo etiqueta="Apellidos" value={form.apellidos} onChange={set('apellidos')} />
+        <Selecto etiqueta="Tipo de documento" value={form.tipo_documento} onChange={cambiarDocumento} disabled={documentoBloqueado}>
+          <option value="DNI">DNI</option>
+          <option value="CE">Carnet de extranjería</option>
+        </Selecto>
+        <Campo
+          etiqueta="Número de documento"
+          value={form.numero_documento}
+          onChange={(e) => setForm({
+            ...form,
+            numero_documento: soloDigitos(e.target.value),
+          })}
+          inputMode="numeric"
+          maxLength={form.tipo_documento === 'DNI' ? 8 : 12}
+          disabled={documentoBloqueado}
+        />
         <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
         <Campo etiqueta="Dirección" value={form.direccion} onChange={set('direccion')} />
         <Campo etiqueta="Distrito" value={form.distrito} onChange={set('distrito')} />

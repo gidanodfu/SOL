@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Briefcase } from 'lucide-react';
@@ -278,13 +279,82 @@ export default function BuscarEmpleo() {
 
 function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerrar, onElegir }) {
   const ref = useRef(null);
-  useClickFuera(ref, abierto, onCerrar);
+  const panelRef = useRef(null);
+  const [posicion, setPosicion] = useState(null);
+  const [portalRoot, setPortalRoot] = useState(null);
   const opcionActiva = opciones.find((o) => String(o.valor) === String(valor));
   const etiquetaMostrada = valor && opcionActiva ? opcionActiva.etiqueta : titulo;
 
+  useClickFuera(ref, abierto, onCerrar, [panelRef]);
+
+  const posicionar = useCallback(() => {
+    const disparador = ref.current;
+    if (!disparador) return;
+
+    const rect = disparador.getBoundingClientRect();
+    const margen = 8;
+    const separacion = 8;
+    const ancho = Math.min(320, Math.max(180, window.innerWidth - margen * 2));
+    const izquierda = Math.max(
+      margen,
+      Math.min(
+        Math.round(rect.left + rect.width / 2 - ancho / 2),
+        window.innerWidth - ancho - margen,
+      ),
+    );
+
+    const espacioAbajo = window.innerHeight - rect.bottom - separacion - margen;
+    const espacioArriba = rect.top - separacion - margen;
+    const abrirArriba = espacioAbajo < 180 && espacioArriba > espacioAbajo;
+    const altoMaximo = Math.max(120, Math.min(320, abrirArriba ? espacioArriba : espacioAbajo));
+
+    setPosicion({
+      left: izquierda,
+      width: ancho,
+      maxHeight: altoMaximo,
+      ...(abrirArriba
+        ? { bottom: Math.round(window.innerHeight - rect.top + separacion) }
+        : { top: Math.round(rect.bottom + separacion) }),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!abierto) {
+      setPosicion(null);
+      setPortalRoot(null);
+      return undefined;
+    }
+
+    // El portal se monta dentro de `.app-postulante` para conservar los estilos
+    // scoped y el tema; nunca dentro de un contenedor con overflow.
+    setPortalRoot(ref.current?.closest('.app-postulante') || document.body);
+    posicionar();
+    window.addEventListener('resize', posicionar);
+    window.addEventListener('scroll', posicionar, true);
+    return () => {
+      window.removeEventListener('resize', posicionar);
+      window.removeEventListener('scroll', posicionar, true);
+    };
+  }, [abierto, opciones.length, posicionar]);
+
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const alTeclear = (e) => {
+      if (e.key === 'Escape') onCerrar();
+    };
+    document.addEventListener('keydown', alTeclear);
+    return () => document.removeEventListener('keydown', alTeclear);
+  }, [abierto, onCerrar]);
+
   return (
     <div ref={ref} className={`pill${abierto ? ' open' : ''}${valor ? ' active' : ''}`}>
-      <button type="button" className="pill-btn" onClick={onToggle}>
+      <button
+        type="button"
+        className="pill-btn"
+        onClick={onToggle}
+        aria-haspopup="listbox"
+        aria-expanded={abierto}
+      >
         <i className={icono} />
         <span className="pill-label">
           <span className="label-text">{etiquetaMostrada}</span>
@@ -301,19 +371,35 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
             </span>
           ) : null}
         </span>
-       
+
         <i
           className={`ti ti-chevron-down filtro-chevron${
             abierto ? ' rotate' : ''
           }`}
         />
       </button>
-      {abierto && (
-        <div className="pill-panel">
+
+      {abierto && posicion && portalRoot && createPortal(
+        <div
+          ref={panelRef}
+          className="pill-panel pill-panel-flotante"
+          role="listbox"
+          aria-label={titulo}
+          style={{
+            left: posicion.left,
+            width: posicion.width,
+            maxHeight: posicion.maxHeight,
+            ...(posicion.top !== undefined
+              ? { top: posicion.top, bottom: 'auto' }
+              : { top: 'auto', bottom: posicion.bottom }),
+          }}
+        >
           {opciones.map((o) => (
             <button
               key={String(o.valor) || 'todo'}
               type="button"
+              role="option"
+              aria-selected={String(o.valor) === String(valor)}
               className={`option-item${String(o.valor) === String(valor) ? ' selected' : ''}`}
               onClick={() => onElegir(o.valor, o.etiqueta)}
             >
@@ -321,7 +407,8 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
               {String(o.valor) === String(valor) ? <i className="ti ti-check" style={{ color: 'var(--blue-dark)' }} /> : null}
             </button>
           ))}
-        </div>
+        </div>,
+        portalRoot,
       )}
     </div>
   );
