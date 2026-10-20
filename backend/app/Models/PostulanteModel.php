@@ -15,7 +15,7 @@ class PostulanteModel extends Model
     protected $useTimestamps = true;
 
     protected $allowedFields = [
-        'user_id', 'dni', 'nombres', 'apellidos', 'fecha_nacimiento',
+        'user_id', 'tipo_documento', 'dni', 'nombres', 'apellidos', 'fecha_nacimiento',
         'direccion', 'distrito', 'telefono', 'ocupacion', 'experiencia', 'estudios',
         'foto_key',
     ];

@@ -52,6 +52,14 @@ class SolicitudEmpresaRepository
         if (! empty($filtros['estado'])) {
             $builder->where('s.estado', $filtros['estado']);
         }
+        if (! empty($filtros['q'])) {
+            $builder->groupStart()
+                ->like('s.ruc', $filtros['q'])
+                ->orLike('s.razon_social', $filtros['q'])
+                ->orLike('s.representante', $filtros['q'])
+                ->orLike('s.email', $filtros['q'])
+                ->groupEnd();
+        }
 
         return (int) $builder->countAllResults();
     }
@@ -67,7 +75,16 @@ class SolicitudEmpresaRepository
     private function base(): \CodeIgniter\Database\BaseBuilder
     {
         return $this->db->table('solicitudes_empresa s')
-            ->select('s.*, u.nombres AS resuelto_por_nombre, u.apellidos AS resuelto_por_apellido')
-            ->join('users u', 'u.id = s.resuelto_por', 'LEFT');
+            ->select('s.*, admin.nombres AS resuelto_por_nombre, admin.apellidos AS resuelto_por_apellido')
+            ->select('e.id AS empresa_id, e.estado AS empresa_estado, eu.estado AS empresa_usuario_estado')
+            ->select(
+                '(SELECT MAX(a.usado_en) FROM activaciones a WHERE a.user_id = e.user_id) AS activada_en,
+                 COALESCE((SELECT MAX(a.usado_en) FROM activaciones a WHERE a.user_id = e.user_id),
+                          CASE WHEN eu.estado = \'activo\' THEN COALESCE(eu.updated_at, e.updated_at, e.created_at) ELSE NULL END) AS activada_en_efectiva',
+                false,
+            )
+            ->join('users admin', 'admin.id = s.resuelto_por', 'LEFT')
+            ->join('empresas e', 'e.ruc = s.ruc', 'LEFT')
+            ->join('users eu', 'eu.id = e.user_id', 'LEFT');
     }
 }

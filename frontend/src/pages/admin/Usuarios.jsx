@@ -123,7 +123,9 @@ export default function Usuarios() {
                           {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
                         </Boton>
                       )}
-                      <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
+                      {u.proveedor !== 'google' && (
+                        <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -198,9 +200,15 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
               <Power size={16} aria-hidden="true" />{usuario.estado === 'activo' ? 'Desactivar' : 'Activar'}
             </Boton>
           )}
-          <Boton variante="gris" cargando={enviando} onClick={resetPassword}>
-            <KeyRound size={16} aria-hidden="true" />Cambiar clave
-          </Boton>
+          {usuario.proveedor === 'google' ? (
+            <span style={{ color: 'var(--text-3)', fontSize: '0.82rem' }}>
+              Acceso con Google: no tiene contraseña local.
+            </span>
+          ) : (
+            <Boton variante="gris" cargando={enviando} onClick={resetPassword}>
+              <KeyRound size={16} aria-hidden="true" />Cambiar clave
+            </Boton>
+          )}
         </>
       )}
     >

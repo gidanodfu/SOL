@@ -87,6 +87,12 @@ class AuthService
             ->groupEnd()
             ->first();
 
+        // Las cuentas creadas exclusivamente con Google no tienen contraseña
+        // local utilizable; se evita evaluar el hash temporal.
+        if ($usuario !== null && ($usuario->proveedor ?? 'local') === 'google') {
+            throw ApiException::noAutorizado('Esta cuenta se autentica con Google. Use "Continuar con Google".');
+        }
+
         // Mensaje único evita enumeración de cuentas (RNF-05).
         if ($usuario === null || ! password_verify($password, $usuario->password_hash)) {
             throw ApiException::noAutorizado('Credenciales inválidas.');
@@ -222,10 +228,11 @@ class AuthService
         $userId = $this->users->getInsertID();
 
         $this->postulantes->insert([
-            'user_id'   => $userId,
-            'dni'       => $dni,
-            'nombres'   => $datos['nombres'],
-            'apellidos' => $datos['apellidos'],
+            'user_id'        => $userId,
+            'tipo_documento' => 'DNI',
+            'dni'            => $dni,
+            'nombres'        => $datos['nombres'],
+            'apellidos'      => $datos['apellidos'],
         ]);
 
         $this->users->db->transComplete();
@@ -302,10 +309,11 @@ class AuthService
         $userId = (int) $this->users->getInsertID();
 
         $this->postulantes->insert([
-            'user_id'   => $userId,
-            'dni'       => null,
-            'nombres'   => $payload['given_name'] ?? '',
-            'apellidos' => $payload['family_name'] ?? '',
+            'user_id'        => $userId,
+            'tipo_documento' => null,
+            'dni'            => null,
+            'nombres'        => $payload['given_name'] ?? '',
+            'apellidos'      => $payload['family_name'] ?? '',
         ]);
 
         $this->users->db->transComplete();
@@ -412,7 +420,13 @@ class AuthService
         ]);
 
         $usuario = $this->users->find($usuarioId);
-        if ($usuario === null || ! password_verify($datos['password_actual'], $usuario->password_hash)) {
+        if ($usuario === null) {
+            throw ApiException::noEncontrado('El usuario no existe.');
+        }
+        if (($usuario->proveedor ?? 'local') === 'google') {
+            throw ApiException::prohibido('Esta cuenta se autentica con Google y no tiene contraseña local.');
+        }
+        if (! password_verify($datos['password_actual'], $usuario->password_hash)) {
             throw ApiException::badRequest('La contraseña actual es incorrecta.');
         }
 
@@ -426,12 +440,13 @@ class AuthService
     public function publico($usuario): array
     {
         return [
-            'id'       => $usuario->id,
-            'username' => $usuario->username,
-            'rol'      => $usuario->rol,
-            'nombres'  => $usuario->nombres,
+            'id'        => $usuario->id,
+            'username'  => $usuario->username,
+            'rol'       => $usuario->rol,
+            'proveedor' => $usuario->proveedor ?? 'local',
+            'nombres'   => $usuario->nombres,
             'apellidos' => $usuario->apellidos,
-            'email'    => $usuario->email,
+            'email'     => $usuario->email,
         ];
     }
 }

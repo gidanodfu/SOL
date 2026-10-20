@@ -305,6 +305,14 @@
   overflow-y: auto;
 }
 .app-postulante .pill.open .pill-panel { display: block; }
+/* El panel se monta fuera del filtro y se posiciona respecto del viewport. */
+.app-postulante .pill-panel.pill-panel-flotante {
+  display: block;
+  position: fixed;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
+  z-index: 1000;
+}
 .app-postulante .pill-panel .option-item {
   display: flex;
   align-items: center;
@@ -673,7 +681,6 @@
   .app-postulante .post-main { padding: 14px 12px 22px; }
   .app-postulante .page-head h1 { font-size: 20px; }
   .app-postulante .user-info { display: none; }
-  .app-postulante .pill-panel { left: -80px; min-width: 200px; }
   .app-postulante .job-card .job-fila { flex-direction: column; }
   .app-postulante .job-card { padding: 16px; }
   .app-postulante .job-body h3 { font-size: 15.5px; }
@@ -691,15 +698,18 @@
 /* Móvil: el buscador ocupa su propia fila a ancho completo; el logo y las
    acciones quedan arriba y la navegación debajo. Sin scroll horizontal. */
 @media (max-width: 640px) {
-  .app-postulante .post-header { column-gap: 10px; }
+  .app-postulante .post-header {
+    column-gap: 10px;
+    justify-content: space-between;
+  }
   .app-postulante .post-header > .brand { order: 1; }
-  /* La zona de acciones comparte la fila del logo pero puede encoger y envolver
-     (p. ej. los tres botones de visitante en pantallas de 360 px). */
-  .app-postulante .post-acciones { order: 2; flex: 1 1 auto; min-width: 0; justify-content: flex-start; }
+  /* La zona de acciones comparte la fila del logo y se alinea al extremo
+     derecho; el buscador y la navegación conservan sus propias filas. */
+  .app-postulante .post-acciones { order: 2; flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
   .app-postulante .post-buscador { order: 3; flex: 1 1 100%; max-width: none; height: 44px; }
   .app-postulante .post-nav { order: 4; flex: 1 1 100%; }
   .app-postulante .post-nav a { flex: 1 1 0; justify-content: center; text-align: center; }
-  .app-postulante .post-acciones .guest-actions { flex-shrink: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-start; }
+  .app-postulante .post-acciones .guest-actions { flex-shrink: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
 }
 
 /* Encabezado público sin sesión: identidad + tema, empresa, acceso/registro,
@@ -779,7 +789,6 @@
   .app-postulante .filter-bar .pill-label { min-width: 0; }
   .app-postulante .filter-bar .label-text { overflow: hidden; text-overflow: ellipsis; }
   .app-postulante .filter-bar .filtro-chevron { margin-left: auto; }
-  .app-postulante .filter-bar .pill:nth-child(even) .pill-panel { left: auto; right: 0; }
 
   /* Cada postulación es una tarjeta Rounded en vertical */
   .app-postulante .fila {

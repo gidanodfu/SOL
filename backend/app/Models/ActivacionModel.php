@@ -18,7 +18,7 @@ class ActivacionModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
-    protected $allowedFields = ['user_id', 'token_hash', 'tipo', 'usado', 'expira_en'];
+    protected $allowedFields = ['user_id', 'token_hash', 'tipo', 'usado', 'usado_en', 'expira_en'];
 
     protected $beforeInsert = ['fijarFecha'];
 

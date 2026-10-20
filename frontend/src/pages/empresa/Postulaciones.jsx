@@ -17,6 +17,8 @@ import { listarOfertasEmpresa } from '../../services/ofertas';
 import { descargarUrl, errorApi, fechaCalendario, fechaHora, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
+const etiquetaDocumento = (tipo) => (tipo === 'CE' ? 'Carnet de extranjería' : 'DNI');
+
 const FILTROS = [
   ['', 'Todas'],
   ['pendiente', 'Pendientes'],
@@ -133,7 +135,7 @@ export default function Postulaciones() {
               meta={(
                 <>
                   <span><b>{p.puesto}</b>{p.ubicacion ? ` · ${p.ubicacion}` : ''}</span>
-                  <span>DNI {p.dni}</span>
+                  <span>{etiquetaDocumento(p.tipo_documento)} {p.dni}</span>
                   <span>{fechaHora(p.fecha_postulacion)}</span>
                 </>
               )}
@@ -225,7 +227,7 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
 
       <FichaDatos
         items={[
-          { etiqueta: 'DNI', valor: p?.dni || postulacion.dni },
+          { etiqueta: etiquetaDocumento(p?.tipo_documento || postulacion.tipo_documento), valor: p?.dni || postulacion.dni },
           { etiqueta: 'Fecha de nacimiento', valor: p?.fecha_nacimiento ? fechaCalendario(p.fecha_nacimiento) : null },
           { etiqueta: 'Distrito', valor: p?.distrito },
           { etiqueta: 'Teléfono', valor: p?.telefono || postulacion.telefono },

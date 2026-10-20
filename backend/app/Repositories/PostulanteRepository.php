@@ -24,7 +24,7 @@ class PostulanteRepository
     public function perfilCompleto(int $postulanteId): array
     {
         $postulante = $this->db->table('postulantes p')
-            ->select('p.*, u.username, u.email, u.telefono AS user_telefono')
+            ->select('p.*, u.username, u.email, u.proveedor, u.telefono AS user_telefono')
             ->join('users u', 'u.id = p.user_id')
             ->where('p.id', $postulanteId)
             ->get()
@@ -37,6 +37,8 @@ class PostulanteRepository
         // El teléfono puede vivir en `postulantes` (edición de perfil) o en
         // `users` (dato capturado en el registro); se expone uno solo y coherente.
         $postulante['telefono'] = $postulante['telefono'] ?: ($postulante['user_telefono'] ?? null);
+        $postulante['tipo_documento'] = $postulante['tipo_documento'] ?: ($postulante['dni'] ? 'DNI' : null);
+        $postulante['numero_documento'] = $postulante['dni'];
 
         // La clave interna de la foto no se expone; se entrega la URL del proxy.
         // El `v` (hash corto de la clave, no la clave) invalida la caché del

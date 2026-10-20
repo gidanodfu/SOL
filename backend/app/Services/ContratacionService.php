@@ -49,7 +49,7 @@ class ContratacionService
     public function opcionesDeEmpresa(int $empresaId): array
     {
         return $this->contrataciones->db->table('postulaciones p')
-            ->select('p.id, po.nombres, po.apellidos, po.dni, of.puesto, p.fecha_postulacion')
+            ->select('p.id, po.nombres, po.apellidos, po.tipo_documento, po.dni, of.puesto, p.fecha_postulacion')
             ->join('postulantes po', 'po.id = p.postulante_id')
             ->join('ofertas of', 'of.id = p.oferta_id')
             ->where('p.empresa_id', $empresaId)
@@ -194,7 +194,7 @@ class ContratacionService
     private function base(): \CodeIgniter\Database\BaseBuilder
     {
         return $this->contrataciones->db->table('contrataciones c')
-            ->select('c.*, po.dni, po.nombres, po.apellidos, of.puesto, emp.razon_social, emp.ruc')
+            ->select('c.*, po.tipo_documento, po.dni, po.nombres, po.apellidos, of.puesto, emp.razon_social, emp.ruc')
             ->join('postulantes po', 'po.id = c.postulante_id')
             ->join('ofertas of', 'of.id = c.oferta_id')
             ->join('empresas emp', 'emp.id = c.empresa_id');

@@ -99,12 +99,13 @@ class DatosPruebaSeeder extends Seeder
         $postulante = $this->db->table('postulantes')->where('dni', '12345678')->get()->getRowArray();
         if ($postulante === null) {
             $this->db->table('postulantes')->insert([
-                'user_id'    => $postulanteUserId,
-                'dni'        => '12345678',
-                'nombres'    => 'Ana',
-                'apellidos'  => 'Torres Rojas',
-                'distrito'   => 'José Leonardo Ortiz',
-                'telefono'   => '987654321',
+                'user_id'        => $postulanteUserId,
+                'tipo_documento' => 'DNI',
+                'dni'            => '12345678',
+                'nombres'        => 'Ana',
+                'apellidos'      => 'Torres Rojas',
+                'distrito'       => 'José Leonardo Ortiz',
+                'telefono'       => '987654321',
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);

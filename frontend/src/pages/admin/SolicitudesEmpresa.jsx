@@ -19,6 +19,7 @@ import { useAccion } from '../../hooks/useAccion';
 const estadosSolicitud = {
   pendiente: 'Pendiente',
   aprobada: 'Aprobada',
+  activada: 'Activada',
   rechazada: 'Rechazada',
 };
 
@@ -93,7 +94,12 @@ export default function SolicitudesEmpresa() {
                     {s.email}<br />
                     <small style={{ color: 'var(--gris)' }}>{s.telefono}</small>
                   </td>
-                  <td data-label="Estado"><Estado valor={s.estado} diccionario={estadosSolicitud} /></td>
+                  <td data-label="Estado">
+                    <Estado
+                      valor={s.estado === 'aprobada' && s.activada_en_efectiva ? 'activada' : s.estado}
+                      diccionario={estadosSolicitud}
+                    />
+                  </td>
                   <td className="col-fecha" data-label="Recibida">{fechaHora(s.created_at)}</td>
                   <td className="col-acciones">
                     <div className="acciones">
@@ -229,6 +235,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
   const resueltoPor = solicitud.resuelto_por_nombre
     ? `${solicitud.resuelto_por_nombre} ${solicitud.resuelto_por_apellido || ''}`.trim()
     : null;
+  const estaActivada = solicitud.estado === 'aprobada' && Boolean(solicitud.activada_en_efectiva);
 
   const acciones = (
     <>
@@ -242,7 +249,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
           </Boton>
         </>
       )}
-      {solicitud.estado === 'aprobada' && (
+      {solicitud.estado === 'aprobada' && !estaActivada && (
         <>
           <Boton variante="exito" cargando={enviando} onClick={reenviar}>
             <Send size={16} aria-hidden="true" />Reenviar correo
@@ -264,7 +271,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
       acciones={acciones}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
-        <Estado valor={solicitud.estado} diccionario={estadosSolicitud} />
+        <Estado valor={estaActivada ? 'activada' : solicitud.estado} diccionario={estadosSolicitud} />
       </div>
 
       <Mensaje>{error}</Mensaje>
@@ -280,6 +287,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
           { etiqueta: 'Dirección', valor: solicitud.direccion },
           { etiqueta: 'Recibida', valor: fechaHora(solicitud.created_at) },
           { etiqueta: 'Resuelta por', valor: resueltoPor ? `${resueltoPor} · ${fechaHora(solicitud.resuelto_en)}` : null },
+          { etiqueta: 'Activada', valor: estaActivada ? fechaHora(solicitud.activada_en_efectiva) : null },
         ]}
       />
 

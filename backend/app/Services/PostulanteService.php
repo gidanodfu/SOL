@@ -149,16 +149,59 @@ class PostulanteService
             'direccion'  => ['max:255'],
             'distrito'   => ['max:100'],
             'fecha_nacimiento' => ['fecha'],
-            // Información laboral del perfil/CV (RF-19). El DNI no se edita aquí.
+            // Información laboral del perfil/CV (RF-19).
             'ocupacion'   => ['max:150'],
             'experiencia' => ['max:5000'],
             'estudios'    => ['max:5000'],
+            'tipo_documento' => ['enum:DNI,CE'],
+            'numero_documento' => ['max:20'],
+            'dni'        => ['max:20'],
         ]);
+
+        $usuario = $this->users->find($usuarioId);
+        if ($usuario === null) {
+            throw ApiException::noEncontrado('El usuario no existe.');
+        }
+        $proveedor = $usuario->proveedor ?? 'local';
+
+        // `dni` es la columna histórica que guarda el número; el tipo documental
+        // distingue DNI de carnet de extranjería sin duplicar el número.
+        $numero = trim((string) ($datos['numero_documento'] ?? $datos['dni'] ?? ''));
+        $tipo   = strtoupper(trim((string) ($datos['tipo_documento'] ?? '')));
+        $documento = [];
+
+        if ($numero !== '') {
+            if ($tipo === '') {
+                throw ApiException::validacion('Seleccione el tipo de documento.', ['Seleccione el tipo de documento.']);
+            }
+            if ($tipo === 'DNI' && preg_match('/^\d{8}$/', $numero) !== 1) {
+                throw ApiException::validacion('El DNI debe tener 8 dígitos.', ['El DNI debe tener 8 dígitos.']);
+            }
+            if ($tipo === 'CE' && preg_match('/^\\d{9,12}$/', $numero) !== 1) {
+                throw ApiException::validacion('El carnet de extranjería debe tener entre 9 y 12 dígitos.', ['El carnet de extranjería debe tener entre 9 y 12 dígitos.']);
+            }
+
+            $tipoActual = $postulante->tipo_documento ?: ($postulante->dni ? 'DNI' : null);
+            if ($postulante->dni !== null && $proveedor !== 'google'
+                && ((string) $postulante->dni !== $numero || $tipoActual !== $tipo)) {
+                throw ApiException::conflicto('El documento de identidad no puede modificarse en esta cuenta.');
+            }
+
+            $duplicado = $this->postulantes
+                ->where('dni', $numero)
+                ->where('id !=', (int) $postulante->id)
+                ->countAllResults();
+            if ($duplicado > 0) {
+                throw ApiException::conflicto('El documento ya está registrado en otra cuenta.');
+            }
+
+            $documento = ['tipo_documento' => $tipo, 'dni' => $numero];
+        }
 
         // Perfil y cuenta se actualizan juntos: un fallo parcial dejaría datos
         // de contacto divergentes entre `postulantes` y `users`.
         $this->postulantes->db->transStart();
-        $this->postulantes->update((int) $postulante->id, [
+        $this->postulantes->update((int) $postulante->id, array_merge([
             'nombres'          => $datos['nombres'],
             'apellidos'        => $datos['apellidos'],
             'direccion'        => $datos['direccion'] ?? null,
@@ -168,7 +211,7 @@ class PostulanteService
             'ocupacion'        => $datos['ocupacion'] ?? null,
             'experiencia'      => $datos['experiencia'] ?? null,
             'estudios'         => $datos['estudios'] ?? null,
-        ]);
+        ], $documento));
         $this->users->update($usuarioId, [
             'nombres'   => $datos['nombres'],
             'apellidos' => $datos['apellidos'],

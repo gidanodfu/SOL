@@ -15,8 +15,9 @@ class Postulante extends Entity
 
     protected $casts = [
         'id'        => 'integer',
-        'user_id'   => 'integer',
-        'dni'       => 'string',
+        'user_id'        => 'integer',
+        'tipo_documento' => '?string',
+        'dni'            => '?string',
         'nombres'   => 'string',
         'apellidos' => 'string',
         'direccion' => '?string',

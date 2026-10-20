@@ -18,6 +18,7 @@ export default function Cuenta() {
 
   const esAdmin = usuario?.rol === ROLES.ADMIN;
   const esEmpresa = usuario?.rol === ROLES.EMPRESA;
+  const esGoogle = usuario?.proveedor === 'google';
 
   // Para la empresa, los datos institucionales provienen de su propio perfil
   // (fuente de verdad), no de users.nombres/apellidos.
@@ -80,17 +81,29 @@ export default function Cuenta() {
           <div className="tarjeta-titulo">
             <h2>Seguridad</h2>
           </div>
-          <p className="tarjeta-sub">Actualiza la contraseña de acceso al sistema.</p>
+          {esGoogle ? (
+            <>
+              <p className="tarjeta-sub">Tu identidad se gestiona mediante Google.</p>
+              <p className="tarjeta-sub">
+                Iniciaste sesión con «Continuar con Google». Esta cuenta no tiene una contraseña local
+                que cambiar; si necesitas actualizar el acceso, hazlo desde tu cuenta de Google.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="tarjeta-sub">Actualiza la contraseña de acceso al sistema.</p>
 
-          <form onSubmit={guardar}>
-            <Mensaje>{error}</Mensaje>
-            <div className="form-malla">
-              <Campo etiqueta="Contraseña actual" type="password" value={form.password_actual} onChange={set('password_actual')} required autoComplete="current-password" />
-              <Campo etiqueta="Nueva contraseña" type="password" value={form.password} onChange={set('password')} required minLength={8} autoComplete="new-password" />
-              <Campo etiqueta="Confirmar nueva contraseña" type="password" value={form.password2} onChange={set('password2')} required autoComplete="new-password" />
-            </div>
-            <Boton variante="primario" cargando={enviando} type="submit">Actualizar contraseña</Boton>
-          </form>
+              <form onSubmit={guardar}>
+                <Mensaje>{error}</Mensaje>
+                <div className="form-malla">
+                  <Campo etiqueta="Contraseña actual" type="password" value={form.password_actual} onChange={set('password_actual')} required autoComplete="current-password" />
+                  <Campo etiqueta="Nueva contraseña" type="password" value={form.password} onChange={set('password')} required minLength={8} autoComplete="new-password" />
+                  <Campo etiqueta="Confirmar nueva contraseña" type="password" value={form.password2} onChange={set('password2')} required autoComplete="new-password" />
+                </div>
+                <Boton variante="primario" cargando={enviando} type="submit">Actualizar contraseña</Boton>
+              </form>
+            </>
+          )}
         </section>
       </div>
     </div>
