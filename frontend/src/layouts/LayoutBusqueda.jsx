@@ -43,13 +43,13 @@ function CabeceroPublico({ usuario }) {
             </div>
           ) : (
             <div className="guest-actions publicas">
-              <Link to="/registro-empresa" className="guest-link" title="Registro de empresa">
+              <Link to="/registro-empresa" className="guest-link guest-empresa" title="Registro de empresa">
                 Soy una empresa
               </Link>
-              <Link to="/login" className="guest-link solid">
+              <Link to="/login" className="guest-link guest-login solid">
                 Iniciar sesión
               </Link>
-              <Link to="/registro" className="guest-link solid">
+              <Link to="/registro" className="guest-link guest-registro solid">
                 Registrarme
               </Link>
             </div>
