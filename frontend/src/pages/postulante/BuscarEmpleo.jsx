@@ -291,30 +291,46 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
     const disparador = ref.current;
     if (!disparador) return;
 
+    // En móviles reales el viewport visual no coincide con innerWidth/Height
+    // (barra del navegador, zoom, teclado). Se usa visualViewport cuando existe.
+    const vv = window.visualViewport;
+    const vw = vv?.width ?? window.innerWidth;
+    const vh = vv?.height ?? window.innerHeight;
+
     const rect = disparador.getBoundingClientRect();
-    const margen = 8;
+    const margen = 12;
     const separacion = 8;
-    const ancho = Math.min(320, Math.max(180, window.innerWidth - margen * 2));
+
+    // El panel no debe ocupar todo el ancho del teléfono ni salirse del viewport.
+    const ancho = Math.max(0, Math.min(280, vw - margen * 2));
     const izquierda = Math.max(
       margen,
       Math.min(
         Math.round(rect.left + rect.width / 2 - ancho / 2),
-        window.innerWidth - ancho - margen,
+        vw - ancho - margen,
       ),
     );
 
-    const espacioAbajo = window.innerHeight - rect.bottom - separacion - margen;
-    const espacioArriba = rect.top - separacion - margen;
-    const abrirArriba = espacioAbajo < 180 && espacioArriba > espacioAbajo;
-    const altoMaximo = Math.max(120, Math.min(320, abrirArriba ? espacioArriba : espacioAbajo));
+    const espacioAbajo = Math.max(0, vh - rect.bottom - separacion - margen);
+    const espacioArriba = Math.max(0, rect.top - separacion - margen);
+    // Se abre arriba solo cuando debajo queda muy poco espacio; si hay espacio
+    // suficiente, se mantiene pegado al control y el panel largo hace scroll.
+    const abrirArriba = espacioAbajo < 200 && espacioArriba > espacioAbajo;
+    const disponible = abrirArriba ? espacioArriba : espacioAbajo;
+    const altoMaximo = Math.min(320, Math.max(48, disponible));
+    const top = Math.max(
+      margen,
+      Math.min(
+        abrirArriba ? rect.top - separacion - altoMaximo : rect.bottom + separacion,
+        vh - margen - altoMaximo,
+      ),
+    );
 
     setPosicion({
-      left: izquierda,
-      width: ancho,
-      maxHeight: altoMaximo,
-      ...(abrirArriba
-        ? { bottom: Math.round(window.innerHeight - rect.top + separacion) }
-        : { top: Math.round(rect.bottom + separacion) }),
+      left: Math.round(izquierda),
+      width: Math.round(ancho),
+      maxHeight: Math.round(altoMaximo),
+      top: Math.round(top),
     });
   }, []);
 
@@ -329,11 +345,16 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
     // scoped y el tema; nunca dentro de un contenedor con overflow.
     setPortalRoot(ref.current?.closest('.app-postulante') || document.body);
     posicionar();
+    const vv = window.visualViewport;
     window.addEventListener('resize', posicionar);
     window.addEventListener('scroll', posicionar, true);
+    vv?.addEventListener('resize', posicionar);
+    vv?.addEventListener('scroll', posicionar);
     return () => {
       window.removeEventListener('resize', posicionar);
       window.removeEventListener('scroll', posicionar, true);
+      vv?.removeEventListener('resize', posicionar);
+      vv?.removeEventListener('scroll', posicionar);
     };
   }, [abierto, opciones.length, posicionar]);
 
@@ -354,6 +375,7 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
         onClick={onToggle}
         aria-haspopup="listbox"
         aria-expanded={abierto}
+        title={etiquetaMostrada}
       >
         <i className={icono} />
         <span className="pill-label">
@@ -387,11 +409,9 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
           aria-label={titulo}
           style={{
             left: posicion.left,
+            top: posicion.top,
             width: posicion.width,
             maxHeight: posicion.maxHeight,
-            ...(posicion.top !== undefined
-              ? { top: posicion.top, bottom: 'auto' }
-              : { top: 'auto', bottom: posicion.bottom }),
           }}
         >
           {opciones.map((o) => (

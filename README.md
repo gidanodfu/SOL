@@ -489,14 +489,8 @@ Variables por entorno (todas configurables; no hay URLs de producción en el có
 
 ## Autores
 
-Autores y colaboradores del proyecto:
-
-- **Jhonatan Lopez** — https://github.com/jhonalo9
-- **Josue David** — https://github.com/gidanodfu
-- **Jesús Andre** — https://github.com/JesusAndreBS
-
 La titularidad legal del copyright se establece únicamente en el archivo
-[`LICENSE`](LICENSE); esta sección solo reconoce a los autores del trabajo.
+[`LICENSE`](LICENSE).
 
 ## Licencia
 

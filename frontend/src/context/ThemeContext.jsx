@@ -6,7 +6,7 @@ export const MODOS = ['light', 'dark', 'system'];
 export const FUENTES = ['default'];
 
 export const PREFERENCIAS_DEFECTO = {
-  theme: 'blue', mode: 'dark', font: 'default', reducedMotion: false, highContrast: false,
+  theme: 'blue', mode: 'light', font: 'default', reducedMotion: false, highContrast: false,
 };
 
 function prefiereOscuro() {
