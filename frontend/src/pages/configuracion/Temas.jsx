@@ -79,7 +79,7 @@ export default function Temas() {
           <div className="temas-acciones">
             <Boton
               variante="gris"
-              onClick={() => aplicar({ theme: 'blue', mode: 'dark', reducedMotion: false, highContrast: false })}
+              onClick={() => aplicar({ theme: 'blue', mode: 'light', reducedMotion: false, highContrast: false })}
             >
               Restablecer
             </Boton>

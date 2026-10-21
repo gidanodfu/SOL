@@ -23,7 +23,7 @@ class PreferenciaService
 
     public const POR_DEFECTO = [
         'theme'    => 'blue',
-        'mode'     => 'dark',
+        'mode'     => 'light',
         'font'     => 'default',
         'reduced'  => false,
         'contrast' => false,
@@ -86,7 +86,17 @@ class PreferenciaService
         if ($this->prefs->find($usuarioId) !== null) {
             $this->prefs->update($usuarioId, $valores);
         } else {
-            $this->prefs->insert(['user_id' => $usuarioId] + $valores);
+            // Al crear la fila se completan los valores no enviados. Así un
+            // usuario que solo cambia la paleta no hereda el modo oscuro del
+            // valor por defecto antiguo de la tabla.
+            $this->prefs->insert([
+                'user_id'        => $usuarioId,
+                'theme'          => $valores['theme'] ?? self::POR_DEFECTO['theme'],
+                'mode'           => $valores['mode'] ?? self::POR_DEFECTO['mode'],
+                'font'           => $valores['font'] ?? self::POR_DEFECTO['font'],
+                'reduced_motion' => $valores['reduced_motion'] ?? (int) self::POR_DEFECTO['reduced'],
+                'high_contrast'  => $valores['high_contrast'] ?? (int) self::POR_DEFECTO['contrast'],
+            ]);
         }
 
         return $this->obtener($usuarioId);
