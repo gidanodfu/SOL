@@ -2693,3 +2693,11 @@ html[data-motion="reduced"] *::after {
   .app-admin .stat-panel .stat-top { flex-direction: column-reverse; align-items: center; gap: 6px; }
   .app-admin .stat-panel .stat-trend { justify-content: center; }
 }
+.password-requisitos { margin: .45rem 0 .8rem; font-size: .84rem; }
+.password-requisitos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; }
+.password-requisitos li { display: flex; align-items: center; gap: .45rem; color: var(--text-3); }
+.password-requisito-circulo { width: 15px; height: 15px; border: 1px solid currentColor; border-radius: 50%; display: inline-flex; justify-content: center; align-items: center; font-size: 10px; flex: 0 0 15px; }
+.password-requisitos li.cumple, .password-requisitos-ok { color: var(--green-tx); }
+.password-requisitos li.cumple .password-requisito-circulo { background: var(--green-tx); border-color: var(--green-tx); color: var(--white); }
+.password-requisitos li.incumple, .password-requisitos-error { color: var(--red-tx); }
+.password-requisitos-ok, .password-requisitos-error { margin: .4rem 0 0; }

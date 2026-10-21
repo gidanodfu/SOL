@@ -330,7 +330,7 @@ class SolicitudEmpresaService
     public function activar(string $token, array $datos): void
     {
         Validador::validar($datos, [
-            'password'  => ['required', 'min:8'],
+            'password'  => ['required', 'password'],
             'password2' => ['required', 'igual:password'],
         ]);
 

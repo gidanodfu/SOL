@@ -92,7 +92,7 @@ class EmpresaService
             'email'          => ['email', 'max:150'],
             'representante'  => ['max:150'],
             // Contraseña inicial creada por el administrador (RF-13/RN-05).
-            'password'       => ['required', 'min:8'],
+            'password'       => ['required', 'password'],
         ]);
 
         $ruc = $datos['ruc'];
@@ -217,7 +217,7 @@ class EmpresaService
         }
 
         Validador::validar(['password' => $password], [
-            'password' => ['required', 'min:8'],
+            'password' => ['required', 'password'],
         ]);
 
         $this->users->update((int) $empresa['user_id'], ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);

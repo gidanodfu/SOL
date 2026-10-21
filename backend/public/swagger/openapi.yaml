@@ -3257,6 +3257,7 @@ paths:
                 password:
                   type: string
                   minLength: 8
+                  description: Al menos 8 caracteres, una letra, un número y un símbolo especial.
                 password2:
                   type: string
       responses:
@@ -3828,6 +3829,7 @@ components:
           type: string
           format: password
           minLength: 8
+          description: Al menos 8 caracteres, una letra, un número y un símbolo especial.
         password2:
           type: string
           format: password
@@ -3844,6 +3846,7 @@ components:
           type: string
           format: password
           minLength: 8
+          description: Al menos 8 caracteres, una letra, un número y un símbolo especial.
         password2:
           type: string
           format: password
@@ -3996,7 +3999,7 @@ components:
           type: string
           format: password
           minLength: 8
-          description: El rol siempre es `admin` (no se recibe del cuerpo).
+          description: Al menos 8 caracteres, una letra, un número y un símbolo especial. El rol siempre es `admin` (no se recibe del cuerpo).
 
     UsuarioActualizarBody:
       type: object
@@ -4034,6 +4037,7 @@ components:
           type: string
           format: password
           minLength: 8
+          description: Al menos 8 caracteres, una letra, un número y un símbolo especial.
 
     # ----------------------- Empresas -----------------------
     Empresa:
@@ -4155,7 +4159,7 @@ components:
           type: string
           format: password
           minLength: 8
-          description: Contraseña inicial creada por el administrador.
+          description: Contraseña inicial creada por el administrador; requiere 8 caracteres, letra, número y símbolo.
         evaluacion_presencial:
           type: boolean
           description: 'Truthy: cuenta/empresa nacen activas. Sin validación de regla.'

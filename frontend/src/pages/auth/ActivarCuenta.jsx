@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Mensaje } from '../../components/UI';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { passwordCumple } from '../../utils/password';
 import { activarCuenta, verActivacion } from '../../services/solicitudes';
 import { errorApi } from '../../utils';
 
@@ -16,6 +18,7 @@ export default function ActivarCuenta() {
   const [enviando, setEnviando] = useState(false);
   const [verPass, setVerPass] = useState(false);
   const [activada, setActivada] = useState(false);
+  const [intentoPassword, setIntentoPassword] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -30,10 +33,15 @@ export default function ActivarCuenta() {
     })();
   }, [token]);
 
-  const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const cambiar = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); setError(null); };
 
   const enviar = async (e) => {
     e.preventDefault();
+    setIntentoPassword(true);
+    if (!passwordCumple(form.password) || form.password !== form.password2 || !form.password2) {
+      setError('La contraseña debe cumplir todos los requisitos y ambas contraseñas deben coincidir.');
+      return;
+    }
     setEnviando(true);
     setError(null);
     try {
@@ -99,8 +107,6 @@ export default function ActivarCuenta() {
                       placeholder="Mínimo 8 caracteres"
                       value={form.password}
                       onChange={cambiar}
-                      required
-                      minLength={8}
                     />
                     <button
                       type="button"
@@ -115,6 +121,7 @@ export default function ActivarCuenta() {
                       </svg>
                     </button>
                   </div>
+                  <PasswordRequirements password={form.password} confirmacion={form.password2} intento={intentoPassword} />
                 </div>
 
                 <div className="login-campo">
@@ -128,7 +135,6 @@ export default function ActivarCuenta() {
                       placeholder="Repita su contraseña"
                       value={form.password2}
                       onChange={cambiar}
-                      required
                     />
                   </div>
                 </div>

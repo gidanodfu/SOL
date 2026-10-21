@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mensaje } from '../../components/UI';
 import GoogleButton from '../../components/GoogleButton';
 import Turnstile from '../../components/Turnstile';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { passwordCumple } from '../../utils/password';
 import { useAuth } from '../../context/AuthContext';
 import { useTema } from '../../context/ThemeContext';
 import { verificarDni as apiVerificarDni } from '../../services/solicitudes';
@@ -22,11 +24,12 @@ export default function Registro() {
   const [verPass, setVerPass] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);
   const [verificandoDni, setVerificandoDni] = useState(false);
+  const [intentoPassword, setIntentoPassword] = useState(false);
   const [dniVerificado, setDniVerificado] = useState(false);
   const turnstileRef = useRef(null);
   const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
 
-  const cambiar = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const cambiar = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); setError(null); };
 
   // Consulta RENIEC vía backend para autocompletar nombres/apellidos. El token
   // del proveedor vive solo en el backend; aquí no se maneja ninguna credencial.
@@ -72,6 +75,11 @@ export default function Registro() {
   // automático), por lo que se redirige a la bolsa de empleo.
   const enviar = async (e) => {
     e.preventDefault();
+    setIntentoPassword(true);
+    if (!passwordCumple(form.password) || form.password !== form.password2 || !form.password2) {
+      setError('La contraseña debe cumplir todos los requisitos y ambas contraseñas deben coincidir.');
+      return;
+    }
     if (turnstileRequerido && !turnstileToken) {
       setError('Completa la verificación de seguridad e inténtalo de nuevo.');
       return;
@@ -244,8 +252,6 @@ export default function Registro() {
                   placeholder="Mínimo 8 caracteres"
                   value={form.password}
                   onChange={cambiar}
-                  required
-                  minLength={8}
                 />
                 <button
                   type="button"
@@ -268,6 +274,7 @@ export default function Registro() {
                   )}
                 </button>
               </div>
+              <PasswordRequirements password={form.password} confirmacion={form.password2} intento={intentoPassword} />
             </div>
 
             <div className="login-campo">
@@ -285,7 +292,6 @@ export default function Registro() {
                   placeholder="Repita su contraseña"
                   value={form.password2}
                   onChange={cambiar}
-                  required
                 />
               </div>
             </div>

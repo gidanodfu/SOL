@@ -13,6 +13,8 @@ import { ETIQUETA_ROL } from '../../constants';
 import { errorApi, fechaHora, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 import { useAuth } from '../../context/AuthContext';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { passwordCumple } from '../../utils/password';
 
 const estadosUsuarios = { activo: 'activo', inactivo: 'inactivo' };
 
@@ -48,6 +50,7 @@ export default function Usuarios() {
       mensaje: `Usuario ${u.username}`,
       etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
       secreto: true,
+      politicaPassword: true,
       min: 8,
       textoConfirmar: 'Restablecer',
       variante: 'peligro',
@@ -172,6 +175,7 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
       mensaje: `Usuario ${usuario.username}`,
       etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
       secreto: true,
+      politicaPassword: true,
       min: 8,
       textoConfirmar: 'Restablecer',
       variante: 'peligro',
@@ -238,9 +242,15 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
 function NuevoUsuario({ alCrear }) {
   const [form, setForm] = useState({ username: '', nombres: '', apellidos: '', email: '', telefono: '', password: '' });
   const [error, setError] = useState(null);
+  const [intentoPassword, setIntentoPassword] = useState(false);
   const { ejecutar, enviando } = useAccion(() => crearUsuario(form));
 
   const enviar = async () => {
+    setIntentoPassword(true);
+    if (!passwordCumple(form.password)) {
+      setError('La contraseña no cumple los requisitos de seguridad.');
+      return;
+    }
     try {
       await ejecutar();
       alCrear();
@@ -255,7 +265,7 @@ function NuevoUsuario({ alCrear }) {
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
         <Campo etiqueta="Usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-        <Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <div><Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setError(null); }} /><PasswordRequirements password={form.password} intento={intentoPassword} /></div>
         <Campo etiqueta="Nombres" value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} />
         <Campo etiqueta="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
         <Campo etiqueta="Correo" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />

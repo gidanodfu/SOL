@@ -201,7 +201,7 @@ class AuthService
             'apellidos' => ['required', 'max:100'],
             'email'     => ['email'],
             'telefono'  => ['telefono'],
-            'password'  => ['required', 'min:8'],
+            'password'  => ['required', 'password'],
             'password2' => ['required', 'igual:password'],
         ]);
 
@@ -415,7 +415,7 @@ class AuthService
     {
         Validador::validar($datos, [
             'password_actual' => ['required'],
-            'password'        => ['required', 'min:8'],
+            'password'        => ['required', 'password'],
             'password2'       => ['required', 'igual:password'],
         ]);
 
