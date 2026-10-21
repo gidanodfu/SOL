@@ -2,6 +2,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import Modal from './Modal';
+import PasswordRequirements from './PasswordRequirements';
+import { passwordCumple } from '../utils/password';
 
 /**
  * Sistema global de feedbacks de UI (sin librerías nuevas):
@@ -130,6 +132,7 @@ function DialogoFeedback({ dialogo, onResolver }) {
   } = dialogo;
   const [texto, setTexto] = useState(valorInicial);
   const [error, setError] = useState(null);
+  const [intento, setIntento] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -143,8 +146,13 @@ function DialogoFeedback({ dialogo, onResolver }) {
       onResolver(true);
       return;
     }
+    if (dialogo.politicaPassword) setIntento(true);
     if (texto === '') {
       setError('Ingresa un valor.');
+      return;
+    }
+    if (dialogo.politicaPassword && !passwordCumple(texto)) {
+      setError('La contraseña no cumple los requisitos de seguridad.');
       return;
     }
     if (min && texto.length < min) {
@@ -168,18 +176,21 @@ function DialogoFeedback({ dialogo, onResolver }) {
     >
       {mensaje && <p className="modal-texto">{mensaje}</p>}
       {tipo === 'prompt' && (
-        <label className="campo">
-          <span>{etiqueta}</span>
-          <input
-            ref={inputRef}
-            type={dialogo.secreto ? 'password' : 'text'}
-            value={texto}
-            onChange={(e) => { setTexto(e.target.value); setError(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') aceptar(); }}
-            placeholder={placeholder}
-            autoComplete="off"
-          />
-        </label>
+        <>
+          <label className="campo">
+            <span>{etiqueta}</span>
+            <input
+              ref={inputRef}
+              type={dialogo.secreto ? 'password' : 'text'}
+              value={texto}
+              onChange={(e) => { setTexto(e.target.value); setError(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') aceptar(); }}
+              placeholder={placeholder}
+              autoComplete="off"
+            />
+          </label>
+          {dialogo.politicaPassword && <PasswordRequirements password={texto} intento={intento} />}
+        </>
       )}
       {error && <p className="rte-mensaje excedido">{error}</p>}
     </Modal>

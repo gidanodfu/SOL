@@ -11,6 +11,8 @@ import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, KeyRound, Power } from 'lucide-react';
 import { errorApi, fecha, fechaCalendario, soloDigitos, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import PasswordRequirements from '../../components/PasswordRequirements';
+import { passwordCumple } from '../../utils/password';
 
 const estadosEmpresa = { activo: 'activo', inactivo: 'inactivo' };
 
@@ -46,6 +48,7 @@ export default function Empresas() {
       mensaje: `Empresa RUC ${e.ruc}`,
       etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
       secreto: true,
+      politicaPassword: true,
       min: 8,
       textoConfirmar: 'Restablecer',
       variante: 'peligro',
@@ -181,6 +184,7 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
       mensaje: `Empresa RUC ${empresa.ruc}`,
       etiqueta: 'Nueva contraseña (mínimo 8 caracteres)',
       secreto: true,
+      politicaPassword: true,
       min: 8,
       textoConfirmar: 'Restablecer',
       variante: 'peligro',
@@ -265,11 +269,17 @@ const VACIO = { ruc: '', razon_social: '', nombre_comercial: '', direccion: '', 
 function NuevaEmpresa({ alCrear }) {
   const [form, setForm] = useState(VACIO);
   const [error, setError] = useState(null);
+  const [intentoPassword, setIntentoPassword] = useState(false);
   const { ejecutar, enviando } = useAccion(() => crearEmpresa(form));
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
   const enviar = async () => {
+    setIntentoPassword(true);
+    if (!passwordCumple(form.password)) {
+      setError('La contraseña no cumple los requisitos de seguridad.');
+      return;
+    }
     try {
       const creada = await ejecutar();
       alCrear({ ruc: form.ruc, id: creada?.id });
@@ -291,7 +301,7 @@ function NuevaEmpresa({ alCrear }) {
         <Campo etiqueta="Correo" type="email" value={form.email} onChange={set('email')} />
         <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
         <Campo etiqueta="Dirección" value={form.direccion} onChange={set('direccion')} />
-        <Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={set('password')} />
+        <div><Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => { set('password')(e); setError(null); }} /><PasswordRequirements password={form.password} intento={intentoPassword} /></div>
       </div>
       <label className="form-fila" style={{ margin: '0.4rem 0' }}>
         <input type="checkbox" checked={form.evaluacion_presencial} onChange={set('evaluacion_presencial')} style={{ width: 'auto' }} />

@@ -5,6 +5,7 @@
 namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
+use App\Validation\Validador;
 
 /**
  * Datos iniciales de la instalación (estructura → `php spark migrate`).
@@ -41,19 +42,23 @@ class SystemSeeder extends Seeder
 
         $existe = $this->db->table('users')->where('username', $username)->countAllResults() > 0;
         if (! $existe) {
-            $this->db->table('users')->insert([
-                'username'      => $username,
-                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                'rol'           => 'admin',
-                'proveedor'     => 'local',
-                'nombres'       => 'Administrador',
-                'apellidos'     => 'Municipal',
-                'estado'        => 'activo',
-                'created_at'    => $now,
-                'updated_at'    => $now,
-            ]);
+            if (! Validador::esContrasenaSegura($password)) {
+                echo "SystemSeeder: INITIAL_ADMIN_PASSWORD no cumple la política de seguridad.\n";
+            } else {
+                $this->db->table('users')->insert([
+                    'username'      => $username,
+                    'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                    'rol'           => 'admin',
+                    'proveedor'     => 'local',
+                    'nombres'       => 'Administrador',
+                    'apellidos'     => 'Municipal',
+                    'estado'        => 'activo',
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ]);
 
-            echo "SystemSeeder: administrador '{$username}' creado.\n";
+                echo "SystemSeeder: administrador '{$username}' creado.\n";
+            }
         } else {
             echo "SystemSeeder: el administrador '{$username}' ya existe; no se modificó.\n";
         }

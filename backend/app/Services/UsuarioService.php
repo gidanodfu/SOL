@@ -77,7 +77,7 @@ class UsuarioService
             'apellidos' => ['required', 'max:100'],
             'email'     => ['email', 'max:150'],
             'telefono'  => ['telefono'],
-            'password'  => ['required', 'min:8'],
+            'password'  => ['required', 'password'],
         ]);
 
         if ($this->users->buscarPorUsername($datos['username']) !== null) {
@@ -169,7 +169,7 @@ class UsuarioService
         }
 
         Validador::validar(['password' => $password], [
-            'password' => ['required', 'min:8'],
+            'password' => ['required', 'password'],
         ]);
 
         $this->users->update($id, ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);

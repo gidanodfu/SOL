@@ -81,6 +81,22 @@ final class ValidadorTest extends TestCase
         );
     }
 
+    public function testPoliticaDeContrasena(): void
+    {
+        foreach (['abc', 'abcdefgh', 'abcdefg1', 'abcdefg@'] as $invalida) {
+            try {
+                Validador::validar(['password' => $invalida], ['password' => ['required', 'password']]);
+                $this->fail('Debió rechazarse la contraseña de prueba.');
+            } catch (ApiException $e) {
+                $this->assertSame(422, $e->getHttpCode());
+            }
+        }
+
+        foreach (['Abcdefg1@', 'Abcdefg1-', 'Abcdefg1_', 'Abcdefg1/'] as $valida) {
+            Validador::validar(['password' => $valida], ['password' => ['required', 'password']]);
+        }
+    }
+
     public function testEspaciosCuentanComoVacioEnObligatorio(): void
     {
         foreach (['', '   ', "\t\n "] as $soloEspacios) {

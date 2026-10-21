@@ -9,7 +9,7 @@ use App\Exceptions\ApiException;
 /**
  * Validación de datos recibidos desde el frontend. El backend siempre revalida
  * lo que React envía (RT-22). Reglas planas: required, min, max, email, ruc, dni,
- * telefono, fecha, fecha_hora, regex, enum, igual (confirmación de contraseñas).
+ * telefono, fecha, fecha_hora, password, regex, enum, igual (confirmación de contraseñas).
  */
 final class Validador
 {
@@ -45,6 +45,14 @@ final class Validador
     public static function longitudTexto(string $html): int
     {
         return mb_strlen(self::textoVisible($html));
+    }
+
+    public static function esContrasenaSegura(string $valor): bool
+    {
+        return mb_strlen($valor) >= 8
+            && preg_match('/\p{L}/u', $valor) === 1
+            && preg_match('/\p{N}/u', $valor) === 1
+            && preg_match('/[^\p{L}\p{N}]/u', $valor) === 1;
     }
 
     /**
@@ -103,6 +111,10 @@ final class Validador
 
                     case $regla === 'telefono' && ! preg_match('/^(?:\d{9}|\d{11})$/', (string) $valor):
                         $errores[$campo] = "El campo {$etiqueta} debe tener 9 u 11 dígitos.";
+                        break 2;
+
+                    case $regla === 'password' && ! self::esContrasenaSegura((string) $valor):
+                        $errores[$campo] = 'La contraseña debe tener al menos 8 caracteres, una letra, un número y un símbolo especial.';
                         break 2;
 
                     case $regla === 'fecha' && ! self::esFecha((string) $valor):
