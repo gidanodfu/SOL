@@ -125,7 +125,7 @@ class OfertaService
     public function detallePublica(int $id, ?int $postulanteId = null): array
     {
         $oferta = $this->repository->detalle($id);
-        if ($oferta === null || $oferta['estado'] !== 'publicada') {
+        if ($oferta === null || $oferta['estado'] !== 'publicada' || self::vencida($oferta['fecha_cierre'] ?? null)) {
             throw ApiException::noEncontrado('La oferta no está disponible.');
         }
         $oferta = $this->conEmpresa($oferta);
@@ -314,7 +314,7 @@ class OfertaService
         if ($oferta['estado'] !== 'pendiente') {
             throw ApiException::conflicto('Solo puede aprobar ofertas pendientes de revisión.');
         }
-        if ($oferta['fecha_cierre'] !== null && strtotime((string) $oferta['fecha_cierre']) < strtotime(date('Y-m-d'))) {
+        if (self::vencida($oferta['fecha_cierre'] ?? null)) {
             throw ApiException::conflicto('La oferta tiene fecha de cierre vencida; la empresa debe actualizarla antes de aprobarla.');
         }
 
@@ -437,6 +437,11 @@ class OfertaService
         }
 
         return $fila;
+    }
+
+    public static function vencida(?string $fechaCierre, ?string $hoy = null): bool
+    {
+        return $fechaCierre !== null && $fechaCierre < ($hoy ?? date('Y-m-d'));
     }
 
     private function usuarioDeEmpresa(int $empresaId): ?int
