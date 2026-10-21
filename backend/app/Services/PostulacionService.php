@@ -88,7 +88,7 @@ class PostulacionService
         if ($oferta === null || $oferta['estado'] !== 'publicada') {
             throw ApiException::noEncontrado('La oferta no está disponible para postular.');
         }
-        if ($oferta['fecha_cierre'] !== null && strtotime($oferta['fecha_cierre']) < strtotime(date('Y-m-d'))) {
+        if (OfertaService::vencida($oferta['fecha_cierre'] ?? null)) {
             throw ApiException::conflicto('La oferta ya cerró sus postulaciones.');
         }
 
