@@ -5,6 +5,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Libraries\Identidad;
 use App\Models\ActivacionModel;
 use App\Models\EmpresaModel;
 use App\Models\SolicitudEmpresaModel;
@@ -35,6 +36,8 @@ class SolicitudEmpresaService
 
     private RucService $ruc;
 
+    private IdentidadService $identidad;
+
     public function __construct(
         ?SolicitudEmpresaRepository $repository = null,
         ?SolicitudEmpresaModel $solicitudes = null,
@@ -44,6 +47,7 @@ class SolicitudEmpresaService
         ?AuditoriaService $auditoria = null,
         ?EmailService $correo = null,
         ?RucService $ruc = null,
+        ?IdentidadService $identidad = null,
     ) {
         $this->repository   = $repository ?? new SolicitudEmpresaRepository();
         $this->solicitudes  = $solicitudes ?? model(SolicitudEmpresaModel::class);
@@ -53,6 +57,7 @@ class SolicitudEmpresaService
         $this->auditoria    = $auditoria ?? new AuditoriaService();
         $this->correo       = $correo ?? new EmailService();
         $this->ruc          = $ruc ?? new RucService();
+        $this->identidad    = $identidad ?? new IdentidadService();
     }
 
     /**
@@ -63,6 +68,10 @@ class SolicitudEmpresaService
      */
     public function solicitar(array $datos): int
     {
+        $datos['ruc']      = Identidad::ruc($datos['ruc'] ?? '');
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+
         Validador::validar($datos, [
             'ruc'           => ['required', 'ruc'],
             'email'         => ['required', 'email', 'max:150'],
@@ -72,31 +81,66 @@ class SolicitudEmpresaService
 
         $ruc = $datos['ruc'];
 
-        if ($this->empresas->where('ruc', $ruc)->first() !== null) {
-            throw ApiException::conflicto('Ya existe una empresa registrada con este RUC.');
+        $empresa = $this->empresas->where('ruc', $ruc)->first();
+        if ($empresa !== null) {
+            throw ApiException::conflicto(
+                'Este RUC ya está asociado a una empresa registrada. Verifica los datos o utiliza el acceso de la empresa existente; si la cuenta no está activada, solicita el reenvío de activación.',
+            );
         }
+
         $activa = $this->solicitudes
             ->where('ruc', $ruc)
             ->whereIn('estado', ['pendiente', 'aprobada'])
             ->first();
         if ($activa !== null) {
-            throw ApiException::conflicto('Ya existe una solicitud con este RUC. Espere la respuesta de la Municipalidad.');
+            throw ApiException::conflicto(
+                $activa['estado'] === 'pendiente'
+                    ? 'Ya existe una solicitud de afiliación para este RUC que está pendiente de revisión.'
+                    : 'Ya existe una cuenta o solicitud asociada a este RUC. Utiliza el procedimiento de acceso o activación correspondiente.',
+            );
         }
+
+        $this->identidad->exigirLibre('ruc', $ruc);
+        $this->identidad->exigirLibre('email', $datos['email']);
+        $this->identidad->exigirLibre('telefono', $datos['telefono']);
 
         // Verificación del RUC (autocompleta razón social y dirección).
         $info = $this->ruc->consultar($ruc);
 
-        $this->solicitudes->insert([
-            'ruc'              => $ruc,
-            'razon_social'     => $info['razon_social'],
-            'nombre_comercial' => $info['nombre_comercial'],
-            'direccion'        => $info['direccion'],
-            'email'            => $datos['email'],
-            'telefono'         => $datos['telefono'],
-            'representante'    => $datos['representante'],
-            'estado'           => 'pendiente',
-        ]);
-        $id = (int) $this->solicitudes->getInsertID();
+        try {
+            $this->solicitudes->db->transStart();
+
+            $this->solicitudes->insert([
+                'ruc'              => $ruc,
+                'razon_social'     => $info['razon_social'],
+                'nombre_comercial' => $info['nombre_comercial'],
+                'direccion'        => $info['direccion'],
+                'email'            => $datos['email'],
+                'telefono'         => $datos['telefono'],
+                'representante'    => $datos['representante'],
+                'estado'           => 'pendiente',
+            ]);
+            $id = (int) $this->solicitudes->getInsertID();
+
+            $this->identidad->reservar('ruc', $ruc, null, $id);
+            $this->identidad->reservar('email', $datos['email'], null, $id);
+            $this->identidad->reservar('telefono', $datos['telefono'], null, $id);
+
+            $this->solicitudes->db->transComplete();
+
+            if (! $this->solicitudes->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo registrar la solicitud.');
+            }
+        } catch (ApiException $e) {
+            $this->solicitudes->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->solicitudes->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('Ya existe una solicitud o cuenta con estos datos. No se creó una nueva solicitud.');
+            }
+            throw $e;
+        }
 
         $this->auditoria->registrar(null, 'solicitud_empresa', 'solicitud_empresa', $id, ['ruc' => $ruc]);
 
@@ -138,62 +182,103 @@ class SolicitudEmpresaService
      */
     public function aprobar(int $adminId, int $solicitudId): array
     {
-        $solicitud = $this->exigirResoluble($solicitudId);
-
         $this->solicitudes->db->transStart();
 
-        // Contraseña no utilizable hasta que el representante la defina al activar.
-        $hashTemporal = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+        try {
+            // Lock de fila: dos aprobaciones simultáneas no pueden crear dos cuentas.
+            $solicitud = $this->repository->obtenerParaActualizar($solicitudId);
+            if ($solicitud === null) {
+                throw ApiException::noEncontrado('La solicitud no existe.');
+            }
+            if ($solicitud['estado'] !== 'pendiente') {
+                throw ApiException::conflicto('La solicitud ya fue resuelta.');
+            }
 
-        $this->users->insert([
-            'username'      => $solicitud['ruc'],
-            'password_hash' => $hashTemporal,
-            'rol'           => 'empresa',
-            'nombres'       => $solicitud['razon_social'],
-            'apellidos'     => $solicitud['representante'],
-            'email'         => $solicitud['email'],
-            'telefono'      => $solicitud['telefono'],
-            'estado'        => 'inactivo',
-        ]);
-        $userId = (int) $this->users->getInsertID();
+            $ruc      = Identidad::ruc($solicitud['ruc'] ?? '');
+            $email    = Identidad::email($solicitud['email'] ?? null);
+            $telefono = Identidad::telefono($solicitud['telefono'] ?? null);
 
-        $this->empresas->insert([
-            'user_id'               => $userId,
-            'ruc'                   => $solicitud['ruc'],
-            'razon_social'          => $solicitud['razon_social'],
-            'nombre_comercial'      => $solicitud['nombre_comercial'],
-            'direccion'             => $solicitud['direccion'],
-            'telefono'              => $solicitud['telefono'],
-            'email'                 => $solicitud['email'],
-            'representante'         => $solicitud['representante'],
-            'evaluacion_presencial' => 1,
-            'estado'                => 'inactivo',
-        ]);
+            if ($this->empresas->where('ruc', $ruc)->first() !== null
+                || $this->users->buscarPorUsername($ruc) !== null) {
+                throw ApiException::conflicto(
+                    'Ya existe una cuenta o empresa para este RUC. Reenvíe la activación de esa cuenta; no se creó una nueva.',
+                );
+            }
 
-        $this->solicitudes->update($solicitudId, [
-            'estado'       => 'aprobada',
-            'motivo_rechazo' => null,
-            'resuelto_por' => $adminId,
-            'resuelto_en'  => date('Y-m-d H:i:s'),
-        ]);
+            $this->identidad->exigirLibre('ruc', $ruc, null, $solicitudId);
+            $this->identidad->exigirLibre('email', $email, null, $solicitudId);
+            $this->identidad->exigirLibre('telefono', $telefono, null, $solicitudId);
 
-        $this->solicitudes->db->transComplete();
+            // Contraseña no utilizable hasta que el representante la defina al activar.
+            $hashTemporal = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
-        if (! $this->solicitudes->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo aprobar la solicitud.');
+            $this->users->insert([
+                'username'      => $ruc,
+                'password_hash' => $hashTemporal,
+                'rol'           => 'empresa',
+                'nombres'       => $solicitud['razon_social'],
+                'apellidos'     => $solicitud['representante'],
+                'email'         => $email,
+                'telefono'      => $telefono,
+                'estado'        => 'inactivo',
+            ]);
+            $userId = (int) $this->users->getInsertID();
+
+            $this->empresas->insert([
+                'user_id'               => $userId,
+                'ruc'                   => $ruc,
+                'razon_social'          => $solicitud['razon_social'],
+                'nombre_comercial'      => $solicitud['nombre_comercial'],
+                'direccion'             => $solicitud['direccion'],
+                'telefono'              => $telefono,
+                'email'                 => $email,
+                'representante'         => $solicitud['representante'],
+                'evaluacion_presencial' => 1,
+                'estado'                => 'inactivo',
+            ]);
+
+            $this->identidad->transferirSolicitud($solicitudId, $userId, [
+                'ruc'      => $ruc,
+                'email'    => $email,
+                'telefono' => $telefono,
+            ]);
+
+            $this->solicitudes->update($solicitudId, [
+                'estado'         => 'aprobada',
+                'motivo_rechazo' => null,
+                'resuelto_por'   => $adminId,
+                'resuelto_en'    => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->solicitudes->db->transComplete();
+
+            if (! $this->solicitudes->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo aprobar la solicitud.');
+            }
+        } catch (ApiException $e) {
+            $this->solicitudes->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->solicitudes->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('Ya existe una cuenta o solicitud con estos datos. No se creó una cuenta nueva.');
+            }
+            throw $e;
         }
 
         $link = $this->nuevoEnlace($userId);
-        $this->auditoria->registrar($adminId, 'aprobar_solicitud_empresa', 'solicitud_empresa', $solicitudId, ['ruc' => $solicitud['ruc']]);
+        $this->auditoria->registrar($adminId, 'aprobar_solicitud_empresa', 'solicitud_empresa', $solicitudId, ['ruc' => $ruc]);
 
         // Correo transaccional de activación (best-effort). Un fallo del envío NO
         // revierte la aprobación: la cuenta ya está creada y el enlace disponible.
+        $solicitud['email']    = $email;
+        $solicitud['telefono'] = $telefono;
         $enviado = $this->enviarCorreoActivacion($solicitud, $link);
 
         return [
             'link'           => $link,
             'correo_enviado' => $enviado,
-            'correo_destino' => (string) $solicitud['email'],
+            'correo_destino' => (string) $email,
         ];
     }
 
@@ -207,12 +292,24 @@ class SolicitudEmpresaService
         ]);
         $solicitud = $this->exigirResoluble($solicitudId);
 
-        $this->solicitudes->update($solicitudId, [
-            'estado'         => 'rechazada',
-            'motivo_rechazo' => mb_substr((string) $datos['motivo'], 0, 255),
-            'resuelto_por'   => $adminId,
-            'resuelto_en'    => date('Y-m-d H:i:s'),
-        ]);
+        $this->solicitudes->db->transStart();
+        try {
+            $this->solicitudes->update($solicitudId, [
+                'estado'         => 'rechazada',
+                'motivo_rechazo' => mb_substr((string) $datos['motivo'], 0, 255),
+                'resuelto_por'   => $adminId,
+                'resuelto_en'    => date('Y-m-d H:i:s'),
+            ]);
+            $this->identidad->liberarSolicitud($solicitudId);
+            $this->solicitudes->db->transComplete();
+
+            if (! $this->solicitudes->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo rechazar la solicitud.');
+            }
+        } catch (\Throwable $e) {
+            $this->solicitudes->db->transRollback();
+            throw $e;
+        }
 
         $this->auditoria->registrar($adminId, 'rechazar_solicitud_empresa', 'solicitud_empresa', $solicitudId, ['ruc' => $solicitud['ruc']]);
 
@@ -270,15 +367,23 @@ class SolicitudEmpresaService
         $this->exigirNoActivada($empresa);
 
         $link    = $this->nuevoEnlace((int) $empresa['user_id']);
-        $enviado = $this->enviarCorreoActivacion($solicitud, $link);
+        $destino = $this->emailDeUsuario((int) $empresa['user_id']) ?? (string) $solicitud['email'];
+        $enviado = $this->enviarCorreoActivacion($solicitud, $link, $destino);
 
         $this->auditoria->registrar($adminId, 'reenviar_activacion_empresa', 'solicitud_empresa', $solicitudId, ['ruc' => $solicitud['ruc']]);
 
         return [
             'link'           => $link,
             'correo_enviado' => $enviado,
-            'correo_destino' => (string) $solicitud['email'],
+            'correo_destino' => $destino,
         ];
+    }
+
+    private function emailDeUsuario(int $userId): ?string
+    {
+        $usuario = $this->users->find($userId);
+
+        return $usuario === null ? null : Identidad::email($usuario->email);
     }
 
     /**
@@ -287,10 +392,10 @@ class SolicitudEmpresaService
      *
      * @param array<string, mixed> $solicitud
      */
-    private function enviarCorreoActivacion(array $solicitud, string $link): bool
+    private function enviarCorreoActivacion(array $solicitud, string $link, ?string $destino = null): bool
     {
         return $this->correo->enviarActivacionEmpresa(
-            (string) $solicitud['email'],
+            $destino ?? (string) $solicitud['email'],
             $link,
             [
                 'razon_social' => (string) ($solicitud['razon_social'] ?? ''),
@@ -318,7 +423,7 @@ class SolicitudEmpresaService
 
         return [
             'razon_social' => $empresa['razon_social'],
-            'email'        => $empresa['email'],
+            'email'        => $this->emailDeUsuario((int) $empresa['user_id']) ?? Identidad::email($empresa['email']),
         ];
     }
 

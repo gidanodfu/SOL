@@ -12,11 +12,13 @@ vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.p
 
 > El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
 > se validaron manualmente contra la API; aún no tienen pruebas automatizadas.
+> `test_identidad.sh` requiere `turnstile.enabled=false` en `backend/.env`, igual que los
+> demás smoke tests que inician sesión.
 
 ## Smoke de la API (integración)
 
-Cada script levanta un servidor temporal (`php spark serve` en :8080), ejecuta el
-flujo y lo apaga. Requieren MySQL migrado y con los seeds base: `SystemSeeder`
+Cada script levanta un servidor temporal (`php spark serve`; `test_identidad.sh` usa
+:8081 para no colisionar), ejecuta el flujo y lo apaga. Requieren MySQL migrado y con los seeds base: `SystemSeeder`
 (datos iniciales) + `DatosPruebaSeeder` (fixtures de las cuentas que usan los
 scripts). `SystemSeeder` requiere `INITIAL_ADMIN_*` en `backend/.env`.
 
@@ -38,6 +40,7 @@ cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark d
                                        # iframe/svg/eventos/javascript:), enlaces http(s)
                                        # con rel, texto plano heredado y límite 10.000
                                        # caracteres de texto visible
+./tests/smoke/test_identidad.sh        # login por RUC/DNI y rechazo de duplicados
 ./tests/smoke/test_reporte_empresa.sh  # reporte Excel de empresa: rol, aislamiento A/B,
                                        # filtros de fecha y columnas del XLSX
 ./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación

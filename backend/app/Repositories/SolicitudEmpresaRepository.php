@@ -72,6 +72,18 @@ class SolicitudEmpresaRepository
         return $this->base()->where('s.id', $id)->get()->getRowArray() ?: null;
     }
 
+    /**
+     * Bloquea la solicitud para resolverla dentro de una transacción (evita dos
+     * aprobaciones simultáneas).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function obtenerParaActualizar(int $id): ?array
+    {
+        return $this->db->query('SELECT * FROM solicitudes_empresa WHERE id = ? FOR UPDATE', [$id])
+            ->getRowArray() ?: null;
+    }
+
     private function base(): \CodeIgniter\Database\BaseBuilder
     {
         return $this->db->table('solicitudes_empresa s')

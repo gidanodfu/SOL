@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Smoke de flujos nuevos de desarrollo (Anexo 2026-09):
 # auto-registro de empresas (RUC SUNAT) -> aprobación admin -> enlace ->
-# activación -> login por correo; revisión municipal de ofertas + cierre admin;
+# activación -> login por RUC; revisión municipal de ofertas + cierre admin;
 # bolsa pública sin sesión; dashboard admin enriquecido.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
@@ -34,7 +34,7 @@ echo "== 4. admin ve solicitudes pendientes =="
 curl -s "$B/api/admin/solicitudes-empresa" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;[print(" -",s["id"],s["ruc"],s["razon_social"],s["estado"]) for s in json.load(sys.stdin)["data"]["data"]]'
 
 echo "== 5. login empresa ANTES de activar (aun no existe el usuario) => 401 =="
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$CORREO\",\"password\":\"Cualquiera1!\"}"
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$RUC\",\"password\":\"Cualquiera1!\"}"
 
 echo "== 6. admin aprueba => devuelve enlace =="
 LINK=$(curl -s -X POST "$B/api/admin/solicitudes-empresa/$SID/aprobar" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["link"])')
@@ -45,17 +45,17 @@ echo "== 7. ver enlace público (GET activar-cuenta/token) =="
 curl -s "$B/api/activar-cuenta/$TOKEN"
 
 echo "== 8. login empresa aún inactiva (password aun no definida) => 401 =="
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$CORREO\",\"password\":\"Clave12345!\"}"
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$RUC\",\"password\":\"Clave12345!\"}"
 
 echo "== 9. activar cuenta (define contraseña) =="
 curl -s -X POST "$B/api/activar-cuenta/$TOKEN" -H 'Content-Type: application/json' -d '{"password":"Clave12345!","password2":"Clave12345!"}'
 
-echo "== 10. login por correo corporativo => 200 =="
-TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$CORREO\",\"password\":\"Clave12345!\"}" | tok)
+echo "== 10. login por RUC => 200 =="
+TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$RUC\",\"password\":\"Clave12345!\"}" | tok)
 echo "token empresa: ${TE:0:20}..."
 
-echo "== 11. login con el RUC como username => 200 (compatibilidad) =="
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$RUC\",\"password\":\"Clave12345!\"}"
+echo "== 11. login con el correo corporativo => 401 (ya no es identificador) =="
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$CORREO\",\"password\":\"Clave12345!\"}"
 
 echo "== 12. enlace reutilizado => 401 =="
 curl -s -o /dev/null -w "%{http_code}\n" "$B/api/activar-cuenta/$TOKEN"

@@ -294,7 +294,7 @@ function NuevaEmpresa({ alCrear }) {
       <h3>Registro municipal de empresa (post evaluación presencial)</h3>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
-        <Campo etiqueta="RUC (será el usuario)" maxLength={11} value={form.ruc} onChange={set('ruc')} />
+        <Campo etiqueta="RUC (será el usuario)" maxLength={11} value={form.ruc} onChange={(e) => setForm({ ...form, ruc: soloDigitos(e.target.value) })} />
         <Campo etiqueta="Razón social" value={form.razon_social} onChange={set('razon_social')} />
         <Campo etiqueta="Nombre comercial" value={form.nombre_comercial} onChange={set('nombre_comercial')} />
         <Campo etiqueta="Representante" value={form.representante} onChange={set('representante')} />

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Identidad de acceso y unicidad global. Requiere MySQL migrado + seeds de prueba
+# y Turnstile deshabilitado en backend/.env (igual que el resto de smoke tests).
+set -u
+cd "$(dirname "$0")/../../backend" || exit 1
+B=http://127.0.0.1:8081
+LOG=/tmp/opencode/spark_identidad.log
+
+env 'storage.driver=local' php spark serve --port 8081 > "$LOG" 2>&1 &
+SRV=$!
+trap 'kill $SRV 2>/dev/null' EXIT
+for i in $(seq 1 30); do curl -s -o /dev/null "$B/health" && break; sleep 0.5; done
+
+fallos=0
+esperar() {
+  local nombre="$1" esperado="$2" metodo="$3" url="$4" cuerpo="${5:-}" cabecera="${6:-}"
+  local args=(-s -o /tmp/opencode/identidad_resp.json -w '%{http_code}' -X "$metodo" "$B$url")
+  [ -n "$cabecera" ] && args+=(-H "$cabecera")
+  [ -n "$cuerpo" ] && args+=(-H 'Content-Type: application/json' -d "$cuerpo")
+  local codigo
+  codigo=$(curl "${args[@]}")
+  if [ "$codigo" = "$esperado" ]; then
+    printf 'OK   %-46s %s\n' "$nombre" "$codigo"
+  else
+    printf 'FAIL %-46s %s (esperado %s)\n' "$nombre" "$codigo" "$esperado"
+    fallos=$((fallos + 1))
+  fi
+}
+
+esperar 'admin: usuario' 200 POST '/api/auth/login' '{"username":"admin","password":"Admin123!"}'
+esperar 'admin: correo' 200 POST '/api/auth/login' '{"username":"admin@mdjlo.gob.pe","password":"Admin123!"}'
+esperar 'empresa: RUC' 200 POST '/api/auth/login' '{"username":"20601234567","password":"Empresa123!"}'
+esperar 'empresa: RUC con separadores' 200 POST '/api/auth/login' '{"username":"20-601234567","password":"Empresa123!"}'
+esperar 'empresa: correo rechazado' 401 POST '/api/auth/login' '{"username":"contacto@losjardines.pe","password":"Empresa123!"}'
+esperar 'postulante: DNI' 200 POST '/api/auth/login' '{"username":"12345678","password":"Postu123!"}'
+esperar 'postulante: DNI con puntos' 200 POST '/api/auth/login' '{"username":"12.345.678","password":"Postu123!"}'
+esperar 'postulante: correo rechazado' 401 POST '/api/auth/login' '{"username":"admin@mdjlo.gob.pe","password":"Postu123!"}'
+
+esperar 'registro: DNI duplicado' 409 POST '/api/registro/postulante' '{"dni":"12345678","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad@example.pe","telefono":"999888777","password":"Clave123!","password2":"Clave123!"}'
+esperar 'registro: correo duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000002","nombres":"Prueba","apellidos":"Duplicado","email":"admin@mdjlo.gob.pe","telefono":"999888771","password":"Clave123!","password2":"Clave123!"}'
+esperar 'registro: teléfono duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000003","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad2@example.pe","telefono":"987654321","password":"Clave123!","password2":"Clave123!"}'
+
+esperar 'solicitud: RUC existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20601234567","email":"nuevo.empresa@example.pe","telefono":"999888775","representante":"Prueba"}'
+esperar 'solicitud: correo existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20999999999","email":"admin@mdjlo.gob.pe","telefono":"999888774","representante":"Prueba"}'
+
+TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])')
+esperar 'admin: alta usuario con correo existente' 409 POST '/api/admin/usuarios' '{"username":"prueba.identidad","nombres":"Prueba","apellidos":"Identidad","email":"admin@mdjlo.gob.pe","telefono":"988777111","password":"Clave123!"}' "Authorization: Bearer $TA"
+esperar 'admin: alta empresa con RUC existente' 409 POST '/api/admin/empresas' '{"ruc":"20601234567","razon_social":"Duplicada SAC","password":"Clave123!","evaluacion_presencial":true}' "Authorization: Bearer $TA"
+
+[ "$fallos" -eq 0 ] || exit 1
+echo 'Identidad: todos los casos esperados pasaron.'

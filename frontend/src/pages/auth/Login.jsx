@@ -100,7 +100,7 @@ export default function Login() {
 
           <form onSubmit={enviar}>
             <div className="login-campo">
-              <label className="login-campo-label" htmlFor="username">Usuario</label>
+              <label className="login-campo-label" htmlFor="username">Usuario, RUC o DNI</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -111,15 +111,16 @@ export default function Login() {
                   className="login-campo-input"
                   type="text"
                   name="username"
-                  placeholder="Ingrese su usuario"
+                  placeholder="Usuario, RUC o DNI"
                   value={form.username}
                   onChange={cambiar}
                   autoComplete="username"
                   required
 
-                  maxLength={50}
+                  maxLength={150}
                 />
               </div>
+              <p className="login-campo-ayuda">Empresas: RUC. Postulantes: DNI. Administración: usuario.</p>
             </div>
 
             <div className="login-campo">

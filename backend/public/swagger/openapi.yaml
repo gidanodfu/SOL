@@ -3170,7 +3170,7 @@ paths:
                 email:
                   type: string
                   format: email
-                  description: Correo corporativo; será el usuario de login al activar.
+                  description: Correo de contacto y recuperación; ya no es un identificador de login. Debe ser único en SOL.
                 telefono:
                   type: string
                   pattern: '^(?:\d{9}|\d{11})$'
@@ -3355,9 +3355,10 @@ paths:
       operationId: adminSolicitudAprobar
       summary: Aprobar solicitud y crear la cuenta de la empresa
       description: |
-        Crea el usuario (estado `inactivo`, login con el correo corporativo) y la empresa
+        Crea el usuario (estado `inactivo`, login exclusivo con RUC) y la empresa
         con `evaluacion_presencial=1`, genera el enlace de activación y notifica por correo
-        (best-effort). Devuelve el enlace como respaldo interno.
+        (best-effort). Devuelve el enlace como respaldo interno. No crea una segunda cuenta
+        si el RUC, correo o teléfono ya están reservados por otra cuenta o solicitud.
       security:
         - bearerAuth: []
       parameters:
@@ -3790,7 +3791,10 @@ components:
       properties:
         username:
           type: string
-          description: Nombre de usuario. Para empresas y postulantes es el RUC o DNI.
+          description: |
+            Identificador de acceso: RUC para empresa, DNI para postulante y
+            usuario o correo para administración. El correo no se acepta para
+            empresas ni postulantes. Se normalizan separadores y mayúsculas.
         password:
           type: string
           format: password

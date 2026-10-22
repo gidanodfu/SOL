@@ -34,6 +34,10 @@ MySQL es la fuente de verdad.
   (ENUM); no existe tabla de roles. Auth JWT + refresh, filtros `jwt` y `rol:` por ruta;
   bloqueo inmediato al desactivar la cuenta. Un administrador **no puede desactivar su
   propia cuenta** (validado en backend y reflejado en la UI).
+- **Identidad y unicidad**: la empresa inicia sesión exclusivamente con RUC y el
+  postulante con DNI (Google conserva su flujo). Correo y teléfono se normalizan y se
+  reservan globalmente; RUC/DNI también se validan antes de crear cuentas o solicitudes.
+  Las duplicidades históricas se documentan sin fusionar ni borrar cuentas.
 - **Presencia digital de empresas**: la propia empresa configura sitio web e
   Instagram/Facebook/TikTok/X desde `/empresa/perfil` (tarjeta «Presencia digital»,
   `PUT /empresa/perfil/presencia`, separado del endpoint de datos de contacto para que uno
@@ -45,8 +49,9 @@ MySQL es la fuente de verdad.
   sí los conserva.
 - **Auto-registro de empresas**: solicitud pública con RUC verificado en SUNAT
   (`sunat.token`); el admin aprueba/rechaza desde una bandeja y la cuenta se activa con un
-  enlace de un solo uso (`/activar-cuenta`). El login usa el correo corporativo (el RUC
-  también funciona).
+  enlace de un solo uso (`/activar-cuenta`). El login de empresa usa exclusivamente el RUC;
+  el correo queda como dato de contacto y recuperación. El postulante inicia sesión con su
+  DNI; las cuentas Google conservan su flujo de Google.
 - **Ofertas laborales**: toda oferta nace **pendiente de revisión municipal**. El admin puede
   **aprobar** (pasa a `publicada`, recién visible y postulable), **observar** (pasa a
   `observada`: registra las correcciones requeridas y deja la oferta NO publicada; la empresa
@@ -74,7 +79,7 @@ MySQL es la fuente de verdad.
   cambia de "Subir CV" a "Actualizar CV".
 - **Validación de teléfono**: 9 u 11 dígitos (`^(?:\d{9}|\d{11})$`), validado en backend y
   en frontend.
-- **Rate limiting** (token bucket de CI4): login 5 fallos por IP+usuario y 1 intento/60 s
+- **Rate limiting** (token bucket de CI4): login 5 fallos por IP+identificador y 1 intento/60 s
   después; refresh/Google/registro 10 por IP y 1/30 s; subida de CV 10 por IP y 1/6 min.
   Responde `429` con `Retry-After`.
 - **Errores seguros**: sobre uniforme `{success, message, data, errors}`; los `500`
@@ -197,6 +202,12 @@ eliminarse con una migración cuando se confirme que ningún entorno tiene datos
 
 > No hay un número fijo de migraciones: `php spark migrate` siempre aplica las pendientes.
 > Las migraciones **no** insertan datos ni credenciales.
+>
+> `identidades_reservadas` centraliza la unicidad de email, teléfono, RUC y DNI. La
+> migración la rellena con los datos existentes; los valores duplicados quedan como
+> `estado=conflicto` con referencias por id (sin borrar ni fusionar cuentas) y bloquean
+> nuevas altas hasta su resolución administrativa. El diagnóstico local está en
+> [`docs/identidad-conflictos.md`](docs/identidad-conflictos.md).
 
 ## 8. Seeds
 
@@ -425,6 +436,7 @@ cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark d
 ./tests/smoke/test_fase6.sh            # contrataciones y reportes
 ./tests/smoke/test_seguridad.sh        # booleanos, fechas, URLs, rate limit y cabeceras
 ./tests/smoke/test_rte.sh              # RTE: saneado, enlaces, texto plano y límite 10k
+./tests/smoke/test_identidad.sh        # login por RUC/DNI y rechazo de duplicados
 ./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación
 ```
 

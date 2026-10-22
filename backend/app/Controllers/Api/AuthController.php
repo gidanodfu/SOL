@@ -34,7 +34,7 @@ class AuthController extends BaseApiController
                 ->setContentType('application/json', 'UTF-8')
                 ->setBody(json_encode([
                     'success' => false,
-                    'message' => 'Ingrese su usuario y contraseña.',
+                    'message' => 'Ingrese su usuario, RUC o DNI y su contraseña.',
                     'errors'  => [],
                 ], JSON_UNESCAPED_UNICODE));
         }

@@ -5,6 +5,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Libraries\Identidad;
 use App\Models\EmpresaModel;
 use App\Models\UserModel;
 use App\Repositories\EmpresaRepository;
@@ -30,6 +31,8 @@ class EmpresaService
 
     private ImageService $images;
 
+    private IdentidadService $identidad;
+
     public function __construct(
         ?EmpresaRepository $repository = null,
         ?EmpresaModel $empresas = null,
@@ -37,6 +40,7 @@ class EmpresaService
         ?AuditoriaService $auditoria = null,
         ?StorageService $storage = null,
         ?ImageService $images = null,
+        ?IdentidadService $identidad = null,
     ) {
         $this->repository = $repository ?? new EmpresaRepository();
         $this->empresas   = $empresas ?? model(EmpresaModel::class);
@@ -44,6 +48,7 @@ class EmpresaService
         $this->auditoria  = $auditoria ?? new AuditoriaService();
         $this->storage    = $storage ?? new StorageService();
         $this->images     = $images ?? new ImageService();
+        $this->identidad  = $identidad ?? new IdentidadService();
     }
 
     /**
@@ -83,6 +88,10 @@ class EmpresaService
      */
     public function crear(int $adminId, array $datos): int
     {
+        $datos['ruc']      = Identidad::ruc($datos['ruc'] ?? '');
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+
         Validador::validar($datos, [
             'ruc'            => ['required', 'ruc'],
             'razon_social'   => ['required', 'max:200'],
@@ -97,53 +106,80 @@ class EmpresaService
 
         $ruc = $datos['ruc'];
         if ($this->empresas->where('ruc', $ruc)->first() !== null) {
-            throw ApiException::conflicto('Ya existe una empresa registrada con este RUC.');
+            throw ApiException::conflicto('Este RUC ya está asociado a una empresa registrada. Verifica los datos o utiliza el acceso de la empresa existente.');
         }
         if ($this->users->buscarPorUsername($ruc) !== null) {
-            throw ApiException::conflicto('El RUC ya está en uso como nombre de usuario.');
+            throw ApiException::conflicto('Este RUC ya está asociado a una empresa registrada. Verifica los datos o utiliza el acceso de la empresa existente.');
         }
+
+        $solicitudActiva = $this->empresas->db->table('solicitudes_empresa')
+            ->where('ruc', $ruc)
+            ->whereIn('estado', ['pendiente', 'aprobada'])
+            ->countAllResults() > 0;
+        if ($solicitudActiva) {
+            throw ApiException::conflicto('Ya existe una solicitud o cuenta para este RUC. Resuélvela o reenvía la activación existente.');
+        }
+
+        $this->identidad->exigirLibre('ruc', $ruc);
+        $this->identidad->exigirLibre('email', $datos['email']);
+        $this->identidad->exigirLibre('telefono', $datos['telefono']);
 
         // La evaluación presencial (RF-09/RN-02) debe constar antes de habilitar.
         // Parseo estricto: el texto "false" no debe habilitar la empresa.
         $evaluada = filter_var($datos['evaluacion_presencial'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-        $this->users->db->transStart();
+        try {
+            $this->users->db->transStart();
 
-        $this->users->insert([
-            'username'      => $ruc,
-            'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
-            'rol'           => 'empresa',
-            'nombres'       => $datos['razon_social'],
-            // Los datos de la empresa tienen su propia fuente de verdad (tabla empresas);
-            // no se replica la razón social en apellidos para evitar duplicados.
-            'apellidos'     => $datos['representante'] ?? '',
-            'email'         => $datos['email'] ?? null,
-            'telefono'      => $datos['telefono'] ?? null,
-            // La cuenta se habilita junto con la empresa (RF-16). Inicia inactiva
-            // hasta que la Municipalidad la active.
-            'estado'        => $evaluada ? 'activo' : 'inactivo',
-        ]);
-        $userId = $this->users->getInsertID();
+            $this->users->insert([
+                'username'      => $ruc,
+                'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
+                'rol'           => 'empresa',
+                'nombres'       => $datos['razon_social'],
+                // Los datos de la empresa tienen su propia fuente de verdad (tabla empresas);
+                // no se replica la razón social en apellidos para evitar duplicados.
+                'apellidos'     => $datos['representante'] ?? '',
+                'email'         => $datos['email'],
+                'telefono'      => $datos['telefono'],
+                // La cuenta se habilita junto con la empresa (RF-16). Inicia inactiva
+                // hasta que la Municipalidad la active.
+                'estado'        => $evaluada ? 'activo' : 'inactivo',
+            ]);
+            $userId = (int) $this->users->getInsertID();
 
-        $this->empresas->insert([
-            'user_id'               => $userId,
-            'ruc'                   => $ruc,
-            'razon_social'          => $datos['razon_social'],
-            'nombre_comercial'      => $datos['nombre_comercial'] ?? null,
-            'direccion'             => $datos['direccion'] ?? null,
-            'telefono'              => $datos['telefono'] ?? null,
-            'email'                 => $datos['email'] ?? null,
-            'representante'         => $datos['representante'] ?? null,
-            'info_adicional'        => $datos['info_adicional'] ?? null,
-            'evaluacion_presencial' => (int) $evaluada,
-            'estado'                => $evaluada ? 'activo' : 'inactivo',
-        ]);
-        $empresaId = $this->empresas->getInsertID();
+            $this->empresas->insert([
+                'user_id'               => $userId,
+                'ruc'                   => $ruc,
+                'razon_social'          => $datos['razon_social'],
+                'nombre_comercial'      => $datos['nombre_comercial'] ?? null,
+                'direccion'             => $datos['direccion'] ?? null,
+                'telefono'              => $datos['telefono'],
+                'email'                 => $datos['email'],
+                'representante'         => $datos['representante'] ?? null,
+                'info_adicional'        => $datos['info_adicional'] ?? null,
+                'evaluacion_presencial' => (int) $evaluada,
+                'estado'                => $evaluada ? 'activo' : 'inactivo',
+            ]);
+            $empresaId = (int) $this->empresas->getInsertID();
 
-        $this->users->db->transComplete();
+            $this->identidad->reservar('ruc', $ruc, $userId);
+            $this->identidad->reservar('email', $datos['email'], $userId);
+            $this->identidad->reservar('telefono', $datos['telefono'], $userId);
 
-        if (! $this->users->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo registrar la empresa.');
+            $this->users->db->transComplete();
+
+            if (! $this->users->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo registrar la empresa.');
+            }
+        } catch (ApiException $e) {
+            $this->users->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->users->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('Ya existe una empresa o cuenta con estos datos. No se creó una nueva.');
+            }
+            throw $e;
         }
 
         $this->auditoria->registrar($adminId, 'crear_empresa', 'empresa', $empresaId, ['ruc' => $ruc]);
@@ -156,7 +192,9 @@ class EmpresaService
      */
     public function actualizar(int $adminId, int $id, array $datos): void
     {
-        $this->exigirExistente($id);
+        $empresa = $this->exigirExistente($id);
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
 
         Validador::validar($datos, [
             'razon_social'   => ['required', 'max:200'],
@@ -167,15 +205,45 @@ class EmpresaService
             'representante'  => ['max:150'],
         ]);
 
-        $this->empresas->update($id, [
-            'razon_social'     => $datos['razon_social'],
-            'nombre_comercial' => $datos['nombre_comercial'] ?? null,
-            'direccion'        => $datos['direccion'] ?? null,
-            'telefono'         => $datos['telefono'] ?? null,
-            'email'            => $datos['email'] ?? null,
-            'representante'    => $datos['representante'] ?? null,
-            'info_adicional'   => $datos['info_adicional'] ?? null,
-        ]);
+        $usuario = $this->users->find((int) $empresa['user_id']);
+        if ($usuario === null) {
+            throw ApiException::noEncontrado('El usuario de la empresa no existe.');
+        }
+
+        $this->exigirCambioContacto($usuario, $datos['email'], $datos['telefono']);
+
+        try {
+            $this->empresas->db->transStart();
+            $this->empresas->update($id, [
+                'razon_social'     => $datos['razon_social'],
+                'nombre_comercial' => $datos['nombre_comercial'] ?? null,
+                'direccion'        => $datos['direccion'] ?? null,
+                'telefono'         => $datos['telefono'],
+                'email'            => $datos['email'],
+                'representante'    => $datos['representante'] ?? null,
+                'info_adicional'   => $datos['info_adicional'] ?? null,
+            ]);
+            $this->identidad->actualizarContacto((int) $empresa['user_id'], $datos['email'], $datos['telefono']);
+            $this->users->update((int) $empresa['user_id'], [
+                'email'    => $datos['email'],
+                'telefono' => $datos['telefono'],
+            ]);
+            $this->empresas->db->transComplete();
+
+            if (! $this->empresas->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar la empresa.');
+            }
+        } catch (ApiException $e) {
+            $this->empresas->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->empresas->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('El correo o teléfono ya está asociado a otra cuenta. No se aplicó el cambio.');
+            }
+            throw $e;
+        }
+
         $this->auditoria->registrar($adminId, 'editar_empresa', 'empresa', $id);
     }
 
@@ -361,6 +429,9 @@ class EmpresaService
             throw ApiException::noEncontrado('No se encontró la empresa asociada a su cuenta.');
         }
 
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+
         Validador::validar($datos, [
             'nombre_comercial' => ['max:150'],
             'direccion'        => ['max:255'],
@@ -369,13 +440,42 @@ class EmpresaService
             'representante'    => ['max:150'],
         ]);
 
-        $this->empresas->update((int) $empresa['id'], [
-            'nombre_comercial' => $datos['nombre_comercial'] ?? null,
-            'direccion'        => $datos['direccion'] ?? null,
-            'telefono'         => $datos['telefono'] ?? null,
-            'email'            => $datos['email'] ?? null,
-            'representante'    => $datos['representante'] ?? null,
-        ]);
+        $usuario = $this->users->find($userId);
+        if ($usuario === null) {
+            throw ApiException::noEncontrado('El usuario no existe.');
+        }
+
+        $this->exigirCambioContacto($usuario, $datos['email'], $datos['telefono']);
+
+        try {
+            $this->empresas->db->transStart();
+            $this->empresas->update((int) $empresa['id'], [
+                'nombre_comercial' => $datos['nombre_comercial'] ?? null,
+                'direccion'        => $datos['direccion'] ?? null,
+                'telefono'         => $datos['telefono'],
+                'email'            => $datos['email'],
+                'representante'    => $datos['representante'] ?? null,
+            ]);
+            $this->identidad->actualizarContacto($userId, $datos['email'], $datos['telefono']);
+            $this->users->update($userId, [
+                'email'    => $datos['email'],
+                'telefono' => $datos['telefono'],
+            ]);
+            $this->empresas->db->transComplete();
+
+            if (! $this->empresas->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar el perfil.');
+            }
+        } catch (ApiException $e) {
+            $this->empresas->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->empresas->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('El correo o teléfono ya está asociado a otra cuenta. No se aplicó el cambio.');
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -412,6 +512,16 @@ class EmpresaService
     /**
      * @return array<string, mixed>
      */
+    private function exigirCambioContacto(\App\Entities\Usuario $usuario, ?string $email, ?string $telefono): void
+    {
+        if (Identidad::email($usuario->email) !== $email) {
+            $this->identidad->exigirLibre('email', $email, (int) $usuario->id);
+        }
+        if (Identidad::telefono($usuario->telefono) !== $telefono) {
+            $this->identidad->exigirLibre('telefono', $telefono, (int) $usuario->id);
+        }
+    }
+
     private function exigirExistente(int $id): array
     {
         $empresa = $this->repository->obtenerConUsuario($id);
