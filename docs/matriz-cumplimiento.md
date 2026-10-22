@@ -8,7 +8,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 
 | Código | Estado | Ubicación |
 |---|---|---|
-| RF-01 Login | ✔ | `POST /api/auth/login` · login |
+| RF-01 Login | ✔ | `POST /api/auth/login`: empresa con RUC, postulante con DNI, admin con usuario/correo · login |
 | RF-02 Auth en backend CI4 vs MySQL | ✔ | `Services/AuthService`, `UserModel` |
 | RF-03 MySQL fuente de verdad | ✔ | JWT solo transporta id; rol/estado se recargan de BD (`JwtAuthFilter`) |
 | RF-04 Rol desde BD, no elegible | ✔ | columna `users.rol`; no editable por frontend |
@@ -19,7 +19,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-09 Evaluación presencial | ⬤ | asumida en la aprobación de la solicitud (`evaluacion_presencial=1`) |
 | RF-10 Perfil de empresa | ✔ | CRUD admin + auto-edición de la empresa (`empresa/perfil`) |
 | RF-11 Usuario empresarial creado al aprobar la solicitud | ✔ | dentro de `SolicitudEmpresaService::aprobar` |
-| RF-12 RUC = usuario | ✔ | username generado desde el RUC en el alta; el login acepta el RUC o el correo corporativo |
+| RF-12 RUC = usuario | ✔ | username generado desde el RUC; login exclusivo de empresa por RUC (el correo no es login alternativo) |
 | RF-13 Contraseña definida por la empresa al activar | ✔ | enlace de un solo uso `activar-cuenta/{token}` (`SolicitudEmpresaService`) |
 | RF-14 Hash seguro | ✔ | `password_hash(PASSWORD_DEFAULT)` (RN-06) |
 | RF-15 Notificación por correo + enlace de activación | ✔ | `EmailService` (SMTP); el admin puede copiar/regenerar el enlace |
@@ -67,7 +67,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 
 | Código | Estado | Mecanismo |
 |---|---|---|
-| RN-01…RN-06 | ✔ | alta de empresas por solicitud aprobada (`SolicitudEmpresaService`) o por admin (legado), RUC/correo = credencial, hash seguro |
+| RN-01…RN-06 | ✔ | alta de empresas por solicitud aprobada (`SolicitudEmpresaService`) o por admin (legado), RUC = login de empresa, hash seguro |
 | RN-07/08 | ✔ | rol leído de BD; no editable desde frontend |
 | RN-09 | ✔ | `RoleFilter` en cada endpoint protegido |
 | RN-10 | ✔ | `JwtAuthFilter` valida `estado=activo` |
@@ -114,7 +114,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | Aspecto | Estado | Ubicación |
 |---|---|---|
 | `password_hash` nunca en respuestas | ✔ | `UsuarioRepository::base()` con columnas explícitas; `GET /api/admin/usuarios` sin hash (RT-20) |
-| Rate limiting de autenticación | ✔ | token bucket CI4: login ráfaga 5 (1/60 s) por IP+usuario, solo fallos (reset en éxito); refresh/Google/registro ráfaga 10 (1/30 s) por IP (`ThrottleFilter`, `AuthService`) |
+| Rate limiting de autenticación | ✔ | token bucket CI4: login ráfaga 5 (1/60 s) por IP+identificador normalizado, solo fallos (reset en éxito); refresh/Google/registro ráfaga 10 (1/30 s) por IP (`ThrottleFilter`, `AuthService`) |
 | Rate limiting de subida de CV | ✔ | token bucket: ráfaga 10 (1/360 s) por IP (`throttle:10,3600`) |
 | Validación de teléfono 9 u 11 dígitos | ✔ | regla `telefono` en `Validador` (backend) + filtrado a dígitos y validación en el frontend |
 | Errores saneados | ✔ | `ApiExceptionHandler` responde JSON uniforme; `500` genérico con log interno; `429` con `Retry-After` |

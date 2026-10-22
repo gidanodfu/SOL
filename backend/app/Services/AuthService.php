@@ -4,7 +4,9 @@
 
 namespace App\Services;
 
+use App\Entities\Usuario;
 use App\Exceptions\ApiException;
+use App\Libraries\Identidad;
 use App\Models\PostulanteModel;
 use App\Models\RefreshTokenModel;
 use App\Models\UserModel;
@@ -12,6 +14,7 @@ use App\Repositories\PostulanteRepository;
 use App\Validation\Validador;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Throwable;
 
 /**
  * Autenticación: login, refresh, logout, registro de postulantes y cambio de
@@ -34,6 +37,8 @@ class AuthService
 
     private TurnstileService $turnstile;
 
+    private IdentidadService $identidad;
+
     public function __construct(
         ?UserModel $users = null,
         ?PostulanteModel $postulantes = null,
@@ -42,6 +47,7 @@ class AuthService
         ?AuditoriaService $auditoria = null,
         ?PostulanteRepository $perfiles = null,
         ?TurnstileService $turnstile = null,
+        ?IdentidadService $identidad = null,
     ) {
         $this->users         = $users ?? model(UserModel::class);
         $this->postulantes   = $postulantes ?? model(PostulanteModel::class);
@@ -50,6 +56,7 @@ class AuthService
         $this->auditoria     = $auditoria ?? new AuditoriaService();
         $this->perfiles      = $perfiles ?? new PostulanteRepository();
         $this->turnstile     = $turnstile ?? new TurnstileService();
+        $this->identidad     = $identidad ?? new IdentidadService();
     }
 
     /**
@@ -57,10 +64,12 @@ class AuthService
      */
     public function login(string $username, string $password, ?string $turnstileToken = null): array
     {
-        // Máximo 5 intentos por IP+usuario cada 5 minutos. Solo cuentan los fallos:
-        // el contador se elimina al iniciar sesión correctamente (no se bloquea a
-        // usuarios legítimos de forma permanente).
-        $claveThrottle = $this->claveLogin($username);
+        $tipo          = Identidad::tipoLogin($username);
+        $identificador = Identidad::normalizarLogin($username);
+
+        // Máximo 5 intentos por IP+identificador normalizado cada 5 minutos. Solo
+        // cuentan los fallos: el contador se elimina al iniciar sesión correctamente.
+        $claveThrottle = $this->claveLogin($tipo . '|' . $identificador);
         $throttler     = service('throttler');
         if (! $throttler->check($claveThrottle, 5, 300)) {
             $espera = max(1, $throttler->getTokenTime());
@@ -72,20 +81,35 @@ class AuthService
         }
 
         // Verificación anti-bot (Cloudflare Turnstile) antes de tocar credenciales.
-        // Se ejecuta después del rate limit para acotar las llamadas salientes a
-        // Siteverify; fail-closed (sin token válido no hay login).
         if ($this->turnstile->habilitado()) {
             $this->turnstile->verificar($turnstileToken, $this->ipCliente());
         }
 
-        // El identificador puede ser el nombre de usuario (RUC/DNI) o el correo
-        // corporativo (RF-01; el correo corporativo es la credencial de la empresa).
-        $usuario = $this->users
-            ->groupStart()
-                ->where('username', $username)
-                ->orWhere('email', $username)
-            ->groupEnd()
-            ->first();
+        // El identificador de acceso depende del rol:
+        // - empresa: RUC (11 dígitos)
+        // - postulante: DNI (8 dígitos)
+        // - admin: usuario o su correo
+        // El correo no es un identificador alternativo para empresas/postulantes.
+        $usuario = $this->buscarUsuarioLogin($tipo, $identificador);
+
+        // Preserva usuarios administrativos con nombres numéricos que contengan
+        // separadores: se intenta el valor original solo como usuario admin.
+        if ($usuario === null && $tipo !== 'email' && trim($username) !== $identificador) {
+            $candidato = $this->users->where('username', trim($username))->first();
+            if ($candidato !== null && $candidato->rol === 'admin') {
+                $usuario = $candidato;
+            }
+        }
+
+        if ($tipo === 'email' && ($usuario === null || $usuario->rol !== 'admin')) {
+            throw ApiException::noAutorizado(
+                'El correo electrónico no se usa para iniciar sesión. Empresas: RUC. Postulantes: DNI. Cuentas Google: use "Continuar con Google".',
+            );
+        }
+
+        if ($usuario !== null && ! $this->identificadorPermitido($tipo, $usuario->rol)) {
+            throw ApiException::noAutorizado('Credenciales inválidas.');
+        }
 
         // Las cuentas creadas exclusivamente con Google no tienen contraseña
         // local utilizable; se evita evaluar el hash temporal.
@@ -101,6 +125,12 @@ class AuthService
             throw ApiException::prohibido('Su cuenta está inactiva. Contacte a la Municipalidad.');
         }
 
+        // Una empresa solo accede con su cuenta autorizada (empresa activa), no
+        // basta con que el usuario exista.
+        if ($usuario->rol === 'empresa' && ! $this->empresaActiva((int) $usuario->id)) {
+            throw ApiException::prohibido('La cuenta de empresa no está habilitada para acceder. Contacte a la Municipalidad.');
+        }
+
         $throttler->remove($claveThrottle);
 
         $this->users->update($usuario->id, ['ultimo_acceso' => date('Y-m-d H:i:s')]);
@@ -110,7 +140,42 @@ class AuthService
     }
 
     /**
-     * Clave de throttling del login (IP + usuario), segura para el cache.
+     * Busca el usuario según el formato del identificador. Para correo exige
+     * coincidencia única; si hay duplicados históricos no se elige una cuenta al
+     * azar.
+     */
+    private function buscarUsuarioLogin(string $tipo, string $identificador): ?Usuario
+    {
+        if ($tipo === 'email') {
+            $usuarios = $this->users->where('email', $identificador)->findAll();
+
+            return count($usuarios) === 1 ? $usuarios[0] : null;
+        }
+
+        return $this->users->where('username', $identificador)->first();
+    }
+
+    private function identificadorPermitido(string $tipo, string $rol): bool
+    {
+        return match ($tipo) {
+            'email'   => $rol === 'admin',
+            'ruc'     => in_array($rol, ['empresa', 'admin'], true),
+            'dni'     => in_array($rol, ['postulante', 'admin'], true),
+            'usuario' => $rol === 'admin',
+            default   => false,
+        };
+    }
+
+    private function empresaActiva(int $userId): bool
+    {
+        return $this->users->db->table('empresas')
+            ->where('user_id', $userId)
+            ->where('estado', 'activo')
+            ->countAllResults() > 0;
+    }
+
+    /**
+     * Clave de throttling del login (IP + identificador normalizado), segura para el cache.
      */
     private function claveLogin(string $username): string
     {
@@ -195,6 +260,10 @@ class AuthService
      */
     public function registrarPostulante(array $datos): array
     {
+        $datos['dni']      = Identidad::dni($datos['dni'] ?? '');
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+
         Validador::validar($datos, [
             'dni'       => ['required', 'dni'],
             'nombres'   => ['required', 'max:100'],
@@ -207,38 +276,54 @@ class AuthService
 
         $dni = $datos['dni'];
         if ($this->users->buscarPorUsername($dni) !== null) {
-            throw ApiException::conflicto('Ya existe una cuenta registrada con este DNI.');
-        }
-        if (! empty($datos['email']) && $this->users->where('email', $datos['email'])->first() !== null) {
-            throw ApiException::conflicto('El correo ya está registrado por otro usuario.');
+            throw ApiException::conflicto('Este DNI ya está asociado a una cuenta. Verifica tus datos o utiliza el acceso de la cuenta existente.');
         }
 
-        $this->users->db->transStart();
+        $this->identidad->exigirLibre('dni', $dni);
+        $this->identidad->exigirLibre('email', $datos['email']);
+        $this->identidad->exigirLibre('telefono', $datos['telefono']);
 
-        $this->users->insert([
-            'username'      => $dni,
-            'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
-            'rol'           => 'postulante',
-            'nombres'       => $datos['nombres'],
-            'apellidos'     => $datos['apellidos'],
-            'email'         => $datos['email'] ?? null,
-            'telefono'      => $datos['telefono'] ?? null,
-            'estado'        => 'activo',
-        ]);
-        $userId = $this->users->getInsertID();
+        try {
+            $this->users->db->transStart();
 
-        $this->postulantes->insert([
-            'user_id'        => $userId,
-            'tipo_documento' => 'DNI',
-            'dni'            => $dni,
-            'nombres'        => $datos['nombres'],
-            'apellidos'      => $datos['apellidos'],
-        ]);
+            $this->users->insert([
+                'username'      => $dni,
+                'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
+                'rol'           => 'postulante',
+                'nombres'       => $datos['nombres'],
+                'apellidos'     => $datos['apellidos'],
+                'email'         => $datos['email'],
+                'telefono'      => $datos['telefono'],
+                'estado'        => 'activo',
+            ]);
+            $userId = (int) $this->users->getInsertID();
 
-        $this->users->db->transComplete();
+            $this->postulantes->insert([
+                'user_id'        => $userId,
+                'tipo_documento' => 'DNI',
+                'dni'            => $dni,
+                'nombres'        => $datos['nombres'],
+                'apellidos'      => $datos['apellidos'],
+            ]);
 
-        if ($this->users->db->transStatus() === false) {
-            throw ApiException::conflicto('No se pudo crear la cuenta. Verifique los datos.');
+            $this->identidad->reservar('dni', $dni, $userId);
+            $this->identidad->reservar('email', $datos['email'], $userId);
+            $this->identidad->reservar('telefono', $datos['telefono'], $userId);
+
+            $this->users->db->transComplete();
+
+            if ($this->users->db->transStatus() === false) {
+                throw ApiException::conflicto('No se pudo crear la cuenta. Verifique los datos.');
+            }
+        } catch (ApiException $e) {
+            $this->users->db->transRollback();
+            throw $e;
+        } catch (Throwable $e) {
+            $this->users->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('Ya existe una cuenta con estos datos. Verifica tu DNI, correo o teléfono.');
+            }
+            throw $e;
         }
 
         $usuario = $this->users->find($userId);
@@ -270,7 +355,13 @@ class AuthService
             $usuario = $this->users->where('proveedor_id', (string) $payload['sub'])->first();
         }
         if ($usuario === null) {
-            $usuario = $this->users->where('email', $email)->first();
+            $usuarios = $this->users->where('email', $email)->findAll();
+            if (count($usuarios) > 1) {
+                throw ApiException::noAutorizado(
+                    'Este correo está asociado a más de una cuenta. Contacte a la Municipalidad para regularizar el acceso.',
+                );
+            }
+            $usuario = $usuarios[0] ?? null;
         }
 
         if ($usuario !== null) {
@@ -293,33 +384,48 @@ class AuthService
             throw ApiException::conflicto('No se pudo crear la cuenta con este correo. Intente con otra cuenta de Google.');
         }
 
-        $this->users->db->transStart();
+        $this->identidad->exigirLibre('email', $email);
 
-        $this->users->insert([
-            'username'      => $username,
-            'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
-            'rol'           => 'postulante',
-            'proveedor'     => 'google',
-            'proveedor_id'  => (string) ($payload['sub'] ?? null),
-            'nombres'       => $payload['given_name'] ?? '',
-            'apellidos'     => $payload['family_name'] ?? '',
-            'email'         => $email,
-            'estado'        => 'activo',
-        ]);
-        $userId = (int) $this->users->getInsertID();
+        try {
+            $this->users->db->transStart();
 
-        $this->postulantes->insert([
-            'user_id'        => $userId,
-            'tipo_documento' => null,
-            'dni'            => null,
-            'nombres'        => $payload['given_name'] ?? '',
-            'apellidos'      => $payload['family_name'] ?? '',
-        ]);
+            $this->users->insert([
+                'username'      => $username,
+                'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+                'rol'           => 'postulante',
+                'proveedor'     => 'google',
+                'proveedor_id'  => (string) ($payload['sub'] ?? null),
+                'nombres'       => $payload['given_name'] ?? '',
+                'apellidos'     => $payload['family_name'] ?? '',
+                'email'         => $email,
+                'estado'        => 'activo',
+            ]);
+            $userId = (int) $this->users->getInsertID();
 
-        $this->users->db->transComplete();
+            $this->postulantes->insert([
+                'user_id'        => $userId,
+                'tipo_documento' => null,
+                'dni'            => null,
+                'nombres'        => $payload['given_name'] ?? '',
+                'apellidos'      => $payload['family_name'] ?? '',
+            ]);
 
-        if (! $this->users->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo crear la cuenta con Google.');
+            $this->identidad->reservar('email', $email, $userId);
+
+            $this->users->db->transComplete();
+
+            if (! $this->users->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo crear la cuenta con Google.');
+            }
+        } catch (ApiException $e) {
+            $this->users->db->transRollback();
+            throw $e;
+        } catch (Throwable $e) {
+            $this->users->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('Este correo electrónico ya está asociado a una cuenta o solicitud. Inicia sesión o utiliza la opción de recuperación correspondiente.');
+            }
+            throw $e;
         }
 
         $nuevo = $this->users->find($userId);

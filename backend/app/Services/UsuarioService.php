@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Entities\Usuario;
 use App\Exceptions\ApiException;
+use App\Libraries\Identidad;
 use App\Models\EmpresaModel;
 use App\Models\UserModel;
 use App\Repositories\UsuarioRepository;
@@ -26,16 +27,20 @@ class UsuarioService
 
     private AuditoriaService $auditoria;
 
+    private IdentidadService $identidad;
+
     public function __construct(
         ?UsuarioRepository $repository = null,
         ?UserModel $users = null,
         ?EmpresaModel $empresas = null,
         ?AuditoriaService $auditoria = null,
+        ?IdentidadService $identidad = null,
     ) {
         $this->repository = $repository ?? new UsuarioRepository();
         $this->users      = $users ?? model(UserModel::class);
         $this->empresas   = $empresas ?? model(EmpresaModel::class);
         $this->auditoria  = $auditoria ?? new AuditoriaService();
+        $this->identidad  = $identidad ?? new IdentidadService();
     }
 
     /**
@@ -71,6 +76,9 @@ class UsuarioService
      */
     public function crear(int $adminId, array $datos): int
     {
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+
         Validador::validar($datos, [
             'username'  => ['required', 'max:60', 'regex:/^[a-zA-Z0-9._-]+$/'],
             'nombres'   => ['required', 'max:100'],
@@ -84,18 +92,43 @@ class UsuarioService
             throw ApiException::conflicto('El nombre de usuario ya está en uso.');
         }
 
-        $this->users->insert([
-            'username'      => $datos['username'],
-            'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
-            'rol'           => 'admin',
-            'nombres'       => $datos['nombres'],
-            'apellidos'     => $datos['apellidos'],
-            'email'         => $datos['email'] ?? null,
-            'telefono'      => $datos['telefono'] ?? null,
-            'estado'        => 'activo',
-        ]);
+        $this->identidad->exigirLibre('email', $datos['email']);
+        $this->identidad->exigirLibre('telefono', $datos['telefono']);
 
-        $id = $this->users->getInsertID();
+        try {
+            $this->users->db->transStart();
+
+            $this->users->insert([
+                'username'      => $datos['username'],
+                'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
+                'rol'           => 'admin',
+                'nombres'       => $datos['nombres'],
+                'apellidos'     => $datos['apellidos'],
+                'email'         => $datos['email'],
+                'telefono'      => $datos['telefono'],
+                'estado'        => 'activo',
+            ]);
+            $id = (int) $this->users->getInsertID();
+
+            $this->identidad->reservar('email', $datos['email'], $id);
+            $this->identidad->reservar('telefono', $datos['telefono'], $id);
+
+            $this->users->db->transComplete();
+
+            if (! $this->users->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo crear el usuario.');
+            }
+        } catch (ApiException $e) {
+            $this->users->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->users->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('El correo o teléfono ya está asociado a otra cuenta.');
+            }
+            throw $e;
+        }
+
         $this->auditoria->registrar($adminId, 'crear_usuario', 'user', $id, ['username' => $datos['username']]);
 
         return $id;
@@ -106,7 +139,9 @@ class UsuarioService
      */
     public function actualizar(int $adminId, int $id, array $datos): void
     {
-        $this->exigirExistente($id);
+        $usuario = $this->exigirExistente($id);
+        $datos['email']    = Identidad::email($datos['email'] ?? null);
+        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
 
         Validador::validar($datos, [
             'nombres'   => ['required', 'max:100'],
@@ -115,12 +150,38 @@ class UsuarioService
             'telefono'  => ['telefono'],
         ]);
 
-        $this->users->update($id, [
-            'nombres'   => $datos['nombres'],
-            'apellidos' => $datos['apellidos'],
-            'email'     => $datos['email'] ?? null,
-            'telefono'  => $datos['telefono'] ?? null,
-        ]);
+        if (Identidad::email($usuario->email) !== $datos['email']) {
+            $this->identidad->exigirLibre('email', $datos['email'], $id);
+        }
+        if (Identidad::telefono($usuario->telefono) !== $datos['telefono']) {
+            $this->identidad->exigirLibre('telefono', $datos['telefono'], $id);
+        }
+
+        try {
+            $this->users->db->transStart();
+            $this->identidad->actualizarContacto($id, $datos['email'], $datos['telefono']);
+            $this->users->update($id, [
+                'nombres'   => $datos['nombres'],
+                'apellidos' => $datos['apellidos'],
+                'email'     => $datos['email'],
+                'telefono'  => $datos['telefono'],
+            ]);
+            $this->users->db->transComplete();
+
+            if (! $this->users->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar el usuario.');
+            }
+        } catch (ApiException $e) {
+            $this->users->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->users->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('El correo o teléfono ya está asociado a otra cuenta. No se aplicó el cambio.');
+            }
+            throw $e;
+        }
+
         $this->auditoria->registrar($adminId, 'editar_usuario', 'user', $id);
     }
 

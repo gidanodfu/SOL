@@ -52,6 +52,6 @@ class SolicitudesEmpresaController extends BaseApiController
     {
         (new SolicitudEmpresaService())->activar((string) $token, $this->cuerpo());
 
-        return $this->sinContenido('Cuenta activada correctamente. Ya puede iniciar sesión con su correo y contraseña.');
+        return $this->sinContenido('Cuenta activada correctamente. Ya puede iniciar sesión con su RUC y contraseña.');
     }
 }

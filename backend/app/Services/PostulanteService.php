@@ -5,6 +5,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Libraries\Identidad;
 use App\Models\PostulanteModel;
 use App\Models\UserModel;
 use App\Repositories\PostulanteRepository;
@@ -27,18 +28,22 @@ class PostulanteService
 
     private ImageService $images;
 
+    private IdentidadService $identidad;
+
     public function __construct(
         ?PostulanteRepository $repository = null,
         ?PostulanteModel $postulantes = null,
         ?UserModel $users = null,
         ?StorageService $storage = null,
         ?ImageService $images = null,
+        ?IdentidadService $identidad = null,
     ) {
         $this->repository  = $repository ?? new PostulanteRepository();
         $this->postulantes = $postulantes ?? model(PostulanteModel::class);
         $this->users       = $users ?? model(UserModel::class);
         $this->storage     = $storage ?? new StorageService();
         $this->images      = $images ?? new ImageService();
+        $this->identidad   = $identidad ?? new IdentidadService();
     }
 
     /**
@@ -141,6 +146,11 @@ class PostulanteService
             throw ApiException::noEncontrado('No se encontró el perfil de postulante.');
         }
 
+        $datos['email']            = Identidad::email($datos['email'] ?? null);
+        $datos['telefono']         = Identidad::telefono($datos['telefono'] ?? null);
+        $datos['tipo_documento']   = strtoupper(trim((string) ($datos['tipo_documento'] ?? '')));
+        $datos['numero_documento'] = trim((string) ($datos['numero_documento'] ?? $datos['dni'] ?? ''));
+
         Validador::validar($datos, [
             'nombres'    => ['required', 'max:100'],
             'apellidos'  => ['required', 'max:100'],
@@ -166,19 +176,24 @@ class PostulanteService
 
         // `dni` es la columna histórica que guarda el número; el tipo documental
         // distingue DNI de carnet de extranjería sin duplicar el número.
-        $numero = trim((string) ($datos['numero_documento'] ?? $datos['dni'] ?? ''));
-        $tipo   = strtoupper(trim((string) ($datos['tipo_documento'] ?? '')));
+        $numero = (string) $datos['numero_documento'];
+        $tipo   = (string) $datos['tipo_documento'];
         $documento = [];
 
         if ($numero !== '') {
             if ($tipo === '') {
                 throw ApiException::validacion('Seleccione el tipo de documento.', ['Seleccione el tipo de documento.']);
             }
-            if ($tipo === 'DNI' && preg_match('/^\d{8}$/', $numero) !== 1) {
-                throw ApiException::validacion('El DNI debe tener 8 dígitos.', ['El DNI debe tener 8 dígitos.']);
-            }
-            if ($tipo === 'CE' && preg_match('/^\\d{9,12}$/', $numero) !== 1) {
-                throw ApiException::validacion('El carnet de extranjería debe tener entre 9 y 12 dígitos.', ['El carnet de extranjería debe tener entre 9 y 12 dígitos.']);
+            if ($tipo === 'DNI') {
+                $numero = Identidad::dni($numero);
+                if (preg_match('/^\d{8}$/', $numero) !== 1) {
+                    throw ApiException::validacion('El DNI debe tener 8 dígitos.', ['El DNI debe tener 8 dígitos.']);
+                }
+            } else {
+                $numero = (string) preg_replace('/\D+/', '', $numero);
+                if (preg_match('/^\d{9,12}$/', $numero) !== 1) {
+                    throw ApiException::validacion('El carnet de extranjería debe tener entre 9 y 12 dígitos.', ['El carnet de extranjería debe tener entre 9 y 12 dígitos.']);
+                }
             }
 
             $tipoActual = $postulante->tipo_documento ?: ($postulante->dni ? 'DNI' : null);
@@ -187,41 +202,62 @@ class PostulanteService
                 throw ApiException::conflicto('El documento de identidad no puede modificarse en esta cuenta.');
             }
 
-            $duplicado = $this->postulantes
-                ->where('dni', $numero)
-                ->where('id !=', (int) $postulante->id)
-                ->countAllResults();
-            if ($duplicado > 0) {
-                throw ApiException::conflicto('El documento ya está registrado en otra cuenta.');
-            }
+            $this->identidad->exigirLibre('dni', $numero, $usuarioId);
 
             $documento = ['tipo_documento' => $tipo, 'dni' => $numero];
         }
 
+        if (Identidad::email($usuario->email) !== $datos['email']) {
+            $this->identidad->exigirLibre('email', $datos['email'], $usuarioId);
+        }
+        if (Identidad::telefono($usuario->telefono) !== $datos['telefono']) {
+            $this->identidad->exigirLibre('telefono', $datos['telefono'], $usuarioId);
+        }
+
         // Perfil y cuenta se actualizan juntos: un fallo parcial dejaría datos
         // de contacto divergentes entre `postulantes` y `users`.
-        $this->postulantes->db->transStart();
-        $this->postulantes->update((int) $postulante->id, array_merge([
-            'nombres'          => $datos['nombres'],
-            'apellidos'        => $datos['apellidos'],
-            'direccion'        => $datos['direccion'] ?? null,
-            'distrito'         => $datos['distrito'] ?? null,
-            'telefono'         => $datos['telefono'] ?? null,
-            'fecha_nacimiento' => $datos['fecha_nacimiento'] ?? null,
-            'ocupacion'        => $datos['ocupacion'] ?? null,
-            'experiencia'      => $datos['experiencia'] ?? null,
-            'estudios'         => $datos['estudios'] ?? null,
-        ], $documento));
-        $this->users->update($usuarioId, [
-            'nombres'   => $datos['nombres'],
-            'apellidos' => $datos['apellidos'],
-            'email'     => $datos['email'] ?? null,
-            'telefono'  => $datos['telefono'] ?? null,
-        ]);
-        $this->postulantes->db->transComplete();
+        try {
+            $this->postulantes->db->transStart();
 
-        if (! $this->postulantes->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo actualizar el perfil. Intente nuevamente.');
+            // Las reservas se actualizan antes de escribir las nuevas columnas
+            // para que el servicio compare contra los valores actuales.
+            $this->identidad->actualizarContacto($usuarioId, $datos['email'], $datos['telefono']);
+            if ($numero !== '') {
+                $this->identidad->actualizarDocumento($usuarioId, $numero);
+            }
+
+            $this->postulantes->update((int) $postulante->id, array_merge([
+                'nombres'          => $datos['nombres'],
+                'apellidos'        => $datos['apellidos'],
+                'direccion'        => $datos['direccion'] ?? null,
+                'distrito'         => $datos['distrito'] ?? null,
+                'telefono'         => $datos['telefono'],
+                'fecha_nacimiento' => $datos['fecha_nacimiento'] ?? null,
+                'ocupacion'        => $datos['ocupacion'] ?? null,
+                'experiencia'      => $datos['experiencia'] ?? null,
+                'estudios'         => $datos['estudios'] ?? null,
+            ], $documento));
+            $this->users->update($usuarioId, [
+                'nombres'   => $datos['nombres'],
+                'apellidos' => $datos['apellidos'],
+                'email'     => $datos['email'],
+                'telefono'  => $datos['telefono'],
+            ]);
+
+            $this->postulantes->db->transComplete();
+
+            if (! $this->postulantes->db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar el perfil. Intente nuevamente.');
+            }
+        } catch (ApiException $e) {
+            $this->postulantes->db->transRollback();
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->postulantes->db->transRollback();
+            if (IdentidadService::esDuplicado($e)) {
+                throw ApiException::conflicto('El DNI, correo o teléfono ya está asociado a otra cuenta. No se aplicó el cambio.');
+            }
+            throw $e;
         }
     }
 }

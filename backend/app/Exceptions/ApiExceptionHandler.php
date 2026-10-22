@@ -9,6 +9,7 @@ use CodeIgniter\HTTP\CLIRequest;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use App\Services\IdentidadService;
 use Throwable;
 
 /**
@@ -30,6 +31,10 @@ class ApiExceptionHandler implements ExceptionHandlerInterface
     ): void {
         if ($exception instanceof ApiException) {
             $api = $exception;
+        } elseif (IdentidadService::esDuplicado($exception)) {
+            // Violación de un índice único no capturada por el servicio: se
+            // traduce a un 409 controlado, sin exponer detalles de la BD.
+            $api = new ApiException('Ya existe un registro con estos datos. Verifica la información o utiliza el acceso correspondiente.', 409);
         } else {
             // Nunca exponer el mensaje interno (SQL, rutas, excepciones): se
             // registra en el log y el cliente recibe un mensaje genérico.

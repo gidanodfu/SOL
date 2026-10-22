@@ -976,6 +976,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 [data-theme="dark"] .auth-turnstile-box { color-scheme: dark; }
 
+.login-campo-ayuda { margin: .35rem 0 0; font-size: .78rem; color: var(--text-3); line-height: 1.35; }
+
 /* Botón "Verificar RUC" dentro del campo (registro de empresa) */
 .login-campo-input-con-boton {
   padding-right: 7rem;

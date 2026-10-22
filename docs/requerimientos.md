@@ -56,7 +56,9 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 ## 5. Requerimientos funcionales (RF)
 
 ### 5.1 Gestión de usuarios y autenticación
-- **RF-01** Login con nombre de usuario (RUC/DNI) o correo y contraseña.
+- **RF-01** Login con identificador exclusivo por rol: RUC para empresa, DNI para
+  postulante y usuario/correo para administración, siempre con contraseña. Las cuentas
+  Google de postulante conservan su ingreso por Google.
 - **RF-02** Autenticación procesada por el backend CI4 contra MySQL.
 - **RF-03** MySQL es la fuente de verdad de identidad, rol, estado y relaciones.
 - **RF-04** El rol se identifica automáticamente desde la BD; el usuario no puede elegirlo.
@@ -72,8 +74,8 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-10** Perfil de empresa: RUC, razón social, nombre comercial, dirección, teléfono,
   correo, representante, información adicional.
 - **RF-11** Al aprobar la solicitud se crea el usuario empresarial.
-- **RF-12** El RUC es el nombre de usuario por defecto; el login acepta el correo
-  corporativo o el RUC.
+- **RF-12** El RUC es el identificador exclusivo de acceso de la empresa. El correo
+  corporativo queda como dato de contacto y recuperación, no como login alternativo.
 - **RF-13** La empresa define su contraseña al activar la cuenta con un enlace de un solo
   uso (`/activar-cuenta`).
 - **RF-14** Hash seguro; nunca texto plano.
@@ -159,7 +161,8 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RN-01** Las empresas se afilian por solicitud pública aprobada por la Municipalidad.
 - **RN-02** La aprobación asume la evaluación presencial.
 - **RN-03** Al aprobar la solicitud se crea el perfil y el usuario de la empresa.
-- **RN-04** RUC = usuario por defecto (el login también acepta el correo corporativo).
+- **RN-04** RUC = identificador exclusivo de acceso de la empresa. El correo corporativo
+  no es un login alternativo; se conserva para contacto y recuperación.
 - **RN-05** La contraseña la define la empresa al activar la cuenta.
 - **RN-06** Hash seguro de contraseñas.
 - **RN-07** Rol determinado por el backend desde la BD.
@@ -322,7 +325,8 @@ Ajustes al flujo original aprobados posteriormente:
   empresa envía una solicitud pública (RUC verificado en SUNAT, correo corporativo,
   teléfono y representante). El admin aprueba o rechaza desde una bandeja y la empresa es
   notificada por correo; si se aprueba recibe un enlace de un solo uso (`/activar-cuenta`)
-  para definir su contraseña y recién entonces operar. El login usa el correo corporativo.
+  para definir su contraseña y recién entonces operar. El login de empresa usa
+  exclusivamente el RUC.
 - **Publicación directa de ofertas (sustituye RF-24 validación municipal previa)**: la
   empresa guarda la oferta en borrador y la publica con un botón; el admin solo supervisa
   (listado y cierre). Editar una oferta publicada la mantiene publicada.
@@ -377,7 +381,7 @@ Cambios aplicados sin modificar el esquema de base de datos ni añadir variables
   "Actualizar CV" cuando ya existe un CV vigente.
 - **Rate limiting** (Throttler nativo de CI4 = **token bucket**; respuesta `429` con
   `Retry-After`): permite una ráfaga inicial y luego repone 1 token por intervalo (no es
-  bloqueo de ventana fija). Login: ráfaga 5 y 1/60 s por IP+usuario (solo fallos, se
+  bloqueo de ventana fija). Login: ráfaga 5 y 1/60 s por IP+identificador normalizado (solo fallos, se
   reinicia en login correcto); refresh/Google/registro: ráfaga 10 y 1/30 s por IP; subida
   de CV: ráfaga 10 y 1/360 s (6 min) por IP.
 - **`password_hash` fuera de las respuestas**: `GET /api/admin/usuarios` selecciona
