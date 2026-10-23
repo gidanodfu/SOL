@@ -202,6 +202,16 @@ class Database extends Config
     {
         parent::__construct();
 
+        // Nombres canónicos del .env raíz. Se mantienen los nombres
+        // database.default.* como compatibilidad si existen en un entorno antiguo.
+        $this->default['hostname'] = (string) env('DB_HOST', $this->default['hostname']);
+        $this->default['port']     = (int) env('DB_PORT', $this->default['port']);
+        $this->default['database'] = (string) env('DB_DATABASE', $this->default['database']);
+        $this->default['username'] = (string) env('DB_USER', $this->default['username']);
+        $this->default['password'] = (string) env('DB_PASSWORD', $this->default['password']);
+        $this->default['DBDriver'] = (string) env('DB_DRIVER', $this->default['DBDriver']);
+        $this->default['DBPrefix'] = (string) env('DB_PREFIX', $this->default['DBPrefix']);
+
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
         // we don't overwrite live data on accident.

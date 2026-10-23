@@ -1,0 +1,76 @@
+name: ${COMPOSE_PROJECT_NAME:-sol_dev}
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: ${TZ:-America/Lima}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - ${BACKEND_ENV_FILE:?Ejecute los scripts de deploy para preparar un entorno de backend filtrado.}
+    environment:
+      TZ: ${TZ:-America/Lima}
+      DB_HOST: db
+      DB_PORT: "3306"
+    volumes:
+      - backend_writable:/var/www/sol/backend/writable
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      target: prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - internal
+
+volumes:
+  mysql_data:
+  backend_writable:
+
+networks:
+  internal:
+    driver: bridge

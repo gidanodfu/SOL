@@ -26,13 +26,23 @@ app/
 
 ## Puesta en marcha
 
+La configuración es única y vive en el `.env` de la raíz del repositorio
+(CodeIgniter carga esa ruta mediante `Config\Paths::$envDirectory`).
+
 ```bash
+# desde la raíz
+cp .env.example .env
+chmod 600 .env
+cd backend
 composer install
-cp .env.example .env    # DB + INITIAL_ADMIN_* + opcionales: Supabase, sunat.token, email.*, google.clientId
 php spark migrate
 php spark db:seed SystemSeeder
 php spark serve         # http://localhost:8080
 ```
+
+En desarrollo se recomienda `./deploy/scripts/dev.sh up`. El bootstrap inicial
+está en `./deploy/scripts/bootstrap.sh` y las operaciones en
+`docs/operaciones.md`.
 
 ## Convenciones
 

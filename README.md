@@ -15,8 +15,10 @@ SISTEMA-EMPLEO/
 ├── backend/               CodeIgniter 4 (PHP 8.2+) — API REST, reglas de negocio, auth
 ├── frontend/              React + Vite — presentación y consumo de API
 ├── tests/smoke/           Pruebas de integración de la API (curl)
-├── docs/                  Requerimientos y matriz de cumplimiento RF/RN/RT
-└── docker-compose.yml     MySQL 8 + Adminer (desarrollo local)
+├── docs/                  Requerimientos, cumplimiento y operaciones
+├── deploy/                Compose, Nginx, scripts y certificados
+├── .env.example           Plantilla única de configuración
+└── backend|frontend/      Dockerfiles y código de aplicación
 ```
 
 ```
@@ -97,7 +99,7 @@ MySQL es la fuente de verdad.
 - PHP >= 8.2 con extensiones `curl`, `fileinfo`, `mysqli` (ver §17) · Composer 2
 - MySQL 8 (o MariaDB compatible)
 - Node.js >= 20 y npm
-- Docker (opcional, para MySQL + Adminer local)
+- Docker + Docker Compose (recomendado para desarrollo y producción)
 
 ## 4. Instalación
 
@@ -108,75 +110,80 @@ git clone https://github.com/gidanodfu/SOL.git
 cd SOL
 ```
 
-### Base de datos (Docker, opcional si ya tienes MySQL 8)
+### Configuración centralizada
+
+Toda la configuración vive en un único archivo `.env` en la raíz:
 
 ```bash
-docker compose up -d            # MySQL en :3306 (db: sistema_empleo, user: empleo/empleo123)
-                                # Adminer en http://localhost:8082
+cp .env.example .env
+chmod 600 .env
+# completar dominios, DB, administrador inicial y servicios externos
 ```
 
-### Backend
+No hay `.env` en `backend/` ni `frontend/`. La plantilla completa está en
+`.env.example` y el procedimiento detallado en
+[`docs/operaciones.md`](docs/operaciones.md).
+
+Los scripts de operación generan `deploy/runtime/backend.env` (permisos `600`,
+ignorado por Git) con una lista explícita de variables del backend. Ese archivo
+evita que el backend reciba `DB_ROOT_PASSWORD`, las credenciales iniciales, las
+variables `VITE_*` o la configuración de Nginx/TLS. No lo edite a mano ni lo
+versione. Si ejecuta `docker compose` directamente, defina
+`BACKEND_ENV_FILE` apuntando a ese archivo; se recomienda usar los scripts.
+
+### Desarrollo local con Docker
+
+```bash
+./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh status
+./deploy/scripts/dev.sh logs backend
+./deploy/scripts/dev.sh migrate
+./deploy/scripts/dev.sh down      # conserva volúmenes
+```
+
+- Frontend: `http://localhost:5173`
+- API: `http://localhost:8080`
+- MySQL: `127.0.0.1:3307`
+- Adminer: `http://localhost:8082`
+
+### Alternativa sin Docker
+
+El backend puede ejecutarse en el host usando el mismo `.env` raíz:
 
 ```bash
 cd backend
 composer install
-cp .env.example .env            # ajustar DB; opcionales: Supabase, SUNAT, SMTP, Google
-# editar .env con los datos de conexión (database.default.*) y INITIAL_ADMIN_*
-php spark migrate               # crea/actualiza el esquema completo
-php spark db:seed SystemSeeder  # datos iniciales (administrador y categorías)
-php spark serve                 # API en http://localhost:8080
+php spark migrate
+php spark db:seed SystemSeeder
+php spark serve
 ```
 
-### Datos ficticios (solo desarrollo/pruebas)
-
-Los datos de prueba están **separados** de la instalación inicial. `SystemSeeder` no crea
-empresas, postulantes, ofertas ni credenciales ficticias. Para cargarlos:
-
-```bash
-cd backend
-php spark db:seed DatosPruebaSeeder   # fixtures para tests/smoke (no usar en producción)
-```
-
-### Frontend
+El frontend usa el `.env` raíz mediante la configuración de Vite:
 
 ```bash
 cd frontend
 npm install
-cp .env.example .env            # VITE_API_URL=http://localhost:8080
-npm run dev                     # http://localhost:5173 (origen permitido por CORS)
+npm run dev
 ```
 
-## 5. Configuración .env
+## 5. Configuración `.env`
 
-### Backend (`backend/.env`)
+La fuente única es `.env` en la raíz. Las variables principales son:
 
-| Variable | Uso |
+| Grupo | Variables |
 |---|---|
-| `CI_ENVIRONMENT` | `development` o `production` |
-| `app.baseURL` | URL pública del backend (p. ej. `http://localhost:8080/`) |
-| `app.frontendUrl` | Base del frontend para los enlaces de activación |
-| `database.default.hostname` / `database` / `username` / `password` / `port` | Conexión MySQL |
-| `database.default.DBDriver` | `MySQLi` (valor por defecto del proyecto) |
-| `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD` | Cuenta administradora que crea `SystemSeeder` |
-| `jwt.secret` | Clave para firmar JWT (larga y aleatoria; rotar en producción) |
-| `jwt.accessExpiresMinutes` / `jwt.refreshExpiresDays` | Duraciones de sesión |
-| `storage.driver` | `local` (desarrollo) o `supabase` (producción) |
-| `storage.bucket` / `s3.endpoint` / `s3.accessKey` / `s3.secretKey` / `s3.region` | Supabase Storage (CV) |
-| `sunat.token` | Verificación de RUC en el auto-registro (opcional) |
-| `email.*` | SMTP para notificaciones (opcional; vacío = no envía) |
-| `google.clientId` | Ingreso con Google (opcional) |
-| `activacion.expiraDias` | Vigencia del enlace de activación (7) |
-| `cors.allowedOrigins` | Origen(es) permitidos del frontend en producción |
+| Aplicación | `CI_ENVIRONMENT`, `APP_URL`, `app.baseURL`, `app.appTimezone`, `cors.allowedOrigins` |
+| Base de datos | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`, `DB_DRIVER` |
+| Seguridad | `encryption.key`, `jwt.secret`, duraciones JWT, `INITIAL_ADMIN_*` |
+| Almacenamiento | `storage.driver`, `storage.bucket`, `s3.*` |
+| Servicios externos | `sunat.token`, `jsonpe.token` (alias legado `dni.token` aceptado por compatibilidad), `RESEND_*`, `email.*`, `google.clientId`, `turnstile.*` |
+| Frontend público | `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_TURNSTILE_SITE_KEY` |
+| Docker/Nginx | `COMPOSE_PROJECT_NAME`, `DEV_*`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `TLS_*` |
 
-El `.env` real **no se versiona**. En `backend/.env.example` las credenciales van vacías
-salvo el usuario inicial; nunca se escribe una contraseña real en un archivo versionado.
-
-### Frontend (`frontend/.env`)
-
-| Variable | Descripción |
-|---|---|
-| `VITE_API_URL` | Base del backend, p. ej. `http://localhost:8080` |
-| `VITE_GOOGLE_CLIENT_ID` | Client ID OAuth de Google (habilita el botón de Google) |
+Los secretos del backend nunca se pasan al contenedor frontend. Vite solo recibe
+variables `VITE_*`; éstas se incorporan al bundle público y no deben contener
+credenciales privadas. Las credenciales `INITIAL_ADMIN_*` solo se inyectan en la
+ejecución puntual del bootstrap/seeder, no en el backend en funcionamiento.
 
 ## 6. Base de datos
 
@@ -259,7 +266,8 @@ php spark serve              # API en http://localhost:8080 (puerto por defecto 
 ```
 
 El puerto se controla con `php spark serve --port <puerto>`; si se cambia, ajustar
-`app.baseURL` en `backend/.env` y `VITE_API_URL` en `frontend/.env`.
+`app.baseURL` y `VITE_API_URL` en el `.env` raíz. En Docker use
+`./deploy/scripts/dev.sh`.
 
 ### Estructura pública de la API
 
@@ -284,18 +292,14 @@ curl -i http://localhost:8080/health
 
 ### Public API URL
 
-**Public API URL: pendiente de deployment.** El repositorio no configura ni documenta
-(con datos reales) un dominio público: `backend/env.production.example` es una plantilla y
-su dominio de ejemplo no resuelve. Para exponerla públicamente falta:
+La API pública se sirve mediante `deploy/compose.prod.yaml` y Nginx. Complete
+`APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `APP_URL`, `app.baseURL` y
+`cors.allowedOrigins` en el `.env` del servidor. El health check queda disponible
+en `https://<dominio>/health` (modalidad same-domain) o
+`https://<api-dominio>/health` (subdominio).
 
-1. Hosting del backend CI4 (docroot en `backend/public/`, p. ej. VPS con Nginx + PHP-FPM).
-2. Dominio real y registros DNS (A/AAAA o CNAME) apuntando al host.
-3. Reverse proxy con TLS (Nginx/Caddy/Cloudflare) hacia el backend.
-4. `backend/.env` de producción con `CI_ENVIRONMENT=production`, `app.baseURL`,
-   `cors.allowedOrigins` y `app.frontendUrl` con el dominio real.
-5. Frontend publicado con `VITE_API_URL` apuntando a la API pública.
-
-Una vez desplegada, la URL pública del health check será `<dominio-real>/health`.
+Consulte [`deploy/README.md`](deploy/README.md) y
+[`docs/operaciones.md`](docs/operaciones.md) para bootstrap, TLS y despliegue.
 
 ## 11. Ejecución frontend
 
@@ -316,7 +320,9 @@ coincida con el origen permitido por CORS en el backend.
 El CV se guarda en Supabase Storage (API compatible con S3); MySQL solo almacena metadatos.
 
 - `storage.driver = supabase` y las credenciales `s3.endpoint`, `s3.accessKey`,
-  `s3.secretKey`, `s3.region`, con bucket privado `cvs`.
+  `s3.secretKey`, `s3.region`, con el bucket privado indicado en `storage.bucket`.
+  La plantilla usa `cvs` como ejemplo; el `.env` local usa otro nombre. Confirme
+  el bucket real antes de producción.
 - Las claves viven **solo en el backend** y nunca llegan al frontend.
 - Descarga mediante URL firmada temporal generada por el backend (RT-CV-05).
 - Desarrollo sin credenciales: `storage.driver = local` guarda en `writable/uploads`
@@ -348,12 +354,12 @@ Si `php spark migrate` falla, verificar en orden:
 1. PHP instalado y su versión (`php -v`).
 2. Composer disponible (`composer --version`).
 3. Extensión **mysqli** cargada (§17).
-4. MySQL en ejecución (`docker compose ps` o el servicio del sistema).
-5. Host de la base de datos (`database.default.hostname`).
-6. Puerto (`database.default.port`, por defecto `3306`).
-7. Nombre de la base de datos (`database.default.database`).
-8. Usuario y contraseña (`database.default.username` / `password`).
-9. Que exista el `.env` (copiado de `.env.example`) y que `database.default.DBDriver` sea `MySQLi`.
+4. MySQL en ejecución (`./deploy/scripts/dev.sh status` o el servicio del sistema).
+5. Host de la base de datos (`DB_HOST`).
+6. Puerto (`DB_PORT`, por defecto `3306`).
+7. Nombre de la base de datos (`DB_DATABASE`).
+8. Usuario y contraseña (`DB_USER` / `DB_PASSWORD`).
+9. Que exista el `.env` (copiado de `.env.example`) y que `DB_DRIVER` sea `MySQLi`.
 
 Comprobar primero la configuración del `.env`; **no** eliminar ni recrear la base de datos
 como primera solución (se perderían datos).
@@ -438,9 +444,14 @@ npm run build
 Cada script levanta un servidor temporal (`php spark serve` en :8080), ejecuta el flujo y
 lo apaga. Requieren MySQL migrado y con los seeds base:
 
+Los smoke tests requieren un entorno aislado con `DatosPruebaSeeder` y ejecutan
+`php spark serve` desde el host; no deben apuntar a la base de datos migrada de
+desarrollo o producción. Use una base de pruebas y detenga el backend Docker si
+el puerto 8080 está ocupado:
+
 ```bash
-docker compose up -d mysql
-cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark db:seed DatosPruebaSeeder && cd ..
+./deploy/scripts/dev.sh migrate
+./deploy/scripts/dev.sh seed DatosPruebaSeeder   # solo en una base de pruebas
 ./tests/smoke/test_api.sh              # auth por rol, alta admin de empresas, CV
 ./tests/smoke/test_ofertas.sh          # ciclo de ofertas: revisión municipal, reenvío y cierre
 ./tests/smoke/test_aprobacion_ofertas.sh # aprobación/rechazo, visibilidad y mass assignment
@@ -462,42 +473,35 @@ en [`tests/README.md`](tests/README.md).
 
 ## 19. Producción
 
-- Configurar desde `backend/env.production.example` (secretos, `app.baseURL`, CORS vía
-  `cors.allowedOrigins`, expiración JWT, `INITIAL_ADMIN_*`, `sunat.token`, `email.*`,
-  `google.clientId`, `app.frontendUrl`) y `frontend/.env` (`VITE_API_URL`,
-  `VITE_GOOGLE_CLIENT_ID`).
-- Almacenamiento de CV: `storage.driver = supabase` con credenciales S3 del bucket `cvs`;
-  las claves solo viven en el backend.
-- Entorno: `CI_ENVIRONMENT=production` y HTTPS (`forceGlobalSecureRequests`).
-- Instalación: `php spark migrate` + `php spark db:seed SystemSeeder`; cambiar la
-  contraseña del administrador inicial tras el primer acceso.
-- Pendiente antes de producción (ver matriz): autorizar en la consola de Google el origen
-  del frontend, revisar credenciales Supabase/SMTP/SUNAT y eliminar con una migración las
-  tablas de perfil en desuso si ningún entorno tiene datos reales.
-- La API envía cabeceras de seguridad (`secureheaders`) pero no aplica CSP global: sirve
-  JSON y el Swagger UI es estático con CDN. Al desplegar el SPA, configurar la
-  Content-Security-Policy en el hosting del frontend.
+- Configuración única en `.env` raíz, con secretos propios de producción.
+- Instalación nueva: `./deploy/scripts/bootstrap.sh --prod`.
+- Actualizaciones: `./deploy/scripts/deploy.sh` (no ejecuta `SystemSeeder`).
+- Nginx: `deploy/compose.prod.yaml`; modos `http`, `same-domain` o `subdomain`.
+- Certificados: `deploy/nginx/certs/` (o `TLS_CERTS_DIR`) montados en solo lectura.
+- Persistencia: volúmenes `sol_<proyecto>_mysql_data` y
+  `sol_<proyecto>_backend_writable`.
+- Almacenamiento de CV: `storage.driver=supabase` con credenciales S3 privadas.
+- Entorno: `CI_ENVIRONMENT=production` y HTTPS.
+- Pendiente: DNS/dominios, certificados reales, Google OAuth, Turnstile,
+  Supabase, Resend/SMTP, SUNAT/RENIEC y revisión de credenciales.
+- La API envía cabeceras de seguridad (`secureheaders`) pero no aplica CSP global:
+  configurar CSP en el hosting del frontend.
+
+Procedimiento completo:
+[`deploy/README.md`](deploy/README.md) y [`docs/operaciones.md`](docs/operaciones.md).
 
 ### Dominios, subdominios y SPA fallback
 
-Variables por entorno (todas configurables; no hay URLs de producción en el código):
-
-| Entorno | `app.baseURL` | `app.frontendUrl` | `cors.allowedOrigins` / `Patterns` | `VITE_API_URL` |
+| Entorno | `app.baseURL` | `APP_URL` | `cors.allowedOrigins` | `VITE_API_URL` |
 |---|---|---|---|---|
 | local | `http://localhost:8080/` | `http://localhost:5173` | `http://localhost:5173` | `http://localhost:8080` |
-| staging | `https://staging-api…` | `https://staging…` | el dominio de staging | el dominio de la API de staging |
-| producción | `https://api.midominio.gob.pe/` | `https://empleo.midominio.gob.pe` | el dominio real; usar `Patterns` para subdominios | vacío si el frontend sirve `/api` en el mismo origen, o el dominio de la API |
+| producción same-domain | `https://APPDOMAIN/` | `https://APPDOMAIN` | `https://APPDOMAIN` | vacío |
+| producción subdomain | `https://APIDOMAIN/` | `https://APPDOMAIN` | `https://APPDOMAIN` | `https://APIDOMAIN` |
 
-- `app.frontendUrl` es obligatoria: sin ella no se generan los enlaces de activación.
-- Zona horaria de negocio: `app.appTimezone = America/Lima` (por defecto). Mantener el
-  MySQL de producción en la misma zona o en UTC y convertir en las fronteras.
-- CORS sin cookies (`supportsCredentials=false`): la autenticación es JWT Bearer.
-- **SPA fallback** (React Router con `BrowserRouter`): el hosting del frontend debe
-  devolver `index.html` en cualquier ruta. Ejemplo Nginx:
-
-  ```nginx
-  location / { try_files $uri $uri/ /index.html; }
-  ```
+- `APP_URL` es obligatoria para los enlaces de activación.
+- CORS sin cookies (`supportsCredentials=false`): autenticación JWT Bearer.
+- El frontend incluye SPA fallback en su `frontend/nginx.conf`; Nginx de borde
+  proxyfica el frontend.
 
 ## Convenciones del backend
 

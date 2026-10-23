@@ -1,0 +1,61 @@
+# Modalidad A: frontend y API en el mismo dominio.
+# https://${APP_DOMAIN}/       -> frontend
+# https://${APP_DOMAIN}/api    -> backend (FastCGI)
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name ${APP_DOMAIN};
+    client_max_body_size 8m;
+
+    ssl_certificate ${TLS_CERT_PATH};
+    ssl_certificate_key ${TLS_KEY_PATH};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy same-origin always;
+
+    location = /health {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/sol/backend/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/sol/backend/public;
+        fastcgi_param REQUEST_URI $request_uri;
+        fastcgi_param PATH_INFO $uri;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
+        fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+        fastcgi_param HTTPS on;
+        fastcgi_pass backend:9000;
+        fastcgi_read_timeout 60s;
+    }
+
+    location ^~ /api {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/sol/backend/public/index.php;
+        fastcgi_param SCRIPT_NAME /index.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/sol/backend/public;
+        fastcgi_param REQUEST_URI $request_uri;
+        fastcgi_param PATH_INFO $uri;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
+        fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+        fastcgi_param HTTPS on;
+        fastcgi_pass backend:9000;
+        fastcgi_read_timeout 60s;
+    }
+
+    location / {
+        proxy_pass http://frontend:80;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

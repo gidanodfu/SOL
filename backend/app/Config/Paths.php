@@ -86,5 +86,6 @@ class Paths
      * Please consider security implications when changing this
      * value - the directory should not be publicly accessible.
      */
-    public string $envDirectory = __DIR__ . '/../../';
+    // El .env es único y vive en la raíz del repositorio, fuera de backend/.
+    public string $envDirectory = __DIR__ . '/../../../';
 }

@@ -21,12 +21,19 @@ npm test          # pruebas estáticas de documentos legales y aceptación
 npm run preview   # sirve dist/
 ```
 
-## Variables de entorno (`frontend/.env`)
+## Variables de entorno
+
+La configuración pública se toma del `.env` de la **raíz** del repositorio (Vite usa
+`envDir='..'`). En Docker, Compose inyecta solo las variables `VITE_*`; nunca se
+monta el `.env` privado completo en el contenedor frontend.
 
 | Variable | Descripción |
 |---|---|
-| `VITE_API_URL` | Base del backend, p. ej. `http://localhost:8080` |
-| `VITE_GOOGLE_CLIENT_ID` | Client ID OAuth de Google (habilita el botón de ingreso/registro con Google) |
+| `VITE_API_URL` | Base del backend, p. ej. `http://localhost:8080`; vacío en same-domain |
+| `VITE_GOOGLE_CLIENT_ID` | Client ID OAuth de Google (habilita el botón de Google) |
+| `VITE_TURNSTILE_SITE_KEY` | Site key pública de Cloudflare Turnstile |
+
+Las variables `VITE_*` se incorporan al bundle público. No incluya secretos del backend.
 
 ## Estructura
 

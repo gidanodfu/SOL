@@ -18,10 +18,12 @@ vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.p
 
 `tests/unit/ValidadorTest.php` cubre, entre otras reglas, la validación de teléfono
 (acepta 9 u 11 dígitos; rechaza 8, 10, 12 y no numéricos).
+`tests/unit/SystemSeederTest.php` cubre las validaciones del bootstrap del administrador
+inicial (usuario/contraseña ausentes o inválidos) sin tocar la base de datos.
 
 > El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
 > se validaron manualmente contra la API; aún no tienen pruebas automatizadas.
-> `test_identidad.sh` requiere `turnstile.enabled=false` en `backend/.env`, igual que los
+> `test_identidad.sh` requiere `turnstile.enabled=false` en el `.env` de la raíz, igual que los
 > demás smoke tests que inician sesión.
 
 ## Smoke de la API (integración)
@@ -29,10 +31,11 @@ vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.p
 Cada script levanta un servidor temporal (`php spark serve`; `test_identidad.sh` usa
 :8081 para no colisionar), ejecuta el flujo y lo apaga. Requieren MySQL migrado y con los seeds base: `SystemSeeder`
 (datos iniciales) + `DatosPruebaSeeder` (fixtures de las cuentas que usan los
-scripts). `SystemSeeder` requiere `INITIAL_ADMIN_*` en `backend/.env`.
+scripts). `SystemSeeder` requiere `INITIAL_ADMIN_*` en el `.env` de la raíz.
 
 ```bash
-docker compose up -d mysql
+./deploy/scripts/dev.sh up
+# Use una base de pruebas aislada: no cargue DatosPruebaSeeder sobre datos reales.
 cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark db:seed DatosPruebaSeeder && cd ..
 ./tests/smoke/test_api.sh              # auth por rol, alta admin de empresas, CV
 ./tests/smoke/test_ofertas.sh          # ciclo de ofertas: revisión municipal, reenvío y cierre
@@ -74,7 +77,7 @@ Notas:
   filtros vigentes son categoría, ubicación, formación y experiencia.
 
 - `test_desarrollo_nuevo.sh` verifica un RUC real contra SUNAT: requiere `sunat.token` en
-  `backend/.env` (si el token no está o el RUC no es resoluble, los pasos 1-2 fallan; el
+  el `.env` de la raíz (si el token no está o el RUC no es resoluble, los pasos 1-2 fallan; el
   resto del flujo se puede probar con el enlace interno del admin).
 - Los scripts de CV (subida/descarga) dependen de `storage.driver` del `.env` local: con
   driver `supabase` la subida y la URL firmada funcionan contra el bucket configurado; los

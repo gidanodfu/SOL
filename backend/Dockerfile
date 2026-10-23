@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1.7
+
+FROM composer:2 AS vendor-prod
+WORKDIR /app
+COPY backend/composer.json backend/composer.lock ./
+RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
+
+FROM composer:2 AS vendor-dev
+WORKDIR /app
+COPY backend/composer.json backend/composer.lock ./
+RUN composer install --no-scripts --no-interaction --prefer-dist --ignore-platform-reqs
+
+FROM php:8.4-fpm-alpine AS php-base
+RUN apk add --no-cache \
+        libzip-dev oniguruma-dev icu-dev libpng-dev libjpeg-turbo-dev freetype-dev \
+        libxml2-dev curl-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j"$(nproc)" mysqli pdo_mysql mbstring intl gd zip opcache curl
+WORKDIR /var/www/sol/backend
+RUN mkdir -p writable/cache writable/logs writable/session writable/uploads writable/debugbar \
+    && chown -R www-data:www-data writable
+COPY backend/docker-entrypoint.sh /usr/local/bin/sol-backend-entrypoint
+RUN chmod +x /usr/local/bin/sol-backend-entrypoint
+ENTRYPOINT ["sol-backend-entrypoint"]
+
+FROM php-base AS dev
+COPY backend/ ./
+COPY --from=vendor-dev /app/vendor ./vendor
+CMD ["php", "spark", "serve", "--host", "0.0.0.0", "--port", "8080"]
+
+FROM php-base AS prod
+COPY backend/ ./
+COPY --from=vendor-prod /app/vendor ./vendor
+CMD ["php-fpm"]
