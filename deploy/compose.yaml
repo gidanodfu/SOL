@@ -2,7 +2,7 @@ name: ${COMPOSE_PROJECT_NAME:-sol_dev}
 
 services:
   db:
-    image: mysql:8.0
+    image: mysql:8.0.46
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
@@ -12,13 +12,17 @@ services:
       TZ: ${TZ:-America/Lima}
     volumes:
       - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
     healthcheck:
       test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - internal
 
@@ -40,11 +44,16 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1 && php -r '$$p = new PDO(\"mysql:host=\".getenv(\"DB_HOST\").\";dbname=\".getenv(\"DB_DATABASE\"), getenv(\"DB_USER\"), getenv(\"DB_PASSWORD\")); $$p->query(\"SELECT 1\");' >/dev/null 2>&1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - internal
 
@@ -64,6 +73,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - internal
 

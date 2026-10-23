@@ -34,6 +34,11 @@ class DatosMasivosSeeder extends Seeder
 
     public function run(): void
     {
+        if (ENVIRONMENT === 'production') {
+            fwrite(STDERR, "DatosMasivosSeeder está prohibido en producción.\n");
+            exit(1);
+        }
+
         $existentes = (int) $this->db->table('empresas')->countAllResults();
         if ($existentes > 1) {
             echo "DatosMasivosSeeder: ya hay {$existentes} empresas. Ejecute primero:\n";

@@ -1,5 +1,8 @@
 # Operaciones de SOL
 
+Docker es la única vía oficial. Los comandos de aplicación se ejecutan dentro de
+contenedores; no se requiere PHP, Composer, Node.js, npm ni MySQL en el host.
+
 ## 1. Configuración centralizada
 
 Hay un único archivo privado: `.env` en la raíz. Se crea a partir de
@@ -14,6 +17,7 @@ No se mantienen `.env` en `backend/` ni `frontend/`. Para cambiar de entorno se
 selecciona otro archivo y se pasa `ENV_FILE` a los scripts; no se copian
 secretos entre desarrollo y producción. En el servidor de producción se
 recomienda un `.env` propio, por ejemplo con `COMPOSE_PROJECT_NAME=sol_prod`.
+Los scripts de producción rechazan `sol_dev` como nombre de proyecto.
 
 Los scripts generan `deploy/runtime/backend.env` con permisos `600` y una lista
 explícita de variables del backend. Este archivo derivado, ignorado por Git,
@@ -29,8 +33,9 @@ variables `VITE_*` públicas por variables de proceso o build args.
 
 Variables principales:
 
-- Aplicación: `CI_ENVIRONMENT`, `APP_URL`, `app.baseURL`, `app.appTimezone`,
-  `cors.allowedOrigins`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`.
+- Aplicación: `CI_ENVIRONMENT`, `COMPOSE_PROJECT_NAME`, `APP_URL`,
+  `app.baseURL`, `app.appTimezone`, `cors.allowedOrigins`, `APP_DOMAIN`,
+  `API_DOMAIN`, `NGINX_MODE`.
 - Base de datos: `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`,
   `DB_ROOT_PASSWORD`, `DB_DRIVER` y `DB_PREFIX`.
 - Seguridad: `encryption.key`, `jwt.secret`, duraciones JWT,
@@ -51,47 +56,64 @@ contraseñas en variables `VITE_*`.
 ./deploy/scripts/dev.sh status
 ./deploy/scripts/dev.sh logs backend
 ./deploy/scripts/dev.sh migrate
-./deploy/scripts/dev.sh seed DatosPruebaSeeder   # opcional; modifica datos
-./deploy/scripts/dev.sh down                     # conserva volúmenes
+./deploy/scripts/dev.sh migration-status
+./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes   # opcional; modifica datos
+./deploy/scripts/dev.sh down                           # conserva volúmenes
 ```
 
 URLs por defecto: frontend `http://localhost:5173`, API
-`http://localhost:8080`, MySQL `127.0.0.1:3307`, Adminer
-`http://localhost:8082`.
+`http://localhost:8080`, MySQL `127.0.0.1:3307`. Adminer es opcional:
+`./deploy/scripts/dev.sh tools` lo inicia en `http://localhost:8082`.
 
 `migrate` y `seed` son explícitos. `up` y `restart` no ejecutan seeders.
+`seed` exige `--yes`, solo acepta `DatosPruebaSeeder` o `DatosMasivosSeeder` y
+rechaza `SystemSeeder`; la instalación inicial se hace con `bootstrap.sh`.
+
+Comandos de trabajo dentro de contenedores:
+
+```bash
+./deploy/scripts/dev.sh shell backend
+./deploy/scripts/dev.sh exec backend php spark migrate:status
+./deploy/scripts/dev.sh run backend php vendor/bin/phpunit
+./deploy/scripts/dev.sh db
+```
 
 ## 3. Validación y pruebas
 
 ```bash
-./deploy/scripts/validate.sh
+./deploy/scripts/validate.sh --dev
+./deploy/scripts/validate.sh --prod
 ./deploy/scripts/validate.sh --build
+./deploy/scripts/validate.sh --build-prod   # requiere .env de producción
 ./deploy/scripts/validate.sh --runtime
 ./deploy/scripts/test.sh all
 ./deploy/scripts/test.sh backend
 ./deploy/scripts/test.sh frontend
+./deploy/scripts/test.sh http
 ```
 
 `validate.sh` distingue fallos críticos de advertencias. `--runtime` solo
 comprueba endpoints si el entorno ya está levantado; una comprobación omitida
-no se considera superada.
+no se considera superada. `test.sh http` es un smoke no destructivo contra el
+stack de desarrollo y requiere `dev.sh up`.
 
 ## 4. Instalación nueva en VPS
 
 1. Clonar el repositorio y entrar en él.
 2. Copiar `.env.example` a `.env` y completar dominios, base de datos,
    `INITIAL_ADMIN_*`, JWT, correo, almacenamiento e integraciones.
-3. Configurar `NGINX_MODE` y los certificados si se usa HTTPS.
-4. Ejecutar:
+3. Usar `COMPOSE_PROJECT_NAME` distinto de `sol_dev`, por ejemplo `sol_prod`.
+4. Configurar `NGINX_MODE` y los certificados si se usa HTTPS.
+5. Ejecutar, revisando antes el entorno de destino:
 
 ```bash
-./deploy/scripts/bootstrap.sh --prod
+./deploy/scripts/bootstrap.sh --prod --authorize
 ```
 
-El script valida que la base esté vacía, construye imágenes, espera MySQL,
-aplica migraciones, ejecuta `SystemSeeder`, verifica el administrador y levanta
-Nginx. Si la base ya contiene usuarios se detiene: para actualizar use
-`deploy.sh`.
+El script exige `--authorize`, valida que la base esté vacía, construye imágenes,
+espera MySQL, aplica migraciones, ejecuta **solo** `SystemSeeder`, verifica el
+administrador y levanta Nginx. Si la base ya contiene usuarios se detiene: para
+actualizar use `deploy.sh`. No se ejecuta desde `up`, `restart` ni `deploy.sh`.
 
 ## 5. Actualizaciones
 
@@ -100,13 +122,15 @@ Nginx. Si la base ya contiene usuarios se detiene: para actualizar use
 ./deploy/scripts/deploy.sh
 ```
 
-`deploy.sh` exige `CI_ENVIRONMENT=production`, valida certificados si
-corresponden, crea un respaldo, construye imágenes, aplica migraciones y
+`deploy.sh` exige `CI_ENVIRONMENT=production`, un proyecto distinto de
+`sol_dev`, valida certificados si corresponden, verifica que la base ya tenga
+usuarios, crea un respaldo verificado, construye imágenes, aplica migraciones y
 recrea los servicios sin eliminar volúmenes. **No ejecuta SystemSeeder** y no
 restablece contraseñas de administradores existentes.
 
-Si una comprobación crítica falla, el proceso se detiene. No use `down -v`
-para "arreglar" el problema: conserve el estado y el respaldo para recuperación.
+Si una comprobación crítica falla, el proceso se detiene con código distinto de
+cero. No use `down -v` para "arreglar" el problema: conserve el estado y el
+respaldo para recuperación. `deploy.sh` no restaura automáticamente.
 
 ## 6. Base de datos y persistencia
 
@@ -138,38 +162,45 @@ BACKUP_DIR=/ruta/fuera/del/repo ./deploy/scripts/backup.sh prod
 El script genera:
 
 - `sol-db-<fecha>.sql` con `mysqldump --single-transaction --routines --triggers`.
-- `sol-writable-<fecha>.tar.gz` con el volumen `backend_writable`.
+- `sol-writable-<fecha>.tar.gz` con el volumen `backend_writable`, si existe.
+- `sol-backup-<fecha>.txt` con fecha, entorno, proyecto, nombres, tamaños y
+  SHA-256, sin secretos.
 
-Los archivos quedan con permisos `600`. No se sobrescriben respaldos y no se
-borran automáticamente.
+Los archivos quedan con permisos `600`, no se sobrescriben y se verifica que el
+SQL contenga tablas y que el tar.gz sea legible. No se borran respaldos
+automáticamente. Los CV alojados en Supabase no están dentro del volumen local;
+respáldelos también desde el proveedor.
 
-Restauración controlada (ejemplo; sustituya nombres y fechas). El entorno
-filtrado del backend debe existir antes de invocar Compose directamente:
+Restauración oficial (operación destructiva y explícita). Primero practique en
+un entorno desechable; nunca use los volúmenes reales para una prueba:
 
 ```bash
-# 0. Genere el entorno filtrado y expórtelo (no contiene la contraseña root).
-./deploy/scripts/validate.sh >/dev/null
-export BACKEND_ENV_FILE="$PWD/deploy/runtime/backend.env"
+# El script crea un respaldo de seguridad antes de restaurar, detiene la
+# aplicación y no elimina el volumen.
+./deploy/scripts/restore.sh \
+  --env dev \
+  --db "$HOME/sol-backups/sol-db-AAAAMMDD-HHMMSS.sql" \
+  --files "$HOME/sol-backups/sol-writable-AAAAMMDD-HHMMSS.tar.gz" \
+  --confirm "RESTORE:sol_dev:dev"
 
-# 1. Detenga la aplicación (sin -v).
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.prod.yaml stop backend frontend nginx
-
-# 2. Restaure el SQL en la base de datos de destino.
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.prod.yaml exec -T db \
-  sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot "$MYSQL_DATABASE"' < sol-db-AAAAMMDD-HHMMSS.sql
-
-# 3. Extraiga writable en el volumen de destino (preferiblemente uno nuevo).
-docker run --rm \
-  -v sol_prod_backend_writable:/dest \
-  -v "$PWD:/backup:ro" \
-  alpine sh -c 'tar xzf /backup/sol-writable-AAAAMMDD-HHMMSS.tar.gz -C /dest'
-
-# 4. Arranque y valide conteos, integridad y /health.
-docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.prod.yaml up -d
+# Producción exige además --allow-production.
+./deploy/scripts/restore.sh \
+  --env prod \
+  --db /ruta/segura/sol-db-AAAAMMDD-HHMMSS.sql \
+  --confirm "RESTORE:sol_prod:prod" \
+  --allow-production
 ```
 
-Valide primero en un entorno aislado, no sobrescriba el volumen bueno sin
-respaldo y no use `down -v` sobre datos que deban conservarse.
+El script verifica el tar.gz antes de detener servicios, restaura el SQL,
+comprueba que existan tablas y la tabla `users`, inicia los servicios y valida
+`/health`. La restauración de archivos sobrescribe los nombres presentes en el
+tar pero no elimina archivos adicionales del volumen; para un reemplazo total
+use un volumen nuevo y autorizado. Después de restaurar, valide conteos,
+relaciones y flujos funcionales antes de reabrir el servicio.
+
+No use `down -v`, `docker volume rm` ni `docker volume prune` para restaurar.
+No sobrescriba el volumen bueno sin un respaldo verificado. El respaldo de
+seguridad generado por `restore.sh` es la vía de reversión.
 
 ## 8. Nginx y certificados
 
@@ -188,8 +219,8 @@ Procedimiento de renovación recomendado:
 1. Emita/renueve el certificado en el host con Certbot.
 2. Copie o sincronice `fullchain.pem` y `privkey.pem` al directorio configurado.
 3. Compruebe correspondencia, fechas y nombres de dominio.
-4. Recargue Nginx mediante el procedimiento de despliegue o
-   `BACKEND_ENV_FILE="$PWD/deploy/runtime/backend.env" docker compose ... exec nginx nginx -s reload`.
+4. Recargue Nginx mediante el procedimiento de despliegue
+   (`./deploy/scripts/deploy.sh`) o una recarga controlada del contenedor.
 5. Verifique HTTPS y `/health`.
 
 No se generan certificados ficticios ni se incluyen claves privadas en Git.
@@ -227,3 +258,40 @@ El historial de Git conserva archivos retirados con credenciales literales:
 esas credenciales y, si se autoriza, purgue esos archivos del historial. El
 volumen antiguo y los respaldos conservan credenciales históricas; no se
 eliminan en esta tarea.
+
+## 11. Operaciones prohibidas en el flujo ordinario
+
+No ejecute sobre datos reales:
+
+- `docker compose down -v`, `docker volume rm`, `docker volume prune` ni
+  `docker system prune --volumes`.
+- Migraciones o seeders contra producción fuera de `deploy.sh`/`bootstrap.sh`.
+- `SystemSeeder` desde `up`, `restart`, `deploy.sh` o `dev.sh`.
+- Restauraciones sobre volúmenes reales sin un respaldo verificado y una
+  confirmación explícita.
+- `php spark`, Composer, `npm install`, `npm run dev` o MySQL instalados en el
+  host como sustituto de los contenedores.
+
+Los seeders de prueba (`DatosPruebaSeeder`, `DatosMasivosSeeder`) abortan con
+`CI_ENVIRONMENT=production`. `dev.sh seed` exige `--yes` y rechaza
+`SystemSeeder`.
+
+## 12. Verificación de extremo a extremo
+
+```bash
+./deploy/scripts/validate.sh --dev
+./deploy/scripts/test.sh all
+./deploy/scripts/dev.sh up
+./deploy/scripts/test.sh http
+./deploy/scripts/dev.sh status
+```
+
+Para una instalación nueva aislada, use un `ENV_FILE` propio y un
+`COMPOSE_PROJECT_NAME` distinto, ejecute `bootstrap.sh --dev --authorize`,
+verifique `/health` y luego `backup.sh dev`. Practique `restore.sh` solo en un
+proyecto/volumen desechable, nunca sobre `sol_dev`/`sol_prod` reales.
+
+Una comprobación no ejecutada no se considera superada. Los servicios externos
+(SUNAT/RENIEC, Google, Turnstile, Supabase, Resend/SMTP), TLS/DNS y una
+restauración real de producción requieren credenciales y autorización externas;
+quedan pendientes hasta ejecutarlos en el entorno correspondiente.

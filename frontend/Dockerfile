@@ -1,18 +1,16 @@
-# syntax=docker/dockerfile:1.7
-
-FROM node:22-alpine AS deps
+FROM node:22.23.4-alpine AS deps
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
-FROM node:22-alpine AS dev
+FROM node:22.23.4-alpine AS dev
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ ./
 ENV SOL_VITE_ENV_DIR=false
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
 
-FROM node:22-alpine AS build
+FROM node:22.23.4-alpine AS build
 WORKDIR /app
 ARG VITE_API_URL=
 ARG VITE_GOOGLE_CLIENT_ID=
@@ -25,7 +23,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ ./
 RUN npm run build
 
-FROM nginx:1.27-alpine AS prod
+FROM nginx:1.27.5-alpine AS prod
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80

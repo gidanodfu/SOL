@@ -7,19 +7,26 @@ la autorización viven en el backend (`../backend`). Ver el
 ## Stack
 
 - React 19 + Vite 8 · react-router-dom 7 · TanStack Query · Axios
+- Node.js 22.23.4 (imagen fijada `node:22.23.4-alpine`) · Nginx 1.27.5 en producción
 - Iconos: Tabler Icons (`@tabler/icons-webfont`, CSS importado en `main.jsx`) y
   `lucide-react` · Tipografías Google (Inter, Sora; Playfair Display en el portal)
 
 ## Scripts
 
+Todos los comandos se ejecutan dentro de Docker; no instale Node.js ni
+`node_modules` en el host.
+
 ```bash
-npm install
-npm run dev       # http://localhost:5173 (origen permitido por CORS del backend)
-npm run build     # producción → dist/
-npm run lint      # oxlint
-npm test          # pruebas estáticas de documentos legales y aceptación
-npm run preview   # sirve dist/
+# desde la raíz del repositorio
+./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh exec frontend npm run lint
+./deploy/scripts/dev.sh exec frontend npm run build
+./deploy/scripts/test.sh frontend     # tests + lint + build
 ```
+
+El servidor de desarrollo (Vite) se inicia con `dev.sh up` en
+`http://localhost:5173`, con recarga automática mediante los volúmenes de
+`src/`, `public/`, `index.html`, `vite.config.js` y `package.json`.
 
 ## Variables de entorno
 

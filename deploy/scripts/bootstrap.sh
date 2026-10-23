@@ -3,25 +3,42 @@ set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
 
-MODE=prod
-case "${1:-}" in
-    --dev) MODE=dev ;;
-    --prod|'') MODE=prod ;;
-    -h|--help)
-        cat <<'USAGE'
-Uso: deploy/scripts/bootstrap.sh [--dev|--prod]
+trap 'code=$?; if [ "$code" -ne 0 ]; then
+    printf "\nBootstrap detenido (código %s). No se eliminaron volúmenes ni se restauró nada automáticamente.\n" "$code" >&2
+    printf "Revise el estado con docker compose -p %s ps y los logs del backend.\n" "$(project_name)" >&2
+fi' EXIT
 
-Inicializa una instalación NUEVA: valida el .env raíz, construye imágenes,
-espera MySQL, aplica migraciones, ejecuta SystemSeeder y verifica el
-administrador. No ejecuta down -v ni elimina volúmenes.
+MODE=""
+AUTHORIZED=0
+for arg in "$@"; do
+    case "$arg" in
+        --dev) MODE=dev ;;
+        --prod) MODE=prod ;;
+        --authorize|--yes) AUTHORIZED=1 ;;
+        -h|--help)
+            cat <<'USAGE'
+Uso: deploy/scripts/bootstrap.sh <--dev|--prod> --authorize
 
---prod (por defecto) usa deploy/compose.prod.yaml y exige CI_ENVIRONMENT=production.
---dev  usa deploy/compose.dev.yaml para una instalación local de prueba.
+Inicializa una instalación NUEVA de forma explícita. No se ejecuta desde up,
+restart ni deploy.sh.
+
+  --dev         usa el entorno de desarrollo y su proyecto Compose.
+  --prod        usa producción; exige CI_ENVIRONMENT=production y un proyecto
+                distinto de sol_dev.
+  --authorize   confirma que se crearán el administrador inicial y los datos
+                base. Sin esta bandera el script no hace cambios.
+
+Requiere INITIAL_ADMIN_USERNAME e INITIAL_ADMIN_PASSWORD en el .env activo.
+No imprime contraseñas. Si la base ya contiene usuarios, se detiene.
 USAGE
-        exit 0
-        ;;
-    *) die "Opción desconocida: $1" ;;
-esac
+            exit 0
+            ;;
+        *) die "Opción desconocida: $arg" ;;
+    esac
+done
+
+[ -n "$MODE" ] || die "Debe seleccionar el entorno: bootstrap.sh --dev --authorize o --prod --authorize."
+[ "$AUTHORIZED" = "1" ] || die "Falta autorización expresa: agregue --authorize para crear la instalación inicial."
 
 require_repo
 docker_available
@@ -30,38 +47,53 @@ require_env INITIAL_ADMIN_USERNAME "Defina el usuario administrador inicial."
 require_env INITIAL_ADMIN_PASSWORD "Defina la contraseña del administrador inicial."
 export_admin_credentials
 
-MODE_TLS=$(env_get NGINX_MODE)
-if [ "$MODE" = "prod" ] && [ "$MODE_TLS" != "http" ]; then
-    CERT_DIR=$(env_get TLS_CERTS_DIR)
-    [ -n "$CERT_DIR" ] || die "Falta TLS_CERTS_DIR para HTTPS."
-    [ -f "$(resolve_deploy_path "$CERT_DIR")/fullchain.pem" ] || die "Falta ${CERT_DIR}/fullchain.pem."
-    [ -f "$(resolve_deploy_path "$CERT_DIR")/privkey.pem" ] || die "Falta ${CERT_DIR}/privkey.pem."
-    [ "$MODE_TLS" = "subdomain" ] && require_env API_DOMAIN "Defina el dominio de la API para subdomain."
-fi
-
 if [ "$MODE" = "prod" ]; then
-    [ "$(env_get CI_ENVIRONMENT)" = "production" ] || die "Para --prod, CI_ENVIRONMENT debe ser production."
+    require_prod_project
+    MODE_TLS=$(env_get NGINX_MODE)
+    if [ "$MODE_TLS" != "http" ]; then
+        CERT_DIR=$(env_get TLS_CERTS_DIR)
+        [ -n "$CERT_DIR" ] || die "Falta TLS_CERTS_DIR para HTTPS."
+        [ -f "$(resolve_deploy_path "$CERT_DIR")/fullchain.pem" ] || die "Falta ${CERT_DIR}/fullchain.pem."
+        [ -f "$(resolve_deploy_path "$CERT_DIR")/privkey.pem" ] || die "Falta ${CERT_DIR}/privkey.pem."
+        [ "$MODE_TLS" = "subdomain" ] && require_env API_DOMAIN "Defina el dominio de la API para subdomain."
+    fi
     run_compose() { compose_prod "$@"; }
     compute_cmd=compose_prod
     wait_services="db backend frontend nginx"
 else
+    require_dev_project
     run_compose() { compose_dev "$@"; }
     compute_cmd=compose_dev
     wait_services="db backend frontend"
 fi
 
-# No inicializar sobre una base que ya contiene usuarios.
+assert_compose_project "$compute_cmd"
+
+printf 'Bootstrap de instalación nueva\n'
+printf 'Entorno: %s\n' "$MODE"
+printf 'Proyecto Compose: %s\n' "$(project_name)"
+printf 'No se ejecutará ningún seeder adicional.\n'
+
+printf 'Asegurando base de datos...\n'
 run_compose up -d db
 wait_for_service "$compute_cmd" db 90
 
-HAS_USERS=$(run_compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=\"users\";"' | tr -d '[:space:]')
+printf 'Comprobando que la base esté vacía...\n'
+HAS_USERS=$(run_compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL'
+SELECT COUNT(*) FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'users';
+SQL
+) || die "No se pudo consultar la base de datos."
+HAS_USERS=$(printf '%s' "$HAS_USERS" | tr -d '[:space:]')
+
 if [ "${HAS_USERS:-0}" != "0" ]; then
-    USER_COUNT=$(run_compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL' | tr -d '[:space:]'
+    USER_COUNT=$(run_compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL'
 SELECT COUNT(*) FROM users;
 SQL
-)
+) || die "No se pudo contar los usuarios existentes."
+    USER_COUNT=$(printf '%s' "$USER_COUNT" | tr -d '[:space:]')
     if [ "${USER_COUNT:-0}" != "0" ]; then
-        die "La base de datos ya contiene usuarios. bootstrap.sh es solo para instalaciones nuevas; use deploy.sh para actualizar."
+        die "La base ya contiene usuarios. bootstrap.sh es solo para instalaciones nuevas; use deploy.sh para actualizar."
     fi
 fi
 
@@ -71,12 +103,13 @@ run_compose build
 printf 'Aplicando migraciones...\n'
 run_compose run --rm backend php spark migrate --all
 
-printf 'Ejecutando SystemSeeder...\n'
+printf 'Ejecutando SystemSeeder con las credenciales iniciales...\n'
 run_compose run --rm -e INITIAL_ADMIN_USERNAME -e INITIAL_ADMIN_PASSWORD backend php spark db:seed SystemSeeder
 
 ADMIN_USER=$(env_get INITIAL_ADMIN_USERNAME)
-ADMIN_USER_SQL=$(printf '%s' "$ADMIN_USER" | sed "s/'/''/g")
-ADMIN_COUNT=$(printf "SELECT COUNT(*) FROM users WHERE username='%s' AND rol='admin' AND estado='activo';\n" "$ADMIN_USER_SQL" | run_compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' | tr -d '[:space:]')
+ADMIN_USER_SQL=$(printf '%s' "$ADMIN_USER" | sed "s/\\\\/\\\\\\\\/g; s/'/''/g")
+ADMIN_COUNT=$(printf "SELECT COUNT(*) FROM users WHERE username='%s' AND rol='admin' AND estado='activo';\n" "$ADMIN_USER_SQL" | run_compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"') || die "No se pudo verificar el administrador inicial."
+ADMIN_COUNT=$(printf '%s' "$ADMIN_COUNT" | tr -d '[:space:]')
 [ "${ADMIN_COUNT:-0}" = "1" ] || die "No se pudo verificar el administrador inicial. Revise los logs del backend."
 
 printf 'Iniciando servicios...\n'
@@ -93,6 +126,7 @@ else
 fi
 
 printf '\nBootstrap completado correctamente.\n'
+printf 'Proyecto: %s\n' "$(project_name)"
 printf 'Frontend: %s\n' "$(env_get APP_URL)"
 printf 'API:      %s\n' "$(env_get app.baseURL)"
 printf 'No se eliminaron volúmenes. Para actualizaciones use deploy.sh.\n'

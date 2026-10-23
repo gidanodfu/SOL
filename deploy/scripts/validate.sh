@@ -3,20 +3,30 @@ set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
 
+TARGET=all
 BUILD=0
+BUILD_PROD=0
 RUNTIME=0
 for arg in "$@"; do
     case "$arg" in
+        --dev) TARGET=dev ;;
+        --prod) TARGET=prod ;;
+        --all) TARGET=all ;;
         --build) BUILD=1 ;;
+        --build-prod) BUILD_PROD=1 ;;
         --runtime) RUNTIME=1 ;;
         -h|--help)
             cat <<'USAGE'
-Uso: deploy/scripts/validate.sh [--build] [--runtime]
+Uso: deploy/scripts/validate.sh [--dev|--prod|--all] [--build] [--build-prod] [--runtime]
 
-Valida .env, variables obligatorias, Compose, Dockerfiles y coherencia básica.
---build   construye las imágenes de desarrollo.
---runtime comprueba servicios y endpoints si ya están levantados.
-No imprime valores secretos.
+Valida .env, variables obligatorias, Compose, Dockerfiles, scripts y coherencia
+básica sin imprimir secretos. Por defecto valida la sintaxis de ambos entornos.
+
+  --dev         exige que el .env activo sea de desarrollo.
+  --prod        exige CI_ENVIRONMENT=production y un proyecto distinto de sol_dev.
+  --build       construye las imágenes de desarrollo.
+  --build-prod  construye las imágenes de producción (requiere .env de producción).
+  --runtime     comprueba servicios y endpoints del entorno seleccionado.
 USAGE
             exit 0
             ;;
@@ -31,12 +41,55 @@ validate_env_basics
 [ -f "$ENV_FILE" ] || die "Falta $ENV_FILE."
 [ -f "$ROOT/.env.example" ] || die "Falta .env.example en la raíz."
 [ -f "$ROOT/backend/Dockerfile" ] || die "Falta backend/Dockerfile."
+[ -f "$ROOT/backend/php.ini" ] || die "Falta backend/php.ini."
+[ -f "$ROOT/backend/php.prod.ini" ] || die "Falta backend/php.prod.ini."
 [ -f "$ROOT/frontend/Dockerfile" ] || die "Falta frontend/Dockerfile."
+[ -f "$ROOT/frontend/nginx.conf" ] || die "Falta frontend/nginx.conf."
 [ -f "$ROOT/deploy/nginx/render.sh" ] || die "Falta deploy/nginx/render.sh."
+[ -f "$ROOT/deploy/scripts/restore.sh" ] || die "Falta deploy/scripts/restore.sh."
+[ -f "$ROOT/tests/smoke/test_docker_http.sh" ] || die "Falta tests/smoke/test_docker_http.sh."
+
+case "$TARGET" in
+    dev) require_dev_project ;;
+    prod) require_prod_project ;;
+    all)
+        if [ "$(env_get CI_ENVIRONMENT)" = "production" ]; then
+            require_prod_project
+        else
+            printf 'Aviso: el .env activo no es de producción; se valida la sintaxis de prod sin sus guardias.\n'
+        fi
+        ;;
+esac
+
+printf 'Validando scripts de operación...\n'
+for script in \
+    "$ROOT/deploy/scripts/dev.sh" \
+    "$ROOT/deploy/scripts/test.sh" \
+    "$ROOT/deploy/scripts/validate.sh" \
+    "$ROOT/deploy/scripts/deploy.sh" \
+    "$ROOT/deploy/scripts/bootstrap.sh" \
+    "$ROOT/deploy/scripts/backup.sh" \
+    "$ROOT/deploy/scripts/restore.sh" \
+    "$ROOT/deploy/scripts/lib/common.sh"; do
+    [ -f "$script" ] || die "Falta $script."
+    [ -x "$script" ] || die "El script $script no es ejecutable."
+    sh -n "$script" || die "Error de sintaxis shell en $script."
+done
+[ -x "$ROOT/tests/smoke/test_docker_http.sh" ] || die "La prueba HTTP no es ejecutable."
+sh -n "$ROOT/tests/smoke/test_docker_http.sh" || die "Error de sintaxis en la prueba HTTP."
 
 printf 'Validando Compose desarrollo y producción...\n'
-compose_dev config >/dev/null
-compose_prod config >/dev/null
+compose_dev config -q
+compose_prod config -q
+assert_compose_project compose_dev
+assert_compose_project compose_prod
+
+printf 'Comprobando que las imágenes no usen etiquetas móviles...\n'
+if grep -RInE '(^|[[:space:]])(image:[[:space:]]+[^[:space:]]+:latest|FROM[[:space:]]+[^[:space:]]+:latest)' \
+    "$ROOT/deploy/compose.yaml" "$ROOT/deploy/compose.dev.yaml" "$ROOT/deploy/compose.prod.yaml" \
+    "$ROOT/backend/Dockerfile" "$ROOT/frontend/Dockerfile" >/dev/null 2>&1; then
+    die "Hay imágenes con la etiqueta 'latest'; fije una versión explícita."
+fi
 
 backend_env_file=${BACKEND_ENV_FILE:-$ROOT/deploy/runtime/backend.env}
 [ -f "$backend_env_file" ] || die "No se generó el entorno filtrado del backend."
@@ -60,6 +113,10 @@ if grep -q 'VITE_SECRET\|JWT_SECRET\|DB_PASSWORD\|RESEND_API_KEY' "$ROOT/fronten
     die "El Dockerfile del frontend no debe recibir variables privadas."
 fi
 
+for entry in '.env' 'backend/writable' 'frontend/node_modules' 'frontend/dist' 'deploy/runtime'; do
+    grep -Fq "$entry" "$ROOT/.dockerignore" || die "Falta '$entry' en .dockerignore."
+done
+
 MODE=$(env_get NGINX_MODE)
 if [ "$MODE" = "same-domain" ] || [ "$MODE" = "subdomain" ]; then
     CERT_DIR=$(env_get TLS_CERTS_DIR)
@@ -81,12 +138,22 @@ if [ "$BUILD" = "1" ]; then
     printf 'Construyendo imágenes de desarrollo...\n'
     compose_dev build
 fi
+if [ "$BUILD_PROD" = "1" ]; then
+    require_prod_project
+    printf 'Construyendo imágenes de producción...\n'
+    compose_prod build
+fi
 
 if [ "$RUNTIME" = "1" ]; then
     printf 'Comprobando servicios en ejecución...\n'
-    compose_dev ps
-    http_ok "http://127.0.0.1:$(env_get DEV_API_PORT)/health" || die "Backend no responde en /health."
-    http_ok "http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)/" || die "Frontend no responde."
+    if [ "$TARGET" = "prod" ]; then
+        compose_prod ps
+        http_ok "$(nginx_health_url)" || die "Nginx de producción no responde en /health."
+    else
+        compose_dev ps
+        http_ok "http://127.0.0.1:$(env_get DEV_API_PORT)/health" || die "Backend no responde en /health."
+        http_ok "http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)/" || die "Frontend no responde."
+    fi
 fi
 
-printf 'Configuración válida. Las comprobaciones no ejecutadas no se consideran superadas.\n'
+printf 'Configuración válida para el objetivo: %s. Las comprobaciones no ejecutadas no se consideran superadas.\n' "$TARGET"

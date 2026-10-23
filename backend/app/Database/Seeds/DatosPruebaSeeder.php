@@ -20,6 +20,11 @@ class DatosPruebaSeeder extends Seeder
 {
     public function run(): void
     {
+        if (ENVIRONMENT === 'production') {
+            fwrite(STDERR, "DatosPruebaSeeder está prohibido en producción.\n");
+            exit(1);
+        }
+
         $now = date('Y-m-d H:i:s');
 
         // ------------------------------------------------ admin de prueba

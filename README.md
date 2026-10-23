@@ -11,14 +11,14 @@ La especificación funcional está en `docs/requerimientos.md` y la trazabilidad
 ## 2. Arquitectura
 
 ```
-SISTEMA-EMPLEO/
-├── backend/               CodeIgniter 4 (PHP 8.2+) — API REST, reglas de negocio, auth
-├── frontend/              React + Vite — presentación y consumo de API
-├── tests/smoke/           Pruebas de integración de la API (curl)
+SOL/
+├── backend/               CodeIgniter 4 (PHP 8.4.27 en Docker) — API REST, reglas, auth
+├── frontend/              React + Vite (Node 22.23.4 en Docker) — SPA
+├── tests/smoke/           Pruebas HTTP y scripts de integración (legado profundo)
 ├── docs/                  Requerimientos, cumplimiento y operaciones
 ├── deploy/                Compose, Nginx, scripts y certificados
 ├── .env.example           Plantilla única de configuración
-└── backend|frontend/      Dockerfiles y código de aplicación
+└── backend|frontend/      Dockerfiles, php.ini y configuración de servidor
 ```
 
 ```
@@ -96,10 +96,16 @@ MySQL es la fuente de verdad.
 
 ## 3. Requisitos
 
-- PHP >= 8.2 con extensiones `curl`, `fileinfo`, `mysqli` (ver §17) · Composer 2
-- MySQL 8 (o MariaDB compatible)
-- Node.js >= 20 y npm
-- Docker + Docker Compose (recomendado para desarrollo y producción)
+**Docker es la única vía oficial de desarrollo y operación.** El host solo necesita:
+
+- Docker Engine >= 24.
+- Docker Compose v2 >= 2.24 (`docker compose`).
+- Git.
+- Un shell POSIX (`sh`), `awk`, `grep`, `sed` y `curl` para los scripts de diagnóstico HTTP.
+
+No es necesario instalar PHP, Composer, Node.js, npm, MySQL ni las dependencias de la
+aplicación en el host. Las versiones de las imágenes están fijadas en los Dockerfiles y
+en `deploy/compose.yaml`; consulte `deploy/README.md` para actualizarlas.
 
 ## 4. Instalación
 
@@ -128,8 +134,9 @@ Los scripts de operación generan `deploy/runtime/backend.env` (permisos `600`,
 ignorado por Git) con una lista explícita de variables del backend. Ese archivo
 evita que el backend reciba `DB_ROOT_PASSWORD`, las credenciales iniciales, las
 variables `VITE_*` o la configuración de Nginx/TLS. No lo edite a mano ni lo
-versione. Si ejecuta `docker compose` directamente, defina
-`BACKEND_ENV_FILE` apuntando a ese archivo; se recomienda usar los scripts.
+versione. Use siempre los scripts; si necesita invocar Compose manualmente,
+exporte `BACKEND_ENV_FILE="$PWD/deploy/runtime/backend.env"` después de que un
+script lo haya generado.
 
 ### Desarrollo local con Docker
 
@@ -138,33 +145,32 @@ versione. Si ejecuta `docker compose` directamente, defina
 ./deploy/scripts/dev.sh status
 ./deploy/scripts/dev.sh logs backend
 ./deploy/scripts/dev.sh migrate
+./deploy/scripts/dev.sh migration-status
 ./deploy/scripts/dev.sh down      # conserva volúmenes
 ```
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8080`
 - MySQL: `127.0.0.1:3307`
-- Adminer: `http://localhost:8082`
+- Adminer opcional: `http://localhost:8082` (`./deploy/scripts/dev.sh tools`)
 
-### Alternativa sin Docker
+`dev.sh up` nunca ejecuta migraciones ni seeders, aunque la base esté vacía.
+Para una instalación nueva use `bootstrap.sh --dev --authorize`; para un entorno
+ya migrado use `dev.sh migrate`.
 
-El backend puede ejecutarse en el host usando el mismo `.env` raíz:
-
-```bash
-cd backend
-composer install
-php spark migrate
-php spark db:seed SystemSeeder
-php spark serve
-```
-
-El frontend usa el `.env` raíz mediante la configuración de Vite:
+### Instalación inicial
 
 ```bash
-cd frontend
-npm install
-npm run dev
+# Desarrollo (crea el administrador y categorías base)
+./deploy/scripts/bootstrap.sh --dev --authorize
+
+# Producción (requiere un .env de producción y confirmación explícita)
+./deploy/scripts/bootstrap.sh --prod --authorize
 ```
+
+`bootstrap.sh` es el único procedimiento autorizado para ejecutar `SystemSeeder`.
+No se ejecuta desde `up`, `restart` ni `deploy.sh`. Se niega a continuar si la base
+ya contiene usuarios.
 
 ## 5. Configuración `.env`
 
@@ -179,6 +185,10 @@ La fuente única es `.env` en la raíz. Las variables principales son:
 | Servicios externos | `sunat.token`, `jsonpe.token` (alias legado `dni.token` aceptado por compatibilidad), `RESEND_*`, `email.*`, `google.clientId`, `turnstile.*` |
 | Frontend público | `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_TURNSTILE_SITE_KEY` |
 | Docker/Nginx | `COMPOSE_PROJECT_NAME`, `DEV_*`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `TLS_*` |
+
+`COMPOSE_PROJECT_NAME` debe ser único por entorno. Desarrollo usa `sol_dev` por
+defecto; producción debe usar otro nombre, por ejemplo `sol_prod`. Los scripts de
+producción rechazan `sol_dev` para evitar reutilizar redes o volúmenes por error.
 
 Los secretos del backend nunca se pasan al contenedor frontend. Vite solo recibe
 variables `VITE_*`; éstas se incorporan al bundle público y no deben contener
@@ -199,10 +209,19 @@ crear/actualizar **toda** la estructura: tablas, columnas, índices, claves for�
 restricciones.
 
 ```bash
-cd backend
-php spark migrate            # ejecuta todas las migraciones pendientes y crea/actualiza el esquema completo
-php spark migrate:status     # muestra las migraciones ejecutadas y pendientes
+./deploy/scripts/dev.sh migrate            # aplica migraciones pendientes
+./deploy/scripts/dev.sh migration-status   # consulta ejecutadas/pendientes
 ```
+
+También se puede usar el contenedor directamente para una tarea puntual:
+
+```bash
+./deploy/scripts/dev.sh exec backend php spark migrate:status
+```
+
+No ejecute `php spark` en el host. Las migraciones de producción las aplica
+`deploy.sh` dentro del contenedor backend; no las ejecute manualmente contra
+producción durante una revisión.
 
 Tablas principales del esquema: `users`, `user_refresh_tokens`, `auditoria`, `empresas`,
 `postulantes`, `cvs`, `categorias`, `ofertas`, `ofertas_habilidades`, `postulaciones`,
@@ -212,7 +231,7 @@ Tablas principales del esquema: `users`, `user_refresh_tokens`, `auditoria`, `em
 `atenciones` siguen creadas por las migraciones históricas pero ya no se usan; pueden
 eliminarse con una migración cuando se confirme que ningún entorno tiene datos reales.
 
-> No hay un número fijo de migraciones: `php spark migrate` siempre aplica las pendientes.
+> No hay un número fijo de migraciones: `./deploy/scripts/dev.sh migrate` siempre aplica las pendientes.
 > Las migraciones **no** insertan datos ni credenciales.
 >
 > `identidades_reservadas` centraliza la unicidad de email, teléfono, RUC y DNI. La
@@ -232,22 +251,28 @@ Ubicados en `backend/app/Database/Seeds/`:
 | `DatosMasivosSeeder` | Carga masiva ficticia (empresas, postulantes, ofertas, postulaciones y contrataciones). | Solo pruebas |
 
 ```bash
-cd backend
-php spark db:seed SystemSeeder        # requerido en la instalación inicial
-php spark db:seed DatosPruebaSeeder   # opcional: fixtures para tests/smoke
+# Solo en desarrollo/pruebas, con confirmación explícita
+./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes
+./deploy/scripts/dev.sh seed DatosMasivosSeeder --yes
+
+# Instalación inicial (único camino autorizado para SystemSeeder)
+./deploy/scripts/bootstrap.sh --dev --authorize
 ```
 
 > `SystemSeeder` y los seeds de prueba están separados a propósito: la instalación inicial
-> no carga empresas, postulantes ni credenciales ficticias.
+> no carga empresas, postulantes ni credenciales ficticias. Los seeders de prueba
+> abortan si `CI_ENVIRONMENT=production`.
 
 ## 9. Usuario administrador inicial
 
-La instalación inicial (`php spark migrate` + `php spark db:seed SystemSeeder`) deja **una
+La instalación inicial (`bootstrap.sh --dev|--prod --authorize`) deja **una
 única cuenta administradora**, provisionada desde el `.env`:
 
-| Usuario | Contraseña inicial | Rol |
-|---|---|---|
-| `MDJLO-SOL` | `MDJLO.2026` | `admin` |
+| Dato | Origen |
+|---|---|
+| Usuario | `INITIAL_ADMIN_USERNAME` |
+| Contraseña inicial | `INITIAL_ADMIN_PASSWORD` (se guarda con hash) |
+| Rol | `admin` |
 
 - La contraseña se lee de `INITIAL_ADMIN_PASSWORD` y se guarda **con hash**
   (`password_hash(PASSWORD_DEFAULT)`); nunca se escribe en migraciones ni en código.
@@ -257,17 +282,29 @@ La instalación inicial (`php spark migrate` + `php spark db:seed SystemSeeder`)
 - Las demás cuentas (`empresa`, `postulante`) se crean por sus flujos reales
   (auto-registro/activación y registro público). Los roles `empresa` y `postulante` se
   mantienen.
+- Una segunda ejecución de `bootstrap.sh` sobre una base con usuarios se rechaza; no
+  restablece contraseñas ni duplica el administrador.
 
 ## 10. Ejecución backend
 
+El backend se ejecuta dentro del contenedor de desarrollo:
+
 ```bash
-cd backend
-php spark serve              # API en http://localhost:8080 (puerto por defecto del proyecto)
+./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh logs backend
+./deploy/scripts/dev.sh shell backend
 ```
 
-El puerto se controla con `php spark serve --port <puerto>`; si se cambia, ajustar
-`app.baseURL` y `VITE_API_URL` en el `.env` raíz. En Docker use
-`./deploy/scripts/dev.sh`.
+Dentro de esa shell puede ejecutar tareas puntuales, por ejemplo:
+
+```bash
+./deploy/scripts/dev.sh exec backend php spark routes
+./deploy/scripts/dev.sh exec backend php spark migrate:status
+```
+
+No es necesario instalar PHP ni ejecutar `php spark serve` en el host. El
+contenedor de desarrollo ya ejecuta `php spark serve --host 0.0.0.0 --port 8080`.
+En producción se usa PHP-FPM detrás de Nginx, nunca el servidor de desarrollo.
 
 ### Estructura pública de la API
 
@@ -304,16 +341,17 @@ Consulte [`deploy/README.md`](deploy/README.md) y
 ## 11. Ejecución frontend
 
 ```bash
-cd frontend
-npm run dev                  # http://localhost:5173 (puerto fijo en vite.config.js)
-npm run build                # producción → dist/
-npm run lint                 # oxlint
-npm run preview              # sirve dist/
+./deploy/scripts/dev.sh up          # Vite con recarga automática en :5173
+./deploy/scripts/test.sh frontend   # tests + lint + build dentro de Docker
+./deploy/scripts/dev.sh exec frontend npm run build
 ```
 
 El puerto de desarrollo está fijado en `frontend/vite.config.js` (`server.port = 5173`,
 `strictPort`): si el 5173 está ocupado, Vite falla en lugar de usar otro puerto, para que
 coincida con el origen permitido por CORS en el backend.
+
+No ejecute `npm install`, `npm run dev` ni `npm run build` en el host. `node_modules`
+del host no es una dependencia del proyecto; la imagen instala con `npm ci`.
 
 ## 12. Configuración de Supabase (CV)
 
@@ -349,82 +387,67 @@ consola de Google.
 
 ### Solución de problemas de migraciones
 
-Si `php spark migrate` falla, verificar en orden:
+Si una migración falla, verificar en orden:
 
-1. PHP instalado y su versión (`php -v`).
-2. Composer disponible (`composer --version`).
-3. Extensión **mysqli** cargada (§17).
-4. MySQL en ejecución (`./deploy/scripts/dev.sh status` o el servicio del sistema).
-5. Host de la base de datos (`DB_HOST`).
-6. Puerto (`DB_PORT`, por defecto `3306`).
-7. Nombre de la base de datos (`DB_DATABASE`).
-8. Usuario y contraseña (`DB_USER` / `DB_PASSWORD`).
-9. Que exista el `.env` (copiado de `.env.example`) y que `DB_DRIVER` sea `MySQLi`.
+1. Estado del stack: `./deploy/scripts/dev.sh status`.
+2. Logs del backend: `./deploy/scripts/dev.sh logs backend`.
+3. Logs de MySQL: `./deploy/scripts/dev.sh logs db`.
+4. Variables de conexión dentro del contenedor:
+   `./deploy/scripts/dev.sh exec backend php -r 'echo getenv("DB_HOST")," ",getenv("DB_PORT"),PHP_EOL;'`.
+5. Que el `.env` exista (copiado de `.env.example`) y que `DB_DRIVER` sea `MySQLi`.
+6. Estado de migraciones: `./deploy/scripts/dev.sh migration-status`.
 
-Comprobar primero la configuración del `.env`; **no** eliminar ni recrear la base de datos
-como primera solución (se perderían datos).
+No elimine ni recree la base de datos como primera solución: se perderían datos.
+No use `docker compose down -v`.
 
 ### Permisos de `writable`
 
+El entrypoint del backend crea y ajusta `writable/` dentro del contenedor; no
+hace falta cambiarlo desde el host. Para revisar el volumen:
+
 ```bash
-ls -ld writable writable/cache
-sudo chown -R $USER:$USER writable
-chmod -R u+rwX writable
-mkdir -p writable/cache
+./deploy/scripts/dev.sh exec backend ls -la writable
 ```
+
+Si un archivo no se puede escribir, reconstruya la imagen y revise los logs; no
+ejecute `chown` sobre el host ni borre el volumen.
 
 ## 17. MySQLi
 
-El proyecto usa el driver **MySQLi**. Si no está cargado, `php spark migrate` falla.
+El driver **MySQLi** y las extensiones requeridas se instalan en la imagen
+`backend/Dockerfile`; no se instalan en el host. Para comprobar la imagen:
 
 ```bash
-php -v
-php -m
-php -m | grep mysqli        # Linux/macOS
+./deploy/scripts/dev.sh exec backend php -m
+./deploy/scripts/dev.sh exec backend php -m | grep mysqli
 ```
 
-En Windows (CMD):
-
-```cmd
-php -m | findstr mysqli
-```
-
-También se puede confirmar con:
-
-```bash
-php -i | grep mysqli        # Windows CMD: php -i | findstr mysqli
-```
-
-Si no aparece:
-
-- **Ubuntu/Debian**:
-
-  ```bash
-  sudo apt update
-  sudo apt install php-mysql
-  php -m | grep mysqli
-  ```
-
-- **Windows**: localizar el `php.ini` que usa la instalación activa:
-
-  ```cmd
-  php --ini
-  ```
-
-  Editar ese `php.ini`, habilitar la extensión correspondiente a la versión de PHP
-  (por ejemplo `extension=mysqli` o `extension=php_mysqli.dll`) y reiniciar el servidor
-  web / la terminal. No asumir una versión de PHP: comprobar primero `php -v`.
-
-Tras habilitarla, verificar de nuevo con `php -m | grep mysqli` y repetir
-`php spark migrate`.
+Si falta una extensión, corrija `backend/Dockerfile` y reconstruya con
+`./deploy/scripts/dev.sh build`. No instale paquetes PHP en el host para
+“arreglar” la imagen.
 
 ## 18. Pruebas
 
-### Unitarias (backend)
+Todas las pruebas oficiales se ejecutan desde el host mediante scripts que usan
+contenedores. No se requiere PHP ni Node.js instalados en el host.
 
 ```bash
-cd backend
-vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.php
+./deploy/scripts/test.sh all        # backend + frontend + build
+./deploy/scripts/test.sh backend    # PHPUnit
+./deploy/scripts/test.sh frontend   # npm test + lint + build
+./deploy/scripts/test.sh http       # smoke HTTP no destructivo (stack activo)
+```
+
+### Unitarias backend
+
+```bash
+./deploy/scripts/test.sh backend
+```
+
+También puede ejecutar un archivo concreto dentro del contenedor:
+
+```bash
+./deploy/scripts/dev.sh run backend php vendor/bin/phpunit tests/unit/ValidadorTest.php
 ```
 
 `tests/unit/ValidadorTest.php` cubre, entre otras reglas, la validación de teléfono
@@ -433,40 +456,30 @@ vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.p
 ### Frontend
 
 ```bash
-cd frontend
-npm test                       # pruebas estáticas de rutas, footer y aceptación
-npm run lint
-npm run build
+./deploy/scripts/test.sh frontend
 ```
 
-### Smoke de la API (integración)
+El comando ejecuta `npm test`, `npm run lint` y `npm run build` dentro de la
+imagen. Los `node_modules` del host no se usan.
 
-Cada script levanta un servidor temporal (`php spark serve` en :8080), ejecuta el flujo y
-lo apaga. Requieren MySQL migrado y con los seeds base:
+### Smoke HTTP oficial
 
-Los smoke tests requieren un entorno aislado con `DatosPruebaSeeder` y ejecutan
-`php spark serve` desde el host; no deben apuntar a la base de datos migrada de
-desarrollo o producción. Use una base de pruebas y detenga el backend Docker si
-el puerto 8080 está ocupado:
+Con el stack de desarrollo activo (`dev.sh up`):
 
 ```bash
-./deploy/scripts/dev.sh migrate
-./deploy/scripts/dev.sh seed DatosPruebaSeeder   # solo en una base de pruebas
-./tests/smoke/test_api.sh              # auth por rol, alta admin de empresas, CV
-./tests/smoke/test_ofertas.sh          # ciclo de ofertas: revisión municipal, reenvío y cierre
-./tests/smoke/test_aprobacion_ofertas.sh # aprobación/rechazo, visibilidad y mass assignment
-./tests/smoke/test_fase3.sh            # bolsa/búsqueda, postulaciones y perfil (contacto + CV)
-./tests/smoke/test_fase4.sh            # bandeja empresa, estados, CV autorizado
-./tests/smoke/test_fase5.sh            # actividades, difusión y permisos por rol
-./tests/smoke/test_fase6.sh            # contrataciones y reportes
-./tests/smoke/test_seguridad.sh        # booleanos, fechas, URLs, rate limit y cabeceras
-./tests/smoke/test_rte.sh              # RTE: saneado, enlaces, texto plano y límite 10k
-./tests/smoke/test_identidad.sh        # login por RUC/DNI y rechazo de duplicados
-./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación
+./deploy/scripts/test.sh http
 ```
 
-`DatosMasivosSeeder` es opcional (carga masiva) y también requiere los seeds base. Detalle
-en [`tests/README.md`](tests/README.md).
+Comprueba `/health`, `/`, `/api/ofertas`, el rechazo `401` de `/api/auth/me`, el
+preflight CORS y el frontend. No crea ni modifica datos.
+
+### Pruebas de integración profundas (legado)
+
+Los scripts de `tests/smoke/*.sh` que crean datos (ofertas, empresas, CV) son
+**legado** y no forman parte del flujo oficial Docker: inician `php spark serve`
+y usan `python3`/`curl` del host, por lo que requieren una base aislada y
+herramientas adicionales. No deben apuntar a desarrollo ni a producción. Su
+migración a contenedores está pendiente; consulte [`tests/README.md`](tests/README.md).
 
 > El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
 > se validaron manualmente contra la API; aún no tienen pruebas automatizadas.
@@ -474,7 +487,9 @@ en [`tests/README.md`](tests/README.md).
 ## 19. Producción
 
 - Configuración única en `.env` raíz, con secretos propios de producción.
-- Instalación nueva: `./deploy/scripts/bootstrap.sh --prod`.
+- `COMPOSE_PROJECT_NAME` debe ser distinto de `sol_dev` (por ejemplo `sol_prod`);
+  `deploy.sh` y `bootstrap.sh` lo exigen.
+- Instalación nueva: `./deploy/scripts/bootstrap.sh --prod --authorize`.
 - Actualizaciones: `./deploy/scripts/deploy.sh` (no ejecuta `SystemSeeder`).
 - Nginx: `deploy/compose.prod.yaml`; modos `http`, `same-domain` o `subdomain`.
 - Certificados: `deploy/nginx/certs/` (o `TLS_CERTS_DIR`) montados en solo lectura.
@@ -482,10 +497,12 @@ en [`tests/README.md`](tests/README.md).
   `sol_<proyecto>_backend_writable`.
 - Almacenamiento de CV: `storage.driver=supabase` con credenciales S3 privadas.
 - Entorno: `CI_ENVIRONMENT=production` y HTTPS.
+- Respaldos: `./deploy/scripts/backup.sh prod`; restauración controlada:
+  `./deploy/scripts/restore.sh --env prod --db <archivo.sql> --confirm "RESTORE:<proyecto>:prod" --allow-production`.
 - Pendiente: DNS/dominios, certificados reales, Google OAuth, Turnstile,
   Supabase, Resend/SMTP, SUNAT/RENIEC y revisión de credenciales.
-- La API envía cabeceras de seguridad (`secureheaders`) pero no aplica CSP global:
-  configurar CSP en el hosting del frontend.
+- La API envía cabeceras de seguridad (`secureheaders`) y Nginx añade HSTS en
+  HTTPS; no se aplica CSP global. Configurar CSP en el hosting del frontend.
 
 Procedimiento completo:
 [`deploy/README.md`](deploy/README.md) y [`docs/operaciones.md`](docs/operaciones.md).
