@@ -104,18 +104,22 @@ export default function Cuenta() {
               <form onSubmit={guardar}>
                 <Mensaje>{error}</Mensaje>
                 <div className="cuenta-seguridad">
-                  <div className="cuenta-campo cuenta-campo-actual">
-                    <Campo etiqueta="Contraseña actual" type="password" value={form.password_actual} onChange={set('password_actual')} autoComplete="current-password" />
+                  <div className="cuenta-columna cuenta-columna-izquierda">
+                    <div className="cuenta-campo cuenta-campo-actual">
+                      <Campo etiqueta="Contraseña actual" type="password" value={form.password_actual} onChange={set('password_actual')} autoComplete="current-password" />
+                    </div>
+                    <div className="cuenta-campo cuenta-campo-confirmar">
+                      <Campo etiqueta="Confirmar nueva contraseña" type="password" value={form.password2} onChange={set('password2')} autoComplete="new-password" />
+                    </div>
+                    <div className="cuenta-acciones">
+                      <Boton variante="primario" cargando={enviando} type="submit">Actualizar contraseña</Boton>
+                    </div>
                   </div>
-                  <div className="cuenta-campo cuenta-campo-nueva">
-                    <Campo etiqueta="Nueva contraseña" type="password" value={form.password} onChange={set('password')} autoComplete="new-password" />
-                    <PasswordRequirements password={form.password} confirmacion={form.password2} intento={intentoPassword} />
-                  </div>
-                  <div className="cuenta-campo cuenta-campo-confirmar">
-                    <Campo etiqueta="Confirmar nueva contraseña" type="password" value={form.password2} onChange={set('password2')} autoComplete="new-password" />
-                  </div>
-                  <div className="cuenta-acciones">
-                    <Boton variante="primario" cargando={enviando} type="submit">Actualizar contraseña</Boton>
+                  <div className="cuenta-columna cuenta-columna-derecha">
+                    <div className="cuenta-campo cuenta-campo-nueva">
+                      <Campo etiqueta="Nueva contraseña" type="password" value={form.password} onChange={set('password')} autoComplete="new-password" />
+                      <PasswordRequirements password={form.password} confirmacion={form.password2} intento={intentoPassword} />
+                    </div>
                   </div>
                 </div>
               </form>
