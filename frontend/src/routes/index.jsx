@@ -32,7 +32,7 @@ import Temas from '../pages/configuracion/Temas';
 import PoliticaPrivacidad from '../pages/legal/PoliticaPrivacidad';
 import TerminosCondiciones from '../pages/legal/TerminosCondiciones';
 import AvisoLegal from '../pages/legal/AvisoLegal';
-import PoliticaCookies from '../pages/legal/PoliticaCookies';
+import PoliticaTecnologiasWeb from '../pages/legal/PoliticaTecnologiasWeb';
 
 export function Rutas() {
   return (
@@ -50,7 +50,7 @@ export function Rutas() {
       <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
       <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
       <Route path="/aviso-legal" element={<AvisoLegal />} />
-      <Route path="/politica-cookies" element={<PoliticaCookies />} />
+      <Route path="/politica-cookies" element={<PoliticaTecnologiasWeb />} />
 
       {/* Bolsa de empleo pública: se ve sin sesión. Para postulantes autenticados
           se conserva el cabecero de postulante (LayoutBusqueda decide). */}

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
+// Nombre neutral: evita el falso positivo /politicacookies.js de EasyList Cookie
+// List que usa Brave Shields. La ruta pública sigue siendo /politica-cookies.
 import { Link } from 'react-router-dom';
 import LegalPage from './LegalPage';
 
-export default function PoliticaCookies() {
+export default function PoliticaTecnologiasWeb() {
   return (
     <LegalPage documentKey="cookies">
       <section>

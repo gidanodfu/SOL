@@ -48,7 +48,7 @@ test('ambos formularios incluyen la casilla y envían la aceptación explícita'
 });
 
 test('cada documento legal reutiliza el layout común', () => {
-  for (const archivo of ['PoliticaPrivacidad.jsx', 'TerminosCondiciones.jsx', 'AvisoLegal.jsx', 'PoliticaCookies.jsx']) {
+  for (const archivo of ['PoliticaPrivacidad.jsx', 'TerminosCondiciones.jsx', 'AvisoLegal.jsx', 'PoliticaTecnologiasWeb.jsx']) {
     assert.match(leer(`../src/pages/legal/${archivo}`), /LegalPage/);
   }
 });
