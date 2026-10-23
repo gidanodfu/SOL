@@ -5,7 +5,7 @@ está en el [`README.md`](../README.md) de la raíz.
 
 ## Stack
 
-- CodeIgniter 4.7 · PHP 8.2+ (recomendado 8.5) · MySQL 8 (MySQLi, `numberNative=true`)
+- CodeIgniter 4.7 · PHP 8.4.27 (imagen fijada `php:8.4.27-fpm-alpine3.23`) · MySQL 8.0.46 (MySQLi, `numberNative=true`)
 - JWT HS256 (`firebase/php-jwt`) con refresh rotativo · Supabase Storage (S3) para CV
 
 ## Estructura
@@ -27,21 +27,32 @@ app/
 ## Puesta en marcha
 
 La configuración es única y vive en el `.env` de la raíz del repositorio
-(CodeIgniter carga esa ruta mediante `Config\Paths::$envDirectory`).
+(CodeIgniter carga esa ruta mediante `Config\Paths::$envDirectory`). El backend
+se ejecuta siempre dentro de Docker.
 
 ```bash
 # desde la raíz
 cp .env.example .env
 chmod 600 .env
-cd backend
-composer install
-php spark migrate
-php spark db:seed SystemSeeder
-php spark serve         # http://localhost:8080
+./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh migrate
+./deploy/scripts/bootstrap.sh --dev --authorize   # solo instalación nueva
 ```
 
-En desarrollo se recomienda `./deploy/scripts/dev.sh up`. El bootstrap inicial
-está en `./deploy/scripts/bootstrap.sh` y las operaciones en
+Para operar el backend:
+
+```bash
+./deploy/scripts/dev.sh logs backend
+./deploy/scripts/dev.sh shell backend
+./deploy/scripts/dev.sh exec backend php spark routes
+./deploy/scripts/dev.sh exec backend php spark migrate:status
+./deploy/scripts/dev.sh down                  # conserva volúmenes
+```
+
+En producción se usa PHP-FPM dentro de `deploy/compose.prod.yaml`; el
+despliegue se realiza con `./deploy/scripts/deploy.sh`. No ejecute `php spark`,
+Composer ni MySQL en el host. El bootstrap inicial está en
+`./deploy/scripts/bootstrap.sh` (exige `--authorize`) y las operaciones en
 `docs/operaciones.md`.
 
 ## Convenciones
@@ -70,13 +81,20 @@ está en `./deploy/scripts/bootstrap.sh` y las operaciones en
 - `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 completa (81 operaciones,
   versión 1.1.0). Incluye rate limits (`429`), límite mensual de CV, validación de
   teléfono y respuestas de error saneadas. Abrir `public/swagger/index.html` (Swagger UI
-  por CDN) o validar con: `python3 docs/_validate_openapi.py`.
+  por CDN).
 - `docs/auditoria-backend.md` — auditoría de seguridad/calidad con nota de vigencia y
   sección "Actualización post-correcciones (2026-09-10)".
+- `docs/_validate_openapi.py` — validador opcional; requiere PyYAML y debe ejecutarse
+  en un contenedor de herramientas, no como dependencia del host. No forma parte del
+  flujo oficial de build.
 
 ## Pruebas
 
 ```bash
-vendor/bin/phpunit                          # unitarias
-../tests/smoke/test_*.sh                    # integración (ver ../tests/README.md)
+./deploy/scripts/test.sh backend
+./deploy/scripts/dev.sh run backend php vendor/bin/phpunit tests/unit/ValidadorTest.php
 ```
+
+Las pruebas de integración profundas de `../tests/smoke/` son legado y requieren
+un entorno aislado; consulte `../tests/README.md`. No las ejecute contra
+desarrollo o producción.

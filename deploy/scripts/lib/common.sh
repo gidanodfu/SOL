@@ -121,12 +121,12 @@ prepare_backend_env() {
 
 compose_dev() {
     prepare_backend_env
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_BASE" -f "$COMPOSE_DEV" "$@"
+    docker compose --project-name "$(project_name)" --env-file "$ENV_FILE" -f "$COMPOSE_BASE" -f "$COMPOSE_DEV" "$@"
 }
 
 compose_prod() {
     prepare_backend_env
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" "$@"
+    docker compose --project-name "$(project_name)" --env-file "$ENV_FILE" -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" "$@"
 }
 
 export_admin_credentials() {
@@ -137,6 +137,38 @@ export_admin_credentials() {
 project_name() {
     name=$(env_get COMPOSE_PROJECT_NAME)
     printf '%s' "${name:-sol_dev}"
+}
+
+require_project_name() {
+    name=$(env_get COMPOSE_PROJECT_NAME)
+    [ -n "$name" ] || die "Falta COMPOSE_PROJECT_NAME en $ENV_FILE. Use un nombre único por entorno."
+    case "$name" in
+        *[!A-Za-z0-9_.-]*) die "COMPOSE_PROJECT_NAME contiene caracteres no válidos: use letras, números, punto, guion o guion bajo." ;;
+    esac
+}
+
+# Comprueba que el nombre del proyecto Compose coincide con el .env activo.
+assert_compose_project() {
+    compose_cmd="$1"
+    expected="$(project_name)"
+    actual=$($compose_cmd config 2>/dev/null | sed -n 's/^name: //p' | head -n 1)
+    [ -n "$actual" ] || die "No se pudo determinar el nombre del proyecto Compose."
+    [ "$actual" = "$expected" ] || die "El proyecto Compose activo ('$actual') no coincide con COMPOSE_PROJECT_NAME ('$expected')."
+}
+
+require_prod_project() {
+    require_project_name
+    [ "$(env_get CI_ENVIRONMENT)" = "production" ] || die "El entorno de producción exige CI_ENVIRONMENT=production en $ENV_FILE."
+    [ "$(project_name)" != "sol_dev" ] || die "Producción no puede usar COMPOSE_PROJECT_NAME=sol_dev. Defina un nombre propio, por ejemplo sol_prod."
+}
+
+require_dev_project() {
+    require_project_name
+    case "$(env_get CI_ENVIRONMENT)" in
+        development|testing) ;;
+        *) die "El entorno de desarrollo exige CI_ENVIRONMENT=development o testing en $ENV_FILE." ;;
+    esac
+    [ "$(project_name)" != "sol_prod" ] || die "Desarrollo no puede usar el nombre de proyecto de producción (sol_prod)."
 }
 
 # Resuelve una ruta relativa al directorio deploy/ o devuelve una absoluta.
@@ -188,6 +220,35 @@ nginx_health_url() {
 docker_available() {
     require_cmd docker
     docker compose version >/dev/null 2>&1 || die "Docker Compose v2 no está disponible."
+
+    engine_version=$(docker version --format '{{.Server.Version}}' 2>/dev/null | sed 's/[^0-9.].*$//')
+    engine_major=${engine_version%%.*}
+    case "$engine_major" in
+        ''|*[!0-9]*) warn "No se pudo determinar la versión de Docker Engine; se requiere >= 24." ;;
+        *) [ "$engine_major" -ge 24 ] || die "Docker Engine $engine_version es demasiado antiguo; se requiere >= 24." ;;
+    esac
+
+    compose_version=$(docker compose version --short 2>/dev/null | sed 's/^v//')
+    compose_major=${compose_version%%.*}
+    compose_rest=${compose_version#*.}
+    compose_minor=${compose_rest%%.*}
+    case "$compose_major:$compose_minor" in
+        *[!0-9:]*|:*) warn "No se pudo determinar la versión de Docker Compose; se requiere >= 2.24." ;;
+        *)
+            if [ "$compose_major" -lt 2 ] || { [ "$compose_major" -eq 2 ] && [ "$compose_minor" -lt 24 ]; }; then
+                die "Docker Compose $compose_version es demasiado antiguo; se requiere >= 2.24."
+            fi
+            ;;
+    esac
+}
+
+require_service_running() {
+    compose_cmd="$1"
+    service="$2"
+    id=$($compose_cmd ps -q "$service" 2>/dev/null || true)
+    [ -n "$id" ] || die "El servicio '$service' no está iniciado. Ejecute dev.sh up o el procedimiento de despliegue correspondiente."
+    status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || true)
+    [ "$status" = "running" ] || [ "$status" = "healthy" ] || die "El servicio '$service' no está en ejecución (estado: ${status:-desconocido})."
 }
 
 require_repo() {
@@ -202,6 +263,8 @@ validate_env_basics() {
         die "Hay variables duplicadas en $ENV_FILE. Deje una sola definición por variable."
     fi
     require_env CI_ENVIRONMENT "Defina development, testing o production."
+    require_env COMPOSE_PROJECT_NAME "Defina un nombre de proyecto Compose único."
+    require_project_name
     require_env APP_DOMAIN "Defina el dominio público del frontend."
     require_env APP_URL "Defina la URL pública del frontend."
     require_env app.baseURL "Defina la URL pública de la API."
@@ -226,4 +289,39 @@ validate_env_basics() {
         ''|http|same-domain|subdomain) ;;
         *) die "NGINX_MODE debe ser http, same-domain o subdomain." ;;
     esac
+
+    case "$(env_get CI_ENVIRONMENT)" in
+        production)
+            if [ "$(env_get jwt.secret)" = "cambie-esta-clave-por-una-aleatoria-de-64-caracteres" ]; then
+                die "No use el jwt.secret de .env.example en producción."
+            fi
+            jwt_secret=$(env_get jwt.secret)
+            if [ "${#jwt_secret}" -lt 32 ] 2>/dev/null; then
+                die "jwt.secret debe tener al menos 32 caracteres en producción."
+            fi
+            [ "$(project_name)" != "sol_dev" ] || die "Producción no puede usar COMPOSE_PROJECT_NAME=sol_dev."
+            case "$(env_get APP_DOMAIN)" in
+                localhost|127.0.0.1) die "APP_DOMAIN no puede ser localhost en producción." ;;
+            esac
+            case "$(env_get APP_URL)" in
+                https://*) ;;
+                *) warn "APP_URL no usa HTTPS en producción; confirme que un proxy externo termina TLS." ;;
+            esac
+            case "$(env_get app.baseURL)" in
+                https://*) ;;
+                *) warn "app.baseURL no usa HTTPS en producción; confirme que un proxy externo termina TLS." ;;
+            esac
+            case "$(env_get NGINX_MODE)" in
+                http) warn "NGINX_MODE=http en producción solo es válido si un proxy externo termina TLS." ;;
+            esac
+            if [ "$(env_get DB_PASSWORD)" = "$(env_get DB_ROOT_PASSWORD)" ]; then
+                warn "DB_PASSWORD y DB_ROOT_PASSWORD son iguales; use contraseñas distintas."
+            fi
+            ;;
+    esac
+
+    jwt_secret=$(env_get jwt.secret)
+    if [ "${#jwt_secret}" -lt 32 ] 2>/dev/null; then
+        warn "jwt.secret tiene menos de 32 caracteres; use una clave aleatoria más larga."
+    fi
 }

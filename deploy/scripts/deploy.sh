@@ -3,14 +3,27 @@ set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
 
+trap 'code=$?; if [ "$code" -ne 0 ]; then
+    printf "\nDespliegue detenido (código %s). No se restauró nada automáticamente.\n" "$code" >&2
+    printf "Diagnóstico: revise el estado con docker compose -p %s ps y los logs del servicio afectado.\n" "$(project_name)" >&2
+    printf "Conserve el respaldo previo y no ejecute down -v.\n" >&2
+fi' EXIT
+
 case "${1:-}" in
     -h|--help)
         cat <<'USAGE'
 Uso: deploy/scripts/deploy.sh
 
-Actualiza una instalación de producción existente: valida el entorno, crea un
-respaldo, construye imágenes, aplica migraciones y recrea servicios sin borrar
-volúmenes. No ejecuta SystemSeeder ni restablece contraseñas.
+Actualiza una instalación de producción existente. Requiere:
+  - CI_ENVIRONMENT=production en el .env activo.
+  - COMPOSE_PROJECT_NAME distinto de sol_dev.
+  - Una base ya inicializada con usuarios.
+  - Certificados si NGINX_MODE es same-domain o subdomain.
+
+Pasos: valida configuración, arranca/verifica MySQL, exige base inicializada,
+crea un respaldo verificado, construye imágenes, aplica migraciones, recrea
+servicios, espera salud y comprueba /health. No ejecuta seeders, no restaura
+datos y no elimina volúmenes.
 USAGE
         exit 0
         ;;
@@ -21,11 +34,12 @@ esac
 require_repo
 docker_available
 validate_env_basics
-[ "$(env_get CI_ENVIRONMENT)" = "production" ] || die "deploy.sh requiere CI_ENVIRONMENT=production en el .env activo."
+require_prod_project
 require_env APP_DOMAIN "Defina el dominio público del frontend."
+assert_compose_project compose_prod
 
 case "$(env_get NGINX_MODE)" in
-    http) ;;
+    http) warn "NGINX_MODE=http; confirme que un proxy externo termina TLS." ;;
     same-domain|subdomain)
         CERT_DIR=$(env_get TLS_CERTS_DIR)
         [ -n "$CERT_DIR" ] || die "Falta TLS_CERTS_DIR."
@@ -34,14 +48,34 @@ case "$(env_get NGINX_MODE)" in
         ;;
 esac
 
+printf 'Entorno de destino: producción\n'
+printf 'Proyecto Compose: %s\n' "$(project_name)"
+printf 'Dominio: %s\n' "$(env_get APP_DOMAIN)"
+
 printf 'Validando configuración Compose...\n'
-compose_prod config >/dev/null
+compose_prod config -q
 
 printf 'Asegurando base de datos...\n'
 compose_prod up -d db
 wait_for_service compose_prod db 90
 
-printf 'Creando respaldo previo...\n'
+printf 'Verificando que la base esté inicializada...\n'
+TABLES=$(compose_prod exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL'
+SELECT COUNT(*) FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_name = 'users';
+SQL
+) || die "No se pudo consultar la base de datos. Revise el servicio db."
+TABLES=$(printf '%s' "$TABLES" | tr -d '[:space:]')
+[ "${TABLES:-0}" = "1" ] || die "La base no está inicializada. Use bootstrap.sh --prod --authorize en una instalación nueva; deploy.sh no crea la instalación inicial."
+
+USERS=$(compose_prod exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL'
+SELECT COUNT(*) FROM users;
+SQL
+) || die "No se pudo contar los usuarios de la base."
+USERS=$(printf '%s' "$USERS" | tr -d '[:space:]')
+[ "${USERS:-0}" -gt 0 ] || die "La base no contiene usuarios. Use bootstrap.sh --prod --authorize para una instalación nueva."
+
+printf 'Creando respaldo previo verificado...\n'
 "$ROOT/deploy/scripts/backup.sh" prod
 
 printf 'Construyendo imágenes...\n'
@@ -58,5 +92,7 @@ for service in db backend frontend nginx; do
 done
 
 http_ok "$(nginx_health_url)" || die "La verificación /health falló después del despliegue."
-printf '\nDespliegue completado. Los volúmenes se conservaron.\n'
-printf 'Si una comprobación crítica falla, no ejecute down -v: conserve este estado para recuperación.\n'
+printf '\nDespliegue completado correctamente.\n'
+printf 'Proyecto: %s\n' "$(project_name)"
+printf 'Frontend: %s\n' "$(env_get APP_URL)"
+printf 'Los volúmenes se conservaron. Si una comprobación crítica falla, no ejecute down -v.\n'

@@ -1,90 +1,52 @@
 # Pruebas
 
-## Frontend
+Docker es la vía oficial. Los comandos se ejecutan desde la raíz del repositorio
+y no requieren PHP, Node.js, Composer ni MySQL en el host.
+
+## Pruebas oficiales
 
 ```bash
-cd frontend
-npm test        # estáticas: footer legal, rutas, casillas y versión de términos
-npm run lint
-npm run build
+./deploy/scripts/test.sh all        # backend + frontend + build
+./deploy/scripts/test.sh backend    # PHPUnit en el contenedor backend
+./deploy/scripts/test.sh frontend   # npm test + lint + build
+./deploy/scripts/test.sh http       # smoke HTTP no destructivo
 ```
 
-## Unitarias (backend)
+`test.sh http` requiere el stack activo (`./deploy/scripts/dev.sh up`) y comprueba
+`/health`, `/`, `/api/ofertas`, el `401` de `/api/auth/me`, CORS y el frontend.
+No crea ni modifica datos.
+
+### Backend
+
+`tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
+`SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`, `HtmlSanitizerTest`,
+`TerminosTest`, `EnlaceActivacionTest` y las pruebas de correo.
 
 ```bash
-cd backend
-vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.php
+./deploy/scripts/test.sh backend
+./deploy/scripts/dev.sh run backend php vendor/bin/phpunit tests/unit/ValidadorTest.php
 ```
 
-`tests/unit/ValidadorTest.php` cubre, entre otras reglas, la validación de teléfono
-(acepta 9 u 11 dígitos; rechaza 8, 10, 12 y no numéricos).
-`tests/unit/SystemSeederTest.php` cubre las validaciones del bootstrap del administrador
-inicial (usuario/contraseña ausentes o inválidos) sin tocar la base de datos.
-
-> El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
-> se validaron manualmente contra la API; aún no tienen pruebas automatizadas.
-> `test_identidad.sh` requiere `turnstile.enabled=false` en el `.env` de la raíz, igual que los
-> demás smoke tests que inician sesión.
-
-## Smoke de la API (integración)
-
-Cada script levanta un servidor temporal (`php spark serve`; `test_identidad.sh` usa
-:8081 para no colisionar), ejecuta el flujo y lo apaga. Requieren MySQL migrado y con los seeds base: `SystemSeeder`
-(datos iniciales) + `DatosPruebaSeeder` (fixtures de las cuentas que usan los
-scripts). `SystemSeeder` requiere `INITIAL_ADMIN_*` en el `.env` de la raíz.
+### Frontend
 
 ```bash
-./deploy/scripts/dev.sh up
-# Use una base de pruebas aislada: no cargue DatosPruebaSeeder sobre datos reales.
-cd backend && php spark migrate && php spark db:seed SystemSeeder && php spark db:seed DatosPruebaSeeder && cd ..
-./tests/smoke/test_api.sh              # auth por rol, alta admin de empresas, CV
-./tests/smoke/test_ofertas.sh          # ciclo de ofertas: revisión municipal, reenvío y cierre
-./tests/smoke/test_aprobacion_ofertas.sh # crear→pendiente, aprobar/rechazar, visibilidad,
-                                         # permisos (empresa/postulante no aprueban) y
-                                         # mass assignment de estado
-./tests/smoke/test_fase3.sh            # bolsa/búsqueda, postulaciones y perfil (contacto + CV)
-./tests/smoke/test_fase4.sh            # bandeja empresa, estados, CV autorizado
-./tests/smoke/test_fase5.sh            # actividades, difusión y permisos por rol
-./tests/smoke/test_fase6.sh            # contrataciones y reportes
-./tests/smoke/test_seguridad.sh        # booleanos estrictos, fechas calendáricas, enlaces
-                                       # http(s), rate limit público y cabeceras
-./tests/smoke/test_rte.sh              # texto enriquecido: saneado backend (script/
-                                       # iframe/svg/eventos/javascript:), enlaces http(s)
-                                       # con rel, texto plano heredado y límite 10.000
-                                       # caracteres de texto visible
-./tests/smoke/test_identidad.sh        # login por RUC/DNI y rechazo de duplicados
-./tests/smoke/test_reporte_empresa.sh  # reporte Excel de empresa: rol, aislamiento A/B,
-                                       # filtros de fecha y columnas del XLSX
-./tests/smoke/test_desarrollo_nuevo.sh # auto-registro de empresa (RUC real), aprobación
-                                        # admin, enlace de activación, revisión municipal
-                                        # de ofertas, bolsa pública sin sesión
+./deploy/scripts/test.sh frontend
 ```
 
-> Los scripts agregan datos de prueba; para volver al estado base tras correrlos:
-> `cd backend && php spark migrate:refresh && php spark db:seed SystemSeeder && php spark db:seed DatosPruebaSeeder`.
-> Las credenciales de prueba (`Admin123!`, `Empresa123!`, `Postu123!`, RUC/DNI de ejemplo)
-> viven únicamente en `DatosPruebaSeeder` y en estos scripts; no forman parte de la
-> instalación inicial.
+Incluye las pruebas estáticas de documentos legales, lint y build. La imagen de
+desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
 
-Notas:
+## Pruebas de integración profundas (legado)
 
-- `test_api.sh` incluye la verificación de que un administrador **no puede desactivar su
-  propia cuenta** (403) y que la reactivación de otros usuarios sigue funcionando.
-- `test_identidad.sh` verifica que los registros y solicitudes sin `terms_accepted` o con
-  `terms_accepted: false` respondan 422. Los payloads válidos de los smoke tests envían
-  `terms_accepted: true`.
-- La búsqueda pública (`/postulante/buscar`) ya **no** filtra por "Puesto o empresa"; los
-  filtros vigentes son categoría, ubicación, formación y experiencia.
+Los scripts `test_api.sh`, `test_ofertas.sh`, `test_fase3.sh`… son legado:
+inician `php spark serve` y usan `python3`/`curl` del host. No forman parte del
+flujo oficial Docker y **no deben apuntar a desarrollo ni a producción**. Si
+necesita ejecutarlos, use una base de datos aislada, siembrela con
+`DatosPruebaSeeder` y hágalo fuera de este repositorio. Su migración a
+contenedores está pendiente y se documentará cuando esté disponible.
 
-- `test_desarrollo_nuevo.sh` verifica un RUC real contra SUNAT: requiere `sunat.token` en
-  el `.env` de la raíz (si el token no está o el RUC no es resoluble, los pasos 1-2 fallan; el
-  resto del flujo se puede probar con el enlace interno del admin).
-- Los scripts de CV (subida/descarga) dependen de `storage.driver` del `.env` local: con
-  driver `supabase` la subida y la URL firmada funcionan contra el bucket configurado; los
-  checks de descarga por `archivo/{clave}` son propios del driver `local`.
-- El retiro de las secciones del perfil (formación/experiencia/habilidades/cursos) dejó
-  fuera de estos scripts su CRUD; el requisito de postular ahora es **contacto completo +
-  CV vigente** (cubierto en `test_fase3.sh`).
+El rate limiting, el límite de 4 CV por mes y el saneamiento de errores se
+validaron manualmente contra la API; aún no tienen pruebas automatizadas.
 
 La trazabilidad funcional contra la especificación está en
 [`docs/matriz-cumplimiento.md`](../docs/matriz-cumplimiento.md).

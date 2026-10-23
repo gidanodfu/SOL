@@ -3,26 +3,56 @@ set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
 
+TARGET=all
+BUILD=1
+for arg in "$@"; do
+    case "$arg" in
+        all|backend|frontend|http) TARGET=$arg ;;
+        --no-build) BUILD=0 ;;
+        -h|--help)
+            cat <<'USAGE'
+Uso: deploy/scripts/test.sh [all|backend|frontend|http] [--no-build]
+
+Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host
+ni modifica datos de producción.
+
+  all       pruebas backend + frontend + build (por defecto)
+  backend   PHPUnit dentro del contenedor backend
+  frontend  npm test + lint + build dentro del contenedor frontend
+  http      smoke HTTP no destructivo contra el stack de desarrollo activo
+
+Opciones:
+  --no-build  reutiliza las imágenes existentes en lugar de reconstruirlas.
+USAGE
+            exit 0
+            ;;
+        *) die "Argumento desconocido: $arg" ;;
+    esac
+done
+
 require_repo
 docker_available
 validate_env_basics
+require_dev_project
 
-TARGET="${1:-all}"
-case "$TARGET" in
-    all|backend|frontend) ;;
-    -h|--help)
-        cat <<'USAGE'
-Uso: deploy/scripts/test.sh [all|backend|frontend]
+printf 'Validando configuración antes de las pruebas...\n'
+"$ROOT/deploy/scripts/validate.sh" --dev
 
-Ejecuta pruebas dentro de contenedores de desarrollo. No instala dependencias
-en el host ni modifica datos de producción.
-USAGE
-        exit 0
-        ;;
-    *) die "Objetivo inválido: $TARGET" ;;
-esac
+if [ "$TARGET" = "http" ]; then
+    require_service_running compose_dev backend
+    require_service_running compose_dev frontend
+    B="http://127.0.0.1:$(env_get DEV_API_PORT)"
+    F="http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)"
+    printf 'Ejecutando smoke HTTP no destructivo (%s, %s)...\n' "$B" "$F"
+    B="$B" F="$F" "$ROOT/tests/smoke/test_docker_http.sh"
+    exit 0
+fi
 
-compose_dev build backend frontend
+if [ "$BUILD" = "1" ]; then
+    printf 'Construyendo imágenes de desarrollo...\n'
+    compose_dev build backend frontend
+fi
+
 compose_dev up -d db
 wait_for_service compose_dev db 60
 
@@ -32,8 +62,8 @@ if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
 fi
 
 if [ "$TARGET" = "all" ] || [ "$TARGET" = "frontend" ]; then
-    printf 'Pruebas y compilación frontend...\n'
-    compose_dev run --rm --no-deps frontend sh -c 'npm test && npm run build'
+    printf 'Pruebas, lint y compilación frontend...\n'
+    compose_dev run --rm --no-deps frontend sh -c 'npm test && npm run lint && npm run build'
 fi
 
 printf 'Pruebas completadas para: %s\n' "$TARGET"
