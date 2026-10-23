@@ -5,6 +5,8 @@ import { Mensaje } from '../../components/UI';
 import GoogleButton from '../../components/GoogleButton';
 import Turnstile from '../../components/Turnstile';
 import PasswordRequirements from '../../components/PasswordRequirements';
+import TermsCheckbox from '../../components/TermsCheckbox';
+import AuthFooter from '../../components/AuthFooter';
 import { passwordCumple } from '../../utils/password';
 import { useAuth } from '../../context/AuthContext';
 import { useTema } from '../../context/ThemeContext';
@@ -26,6 +28,8 @@ export default function Registro() {
   const [verificandoDni, setVerificandoDni] = useState(false);
   const [intentoPassword, setIntentoPassword] = useState(false);
   const [dniVerificado, setDniVerificado] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [errorTerminos, setErrorTerminos] = useState(null);
   const turnstileRef = useRef(null);
   const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
 
@@ -88,11 +92,16 @@ export default function Registro() {
       setError('El teléfono debe tener 9 u 11 dígitos.');
       return;
     }
+    if (!aceptaTerminos) {
+      setErrorTerminos('Debes aceptar los Términos y Condiciones para crear tu cuenta.');
+      return;
+    }
+    setErrorTerminos(null);
     setEnviando(true);
     setError(null);
     setOk(null);
     try {
-      await registrarPostulante({ ...form, turnstile_token: turnstileToken });
+      await registrarPostulante({ ...form, terms_accepted: true, turnstile_token: turnstileToken });
       setOk('Cuenta creada correctamente. ¡Bienvenido!');
       navigate('/postulante/buscar', { replace: true });
     } catch (err) {
@@ -296,6 +305,23 @@ export default function Registro() {
               </div>
             </div>
 
+            <TermsCheckbox
+              id="acepta-terminos-postulante"
+              checked={aceptaTerminos}
+              onChange={(e) => { setAceptaTerminos(e.target.checked); setErrorTerminos(null); }}
+              error={errorTerminos}
+            >
+              Al registrarme, acepto los{' '}
+              <a
+                href="/terminos-condiciones"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Términos y Condiciones
+              </a>.
+            </TermsCheckbox>
+
             <button
               type="submit"
               className={`login-btn-submit ${enviando ? 'login-btn-loading' : ''}`}
@@ -322,13 +348,7 @@ export default function Registro() {
         </div>
       </main>
 
-      {/* Pie de página */}
-      <footer className="login-footer">
-        <svg className="login-footer-candado" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 1C8.676 1 6 3.676 6 7v2H4v14h16V9h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v2H8V7c0-2.276 1.724-4 4-4zm0 10c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
-        </svg>
-        Conexión Segura - Portal Interno © 2026 MDJLO
-      </footer>
+      <AuthFooter />
     </div>
   );
 }

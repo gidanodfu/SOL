@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Entities\Usuario;
 use App\Exceptions\ApiException;
 use App\Libraries\Identidad;
+use App\Libraries\Terminos;
 use App\Models\PostulanteModel;
 use App\Models\RefreshTokenModel;
 use App\Models\UserModel;
@@ -265,13 +266,14 @@ class AuthService
         $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
 
         Validador::validar($datos, [
-            'dni'       => ['required', 'dni'],
-            'nombres'   => ['required', 'max:100'],
-            'apellidos' => ['required', 'max:100'],
-            'email'     => ['email'],
-            'telefono'  => ['telefono'],
-            'password'  => ['required', 'password'],
-            'password2' => ['required', 'igual:password'],
+            'dni'            => ['required', 'dni'],
+            'nombres'        => ['required', 'max:100'],
+            'apellidos'      => ['required', 'max:100'],
+            'email'          => ['email'],
+            'telefono'       => ['telefono'],
+            'password'       => ['required', 'password'],
+            'password2'      => ['required', 'igual:password'],
+            'terms_accepted' => ['required', 'aceptacion'],
         ]);
 
         $dni = $datos['dni'];
@@ -287,14 +289,16 @@ class AuthService
             $this->users->db->transStart();
 
             $this->users->insert([
-                'username'      => $dni,
-                'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
-                'rol'           => 'postulante',
-                'nombres'       => $datos['nombres'],
-                'apellidos'     => $datos['apellidos'],
-                'email'         => $datos['email'],
-                'telefono'      => $datos['telefono'],
-                'estado'        => 'activo',
+                'username'          => $dni,
+                'password_hash'     => password_hash($datos['password'], PASSWORD_DEFAULT),
+                'rol'               => 'postulante',
+                'nombres'           => $datos['nombres'],
+                'apellidos'         => $datos['apellidos'],
+                'email'             => $datos['email'],
+                'telefono'          => $datos['telefono'],
+                'estado'            => 'activo',
+                'terms_accepted_at' => date('Y-m-d H:i:s'),
+                'terms_version'     => Terminos::VERSION,
             ]);
             $userId = (int) $this->users->getInsertID();
 

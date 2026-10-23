@@ -37,12 +37,16 @@ esperar 'postulante: DNI' 200 POST '/api/auth/login' '{"username":"12345678","pa
 esperar 'postulante: DNI con puntos' 200 POST '/api/auth/login' '{"username":"12.345.678","password":"Postu123!"}'
 esperar 'postulante: correo rechazado' 401 POST '/api/auth/login' '{"username":"admin@mdjlo.gob.pe","password":"Postu123!"}'
 
-esperar 'registro: DNI duplicado' 409 POST '/api/registro/postulante' '{"dni":"12345678","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad@example.pe","telefono":"999888777","password":"Clave123!","password2":"Clave123!"}'
-esperar 'registro: correo duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000002","nombres":"Prueba","apellidos":"Duplicado","email":"admin@mdjlo.gob.pe","telefono":"999888771","password":"Clave123!","password2":"Clave123!"}'
-esperar 'registro: teléfono duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000003","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad2@example.pe","telefono":"987654321","password":"Clave123!","password2":"Clave123!"}'
+esperar 'registro: sin aceptación de términos' 422 POST '/api/registro/postulante' '{"dni":"70000010","nombres":"Prueba","apellidos":"Sin terminos","email":"sin.terminos@example.pe","telefono":"999888771","password":"Clave123!","password2":"Clave123!"}'
+esperar 'registro: aceptación false' 422 POST '/api/registro/postulante' '{"dni":"70000011","nombres":"Prueba","apellidos":"Terminos falsos","email":"terminos.falsos@example.pe","telefono":"999888772","password":"Clave123!","password2":"Clave123!","terms_accepted":false}'
+esperar 'registro: DNI duplicado' 409 POST '/api/registro/postulante' '{"dni":"12345678","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad@example.pe","telefono":"999888777","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
+esperar 'registro: correo duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000002","nombres":"Prueba","apellidos":"Duplicado","email":"admin@mdjlo.gob.pe","telefono":"999888771","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
+esperar 'registro: teléfono duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000003","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad2@example.pe","telefono":"987654321","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
 
-esperar 'solicitud: RUC existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20601234567","email":"nuevo.empresa@example.pe","telefono":"999888775","representante":"Prueba"}'
-esperar 'solicitud: correo existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20999999999","email":"admin@mdjlo.gob.pe","telefono":"999888774","representante":"Prueba"}'
+esperar 'solicitud: sin aceptación de términos' 422 POST '/api/solicitudes-empresa' '{"ruc":"20111111111","email":"empresa.sin.terminos@example.pe","telefono":"999888776","representante":"Prueba"}'
+esperar 'solicitud: aceptación false' 422 POST '/api/solicitudes-empresa' '{"ruc":"20111111112","email":"empresa.terminos.falsos@example.pe","telefono":"999888777","representante":"Prueba","terms_accepted":false}'
+esperar 'solicitud: RUC existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20601234567","email":"nuevo.empresa@example.pe","telefono":"999888775","representante":"Prueba","terms_accepted":true}'
+esperar 'solicitud: correo existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20999999999","email":"admin@mdjlo.gob.pe","telefono":"999888774","representante":"Prueba","terms_accepted":true}'
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])')
 esperar 'admin: alta usuario con correo existente' 409 POST '/api/admin/usuarios' '{"username":"prueba.identidad","nombres":"Prueba","apellidos":"Identidad","email":"admin@mdjlo.gob.pe","telefono":"988777111","password":"Clave123!"}' "Authorization: Bearer $TA"

@@ -29,6 +29,10 @@ import MisPostulaciones from '../pages/postulante/MisPostulaciones';
 import OportunidadesPostulante from '../pages/postulante/Oportunidades';
 import Cuenta from '../pages/cuenta/Cuenta';
 import Temas from '../pages/configuracion/Temas';
+import PoliticaPrivacidad from '../pages/legal/PoliticaPrivacidad';
+import TerminosCondiciones from '../pages/legal/TerminosCondiciones';
+import AvisoLegal from '../pages/legal/AvisoLegal';
+import PoliticaCookies from '../pages/legal/PoliticaCookies';
 
 export function Rutas() {
   return (
@@ -41,6 +45,12 @@ export function Rutas() {
       <Route path="/registro" element={<RutaPublica><Registro /></RutaPublica>} />
       <Route path="/registro-empresa" element={<RegistroEmpresa />} />
       <Route path="/activar-cuenta/:token" element={<ActivarCuenta />} />
+
+      {/* Documentos legales públicos: no dependen de la sesión ni redirigen a login. */}
+      <Route path="/politica-privacidad" element={<PoliticaPrivacidad />} />
+      <Route path="/terminos-condiciones" element={<TerminosCondiciones />} />
+      <Route path="/aviso-legal" element={<AvisoLegal />} />
+      <Route path="/politica-cookies" element={<PoliticaCookies />} />
 
       {/* Bolsa de empleo pública: se ve sin sesión. Para postulantes autenticados
           se conserva el cabecero de postulante (LayoutBusqueda decide). */}

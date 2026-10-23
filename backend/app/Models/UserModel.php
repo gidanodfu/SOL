@@ -17,6 +17,7 @@ class UserModel extends Model
     protected $allowedFields = [
         'username', 'password_hash', 'rol', 'proveedor', 'proveedor_id',
         'nombres', 'apellidos', 'email', 'telefono', 'estado', 'ultimo_acceso',
+        'terms_accepted_at', 'terms_version',
     ];
 
     public function buscarPorUsername(string $username): ?Usuario

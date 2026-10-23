@@ -262,6 +262,10 @@ class UsuarioService
             'telefono'      => $usuario->telefono,
             'estado'        => $usuario->estado,
             'ultimo_acceso' => $usuario->ultimo_acceso ? $usuario->ultimo_acceso->format('Y-m-d H:i:s') : null,
+            'terms_accepted_at' => $usuario->terms_accepted_at
+                ? $usuario->terms_accepted_at->format('Y-m-d H:i:s')
+                : null,
+            'terms_version' => $usuario->terms_version,
         ];
     }
 }

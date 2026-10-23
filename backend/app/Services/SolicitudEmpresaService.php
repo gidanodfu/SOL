@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Exceptions\ApiException;
 use App\Libraries\Identidad;
+use App\Libraries\Terminos;
 use App\Models\ActivacionModel;
 use App\Models\EmpresaModel;
 use App\Models\SolicitudEmpresaModel;
@@ -73,10 +74,11 @@ class SolicitudEmpresaService
         $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
 
         Validador::validar($datos, [
-            'ruc'           => ['required', 'ruc'],
-            'email'         => ['required', 'email', 'max:150'],
-            'telefono'      => ['required', 'telefono'],
-            'representante' => ['required', 'max:150'],
+            'ruc'            => ['required', 'ruc'],
+            'email'          => ['required', 'email', 'max:150'],
+            'telefono'       => ['required', 'telefono'],
+            'representante'  => ['required', 'max:150'],
+            'terms_accepted' => ['required', 'aceptacion'],
         ]);
 
         $ruc = $datos['ruc'];
@@ -111,14 +113,16 @@ class SolicitudEmpresaService
             $this->solicitudes->db->transStart();
 
             $this->solicitudes->insert([
-                'ruc'              => $ruc,
-                'razon_social'     => $info['razon_social'],
-                'nombre_comercial' => $info['nombre_comercial'],
-                'direccion'        => $info['direccion'],
-                'email'            => $datos['email'],
-                'telefono'         => $datos['telefono'],
-                'representante'    => $datos['representante'],
-                'estado'           => 'pendiente',
+                'ruc'               => $ruc,
+                'razon_social'      => $info['razon_social'],
+                'nombre_comercial'  => $info['nombre_comercial'],
+                'direccion'         => $info['direccion'],
+                'email'             => $datos['email'],
+                'telefono'          => $datos['telefono'],
+                'representante'     => $datos['representante'],
+                'estado'            => 'pendiente',
+                'terms_accepted_at' => date('Y-m-d H:i:s'),
+                'terms_version'     => Terminos::VERSION,
             ]);
             $id = (int) $this->solicitudes->getInsertID();
 
@@ -213,14 +217,16 @@ class SolicitudEmpresaService
             $hashTemporal = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
 
             $this->users->insert([
-                'username'      => $ruc,
-                'password_hash' => $hashTemporal,
-                'rol'           => 'empresa',
-                'nombres'       => $solicitud['razon_social'],
-                'apellidos'     => $solicitud['representante'],
-                'email'         => $email,
-                'telefono'      => $telefono,
-                'estado'        => 'inactivo',
+                'username'          => $ruc,
+                'password_hash'     => $hashTemporal,
+                'rol'               => 'empresa',
+                'nombres'           => $solicitud['razon_social'],
+                'apellidos'         => $solicitud['representante'],
+                'email'             => $email,
+                'telefono'          => $telefono,
+                'estado'            => 'inactivo',
+                'terms_accepted_at' => $solicitud['terms_accepted_at'] ?? null,
+                'terms_version'     => $solicitud['terms_version'] ?? null,
             ]);
             $userId = (int) $this->users->getInsertID();
 

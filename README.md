@@ -85,6 +85,11 @@ MySQL es la fuente de verdad.
 - **Errores seguros**: sobre uniforme `{success, message, data, errors}`; los `500`
   devuelven un mensaje genérico y el detalle solo queda en el log. El hash de contraseña
   nunca se expone en la API.
+- **Documentos legales y aceptación**: el pie de las pantallas públicas enlaza a
+  `/politica-privacidad`, `/terminos-condiciones`, `/aviso-legal` y `/politica-cookies`.
+  El registro manual de postulantes y la solicitud de afiliación exigen una casilla de
+  aceptación; el backend valida un booleano estricto y persiste `terms_accepted_at` y
+  `terms_version` en `users` o `solicitudes_empresa`, dentro de la misma transacción.
 - Nada se borra físicamente: activo/inactivo + historial (auditoría, `postulacion_historial`).
 
 ## 3. Requisitos
@@ -418,6 +423,15 @@ vendor/bin/phpunit            # o: vendor/bin/phpunit tests/unit/ValidadorTest.p
 
 `tests/unit/ValidadorTest.php` cubre, entre otras reglas, la validación de teléfono
 (acepta 9 u 11 dígitos; rechaza 8, 10, 12 y no numéricos).
+
+### Frontend
+
+```bash
+cd frontend
+npm test                       # pruebas estáticas de rutas, footer y aceptación
+npm run lint
+npm run build
+```
 
 ### Smoke de la API (integración)
 

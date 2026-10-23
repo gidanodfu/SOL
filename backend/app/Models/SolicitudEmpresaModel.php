@@ -20,6 +20,6 @@ class SolicitudEmpresaModel extends Model
     protected $allowedFields = [
         'ruc', 'razon_social', 'nombre_comercial', 'direccion', 'email',
         'telefono', 'representante', 'estado', 'motivo_rechazo',
-        'resuelto_por', 'resuelto_en',
+        'resuelto_por', 'resuelto_en', 'terms_accepted_at', 'terms_version',
     ];
 }

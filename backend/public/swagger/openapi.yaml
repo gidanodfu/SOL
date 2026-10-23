@@ -3163,7 +3163,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [ruc, email, telefono, representante]
+              required: [ruc, email, telefono, representante, terms_accepted]
               properties:
                 ruc:
                   type: string
@@ -3177,6 +3177,9 @@ paths:
                   description: Teléfono de contacto (9 u 11 dígitos). Requerido.
                 representante:
                   type: string
+                terms_accepted:
+                  type: boolean
+                  description: Debe ser exactamente `true`. El servidor registra la versión vigente de los Términos y Condiciones y la fecha de aceptación.
       responses:
         '201':
           description: Solicitud enviada (queda pendiente de aprobación municipal).
@@ -3809,7 +3812,7 @@ components:
 
     RegistroPostulanteBody:
       type: object
-      required: [dni, nombres, apellidos, password, password2]
+      required: [dni, nombres, apellidos, password, password2, terms_accepted]
       properties:
         dni:
           type: string
@@ -3838,6 +3841,9 @@ components:
           type: string
           format: password
           description: Debe coincidir con `password`.
+        terms_accepted:
+          type: boolean
+          description: Debe ser exactamente `true`. El servidor registra la versión vigente de los Términos y Condiciones y la fecha de aceptación.
 
     CambiarContrasenaBody:
       type: object

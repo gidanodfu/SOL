@@ -14,7 +14,7 @@ class Usuario extends Entity
 {
     protected $datamap = [];
 
-    protected $dates = ['created_at', 'updated_at', 'ultimo_acceso'];
+    protected $dates = ['created_at', 'updated_at', 'ultimo_acceso', 'terms_accepted_at'];
 
     protected $casts = [
         'id'        => 'integer',
@@ -26,6 +26,7 @@ class Usuario extends Entity
         'email'     => '?string',
         'telefono'  => '?string',
         'estado'    => 'string',
+        'terms_version' => '?string',
     ];
 
     protected $hidden = ['password_hash'];

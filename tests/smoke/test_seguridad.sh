@@ -43,7 +43,7 @@ curl -s -o /dev/null -w "oferta http:%{http_code}\n" -X POST "$B/api/empresa/ofe
 
 paso "6. mass assignment en registro: rol/estado manipulados se ignoran"
 DNI=$((10000000 + RANDOM % 89999999))
-curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d "{\"dni\":\"$DNI\",\"nombres\":\"Prueba\",\"apellidos\":\"Seguridad\",\"password\":\"Clave12345!\",\"password2\":\"Clave12345!\",\"rol\":\"admin\",\"estado\":\"inactivo\"}" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"]["usuario"];print("rol:",d["rol"])'
+curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d "{\"dni\":\"$DNI\",\"nombres\":\"Prueba\",\"apellidos\":\"Seguridad\",\"password\":\"Clave12345!\",\"password2\":\"Clave12345!\",\"terms_accepted\":true,\"rol\":\"admin\",\"estado\":\"inactivo\"}" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"]["usuario"];print("rol:",d["rol"])'
 
 paso "7. rate limit público en /verificar-ruc (ráfaga 5)"
 for i in 1 2 3 4 5 6; do

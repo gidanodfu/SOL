@@ -1,5 +1,14 @@
 # Pruebas
 
+## Frontend
+
+```bash
+cd frontend
+npm test        # estáticas: footer legal, rutas, casillas y versión de términos
+npm run lint
+npm run build
+```
+
 ## Unitarias (backend)
 
 ```bash
@@ -58,6 +67,9 @@ Notas:
 
 - `test_api.sh` incluye la verificación de que un administrador **no puede desactivar su
   propia cuenta** (403) y que la reactivación de otros usuarios sigue funcionando.
+- `test_identidad.sh` verifica que los registros y solicitudes sin `terms_accepted` o con
+  `terms_accepted: false` respondan 422. Los payloads válidos de los smoke tests envían
+  `terms_accepted: true`.
 - La búsqueda pública (`/postulante/buscar`) ya **no** filtra por "Puesto o empresa"; los
   filtros vigentes son categoría, ubicación, formación y experiencia.
 
