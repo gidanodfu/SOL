@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
+    "test": "node --test tests/legal.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

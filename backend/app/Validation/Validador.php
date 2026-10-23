@@ -9,7 +9,8 @@ use App\Exceptions\ApiException;
 /**
  * Validación de datos recibidos desde el frontend. El backend siempre revalida
  * lo que React envía (RT-22). Reglas planas: required, min, max, email, ruc, dni,
- * telefono, fecha, fecha_hora, password, regex, enum, igual (confirmación de contraseñas).
+ * telefono, fecha, fecha_hora, password, aceptacion, regex, enum, igual
+ * (confirmación de contraseñas).
  */
 final class Validador
 {
@@ -89,7 +90,9 @@ final class Validador
 
             foreach ($reglasCampo as $regla) {
                 if ($regla === 'required' && self::esVacio($valor)) {
-                    $errores[$campo] = "El campo {$etiqueta} es obligatorio.";
+                    $errores[$campo] = $campo === 'terms_accepted'
+                        ? 'Debe aceptar los Términos y Condiciones para continuar.'
+                        : "El campo {$etiqueta} es obligatorio.";
                     break;
                 }
                 if (self::esVacio($valor)) {
@@ -115,6 +118,12 @@ final class Validador
 
                     case $regla === 'password' && ! self::esContrasenaSegura((string) $valor):
                         $errores[$campo] = 'La contraseña debe tener al menos 8 caracteres, una letra, un número y un símbolo especial.';
+                        break 2;
+
+                    // Aceptación explícita: solo el booleano JSON true. No se
+                    // aceptan "true", 1, "1" ni otros valores por coerción.
+                    case $regla === 'aceptacion' && $valor !== true:
+                        $errores[$campo] = 'Debe aceptar los Términos y Condiciones para continuar.';
                         break 2;
 
                     case $regla === 'fecha' && ! self::esFecha((string) $valor):

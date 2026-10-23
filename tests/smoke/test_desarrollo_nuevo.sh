@@ -23,11 +23,11 @@ echo "== 1. verificar RUC real (SUNAT) =="
 curl -s -X POST "$B/api/verificar-ruc" -H 'Content-Type: application/json' -d "{\"ruc\":\"$RUC\"}"
 
 echo "== 2. solicitar registro de empresa (debe autocompletar razon social) =="
-SID=$(curl -s -X POST "$B/api/solicitudes-empresa" -H 'Content-Type: application/json' -d "{\"ruc\":\"$RUC\",\"email\":\"$CORREO\",\"telefono\":\"014214340\",\"representante\":\"Ricardo B.\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+SID=$(curl -s -X POST "$B/api/solicitudes-empresa" -H 'Content-Type: application/json' -d "{\"ruc\":\"$RUC\",\"email\":\"$CORREO\",\"telefono\":\"014214340\",\"representante\":\"Ricardo B.\",\"terms_accepted\":true}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 echo "solicitud id=$SID"
 
 echo "== 3. duplicado pendiente => 409 =="
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/solicitudes-empresa" -H 'Content-Type: application/json' -d "{\"ruc\":\"$RUC\",\"email\":\"otro@mail.com\",\"telefono\":\"999999999\",\"representante\":\"Otro\"}"
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/solicitudes-empresa" -H 'Content-Type: application/json' -d "{\"ruc\":\"$RUC\",\"email\":\"otro@mail.com\",\"telefono\":\"999999999\",\"representante\":\"Otro\",\"terms_accepted\":true}"
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
 echo "== 4. admin ve solicitudes pendientes =="

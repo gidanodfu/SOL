@@ -17,6 +17,7 @@ npm install
 npm run dev       # http://localhost:5173 (origen permitido por CORS del backend)
 npm run build     # producción → dist/
 npm run lint      # oxlint
+npm test          # pruebas estáticas de documentos legales y aceptación
 npm run preview   # sirve dist/
 ```
 

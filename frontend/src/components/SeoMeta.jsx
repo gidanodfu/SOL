@@ -21,6 +21,22 @@ const PAGINAS = {
     titulo: 'Afiliación de empresa',
     descripcion: 'Solicita la afiliación de tu empresa a la bolsa de empleo municipal de José Leonardo Ortiz.',
   },
+  '/politica-privacidad': {
+    titulo: 'Política de Privacidad',
+    descripcion: 'Política de Privacidad del Sistema de Ofertas Laborales de la Municipalidad Distrital de José Leonardo Ortiz.',
+  },
+  '/terminos-condiciones': {
+    titulo: 'Términos y Condiciones',
+    descripcion: 'Términos y Condiciones de uso del Sistema de Ofertas Laborales de la Municipalidad Distrital de José Leonardo Ortiz.',
+  },
+  '/aviso-legal': {
+    titulo: 'Aviso Legal',
+    descripcion: 'Aviso Legal del Sistema de Ofertas Laborales de la Municipalidad Distrital de José Leonardo Ortiz.',
+  },
+  '/politica-cookies': {
+    titulo: 'Política de Cookies',
+    descripcion: 'Política de Cookies y almacenamiento del navegador del Sistema de Ofertas Laborales.',
+  },
   '/postulante/buscar': {
     titulo: 'Buscar empleo',
     descripcion: 'Explora ofertas laborales vigentes en José Leonardo Ortiz y postula con tu currículum.',

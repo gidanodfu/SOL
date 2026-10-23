@@ -62,7 +62,7 @@ curl -s "$B/api/postulante/perfil" -H "Authorization: Bearer $AT_P" | python3 -c
 curl -s "$B/api/postulante/dashboard" -H "Authorization: Bearer $AT_P" | js | head -c 300; echo
 
 paso "10. registro nuevo postulante DNI 87654321"
-curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d '{"dni":"87654321","nombres":"Luis","apellidos":"Perez Diaz","email":"luis@mail.com","password":"Clave12345!","password2":"Clave12345!"}' | js | head -c 300; echo
+curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d '{"dni":"87654321","nombres":"Luis","apellidos":"Perez Diaz","email":"luis@mail.com","password":"Clave12345!","password2":"Clave12345!","terms_accepted":true}' | js | head -c 300; echo
 
 paso "10b. login nuevo postulante"
 curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"87654321","password":"Clave12345!"}' | js | head -c 200; echo

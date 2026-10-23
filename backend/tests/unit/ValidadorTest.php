@@ -81,6 +81,34 @@ final class ValidadorTest extends TestCase
         );
     }
 
+    public function testAceptacionDeTerminosEsEstricta(): void
+    {
+        // Solo el booleano JSON true representa una aceptación válida.
+        Validador::validar(
+            ['terms_accepted' => true],
+            ['terms_accepted' => ['required', 'aceptacion']],
+        );
+
+        foreach ([null, false, 0, 1, 'true', '1', 'false', 'acepto'] as $invalido) {
+            try {
+                Validador::validar(
+                    ['terms_accepted' => $invalido],
+                    ['terms_accepted' => ['required', 'aceptacion']],
+                );
+                $this->fail('La aceptación inválida debió ser rechazada: ' . var_export($invalido, true));
+            } catch (ApiException $e) {
+                $this->assertSame(422, $e->getHttpCode());
+            }
+        }
+    }
+
+    public function testAceptacionAusenteEsRechazada(): void
+    {
+        $this->expectException(ApiException::class);
+        $this->expectExceptionMessage('Hay errores en los datos enviados.');
+        Validador::validar([], ['terms_accepted' => ['required', 'aceptacion']]);
+    }
+
     public function testPoliticaDeContrasena(): void
     {
         foreach (['abc', 'abcdefgh', 'abcdefg1', 'abcdefg@'] as $invalida) {

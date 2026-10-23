@@ -3,6 +3,8 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mensaje } from '../../components/UI';
 import Turnstile from '../../components/Turnstile';
+import TermsCheckbox from '../../components/TermsCheckbox';
+import AuthFooter from '../../components/AuthFooter';
 import { useTema } from '../../context/ThemeContext';
 import { enviarSolicitudEmpresa, verificarRuc } from '../../services/solicitudes';
 import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
@@ -19,6 +21,8 @@ export default function RegistroEmpresa() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(null);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [errorTerminos, setErrorTerminos] = useState(null);
   const [turnstileToken, setTurnstileToken] = useState(null);
   const turnstileRef = useRef(null);
   const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
@@ -64,6 +68,11 @@ export default function RegistroEmpresa() {
       setError('El teléfono debe tener 9 u 11 dígitos.');
       return;
     }
+    if (!aceptaTerminos) {
+      setErrorTerminos('Debes aceptar los Términos y Condiciones para enviar tu solicitud.');
+      return;
+    }
+    setErrorTerminos(null);
     setEnviando(true);
     setError(null);
     setOk(null);
@@ -73,6 +82,7 @@ export default function RegistroEmpresa() {
         email: form.email,
         telefono: form.telefono,
         representante: form.representante,
+        terms_accepted: true,
         turnstile_token: turnstileToken,
       });
       setOk(true);
@@ -185,6 +195,23 @@ export default function RegistroEmpresa() {
               </div>
             </div>
 
+            <TermsCheckbox
+              id="acepta-terminos-empresa"
+              checked={aceptaTerminos}
+              onChange={(e) => { setAceptaTerminos(e.target.checked); setErrorTerminos(null); }}
+              error={errorTerminos}
+            >
+              Al enviar mi solicitud de afiliación, acepto los{' '}
+              <a
+                href="/terminos-condiciones"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Términos y Condiciones
+              </a>.
+            </TermsCheckbox>
+
             <button type="submit" className={`login-btn-submit ${enviando ? 'login-btn-loading' : ''}`} disabled={enviando || !form.ruc_verificado}>
               {enviando ? <span className="login-btn-spinner" /> : null}
               {enviando ? 'ENVIANDO SOLICITUD...' : 'ENVIAR SOLICITUD'}
@@ -205,12 +232,7 @@ export default function RegistroEmpresa() {
         </div>
       </main>
 
-      <footer className="login-footer">
-        <svg className="login-footer-candado" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 1C8.676 1 6 3.676 6 7v2H4v14h16V9h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v2H8V7c0-2.276 1.724-4 4-4zm0 10c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
-        </svg>
-        Conexión Segura - Portal Interno © 2026 MDJLO
-      </footer>
+      <AuthFooter />
     </div>
   );
 }

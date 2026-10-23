@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Mensaje } from '../../components/UI';
 import PasswordRequirements from '../../components/PasswordRequirements';
+import AuthFooter from '../../components/AuthFooter';
 import { passwordCumple } from '../../utils/password';
 import { activarCuenta, verActivacion } from '../../services/solicitudes';
 import { errorApi } from '../../utils';
@@ -149,12 +150,7 @@ export default function ActivarCuenta() {
         </div>
       </main>
 
-      <footer className="login-footer">
-        <svg className="login-footer-candado" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 1C8.676 1 6 3.676 6 7v2H4v14h16V9h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v2H8V7c0-2.276 1.724-4 4-4zm0 10c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
-        </svg>
-        Conexión Segura - Portal Interno © 2026 MDJLO
-      </footer>
+      <AuthFooter />
     </div>
   );
 }

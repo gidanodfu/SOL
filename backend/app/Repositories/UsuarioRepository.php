@@ -53,7 +53,8 @@ class UsuarioRepository
         return $this->db->table('users')
             ->select('users.id, users.username, users.rol, users.proveedor, users.nombres,
                 users.apellidos, users.email, users.telefono, users.estado,
-                users.ultimo_acceso, users.created_at, users.updated_at')
+                users.ultimo_acceso, users.terms_accepted_at, users.terms_version,
+                users.created_at, users.updated_at')
             ->select('empresas.id AS empresa_id, empresas.razon_social, empresas.estado AS empresa_estado')
             ->join('empresas', 'empresas.user_id = users.id', 'LEFT')
             ->select('postulantes.id AS postulante_id')
