@@ -13,9 +13,11 @@ export default function Modal({
   abierto,
   titulo,
   subtitulo = null,
+  icono = null,
   alCerrar,
   acciones = null,
   tamano = 'normal',
+  etiquetaCerrar = 'Cerrar detalle',
   children,
 }) {
   const cajaRef = useRef(null);
@@ -37,7 +39,44 @@ export default function Modal({
     cajaRef.current?.focus();
 
     const alTeclear = (e) => {
-      if (e.key === 'Escape') cerrarRef.current();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cerrarRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const caja = cajaRef.current;
+      if (!caja) return;
+
+      const focusables = Array.from(caja.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((el) => el.getClientRects().length > 0);
+
+      if (focusables.length === 0) {
+        e.preventDefault();
+        caja.focus();
+        return;
+      }
+
+      const primero = focusables[0];
+      const ultimo = focusables[focusables.length - 1];
+      const activo = document.activeElement;
+
+      if (!caja.contains(activo)) {
+        e.preventDefault();
+        primero.focus();
+        return;
+      }
+      if (e.shiftKey && (activo === primero || activo === caja)) {
+        e.preventDefault();
+        ultimo.focus();
+        return;
+      }
+      if (!e.shiftKey && activo === ultimo) {
+        e.preventDefault();
+        primero.focus();
+      }
     };
     document.addEventListener('keydown', alTeclear);
 
@@ -52,7 +91,7 @@ export default function Modal({
 
   return (
     <div
-      className="modal-overlay"
+      className={`modal-overlay${tamano === 'exito' ? ' modal-overlay-exito' : ''}`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) alCerrar();
       }}
@@ -67,10 +106,11 @@ export default function Modal({
       >
         <header className="modal-cabecera">
           <div className="modal-titulo">
+            {icono && <div className="modal-icono">{icono}</div>}
             <h2 id={tituloId}>{titulo}</h2>
             {subtitulo && <p>{subtitulo}</p>}
           </div>
-          <button type="button" className="modal-cerrar" onClick={alCerrar} title="Cerrar" aria-label="Cerrar detalle">
+          <button type="button" className="modal-cerrar" onClick={alCerrar} title="Cerrar" aria-label={etiquetaCerrar}>
             <X size={18} aria-hidden="true" />
           </button>
         </header>

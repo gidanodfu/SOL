@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mensaje } from '../../components/UI';
+import { CheckCircle2 } from 'lucide-react';
+import Modal from '../../components/Modal';
+import { Boton, Mensaje } from '../../components/UI';
 import Turnstile from '../../components/Turnstile';
 import TermsCheckbox from '../../components/TermsCheckbox';
 import AuthFooter from '../../components/AuthFooter';
@@ -20,7 +22,9 @@ export default function RegistroEmpresa() {
   const [verificando, setVerificando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
-  const [ok, setOk] = useState(null);
+  const [ok, setOk] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const tituloRef = useRef(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [errorTerminos, setErrorTerminos] = useState(null);
   const [turnstileToken, setTurnstileToken] = useState(null);
@@ -56,6 +60,7 @@ export default function RegistroEmpresa() {
 
   const enviar = async (e) => {
     e.preventDefault();
+    if (ok) return;
     if (!form.ruc_verificado) {
       setError('Verifique primero el RUC antes de enviar la solicitud.');
       return;
@@ -75,7 +80,6 @@ export default function RegistroEmpresa() {
     setErrorTerminos(null);
     setEnviando(true);
     setError(null);
-    setOk(null);
     try {
       await enviarSolicitudEmpresa({
         ruc: form.ruc,
@@ -86,6 +90,7 @@ export default function RegistroEmpresa() {
         turnstile_token: turnstileToken,
       });
       setOk(true);
+      setModalAbierto(true);
       setForm((f) => ({ ...f, email: '', telefono: '', representante: '' }));
     } catch (err) {
       const det = err?.response?.data?.errors;
@@ -95,6 +100,11 @@ export default function RegistroEmpresa() {
       setTurnstileToken(null);
       turnstileRef.current?.reset();
     }
+  };
+
+  const cerrarModal = () => {
+    setModalAbierto(false);
+    window.setTimeout(() => tituloRef.current?.focus(), 0);
   };
 
   return (
@@ -107,20 +117,12 @@ export default function RegistroEmpresa() {
         </div>
 
         <div className="login-formulario login-formulario-registro">
-          <h2 className="login-formulario-titulo">AFILIACIÓN DE EMPRESA</h2>
+          <h2 ref={tituloRef} className="login-formulario-titulo" tabIndex={-1}>AFILIACIÓN DE EMPRESA</h2>
           <p className="login-formulario-sub">
             Complete la solicitud; la Municipalidad la revisará y le enviará un correo con el resultado.
           </p>
 
           <Mensaje>{error}</Mensaje>
-          {ok && (
-            <div className="alerta alerta-exito alerta-registro">
-              <strong>Solicitud enviada correctamente</strong>
-              <p>Hemos recibido tu solicitud de afiliación al Sistema de Empleo MDJLO. La Municipalidad revisará la información y te notificará el resultado por correo electrónico.</p>
-              <p>Revisa tu bandeja de entrada y, si no encuentras nuestro mensaje, comprueba también las carpetas de spam o correo no deseado.</p>
-              <p>Si la solicitud ya fue enviada, no necesitas registrarte nuevamente.</p>
-            </div>
-          )}
 
           <form onSubmit={enviar}>
             <div className="login-campo">
@@ -212,9 +214,9 @@ export default function RegistroEmpresa() {
               </a>.
             </TermsCheckbox>
 
-            <button type="submit" className={`login-btn-submit ${enviando ? 'login-btn-loading' : ''}`} disabled={enviando || !form.ruc_verificado}>
+            <button type="submit" className={`login-btn-submit ${enviando ? 'login-btn-loading' : ''}`} disabled={enviando || !form.ruc_verificado || ok}>
               {enviando ? <span className="login-btn-spinner" /> : null}
-              {enviando ? 'ENVIANDO SOLICITUD...' : 'ENVIAR SOLICITUD'}
+              {enviando ? 'ENVIANDO SOLICITUD...' : ok ? 'SOLICITUD ENVIADA' : 'ENVIAR SOLICITUD'}
             </button>
           </form>
 
@@ -231,6 +233,20 @@ export default function RegistroEmpresa() {
           </div>
         </div>
       </main>
+
+      <Modal
+        abierto={modalAbierto}
+        titulo="Solicitud enviada correctamente"
+        icono={<CheckCircle2 size={42} strokeWidth={1.8} aria-hidden="true" />}
+        alCerrar={cerrarModal}
+        tamano="exito"
+        etiquetaCerrar="Cerrar"
+        acciones={<Boton variante="primario" onClick={cerrarModal}>Cerrar</Boton>}
+      >
+        <p>Hemos recibido tu solicitud de afiliación al Sistema de Empleo MDJLO. La Municipalidad revisará la información y te notificará el resultado por correo electrónico.</p>
+        <p>Revisa tu bandeja de entrada y, si no encuentras nuestro mensaje, comprueba también las carpetas de spam o correo no deseado.</p>
+        <p>Si la solicitud ya fue enviada, no necesitas registrarte nuevamente.</p>
+      </Modal>
 
       <AuthFooter />
     </div>
