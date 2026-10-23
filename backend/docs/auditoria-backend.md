@@ -255,7 +255,7 @@ Se documentan **74 operaciones bajo `/api`** + la raíz `GET /` (75 en total). R
 | S9 | RECOMENDACIÓN | `object_key` interno del CV en respuestas JSON | `PostulanteRepository.php:44-55`, `PostulacionService.php:157` | Bajo riesgo; filtrar. |
 | S10 | RECOMENDACIÓN | Enumeración por mensajes en registro público | `AuthService.php:132-137` | Mensaje genérico. |
 | S11 | **RESUELTO (2026-09-15)** | `limite` sin tope en listados admin | `UsuariosController.php`, `EmpresasController.php`, `SolicitudesEmpresaController.php` | Acotado a 1–200 con `offset` >= 0. |
-| S12 | **RESUELTO (2026-09-10)** | Trazas en errores no controlados si el entorno es `development` y sin HTTPS forzado | `.env` local (`CI_ENVIRONMENT=development`, `forceGlobalSecureRequests=false`), `Config/Exceptions.php:102-109` | `ApiExceptionHandler` responde mensaje genérico en `500` y registra el detalle solo en el log; confirmar igualmente HTTPS/entorno en despliegue (`env.production.example`). |
+| S12 | **RESUELTO (2026-09-10)** | Trazas en errores no controlados si el entorno es `development` y sin HTTPS forzado | `.env` local (`CI_ENVIRONMENT=development`, `forceGlobalSecureRequests=false`), `Config/Exceptions.php:102-109` | `ApiExceptionHandler` responde mensaje genérico en `500` y registra el detalle solo en el log; confirmar igualmente HTTPS/entorno en despliegue (`.env.example` y `docs/operaciones.md`). |
 | S13 | RECOMENDACIÓN | CORS default de desarrollo | `Config/Cors.php:52` (`http://localhost:5173`) | Confirmar `cors.allowedOrigins` en producción. |
 | S14 | RECOMENDACIÓN | IP auditada tras proxy | `AuditoriaService.php:26-29`, `App.php:183` (`proxyIPs=[]`) | Configurar `proxyIPs`. |
 
