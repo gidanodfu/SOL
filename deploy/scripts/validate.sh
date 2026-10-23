@@ -47,6 +47,7 @@ validate_env_basics
 [ -f "$ROOT/frontend/nginx.conf" ] || die "Falta frontend/nginx.conf."
 [ -f "$ROOT/deploy/nginx/render.sh" ] || die "Falta deploy/nginx/render.sh."
 [ -f "$ROOT/deploy/scripts/restore.sh" ] || die "Falta deploy/scripts/restore.sh."
+[ -f "$ROOT/deploy/scripts/smoke.sh" ] || die "Falta deploy/scripts/smoke.sh."
 [ -f "$ROOT/tests/smoke/test_docker_http.sh" ] || die "Falta tests/smoke/test_docker_http.sh."
 
 case "$TARGET" in
@@ -70,6 +71,7 @@ for script in \
     "$ROOT/deploy/scripts/bootstrap.sh" \
     "$ROOT/deploy/scripts/backup.sh" \
     "$ROOT/deploy/scripts/restore.sh" \
+    "$ROOT/deploy/scripts/smoke.sh" \
     "$ROOT/deploy/scripts/lib/common.sh"; do
     [ -f "$script" ] || die "Falta $script."
     [ -x "$script" ] || die "El script $script no es ejecutable."
@@ -113,9 +115,19 @@ if grep -q 'VITE_SECRET\|JWT_SECRET\|DB_PASSWORD\|RESEND_API_KEY' "$ROOT/fronten
     die "El Dockerfile del frontend no debe recibir variables privadas."
 fi
 
-for entry in '.env' 'backend/writable' 'frontend/node_modules' 'frontend/dist' 'deploy/runtime'; do
+for entry in '.env' 'backend/writable' 'backend/vendor' 'frontend/node_modules' 'frontend/dist' 'deploy/runtime'; do
     grep -Fq "$entry" "$ROOT/.dockerignore" || die "Falta '$entry' en .dockerignore."
 done
+
+if git -C "$ROOT" ls-files | grep -Eq '(^|/)(vendor|node_modules)/'; then
+    die "Hay dependencias de Composer/npm versionadas por accidente. Elimínelas del índice."
+fi
+if compose_dev config 2>/dev/null | grep -Eq 'source: .*(backend/vendor|frontend/node_modules)'; then
+    die "Compose de desarrollo monta vendor/node_modules del host; use las dependencias de la imagen."
+fi
+if [ -d "$ROOT/backend/vendor" ] || [ -d "$ROOT/frontend/node_modules" ] || [ -d "$ROOT/frontend/dist" ]; then
+    warn "Hay artefactos locales (backend/vendor, frontend/node_modules o frontend/dist); el flujo oficial los ignora y los reconstruye dentro de Docker."
+fi
 
 MODE=$(env_get NGINX_MODE)
 if [ "$MODE" = "same-domain" ] || [ "$MODE" = "subdomain" ]; then

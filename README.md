@@ -14,7 +14,7 @@ La especificación funcional está en `docs/requerimientos.md` y la trazabilidad
 SOL/
 ├── backend/               CodeIgniter 4 (PHP 8.4.27 en Docker) — API REST, reglas, auth
 ├── frontend/              React + Vite (Node 22.23.4 en Docker) — SPA
-├── tests/smoke/           Pruebas HTTP y scripts de integración (legado profundo)
+├── tests/smoke/           Smoke HTTP y pruebas de integración en Docker
 ├── docs/                  Requerimientos, cumplimiento y operaciones
 ├── deploy/                Compose, Nginx, scripts y certificados
 ├── .env.example           Plantilla única de configuración
@@ -428,14 +428,15 @@ Si falta una extensión, corrija `backend/Dockerfile` y reconstruya con
 
 ## 18. Pruebas
 
-Todas las pruebas oficiales se ejecutan desde el host mediante scripts que usan
-contenedores. No se requiere PHP ni Node.js instalados en el host.
+Todas las pruebas oficiales se ejecutan mediante Docker. No se requiere PHP,
+Node.js, Composer, npm ni MySQL instalados en el host.
 
 ```bash
 ./deploy/scripts/test.sh all        # backend + frontend + build
 ./deploy/scripts/test.sh backend    # PHPUnit
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo (stack activo)
+./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 
 ### Unitarias backend
@@ -473,13 +474,20 @@ Con el stack de desarrollo activo (`dev.sh up`):
 Comprueba `/health`, `/`, `/api/ofertas`, el rechazo `401` de `/api/auth/me`, el
 preflight CORS y el frontend. No crea ni modifica datos.
 
-### Pruebas de integración profundas (legado)
+### Pruebas de integración profundas
 
-Los scripts de `tests/smoke/*.sh` que crean datos (ofertas, empresas, CV) son
-**legado** y no forman parte del flujo oficial Docker: inician `php spark serve`
-y usan `python3`/`curl` del host, por lo que requieren una base aislada y
-herramientas adicionales. No deben apuntar a desarrollo ni a producción. Su
-migración a contenedores está pendiente; consulte [`tests/README.md`](tests/README.md).
+```bash
+./deploy/scripts/test.sh smoke
+```
+
+El runner construye una imagen de pruebas con `bash`, `python3` y `curl`,
+levanta un MySQL **temporal en tmpfs** dentro de una red efímera, aplica
+migraciones y seeds, y ejecuta los scripts históricos con `php spark serve`
+**dentro del contenedor**. No toca `sol_dev_*`, no publica puertos y no usa
+herramientas de aplicación del host. `test_desarrollo_nuevo.sh` queda excluido
+porque depende de SUNAT/RUC real; consulte [`tests/README.md`](tests/README.md).
+El runner marca `WARN`/`FAIL` si un script histórico conserva aserciones
+desactualizadas.
 
 > El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
 > se validaron manualmente contra la API; aún no tienen pruebas automatizadas.

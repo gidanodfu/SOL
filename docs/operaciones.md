@@ -90,6 +90,7 @@ Comandos de trabajo dentro de contenedores:
 ./deploy/scripts/test.sh backend
 ./deploy/scripts/test.sh frontend
 ./deploy/scripts/test.sh http
+./deploy/scripts/test.sh smoke
 ```
 
 `validate.sh` distingue fallos críticos de advertencias. `--runtime` solo

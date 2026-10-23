@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080
 LOG=/tmp/opencode/spark.log
 
-env 'storage.driver=local' php spark serve > "$LOG" 2>&1 &
+env 'storage.driver=local' php spark serve --host 127.0.0.1 > "$LOG" 2>&1 &
 SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
@@ -52,8 +52,13 @@ curl -s -o /dev/null -w "desactivar http:%{http_code}\n" -X PUT "$B/api/empresa/
 curl -s -o /dev/null -w "estado con postulación desactivada http:%{http_code} (409)\n" -X PUT "$B/api/empresa/postulaciones/1/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"estado":"seleccionado"}'
 curl -s -o /dev/null -w "reactivar http:%{http_code}\n" -X PUT "$B/api/empresa/postulaciones/1/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}'
 
-echo "== 8. historial tras cambios (DB) =="
-docker exec empleo_mysql mysql -uempleo -pempleo123 sistema_empleo -e "SELECT postulacion_id, estado_anterior, estado_nuevo, created_at FROM postulacion_historial WHERE postulacion_id=1 ORDER BY id;" 2>/dev/null
+echo "== 8. historial tras cambios (DB temporal del contenedor) =="
+php -r '
+$pdo = new PDO("mysql:host=".getenv("DB_HOST").";dbname=".getenv("DB_DATABASE"), getenv("DB_USER"), getenv("DB_PASSWORD"));
+foreach ($pdo->query("SELECT postulacion_id, estado_anterior, estado_nuevo, created_at FROM postulacion_historial WHERE postulacion_id=1 ORDER BY id") as $r) {
+    echo $r["postulacion_id"], " | ", $r["estado_anterior"], " -> ", $r["estado_nuevo"], " | ", $r["created_at"], PHP_EOL;
+}
+' 2>/dev/null || true
 
 echo
 echo "FIN fase 4"

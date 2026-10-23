@@ -4,9 +4,11 @@
 
 Requisitos:
   - BD sembrada con DatosMasivosSeeder (genera writable/masivos_manifest.json).
-  - API corriendo (php spark serve). Usar ./seed_cvs_masivos.sh para todo en uno.
+  - API backend de desarrollo en ejecución. Usar ./seed_cvs_masivos.sh para
+    ejecutar todo dentro de Docker, sin instalar Python ni curl en el host.
 
-Uso:  python3 cvs_masivos.py [http://127.0.0.1:8080]
+Uso dentro del contenedor de herramientas:
+  python3 cvs_masivos.py [http://backend:8080]
 """
 import json
 import os

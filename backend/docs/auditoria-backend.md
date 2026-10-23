@@ -197,7 +197,7 @@ Se documentan **74 operaciones bajo `/api`** + la raíz `GET /` (75 en total). R
   - `operationId`: 75 únicos.
   - Métodos HTTP vs rutas reales: cruce contra `Routes.php` — cobertura total.
   - Parámetros/bodies vs controladores/validador: revisados archivo por archivo.
-  - `@redocly/cli lint`: **no pudo ejecutarse** por caída de red en el entorno (`npm` → ETIMEDOUT); se dejó un validador offline reutilizable en `public/swagger/_validate_openapi.py` y `docs/_validate_openapi.py`.
+  - `@redocly/cli lint`: **no pudo ejecutarse** por caída de red en el entorno; se dejó un validador offline reutilizable en `public/swagger/_validate_openapi.py` y `docs/_validate_openapi.py`. Estas utilidades de documentación no forman parte del flujo oficial y deben ejecutarse en un contenedor de herramientas, no como dependencias del host.
 - **Comportamientos no obvios documentados explícitamente**: 200 en `sinContenido`, cast de booleanos (`(bool)"false" === true`), 404 anti-enumeración para recursos ajenos, `limite/offset` solo en 2 endpoints, driver `supabase` vs `local` para CV, códigos y mensajes reales.
 
 ---
@@ -377,6 +377,6 @@ Formato: (1) Problema · (2) Severidad · (3) Archivo/componente · (4) Impacto 
 
 **Qué puede ir a una fase posterior**: items 8–20 de la lista L (dueño de estados, validación de rangos, auditoría, rendimiento/N+1, timezone, índices, endurecimientos varios).
 
-**Documentación**: la API queda documentada al 100% en `public/swagger/openapi.yaml` (OpenAPI 3.0.3) con Swagger UI en `public/swagger/index.html`, describiendo la API **real** (incluye hallazgos señalados como tales, no como "correcciones"). La validación sintáctica/estructural offline pasó; el lint `@redocly/cli` no pudo ejecutarse en esta sesión por falta de red (recomendado: `npx @redocly/cli lint public/swagger/openapi.yaml` en un entorno con red, o usar `public/swagger/_validate_openapi.py`).
+**Documentación**: la API queda documentada al 100% en `public/swagger/openapi.yaml` (OpenAPI 3.0.3) con Swagger UI en `public/swagger/index.html`, describiendo la API **real** (incluye hallazgos señalados como tales, no como "correcciones"). La validación sintáctica/estructural offline pasó; el lint `@redocly/cli` no pudo ejecutarse en esta sesión por falta de red. Si se necesita, ejecute el lint o el validador `public/swagger/_validate_openapi.py` en un contenedor de herramientas; no instale Node/Python en el host para el flujo oficial.
 
 **Verificaciones pendientes de runtime** (no ejecutables en esta sesión sin BD/credenciales): comprobación de respuestas reales con Thunder Client/Postman y persistencia por SQL. Si al probar el frontend se encuentra una discrepancia entre lo aquí documentado y lo respondido, registrarla como hallazgo y revisar el origen en el backend (no "forzar" el cliente).

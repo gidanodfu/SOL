@@ -7,7 +7,7 @@ cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8081
 LOG=/tmp/opencode/spark_identidad.log
 
-env 'storage.driver=local' php spark serve --port 8081 > "$LOG" 2>&1 &
+env 'storage.driver=local' php spark serve --host 127.0.0.1 --port 8081 > "$LOG" 2>&1 &
 SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 30); do curl -s -o /dev/null "$B/health" && break; sleep 0.5; done

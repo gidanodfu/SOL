@@ -1,7 +1,7 @@
 # Pruebas
 
 Docker es la vía oficial. Los comandos se ejecutan desde la raíz del repositorio
-y no requieren PHP, Node.js, Composer ni MySQL en el host.
+y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 
 ## Pruebas oficiales
 
@@ -10,11 +10,32 @@ y no requieren PHP, Node.js, Composer ni MySQL en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit en el contenedor backend
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo
+./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 
 `test.sh http` requiere el stack activo (`./deploy/scripts/dev.sh up`) y comprueba
 `/health`, `/`, `/api/ofertas`, el `401` de `/api/auth/me`, CORS y el frontend.
 No crea ni modifica datos.
+
+## Integración profunda en Docker
+
+`test.sh smoke` ejecuta `deploy/scripts/smoke.sh`, que:
+
+1. Construye el target `test` del backend con `bash`, `python3` y `curl`.
+2. Crea una red efímera y un MySQL `8.0.46` con `/var/lib/mysql` en `tmpfs`.
+3. Aplica migraciones y carga `SystemSeeder` + `DatosPruebaSeeder`.
+4. Ejecuta cada script de `tests/smoke/` con `php spark serve` **dentro del
+   contenedor**, contra esa base temporal.
+5. Reinicia la base temporal entre pruebas y elimina contenedor/red al terminar.
+
+No usa `sol_dev_mysql_data`, no publica puertos y no toca datos reales. El
+script `test_desarrollo_nuevo.sh` se excluye por defecto porque consulta SUNAT
+y requiere un RUC real y token externo autorizado.
+
+> Los scripts históricos conservan aserciones propias y pueden estar
+> desactualizados respecto de la API actual. El runner devuelve código distinto
+> de cero y marca `WARN`/`FAIL` cuando detecta `Traceback`, `FAIL` o `FALTA`;
+> una prueba solo se considera superada si no aparecen esos indicadores.
 
 ### Backend
 
@@ -35,15 +56,6 @@ No crea ni modifica datos.
 
 Incluye las pruebas estáticas de documentos legales, lint y build. La imagen de
 desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
-
-## Pruebas de integración profundas (legado)
-
-Los scripts `test_api.sh`, `test_ofertas.sh`, `test_fase3.sh`… son legado:
-inician `php spark serve` y usan `python3`/`curl` del host. No forman parte del
-flujo oficial Docker y **no deben apuntar a desarrollo ni a producción**. Si
-necesita ejecutarlos, use una base de datos aislada, siembrela con
-`DatosPruebaSeeder` y hágalo fuera de este repositorio. Su migración a
-contenedores está pendiente y se documentará cuando esté disponible.
 
 El rate limiting, el límite de 4 CV por mes y el saneamiento de errores se
 validaron manualmente contra la API; aún no tienen pruebas automatizadas.

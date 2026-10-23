@@ -27,6 +27,13 @@ COPY backend/ ./
 COPY --from=vendor-dev /app/vendor ./vendor
 CMD ["php", "spark", "serve", "--host", "0.0.0.0", "--port", "8080"]
 
+# Imagen de integración: añade herramientas de prueba (bash, python3 y curl)
+# sobre el target dev. No se usa en desarrollo ni en producción.
+FROM dev AS test
+RUN apk add --no-cache bash python3 curl \
+    && mkdir -p /tmp/opencode
+CMD ["php", "spark", "serve", "--host", "0.0.0.0", "--port", "8080"]
+
 FROM php-base AS prod
 COPY backend/php.prod.ini /usr/local/etc/php/conf.d/zz-sol-prod.ini
 # Solo el código y los artefactos necesarios para PHP-FPM/migraciones.
