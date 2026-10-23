@@ -74,6 +74,7 @@ publican puertos al exterior.
 ./deploy/scripts/test.sh backend
 ./deploy/scripts/test.sh frontend
 ./deploy/scripts/test.sh http
+./deploy/scripts/test.sh smoke
 
 ./deploy/scripts/backup.sh dev
 ./deploy/scripts/backup.sh prod

@@ -1,27 +1,31 @@
-#!/usr/bin/env bash
-# SPDX-License-Identifier: MIT
-# Genera y sube los CV ficticios del dataset masivo usando el flujo real de la API.
-#
-# Requisitos previos (ver DatosMasivosSeeder):
-#   cd backend && php spark migrate:refresh --all -f && php spark db:seed SystemSeeder
-#   php spark db:seed DatosMasivosSeeder
-#
-# Uso:
-#   bash scripts/seed_cvs_masivos.sh          # levanta la API en :8080 si hace falta
-#   B=http://localhost:8090 bash scripts/seed_cvs_masivos.sh   # API ya corriendo en otro puerto
-set -u
-cd "$(dirname "$0")/.." || exit 1
+#!/bin/sh
+# Sube los CV ficticios del dataset masivo usando la API real de SOL.
+# Todo se ejecuta en Docker: no requiere PHP, Python, curl ni MySQL en el host.
+set -eu
 
-B="${B:-http://127.0.0.1:8080}"
-PORT="${B##*:}"
-TMP_LOG=/tmp/opencode/spark_cv_seed.log
+. "$(dirname -- "$0")/../../deploy/scripts/lib/common.sh"
 
-if ! curl -s -o /dev/null "$B/"; then
-  echo "Levantando API temporal en $B ..."
-  php spark serve --port "$PORT" > "$TMP_LOG" 2>&1 &
-  SRV=$!
-  trap 'kill $SRV 2>/dev/null' EXIT
-  for i in $(seq 1 25); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
+require_repo
+docker_available
+require_env_file
+require_project_name
+
+TEST_IMAGE=sol_backend_test:local
+NET="$(project_name)_internal"
+
+if ! docker network inspect "$NET" >/dev/null 2>&1; then
+    die "No existe la red $NET. Ejecute ./deploy/scripts/dev.sh up y vuelva a intentarlo."
 fi
 
-python3 scripts/cvs_masivos.py "$B"
+VOL="$(project_name)_backend_writable"
+docker volume inspect "$VOL" >/dev/null 2>&1 \
+    || die "No existe el volumen $VOL. Ejecute dev.sh up y DatosMasivosSeeder antes de este script."
+
+printf 'Construyendo imagen de herramientas de prueba...\n'
+docker build --target test -t "$TEST_IMAGE" -f "$ROOT/backend/Dockerfile" "$ROOT" >/dev/null
+
+printf 'Subiendo CV ficticios contra el backend de desarrollo (%s)...\n' "$NET"
+docker run --rm --network "$NET" \
+    -v "$ROOT/backend/scripts:/workspace/scripts:ro" \
+    -v "$VOL:/workspace/writable:ro" \
+    "$TEST_IMAGE" python3 /workspace/scripts/cvs_masivos.py "http://backend:8080"

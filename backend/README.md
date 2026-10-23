@@ -88,13 +88,31 @@ Composer ni MySQL en el host. El bootstrap inicial está en
   en un contenedor de herramientas, no como dependencia del host. No forma parte del
   flujo oficial de build.
 
+## Utilidades heredadas
+
+`backend/builds` y los validadores `docs/_validate_openapi.py` /
+`public/swagger/_validate_openapi.py` son utilidades heredadas de CodeIgniter y
+de la documentación. No forman parte del runtime, del build ni del flujo
+oficial; si se necesitan, ejecútelos en un contenedor de herramientas temporal.
+No son requisitos del host.
+
 ## Pruebas
 
 ```bash
 ./deploy/scripts/test.sh backend
+./deploy/scripts/test.sh smoke
 ./deploy/scripts/dev.sh run backend php vendor/bin/phpunit tests/unit/ValidadorTest.php
 ```
 
-Las pruebas de integración profundas de `../tests/smoke/` son legado y requieren
-un entorno aislado; consulte `../tests/README.md`. No las ejecute contra
-desarrollo o producción.
+`test.sh smoke` ejecuta los scripts de integración en un MySQL temporal dentro
+de Docker; no usa PHP, Python ni MySQL del host. Consulte `../tests/README.md`.
+
+Para la carga masiva opcional de CV ficticios (requiere `DatosMasivosSeeder` y el
+backend de desarrollo activo):
+
+```bash
+./backend/scripts/seed_cvs_masivos.sh
+```
+
+El script usa una imagen de herramientas temporal y el volumen de `writable`;
+no requiere Python, curl ni PHP en el host.

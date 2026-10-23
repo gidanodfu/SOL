@@ -7,7 +7,7 @@ TARGET=all
 BUILD=1
 for arg in "$@"; do
     case "$arg" in
-        all|backend|frontend|http) TARGET=$arg ;;
+        all|backend|frontend|http|smoke) TARGET=$arg ;;
         --no-build) BUILD=0 ;;
         -h|--help)
             cat <<'USAGE'
@@ -20,6 +20,7 @@ ni modifica datos de producción.
   backend   PHPUnit dentro del contenedor backend
   frontend  npm test + lint + build dentro del contenedor frontend
   http      smoke HTTP no destructivo contra el stack de desarrollo activo
+  smoke     smoke tests históricos en un MySQL temporal aislado en Docker
 
 Opciones:
   --no-build  reutiliza las imágenes existentes en lugar de reconstruirlas.
@@ -37,6 +38,11 @@ require_dev_project
 
 printf 'Validando configuración antes de las pruebas...\n'
 "$ROOT/deploy/scripts/validate.sh" --dev
+
+if [ "$TARGET" = "smoke" ]; then
+    "$ROOT/deploy/scripts/smoke.sh"
+    exit 0
+fi
 
 if [ "$TARGET" = "http" ]; then
     require_service_running compose_dev backend
