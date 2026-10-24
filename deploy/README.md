@@ -21,7 +21,7 @@ SOL/
     ├── compose.yaml        # servicios base
     ├── compose.dev.yaml    # desarrollo
     ├── compose.prod.yaml   # producción + Nginx interno
-    ├── infra/traefik/      # Traefik compartido y red proxy
+    ├── infra/traefik/      # Traefik compartido, red proxy y entrada SOL
     ├── nginx/              # plantillas, render y certificados legado
     └── scripts/            # bootstrap, deploy, dev, validate, test, backup, restore
 ```
@@ -35,14 +35,16 @@ SOL/
 ## Infraestructura compartida
 
 En un VPS con varios proyectos, **Traefik es el único servicio que publica
-80/443**. Su stack vive en `deploy/infra/traefik/` y crea la red externa
-`proxy`. SOL conserva su Nginx como gateway interno, sin puertos publicados,
-conectado a `proxy` y a su red interna.
+80/443**. Su stack vive en `deploy/infra/traefik/` y crea la red compartida
+`proxy` y la red exclusiva `sol_entry`. SOL conserva su Nginx como gateway
+interno, sin puertos publicados, conectado solo a `sol_entry` y a su red
+interna.
 
 Orden de despliegue:
 
 1. `deploy/infra/traefik` (DNS y ACME configurados).
-2. SOL con `PROXY_NETWORK=proxy`, `NGINX_MODE=http`, dominios y URLs HTTPS.
+2. SOL con `SOL_ENTRY_NETWORK=sol_entry`, `TRAEFIK_ENTRY_IP=172.31.0.2`,
+   `NGINX_MODE=http`, dominios y URLs HTTPS.
 
 Consulte `deploy/infra/traefik/README.md`.
 
@@ -64,14 +66,18 @@ La red interna es `sol_<proyecto>_internal`; los volúmenes son
 `sol_<proyecto>_nginx_conf`. El nombre se toma de `COMPOSE_PROJECT_NAME` y los
 scripts lo pasan explícitamente a Compose. Producción rechaza `sol_dev`.
 
-En producción, el servicio `nginx` se conecta también a la red externa
-`${PROXY_NETWORK:-proxy}` creada por Traefik. No publica puertos al host.
-`PROXY_SUBNET` debe coincidir con la subred de esa red; se usa para confiar en
-`X-Forwarded-For` y conservar la IP real de los clientes en logs y rate limiting.
+En producción, el servicio `nginx` se conecta a la red externa exclusiva
+`entry` (`SOL_ENTRY_NETWORK`, por defecto `sol_entry`) creada por Traefik. Es
+una red interna, sin salida directa a Internet. No se conecta a `proxy` y no
+publica puertos al host. Nginx solo acepta
+conexiones desde la IP fija de Traefik (`TRAEFIK_ENTRY_IP`) en esa red (y
+localhost para su healthcheck) y solo confía en esa IP para
+`X-Forwarded-For`/`X-Forwarded-Proto`; no se usa la subred compartida del
+proxy para determinar la IP del cliente.
 
 Desarrollo publica únicamente en `127.0.0.1` los puertos 5173, 8080, 3307 y
-8082. Producción publica únicamente 80/443 en Nginx; PHP-FPM y MySQL no
-publican puertos al exterior.
+8082. Producción no publica puertos en SOL; únicamente Traefik publica 80/443.
+PHP-FPM y MySQL no publican puertos ni se conectan a `proxy`/`sol_entry`.
 
 ## Comandos
 
@@ -108,7 +114,8 @@ publican puertos al exterior.
 cd deploy/infra/traefik
 cp .env.example .env
 chmod 600 .env
-# completar ACME_EMAIL y revisar PROXY_NETWORK, PROXY_SUBNET y
+# completar ACME_EMAIL y revisar PROXY_NETWORK, PROXY_SUBNET,
+# SOL_ENTRY_NETWORK, SOL_ENTRY_SUBNET, TRAEFIK_ENTRY_IP y
 # TRAEFIK_SOCKET_NETWORK
 docker compose --env-file .env -f compose.yaml config
 docker compose --env-file .env -f compose.yaml up -d
@@ -151,13 +158,16 @@ servicios externos siguen siendo fuentes externas. No se usan etiquetas
 según `NGINX_MODE`:
 
 - `http`: **modo usado en producción detrás de Traefik**; Traefik termina TLS.
+  Renderiza dominio único si `APP_DOMAIN=API_DOMAIN`, o subdominios si son
+  distintos.
 - `same-domain`: legado para Nginx standalone con TLS propio.
 - `subdomain`: legado para Nginx standalone con TLS propio.
 
 En la arquitectura con proxy compartido, SOL usa `NGINX_MODE=http`, no monta
-certificados y no publica puertos. Las plantillas HTTPS se conservan para
-compatibilidad con instalaciones standalone, pero no se usan en el flujo
-oficial.
+certificados ni se conecta a `proxy`, y no publica puertos. En subdominios, el
+host de API solo responde con la API y no devuelve el frontend. Las plantillas
+HTTPS se conservan para compatibilidad con instalaciones standalone, pero no
+se usan en el flujo oficial.
 
 Los certificados y la renovación ACME viven en `deploy/infra/traefik`. No se
 generan certificados automáticamente dentro de SOL.

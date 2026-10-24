@@ -183,18 +183,29 @@ volume_name() {
     printf '%s_%s' "$(project_name)" "$1"
 }
 
-proxy_network() {
-    name=$(env_get PROXY_NETWORK)
-    printf '%s' "${name:-proxy}"
+sol_entry_network() {
+    name=$(env_get SOL_ENTRY_NETWORK)
+    printf '%s' "${name:-sol_entry}"
 }
 
-require_proxy_network() {
-    network=$(proxy_network)
+valid_ipv4() {
+    case "$1" in
+        ''|*[!0-9.]*) return 1 ;;
+    esac
+    printf '%s\n' "$1" | awk -F. '
+        NF == 4 { ok=1; for (i=1; i<=4; i++) if ($i !~ /^[0-9]+$/ || $i < 0 || $i > 255) ok=0 }
+        END { exit ok ? 0 : 1 }
+    '
+}
+
+require_sol_entry_network() {
+    network=$(sol_entry_network)
+    [ "$network" != "proxy" ] || die "SOL_ENTRY_NETWORK no puede ser la red compartida 'proxy'; use una red exclusiva Traefik ↔ SOL."
     docker network inspect "$network" >/dev/null 2>&1 \
-        || die "No existe la red externa '$network'. Despliegue primero deploy/infra/traefik/compose.yaml."
+        || die "No existe la red de entrada exclusiva '$network'. Despliegue primero deploy/infra/traefik/compose.yaml."
 }
 
-require_traefik_running() {
+find_traefik_id() {
     id=""
     if [ -n "${TRAEFIK_CONTAINER:-}" ]; then
         id=$(docker ps -q --filter "name=$TRAEFIK_CONTAINER" --filter status=running)
@@ -202,19 +213,29 @@ require_traefik_running() {
     if [ -z "$id" ]; then
         id=$(docker ps -q --filter 'label=com.sol.infra=traefik' --filter status=running)
     fi
+    printf '%s' "$id"
+}
+
+require_traefik_running() {
+    id=$(find_traefik_id)
     [ -n "$id" ] || die "No se detectó un Traefik compartido en ejecución. Despliegue deploy/infra/traefik o defina TRAEFIK_CONTAINER."
 }
 
-require_proxy_subnet() {
-    expected=$(env_get PROXY_SUBNET)
-    [ -n "$expected" ] || die "Falta PROXY_SUBNET para validar la red del proxy."
-    network=$(proxy_network)
-    actual=$(docker network inspect "$network" --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}' 2>/dev/null || true)
-    [ -n "$actual" ] || die "No se pudo leer la subred de '$network'."
-    case " $actual " in
-        *" $expected "*) ;;
-        *) die "PROXY_SUBNET=$expected no coincide con la subred de '$network' ($actual)." ;;
-    esac
+# Verifica que Traefik esté conectado a la red exclusiva de SOL y que use la
+# misma IP fija que Nginx acepta para X-Forwarded-For/Proto.
+require_traefik_entry() {
+    network=$(sol_entry_network)
+    expected_ip=$(env_get TRAEFIK_ENTRY_IP)
+    [ -n "$expected_ip" ] || die "Falta TRAEFIK_ENTRY_IP para validar la confianza de X-Forwarded-*."
+    require_sol_entry_network
+    require_traefik_running
+    id=$(find_traefik_id)
+    attached=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$id" 2>/dev/null || true)
+    printf '%s\n' "$attached" | grep -Fxq "$network" \
+        || die "Traefik no está conectado a la red de entrada exclusiva '$network'."
+    actual_ip=$(docker inspect --format "{{(index .NetworkSettings.Networks \"$network\").IPAddress}}" "$id" 2>/dev/null || true)
+    [ "$actual_ip" = "$expected_ip" ] \
+        || die "Traefik usa la IP '$actual_ip' en '$network', pero TRAEFIK_ENTRY_IP='$expected_ip'. Corrija .env o la infraestructura."
 }
 
 wait_for_service() {
@@ -242,8 +263,10 @@ http_ok() {
 
 nginx_health_url() {
     mode=$(env_get NGINX_MODE)
-    if [ "$mode" = "subdomain" ]; then
-        printf 'https://%s/health' "$(env_get API_DOMAIN)"
+    app_domain=$(env_get APP_DOMAIN)
+    api_domain=$(env_get API_DOMAIN)
+    if [ "$mode" = "subdomain" ] || { [ "$mode" = "http" ] && [ "$app_domain" != "$api_domain" ]; }; then
+        printf 'https://%s/health' "$api_domain"
     else
         base=$(env_get APP_URL)
         printf '%s/health' "${base%/}"
@@ -333,8 +356,10 @@ validate_env_basics() {
                 die "jwt.secret debe tener al menos 32 caracteres en producción."
             fi
             [ "$(project_name)" != "sol_dev" ] || die "Producción no puede usar COMPOSE_PROJECT_NAME=sol_dev."
-            require_env PROXY_NETWORK "Defina la red externa compartida, por ejemplo proxy."
-            require_env PROXY_SUBNET "Defina la subred de la red proxy, por ejemplo 172.30.0.0/24."
+            require_env SOL_ENTRY_NETWORK "Defina la red de entrada exclusiva Traefik ↔ SOL, por ejemplo sol_entry."
+            require_env TRAEFIK_ENTRY_IP "Defina la IP fija de Traefik en la red de entrada, por ejemplo 172.31.0.2."
+            [ "$(env_get SOL_ENTRY_NETWORK)" != "proxy" ] || die "SOL_ENTRY_NETWORK no puede ser 'proxy'; use una red exclusiva Traefik ↔ SOL."
+            valid_ipv4 "$(env_get TRAEFIK_ENTRY_IP)" || die "TRAEFIK_ENTRY_IP debe ser una dirección IPv4 válida."
             require_env API_DOMAIN "Defina el dominio de la API (puede ser igual a APP_DOMAIN)."
             [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
             case "$(env_get APP_DOMAIN)" in

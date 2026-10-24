@@ -33,8 +33,8 @@ variables `VITE_*` públicas por variables de proceso o build args.
 
 Variables principales:
 
-- Aplicación: `CI_ENVIRONMENT`, `COMPOSE_PROJECT_NAME`, `PROXY_NETWORK`,
-  `PROXY_SUBNET`, `APP_URL`, `app.baseURL`, `app.appTimezone`,
+- Aplicación: `CI_ENVIRONMENT`, `COMPOSE_PROJECT_NAME`, `SOL_ENTRY_NETWORK`,
+  `TRAEFIK_ENTRY_IP`, `APP_URL`, `app.baseURL`, `app.appTimezone`,
   `cors.allowedOrigins`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`.
 - Base de datos: `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`,
   `DB_ROOT_PASSWORD`, `DB_DRIVER` y `DB_PREFIX`.
@@ -102,26 +102,28 @@ stack de desarrollo y requiere `dev.sh up`.
 
 1. Clonar el repositorio y entrar en él.
 2. Desplegar primero la infraestructura compartida de Traefik:
-   `deploy/infra/traefik/README.md`. Debe existir la red `proxy`, DNS apuntando
-   al VPS y `ACME_EMAIL` configurado.
+   `deploy/infra/traefik/README.md`. Deben existir las redes `proxy` y
+   `sol_entry`, DNS apuntando al VPS y `ACME_EMAIL` configurado.
 3. Copiar `.env.example` a `.env` y completar dominios, base de datos,
    `INITIAL_ADMIN_*`, JWT, correo, almacenamiento e integraciones.
 4. Usar `COMPOSE_PROJECT_NAME` distinto de `sol_dev`, por ejemplo `sol_prod`.
-5. Configurar `PROXY_NETWORK=proxy`, `PROXY_SUBNET=172.30.0.0/24`,
-   `NGINX_MODE=http`, `APP_URL` y `app.baseURL` con HTTPS público. **No**
-   configure certificados TLS dentro de SOL en este modo: los gestiona
-   Traefik.
+5. Configurar `SOL_ENTRY_NETWORK=sol_entry`,
+   `TRAEFIK_ENTRY_IP=172.31.0.2`, `NGINX_MODE=http`, `APP_URL` y
+   `app.baseURL` con HTTPS público. **No** configure certificados TLS dentro
+   de SOL en este modo: los gestiona Traefik. No conecte el Nginx de SOL a la
+   red compartida `proxy`.
 6. Ejecutar, revisando antes el entorno de destino:
 
 ```bash
 ./deploy/scripts/bootstrap.sh --prod --authorize
 ```
 
-El script exige `--authorize`, comprueba que Traefik y la red `proxy` existan,
-valida que la base esté vacía, construye imágenes, espera MySQL, aplica
-migraciones, ejecuta **solo** `SystemSeeder`, verifica el administrador y
-levanta Nginx. Si la base ya contiene usuarios se detiene: para actualizar use
-`deploy.sh`. No se ejecuta desde `up`, `restart` ni `deploy.sh`.
+El script exige `--authorize`, comprueba que Traefik y la red exclusiva
+`sol_entry` existan, valida que la base esté vacía, construye imágenes, espera
+MySQL, aplica migraciones, ejecuta **solo** `SystemSeeder`, verifica el
+administrador y levanta Nginx. Si la base ya contiene usuarios se detiene:
+para actualizar use `deploy.sh`. No se ejecuta desde `up`, `restart` ni
+`deploy.sh`.
 
 ## 5. Actualizaciones
 
@@ -131,8 +133,9 @@ levanta Nginx. Si la base ya contiene usuarios se detiene: para actualizar use
 ```
 
 `deploy.sh` exige `CI_ENVIRONMENT=production`, un proyecto distinto de
-`sol_dev`, `NGINX_MODE=http`, la red `proxy` y Traefik en ejecución; verifica
-que la base ya tenga usuarios, crea un respaldo verificado, construye imágenes,
+`sol_dev`, `NGINX_MODE=http`, la red exclusiva `sol_entry` y Traefik en
+ejecución; verifica que la base ya tenga usuarios, crea un respaldo verificado,
+construye imágenes,
 aplica migraciones y recrea los servicios sin eliminar volúmenes. **No ejecuta
 SystemSeeder** y no restablece contraseñas de administradores existentes.
 
@@ -215,14 +218,22 @@ seguridad generado por `restore.sh` es la vía de reversión.
 La arquitectura oficial de producción usa un **Traefik compartido**:
 
 - Traefik publica 80/443 y termina TLS.
-- Crea la red externa `proxy`.
-- SOL Nginx se conecta a `proxy` y a su red `internal`, sin `ports` al host.
+- Crea la red compartida `proxy` para otros proyectos y la red exclusiva
+  `sol_entry` para la entrada de SOL.
+- SOL Nginx se conecta solo a `sol_entry` y a su red `internal`, sin `ports`
+  al host. No se conecta a `proxy`.
+- Traefik usa una IP fija en `sol_entry`; Nginx solo acepta conexiones de esa
+  IP (y localhost para su healthcheck) y solo confía en ella para
+  `X-Forwarded-For` y `X-Forwarded-Proto`.
 - Traefik enruta `APP_DOMAIN` y `API_DOMAIN` al Nginx de SOL por HTTP interno.
-- PHP-FPM y MySQL no se conectan a `proxy` ni publican puertos.
+- PHP-FPM y MySQL no se conectan a `proxy` ni a `sol_entry`, y no publican
+  puertos.
 
 Los modos `same-domain` y `subdomain` de las plantillas Nginx quedan como
 legado para un Nginx standalone con TLS propio. En el flujo oficial SOL usa
-`NGINX_MODE=http`; no monta certificados.
+`NGINX_MODE=http`; no monta certificados. Si `APP_DOMAIN` y `API_DOMAIN` son
+iguales, se renderiza la plantilla de dominio único; si son distintos, se
+renderiza la de subdominios y el host de API no devuelve el frontend.
 
 Procedimiento TLS:
 
