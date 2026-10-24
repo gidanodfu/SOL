@@ -28,4 +28,34 @@ final class OfertaVencimientoTest extends TestCase
         $this->assertFalse(OfertaService::vencida($cierre, $antesDeMedianoche->format('Y-m-d')));
         $this->assertTrue(OfertaService::vencida($cierre, $medianoche->format('Y-m-d')));
     }
+
+    public function testEstadoEfectivoDistingueVencidaDeCerradaYNoPublicada(): void
+    {
+        $this->assertSame('publicada', OfertaService::estadoEfectivo([
+            'estado' => 'publicada',
+            'fecha_cierre' => '2026-10-22',
+        ], '2026-10-21'));
+        $this->assertSame('publicada', OfertaService::estadoEfectivo([
+            'estado' => 'publicada',
+            'fecha_cierre' => '2026-10-21',
+        ], '2026-10-21'));
+        $this->assertSame('vencida', OfertaService::estadoEfectivo([
+            'estado' => 'publicada',
+            'fecha_cierre' => '2026-10-20',
+        ], '2026-10-21'));
+        $this->assertSame('cerrada', OfertaService::estadoEfectivo([
+            'estado' => 'cerrada',
+            'fecha_cierre' => '2026-10-20',
+        ], '2026-10-21'));
+        $this->assertSame('borrador', OfertaService::estadoEfectivo([
+            'estado' => 'borrador',
+            'fecha_cierre' => '2026-10-20',
+        ], '2026-10-21'));
+    }
+
+    public function testFechaHoraNoConvierteElMismoDiaEnVencido(): void
+    {
+        $this->assertFalse(OfertaService::vencida('2026-10-21', '2026-10-21 23:59:59'));
+        $this->assertTrue(OfertaService::vencida('2026-10-21', '2026-10-22 00:00:00'));
+    }
 }

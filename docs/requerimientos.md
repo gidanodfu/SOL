@@ -99,7 +99,9 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
   publicación y cierre.
 - **RF-23** Estados vigentes: **Pendiente de revisión** (`pendiente`), **Publicada**
   (`publicada`), **Rechazada** (`rechazada`) y **Cerrada** (`cerrada`); `borrador` se
-  conserva solo para ofertas heredadas. Toda oferta nueva nace `pendiente`.
+  conserva solo para ofertas heredadas. Toda oferta nueva nace `pendiente`. Una oferta
+  publicada con `fecha_cierre` transcurrida se muestra como **Vencida** mediante el
+  estado efectivo derivado `vencida`; no se confunde con el cierre manual `cerrada`.
 - **RF-24** La empresa registra y **envía a revisión** sus ofertas; **no puede publicarlas
   por sí misma** (la publicación depende de la aprobación municipal, §20).
 - **RF-25** El admin revisa la bandeja de ofertas pendientes, las **aprueba** (pasan a
@@ -125,6 +127,8 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-38** Sin eliminación física; la desactivación solo cambia su activación.
 - **RF-39** Conservar historial de estados (el historial referencia `users.id`).
 - **RF-40** La empresa selecciona candidatos; la Municipalidad supervisa y reporta.
+  La selección formal (`seleccionado`) bloquea nuevas postulaciones del mismo
+  postulante a cualquier oferta de esa empresa, no a otras empresas.
 
 ### 5.7 Atención y orientación laboral — RETIRADO
 - **RF-41/42/43** El registro y seguimiento de atenciones se retiró de la API y el frontend

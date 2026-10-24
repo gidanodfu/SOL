@@ -47,10 +47,25 @@ class OfertaRepository
     public function paraAdmin(?string $estado = null): array
     {
         $builder = $this->base()
-            ->orderBy("FIELD(ofertas.estado, 'pendiente', 'rechazada', 'borrador', 'publicada', 'cerrada')", '', false)
+            ->orderBy("FIELD(ofertas.estado, 'pendiente', 'rechazada', 'borrador', 'publicada', 'vencida', 'cerrada')", '', false)
             ->orderBy('ofertas.created_at', 'DESC');
 
-        if ($estado !== null) {
+        $hoy = date('Y-m-d');
+
+        if ($estado === 'vencida') {
+            // Estado efectivo (no persistido): publicada con cierre anterior a hoy.
+            $builder->where('ofertas.estado', 'publicada')
+                ->where('ofertas.fecha_cierre IS NOT NULL')
+                ->where('ofertas.fecha_cierre <', $hoy);
+        } elseif ($estado === 'publicada') {
+            // La pestaña "Publicadas" es disponibilidad efectiva, no solo el
+            // valor histórico del ENUM.
+            $builder->where('ofertas.estado', 'publicada')
+                ->groupStart()
+                    ->where('ofertas.fecha_cierre IS NULL')
+                    ->orWhere('ofertas.fecha_cierre >=', $hoy)
+                ->groupEnd();
+        } elseif ($estado !== null) {
             $builder->where('ofertas.estado', $estado);
         }
 

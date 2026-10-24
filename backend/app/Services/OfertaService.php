@@ -8,6 +8,7 @@ use App\Exceptions\ApiException;
 use App\Models\OfertaHabilidadModel;
 use App\Models\OfertaModel;
 use App\Repositories\OfertaRepository;
+use App\Repositories\PostulacionRepository;
 use App\Validation\Validador;
 
 /**
@@ -19,13 +20,19 @@ use App\Validation\Validador;
  *   pendiente → publicada (aprobar) ; pendiente → rechazada (rechazar)
  *   borrador/rechazada → pendiente (enviar a revisión)
  *   publicada → pendiente (al editarla, vuelve a revisión)
- *   publicada → cerrada.
+ *   publicada → cerrada (cierre manual).
+ * Además, `publicada` con `fecha_cierre` ya transcurrida se expone como
+ * `estado_efectivo = vencida`: es un estado derivado, no un valor del ENUM.
  */
 class OfertaService
 {
     public const TIPOS_EMPLEO = ['tiempo_completo', 'medio_tiempo', 'por_horas', 'practicas', 'freelance', 'remoto'];
 
-    private const ESTADOS_ADMIN = ['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada', 'observada'];
+    /**
+     * `vencida` no existe en el ENUM porque es un estado efectivo derivado de
+     * `publicada` + `fecha_cierre`; se admite como filtro de la bandeja.
+     */
+    private const ESTADOS_ADMIN = ['borrador', 'pendiente', 'publicada', 'vencida', 'cerrada', 'rechazada', 'observada'];
 
     /**
      * Estados editables por la empresa. `rechazada` NO es editable (decisión
@@ -40,6 +47,8 @@ class OfertaService
 
     private OfertaRepository $repository;
 
+    private PostulacionRepository $postulaciones;
+
     private AuditoriaService $auditoria;
 
     private HtmlSanitizer $html;
@@ -50,12 +59,14 @@ class OfertaService
         ?OfertaRepository $repository = null,
         ?AuditoriaService $auditoria = null,
         ?HtmlSanitizer $html = null,
+        ?PostulacionRepository $postulaciones = null,
     ) {
-        $this->ofertas     = $ofertas ?? model(OfertaModel::class);
-        $this->habilidades = $habilidades ?? model(OfertaHabilidadModel::class);
-        $this->repository  = $repository ?? new OfertaRepository();
-        $this->auditoria   = $auditoria ?? new AuditoriaService();
-        $this->html        = $html ?? new HtmlSanitizer();
+        $this->ofertas       = $ofertas ?? model(OfertaModel::class);
+        $this->habilidades   = $habilidades ?? model(OfertaHabilidadModel::class);
+        $this->repository    = $repository ?? new OfertaRepository();
+        $this->auditoria     = $auditoria ?? new AuditoriaService();
+        $this->html          = $html ?? new HtmlSanitizer();
+        $this->postulaciones = $postulaciones ?? new PostulacionRepository();
     }
 
     /* ----------------------- Búsqueda de postulantes ---------------------- */
@@ -71,7 +82,7 @@ class OfertaService
     {
         $filas = $this->repository->publicadas(array_filter($filtros, static fn ($v) => $v !== null && $v !== ''));
 
-        return array_map([$this, 'conEmpresa'], $filas);
+        return array_map(fn ($fila) => $this->conEstadoEfectivo($this->conEmpresa($fila)), $filas);
     }
 
     /**
@@ -128,14 +139,14 @@ class OfertaService
         if ($oferta === null || $oferta['estado'] !== 'publicada' || self::vencida($oferta['fecha_cierre'] ?? null)) {
             throw ApiException::noEncontrado('La oferta no está disponible.');
         }
-        $oferta = $this->conEmpresa($oferta);
+        $oferta = $this->conEstadoEfectivo($this->conEmpresa($oferta));
 
         if ($postulanteId !== null) {
-            $oferta['ya_postule'] = (bool) $this->ofertas->db->table('postulaciones')
-                ->where('postulante_id', $postulanteId)
-                ->where('oferta_id', $id)
-                ->where('activo', 1)
-                ->countAllResults();
+            $oferta['ya_postule'] = $this->postulaciones->tienePostulacionActiva($postulanteId, $id);
+            $oferta['ya_seleccionado_empresa'] = $this->postulaciones->seleccionadoEnEmpresa(
+                $postulanteId,
+                (int) $oferta['empresa_id'],
+            );
         }
 
         return $oferta;
@@ -147,7 +158,10 @@ class OfertaService
     {
         $filas = $this->repository->porEmpresa($empresaId);
 
-        return array_map(fn ($f) => $f + ['habilidades' => $this->habilidades->deOferta((int) $f['id'])], $filas);
+        return array_map(
+            fn ($f) => $this->conEstadoEfectivo($f) + ['habilidades' => $this->habilidades->deOferta((int) $f['id'])],
+            $filas,
+        );
     }
 
     /**
@@ -155,7 +169,7 @@ class OfertaService
      */
     public function detallePropia(int $empresaId, int $id): array
     {
-        return $this->exigirPropia($empresaId, $id);
+        return $this->conEstadoEfectivo($this->exigirPropia($empresaId, $id));
     }
 
     /**
@@ -197,9 +211,13 @@ class OfertaService
         $oferta = $this->exigirPropia($empresaId, $id);
 
         // `rechazada` (terminal) y `cerrada` no son editables por la empresa;
-        // tampoco por una petición directa a la API.
+        // tampoco por una petición directa a la API. Una oferta publicada que
+        // ya venció tampoco se reabre: el cierre temporal es definitivo.
         if (! in_array($oferta['estado'], self::EDITABLE, true)) {
             throw ApiException::conflicto('La oferta no se puede editar en su estado actual.');
+        }
+        if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
+            throw ApiException::conflicto('La oferta ya venció; no puede volver a publicación ni editarse.');
         }
 
         $datos = $this->validar($datos);
@@ -268,6 +286,9 @@ class OfertaService
         if ($oferta['estado'] !== 'publicada') {
             throw ApiException::conflicto('Solo puede cerrar una oferta publicada.');
         }
+        if (self::vencida($oferta['fecha_cierre'] ?? null)) {
+            throw ApiException::conflicto('La oferta ya venció; el cierre es automático y no se puede convertir en cierre manual.');
+        }
 
         $this->ofertas->update($id, ['estado' => 'cerrada']);
     }
@@ -285,6 +306,9 @@ class OfertaService
         if ($oferta['estado'] !== 'publicada') {
             throw ApiException::conflicto('Solo puede cerrar una oferta publicada.');
         }
+        if (self::vencida($oferta['fecha_cierre'] ?? null)) {
+            throw ApiException::conflicto('La oferta ya venció; el cierre es automático y no se puede convertir en cierre manual.');
+        }
 
         $this->ofertas->update($id, ['estado' => 'cerrada']);
         $this->auditoria->registrar($adminId, 'cerrar_oferta_admin', 'oferta', $id, ['puesto' => $oferta['puesto']]);
@@ -298,7 +322,7 @@ class OfertaService
             throw ApiException::validacion('Estado de oferta no válido.');
         }
 
-        return $this->repository->paraAdmin($estado);
+        return array_map([$this, 'conEstadoEfectivo'], $this->repository->paraAdmin($estado));
     }
 
     /**
@@ -352,6 +376,9 @@ class OfertaService
         if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
             throw ApiException::conflicto('No se puede rechazar una oferta en su estado actual.');
         }
+        if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
+            throw ApiException::conflicto('La oferta ya venció; su cierre temporal es definitivo.');
+        }
 
         $this->ofertas->update($id, [
             'estado'            => 'rechazada',
@@ -383,6 +410,9 @@ class OfertaService
         }
         if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
             throw ApiException::conflicto('No se puede observar una oferta en su estado actual.');
+        }
+        if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
+            throw ApiException::conflicto('La oferta ya venció; su cierre temporal es definitivo.');
         }
 
         // Estado + observación se guardan de forma consistente.
@@ -419,7 +449,7 @@ class OfertaService
             throw ApiException::noEncontrado('La oferta no existe.');
         }
 
-        return $oferta;
+        return $this->conEstadoEfectivo($oferta);
     }
 
     /* ----------------------------- Internos ----------------------------- */
@@ -439,9 +469,79 @@ class OfertaService
         return $fila;
     }
 
+    /**
+     * Vigencia por día en la zona horaria de la aplicación.
+     *
+     * `ofertas.fecha_cierre` es DATE, no DATETIME: la fecha de cierre es el
+     * último día completo de postulación. Por eso el límite es inclusivo
+     * durante ese día y se cruza al comenzar el día siguiente en America/Lima
+     * (configurable con app.appTimezone). PHP y la consulta pública usan la
+     * misma fecha local; no se compara contra UTC ni contra CURDATE() de MySQL.
+     */
     public static function vencida(?string $fechaCierre, ?string $hoy = null): bool
     {
-        return $fechaCierre !== null && $fechaCierre < ($hoy ?? date('Y-m-d'));
+        $fechaCierre = $fechaCierre !== null ? trim($fechaCierre) : '';
+        if ($fechaCierre === '') {
+            return false;
+        }
+
+        $zona = self::zonaHoraria();
+        $cierre = \DateTimeImmutable::createFromFormat('!Y-m-d', substr($fechaCierre, 0, 10), $zona);
+        if ($cierre === false) {
+            // Una fecha corrupta no debe habilitar una oferta por accidente.
+            return true;
+        }
+
+        try {
+            $referencia = $hoy !== null
+                ? new \DateTimeImmutable($hoy, $zona)
+                : new \DateTimeImmutable('now', $zona);
+        } catch (\Throwable) {
+            $referencia = new \DateTimeImmutable('now', $zona);
+        }
+
+        return $referencia->format('Y-m-d') > $cierre->format('Y-m-d');
+    }
+
+    /**
+     * Estado que debe mostrar el panel: conserva `estado` persistido y expone
+     * `vencida` cuando una oferta publicada ya alcanzó su cierre. `cerrada`
+     * sigue siendo el cierre manual y no se confunde con el temporal.
+     *
+     * @param array<string, mixed> $fila
+     */
+    public static function estadoEfectivo(array $fila, ?string $hoy = null): string
+    {
+        $estado = (string) ($fila['estado'] ?? '');
+
+        if ($estado === 'publicada' && self::vencida($fila['fecha_cierre'] ?? null, $hoy)) {
+            return 'vencida';
+        }
+
+        return $estado;
+    }
+
+    /**
+     * @param array<string, mixed> $fila
+     *
+     * @return array<string, mixed>
+     */
+    private function conEstadoEfectivo(array $fila): array
+    {
+        $fila['estado_efectivo'] = self::estadoEfectivo($fila);
+
+        return $fila;
+    }
+
+    private static function zonaHoraria(): \DateTimeZone
+    {
+        $configurada = config('App')->appTimezone ?? date_default_timezone_get();
+
+        try {
+            return new \DateTimeZone($configurada);
+        } catch (\Throwable) {
+            return new \DateTimeZone(date_default_timezone_get());
+        }
     }
 
     private function usuarioDeEmpresa(int $empresaId): ?int

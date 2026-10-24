@@ -24,6 +24,7 @@ const FILTROS = [
   ['pendiente', 'Pendientes'],
   ['observada', 'Observadas'],
   ['publicada', 'Publicadas'],
+  ['vencida', 'Vencidas'],
   ['rechazada', 'Rechazadas'],
   ['cerrada', 'Cerradas'],
 ];
@@ -87,7 +88,7 @@ export default function Ofertas() {
             <tbody>
               {data.map((o) => (
                 <tr key={o.id}>
-                  <td data-label="Estado"><Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
+                  <td data-label="Estado"><Estado valor={o.estado_efectivo || o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} /></td>
                   <td data-label="Puesto"><strong>{o.puesto}</strong></td>
                   <td data-label="Empresa">{o.razon_social}</td>
                   <td className="col-identificador" data-label="RUC">{o.ruc}</td>
@@ -129,6 +130,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
 
   if (!oferta) return null;
   const o = detalle || oferta;
+  const estado = o.estado_efectivo || o.estado;
 
   const aprobar = async () => {
     const ok = await confirmar({
@@ -213,7 +215,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
         </Boton>
       </>
     ),
-  }[o.estado] || null;
+  }[estado] || null;
 
   return (
     <Modal
@@ -225,7 +227,8 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
       tamano="ancho"
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
-        <Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
+        <Estado valor={estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
+        {estado === 'vencida' && <span style={{ color: 'var(--amber-tx)', fontSize: '0.82rem' }}>Cierre automático por vencimiento: ya no recibe postulaciones.</span>}
         {o.fecha_validacion && <span style={{ color: 'var(--text-3)', fontSize: '0.82rem' }}>Revisada el {fechaHora(o.fecha_validacion)}</span>}
         {o.fecha_observacion && <span style={{ color: 'var(--blue-tx)', fontSize: '0.82rem' }}>Observada el {fechaHora(o.fecha_observacion)}</span>}
       </div>
