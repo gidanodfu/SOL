@@ -17,13 +17,14 @@ Uso: deploy/scripts/deploy.sh
 Actualiza una instalación de producción existente. Requiere:
   - CI_ENVIRONMENT=production en el .env activo.
   - COMPOSE_PROJECT_NAME distinto de sol_dev.
+  - La red externa del proxy y Traefik en ejecución.
+  - NGINX_MODE=http; el TLS termina en Traefik.
   - Una base ya inicializada con usuarios.
-  - Certificados si NGINX_MODE es same-domain o subdomain.
 
-Pasos: valida configuración, arranca/verifica MySQL, exige base inicializada,
-crea un respaldo verificado, construye imágenes, aplica migraciones, recrea
-servicios, espera salud y comprueba /health. No ejecuta seeders, no restaura
-datos y no elimina volúmenes.
+Pasos: valida configuración, exige el proxy compartido y Traefik en ejecución,
+arranca/verifica MySQL, exige base inicializada, crea un respaldo verificado,
+construye imágenes, aplica migraciones, recrea servicios, espera salud y
+comprueba /health. No ejecuta seeders, no restaura datos y no elimina volúmenes.
 USAGE
         exit 0
         ;;
@@ -37,16 +38,12 @@ validate_env_basics
 require_prod_project
 require_env APP_DOMAIN "Defina el dominio público del frontend."
 assert_compose_project compose_prod
+require_proxy_network
+require_proxy_subnet
+require_traefik_running
 
-case "$(env_get NGINX_MODE)" in
-    http) warn "NGINX_MODE=http; confirme que un proxy externo termina TLS." ;;
-    same-domain|subdomain)
-        CERT_DIR=$(env_get TLS_CERTS_DIR)
-        [ -n "$CERT_DIR" ] || die "Falta TLS_CERTS_DIR."
-        [ -f "$(resolve_deploy_path "$CERT_DIR")/fullchain.pem" ] || die "No existe ${CERT_DIR}/fullchain.pem."
-        [ -f "$(resolve_deploy_path "$CERT_DIR")/privkey.pem" ] || die "No existe ${CERT_DIR}/privkey.pem."
-        ;;
-esac
+[ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
+printf 'Proxy compartido: %s (Traefik en ejecución)\n' "$(proxy_network)"
 
 printf 'Entorno de destino: producción\n'
 printf 'Proyecto Compose: %s\n' "$(project_name)"

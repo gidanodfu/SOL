@@ -20,8 +20,9 @@ SOL/
 └── deploy/
     ├── compose.yaml        # servicios base
     ├── compose.dev.yaml    # desarrollo
-    ├── compose.prod.yaml   # producción + Nginx
-    ├── nginx/              # plantillas, render y certificados
+    ├── compose.prod.yaml   # producción + Nginx interno
+    ├── infra/traefik/      # Traefik compartido y red proxy
+    ├── nginx/              # plantillas, render y certificados legado
     └── scripts/            # bootstrap, deploy, dev, validate, test, backup, restore
 ```
 
@@ -31,6 +32,20 @@ SOL/
 - Git, shell POSIX, `awk`, `grep`, `sed`, `stat` y `curl` para diagnóstico.
 - No se requiere PHP, Composer, Node.js, npm, MySQL ni `node_modules` en el host.
 
+## Infraestructura compartida
+
+En un VPS con varios proyectos, **Traefik es el único servicio que publica
+80/443**. Su stack vive en `deploy/infra/traefik/` y crea la red externa
+`proxy`. SOL conserva su Nginx como gateway interno, sin puertos publicados,
+conectado a `proxy` y a su red interna.
+
+Orden de despliegue:
+
+1. `deploy/infra/traefik` (DNS y ACME configurados).
+2. SOL con `PROXY_NETWORK=proxy`, `NGINX_MODE=http`, dominios y URLs HTTPS.
+
+Consulte `deploy/infra/traefik/README.md`.
+
 ## Servicios
 
 - `db`: MySQL 8.0.46. Producción no publica puertos; desarrollo usa
@@ -39,13 +54,20 @@ SOL/
   `php spark serve`; en producción, PHP-FPM.
 - `frontend`: build de Vite servido por Nginx en producción; en desarrollo
   ejecuta Vite con recarga automática.
-- `nginx`: solo producción; enruta el frontend y `/api`/`/health` al backend.
+- `nginx`: gateway interno de producción; enruta el frontend y `/api`/`/health`
+  al backend. **No publica puertos al host.**
+- `traefik` (infraestructura separada): publica 80/443 y enruta por dominio.
 - `adminer`: opcional en desarrollo; perfil `tools`, en `127.0.0.1:8082`.
 
-La red es `sol_<proyecto>_internal`; los volúmenes son
+La red interna es `sol_<proyecto>_internal`; los volúmenes son
 `sol_<proyecto>_mysql_data`, `sol_<proyecto>_backend_writable` y, en producción,
 `sol_<proyecto>_nginx_conf`. El nombre se toma de `COMPOSE_PROJECT_NAME` y los
 scripts lo pasan explícitamente a Compose. Producción rechaza `sol_dev`.
+
+En producción, el servicio `nginx` se conecta también a la red externa
+`${PROXY_NETWORK:-proxy}` creada por Traefik. No publica puertos al host.
+`PROXY_SUBNET` debe coincidir con la subred de esa red; se usa para confiar en
+`X-Forwarded-For` y conservar la IP real de los clientes en logs y rate limiting.
 
 Desarrollo publica únicamente en `127.0.0.1` los puertos 5173, 8080, 3307 y
 8082. Producción publica únicamente 80/443 en Nginx; PHP-FPM y MySQL no
@@ -81,6 +103,15 @@ publican puertos al exterior.
 ./deploy/scripts/restore.sh --help
 ./deploy/scripts/bootstrap.sh --prod --authorize   # instalación nueva
 ./deploy/scripts/deploy.sh                          # actualización existente
+
+# Infraestructura compartida (una vez por VPS)
+cd deploy/infra/traefik
+cp .env.example .env
+chmod 600 .env
+# completar ACME_EMAIL y revisar PROXY_NETWORK, PROXY_SUBNET y
+# TRAEFIK_SOCKET_NETWORK
+docker compose --env-file .env -f compose.yaml config
+docker compose --env-file .env -f compose.yaml up -d
 ```
 
 Los scripts localizan la raíz del repositorio y pasan `--env-file` y
@@ -119,18 +150,17 @@ servicios externos siguen siendo fuentes externas. No se usan etiquetas
 `deploy/nginx/render.sh` corre dentro del contenedor y renderiza la plantilla
 según `NGINX_MODE`:
 
-- `http`: HTTP directo o TLS terminado por un proxy externo.
-- `same-domain`: `https://APP_DOMAIN` y `https://APP_DOMAIN/api`.
-- `subdomain`: `https://APP_DOMAIN` y `https://API_DOMAIN`.
+- `http`: **modo usado en producción detrás de Traefik**; Traefik termina TLS.
+- `same-domain`: legado para Nginx standalone con TLS propio.
+- `subdomain`: legado para Nginx standalone con TLS propio.
 
-Los certificados reales se colocan en `TLS_CERTS_DIR` (por defecto
-`deploy/nginx/certs/`): `fullchain.pem` y `privkey.pem`. No se versionan.
-El contenedor los monta como solo lectura. Ver `deploy/nginx/README.md`.
+En la arquitectura con proxy compartido, SOL usa `NGINX_MODE=http`, no monta
+certificados y no publica puertos. Las plantillas HTTPS se conservan para
+compatibilidad con instalaciones standalone, pero no se usan en el flujo
+oficial.
 
-No se generan certificados automáticamente. Para Let's Encrypt, emita/renueve
-en el host, copie los archivos al directorio indicado, compruebe que el
-certificado y la clave correspondan al dominio y recargue Nginx mediante el
-procedimiento de despliegue. Los modos HTTPS envían HSTS; `http` no.
+Los certificados y la renovación ACME viven en `deploy/infra/traefik`. No se
+generan certificados automáticamente dentro de SOL.
 
 ## Datos, respaldos y restauración
 

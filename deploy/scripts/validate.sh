@@ -23,7 +23,8 @@ Valida .env, variables obligatorias, Compose, Dockerfiles, scripts y coherencia
 básica sin imprimir secretos. Por defecto valida la sintaxis de ambos entornos.
 
   --dev         exige que el .env activo sea de desarrollo.
-  --prod        exige CI_ENVIRONMENT=production y un proyecto distinto de sol_dev.
+  --prod        exige CI_ENVIRONMENT=production, un proyecto distinto de
+                sol_dev y la red externa del proxy disponible.
   --build       construye las imágenes de desarrollo.
   --build-prod  construye las imágenes de producción (requiere .env de producción).
   --runtime     comprueba servicios y endpoints del entorno seleccionado.
@@ -52,10 +53,16 @@ validate_env_basics
 
 case "$TARGET" in
     dev) require_dev_project ;;
-    prod) require_prod_project ;;
+    prod)
+        require_prod_project
+        require_proxy_network
+        require_proxy_subnet
+        ;;
     all)
         if [ "$(env_get CI_ENVIRONMENT)" = "production" ]; then
             require_prod_project
+            require_proxy_network
+            require_proxy_subnet
         else
             printf 'Aviso: el .env activo no es de producción; se valida la sintaxis de prod sin sus guardias.\n'
         fi
@@ -85,6 +92,23 @@ compose_dev config -q
 compose_prod config -q
 assert_compose_project compose_dev
 assert_compose_project compose_prod
+
+printf 'Comprobando que producción no publique puertos...\n'
+if compose_prod config 2>/dev/null | grep -q 'published:'; then
+    die "El stack de producción publica puertos al host; solo Traefik debe publicar 80/443."
+fi
+if ! compose_prod config 2>/dev/null | awk '
+    /^  nginx:/ { in_nginx=1; next }
+    /^  [a-zA-Z0-9_-]+:/ { if (in_nginx) exit }
+    in_nginx && /^    networks:/ { in_net=1; next }
+    in_net && index($0, "      proxy:") == 1 { found=1; exit }
+    END { exit found ? 0 : 1 }
+'; then
+    die "El Nginx de SOL no está conectado a la red externa del proxy."
+fi
+if ! compose_prod config 2>/dev/null | grep -q 'traefik.http.routers.sol.rule'; then
+    die "Faltan las labels de enrutamiento de Traefik en el Nginx de SOL."
+fi
 
 printf 'Comprobando que las imágenes no usen etiquetas móviles...\n'
 if grep -RInE '(^|[[:space:]])(image:[[:space:]]+[^[:space:]]+:latest|FROM[[:space:]]+[^[:space:]]+:latest)' \
@@ -159,6 +183,8 @@ fi
 if [ "$RUNTIME" = "1" ]; then
     printf 'Comprobando servicios en ejecución...\n'
     if [ "$TARGET" = "prod" ]; then
+        require_proxy_network
+        require_traefik_running
         compose_prod ps
         http_ok "$(nginx_health_url)" || die "Nginx de producción no responde en /health."
     else
