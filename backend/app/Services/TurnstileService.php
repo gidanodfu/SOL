@@ -86,8 +86,11 @@ class TurnstileService
             throw ApiException::validacion(self::MENSAJE_GENERICO, [self::MENSAJE_GENERICO]);
         }
 
-        $hosts = array_filter(array_map('trim', explode(',', (string) env('turnstile.hostnames'))));
-        if ($hosts !== [] && ! in_array((string) ($resultado['hostname'] ?? ''), $hosts, true)) {
+        $hosts = array_values(array_filter(array_map(
+            static fn ($host) => strtolower(trim((string) $host)),
+            explode(',', (string) env('turnstile.hostnames')),
+        )));
+        if ($hosts !== [] && ! in_array(strtolower((string) ($resultado['hostname'] ?? '')), $hosts, true)) {
             log_message('error', 'Turnstile: hostname no permitido.');
 
             throw ApiException::validacion(self::MENSAJE_GENERICO, [self::MENSAJE_GENERICO]);

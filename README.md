@@ -179,7 +179,9 @@ ya contiene usuarios.
 
 ## 5. Configuración `.env`
 
-La fuente única es `.env` en la raíz. Las variables principales son:
+La fuente de configuración es un archivo privado por entorno, normalmente
+`.env` en la raíz; puede seleccionar otro con `ENV_FILE`. `.env.example` es la
+única plantilla versionada. Las variables principales son:
 
 | Grupo | Variables |
 |---|---|
@@ -345,6 +347,9 @@ Nginx interno de `deploy/compose.prod.yaml`. Complete `APP_DOMAIN`,
 Consulte [`deploy/README.md`](deploy/README.md),
 [`deploy/infra/traefik/README.md`](deploy/infra/traefik/README.md) y
 [`docs/operaciones.md`](docs/operaciones.md) para bootstrap, TLS y despliegue.
+El health check **interno** se ejecuta dentro del contenedor Nginx y no
+depende de DNS; el smoke público se ejecuta aparte con `PUBLIC_SMOKE=1` o
+`validate.sh --runtime --public-smoke`.
 
 ## 11. Ejecución frontend
 
@@ -385,11 +390,23 @@ auto-registro de empresas. Sin token, ese paso no puede validarse contra SUNAT.
 el enlace de activación. Con `email.host` vacío no se envía correo y el administrador
 entrega el enlace desde la bandeja de solicitudes.
 
-## 15. Configuración opcional Google
+## 15. Configuración opcional Google y Turnstile
 
-`google.clientId` (backend) y `VITE_GOOGLE_CLIENT_ID` (frontend) habilitan el ingreso y
-registro de postulantes con Google. El origen del frontend debe estar autorizado en la
-consola de Google.
+`google.clientId` (backend) y `VITE_GOOGLE_CLIENT_ID` (frontend) habilitan el
+ingreso y registro de postulantes con Google. Deben estar ambos presentes y ser
+el mismo cliente web, o ambos vacíos. Autorice en Google Cloud Console:
+
+- desarrollo: `http://localhost:<DEV_FRONTEND_PORT>` (por defecto
+  `http://localhost:5173`);
+- producción: `https://<APP_DOMAIN>`.
+
+Use clientes OAuth separados por entorno. `VITE_GOOGLE_CLIENT_ID` se incorpora
+en el build de Vite: si cambia, reconstruya el frontend.
+
+Cloudflare Turnstile en producción exige `turnstile.enabled=true`, la secret
+key del backend, la site key pública y `turnstile.hostnames` con el
+`APP_DOMAIN` exacto, sin protocolo, ruta ni puerto. En desarrollo puede usar
+`turnstile.enabled=false` o las credenciales de prueba de Cloudflare.
 
 ## 16. Solución de problemas
 
@@ -444,8 +461,14 @@ Node.js, Composer, npm ni MySQL instalados en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo (stack activo)
+./deploy/scripts/test.sh validation # validación preventiva + health interno + ACME
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
+
+`test.sh validation` no usa secretos reales y comprueba Turnstile, Google,
+URLs/CORS, health interno sin DNS y la inicialización del resolver ACME. La CI
+`.github/workflows/ci.yml` ejecuta validación, backend, frontend, build y smoke
+HTTP local con un `.env` sintético.
 
 ### Unitarias backend
 
@@ -515,17 +538,27 @@ desactualizadas.
   TLS y enruta por dominio.
 - Instalación nueva: `./deploy/scripts/bootstrap.sh --prod --authorize`.
 - Actualizaciones: `./deploy/scripts/deploy.sh` (no ejecuta `SystemSeeder`).
-- Certificados/ACME: gestionados por Traefik en `deploy/infra/traefik`.
-  Las plantillas HTTPS de `deploy/nginx/` se conservan solo para un Nginx
-  standalone legado.
+- Certificados/ACME: gestionados por Traefik en `deploy/infra/traefik`. El
+  resolver `letsencrypt` se define una sola vez en la plantilla `traefik.yml`,
+  que se renderiza con `ACME_EMAIL` y `ACME_CA_SERVER`; no use argumentos ACME
+  duplicados en Compose. Las plantillas HTTPS de `deploy/nginx/` se conservan
+  solo para un Nginx standalone legado.
+- Health: bootstrap, deploy y restore usan el health interno de Nginx, sin DNS
+  público. El smoke público es independiente (`PUBLIC_SMOKE=1`).
+- Validación previa: `./deploy/scripts/validate.sh --prod` y
+  `./deploy/scripts/test.sh validation`. La CI no usa secretos reales.
 - Persistencia: volúmenes `sol_<proyecto>_mysql_data` y
   `sol_<proyecto>_backend_writable`.
 - Almacenamiento de CV: `storage.driver=supabase` con credenciales S3 privadas.
 - Entorno: `CI_ENVIRONMENT=production` y HTTPS público.
 - Respaldos: `./deploy/scripts/backup.sh prod`; restauración controlada:
   `./deploy/scripts/restore.sh --env prod --db <archivo.sql> --confirm "RESTORE:<proyecto>:prod" --allow-production`.
-- Pendiente: DNS/dominios, certificados reales, Google OAuth, Turnstile,
-  Supabase, Resend/SMTP, SUNAT/RENIEC y revisión de credenciales.
+- Estado operativo conocido: despliegue VPS con dominio `ufe.a-415.win`,
+  Cloudflare, Traefik v3.6, proyecto `sol_prod`, volumen ACME
+  `sol_infra_traefik_acme` y certificado Let's Encrypt ya emitido. Este
+  repositorio no se conecta al VPS para verificarlo.
+- Pendiente de validación separada: DNS/Cloudflare, renovación TLS, OAuth,
+  Turnstile, Supabase, Resend/SMTP, SUNAT/RENIEC y credenciales externas.
 - La API envía cabeceras de seguridad (`secureheaders`); Traefik añade HSTS en
   HTTPS. No se aplica CSP global. Configurar CSP en el hosting del frontend.
 

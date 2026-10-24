@@ -1,6 +1,10 @@
 # Configuración estática de Traefik para la red compartida `proxy` y la red
 # exclusiva de entrada de SOL `sol_entry`.
-# El correo ACME y el CA se pasan por variables/args en compose.yaml.
+#
+# Este archivo es una plantilla. El entrypoint del contenedor sustituye
+# __ACME_EMAIL__, __ACME_CA_SERVER__ y __PROXY_NETWORK__ por variables del
+# entorno y escribe /tmp/traefik.rendered.yml, que es el archivo que Traefik
+# carga realmente. No incluya correos ni valores de producción aquí.
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -30,7 +34,21 @@ providers:
   docker:
     endpoint: "tcp://socket-proxy:2375"
     exposedByDefault: false
+    network: __PROXY_NETWORK__
     watch: true
   file:
     directory: /etc/traefik/dynamic
     watch: true
+
+# Fuente única de la configuración ACME. El resolver debe llamarse letsencrypt
+# porque es el nombre usado por el router del Nginx de SOL.
+# __ACME_EMAIL__ y __ACME_CA_SERVER__ se sustituyen en el arranque y nunca se
+# versionan en este archivo.
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: __ACME_EMAIL__
+      storage: /acme/acme.json
+      httpChallenge:
+        entryPoint: web
+      caServer: __ACME_CA_SERVER__

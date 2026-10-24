@@ -25,7 +25,7 @@ dentro de contenedores; no se requiere PHP, Composer, Node.js ni MySQL en el hos
   run <svc> <cmd...>  Ejecuta un comando en un contenedor temporal.
   db                 Abre el cliente MySQL dentro del contenedor db.
   tools              Inicia Adminer opcional en 127.0.0.1:8082.
-  test [objetivo]    Ejecuta test.sh (all|backend|frontend|http|smoke).
+  test [objetivo]    Ejecuta test.sh (all|backend|frontend|http|smoke|validation).
   validate           Ejecuta validate.sh.
   migrate            Aplica migraciones pendientes en desarrollo.
   migration-status   Consulta el estado de las migraciones.

@@ -7,20 +7,21 @@ TARGET=all
 BUILD=1
 for arg in "$@"; do
     case "$arg" in
-        all|backend|frontend|http|smoke) TARGET=$arg ;;
+        all|backend|frontend|http|smoke|validation) TARGET=$arg ;;
         --no-build) BUILD=0 ;;
         -h|--help)
             cat <<'USAGE'
-Uso: deploy/scripts/test.sh [all|backend|frontend|http] [--no-build]
+Uso: deploy/scripts/test.sh [all|backend|frontend|http|smoke|validation] [--no-build]
 
 Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host
 ni modifica datos de producción.
 
-  all       pruebas backend + frontend + build (por defecto)
-  backend   PHPUnit dentro del contenedor backend
-  frontend  npm test + lint + build dentro del contenedor frontend
-  http      smoke HTTP no destructivo contra el stack de desarrollo activo
-  smoke     smoke tests históricos en un MySQL temporal aislado en Docker
+  all         pruebas backend + frontend + build (por defecto)
+  backend     PHPUnit dentro del contenedor backend
+  frontend    npm test + lint + build dentro del contenedor frontend
+  http        smoke HTTP no destructivo contra el stack de desarrollo activo
+  smoke       smoke tests históricos en un MySQL temporal aislado en Docker
+  validation  validación de variables y health interno sin DNS público
 
 Opciones:
   --no-build  reutiliza las imágenes existentes en lugar de reconstruirlas.
@@ -41,6 +42,13 @@ printf 'Validando configuración antes de las pruebas...\n'
 
 if [ "$TARGET" = "smoke" ]; then
     "$ROOT/deploy/scripts/smoke.sh"
+    exit 0
+fi
+
+if [ "$TARGET" = "validation" ]; then
+    "$ROOT/tests/deploy/test_validation.sh"
+    "$ROOT/tests/deploy/test_internal_health.sh"
+    "$ROOT/tests/infra/test_traefik_acme.sh"
     exit 0
 fi
 

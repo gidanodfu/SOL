@@ -31,6 +31,7 @@ restart ni deploy.sh.
 
 Requiere INITIAL_ADMIN_USERNAME e INITIAL_ADMIN_PASSWORD en el .env activo.
 No imprime contraseñas. Si la base ya contiene usuarios, se detiene.
+La verificación final es interna; PUBLIC_SMOKE=1 añade el smoke público.
 USAGE
             exit 0
             ;;
@@ -115,7 +116,12 @@ for service in $wait_services; do
 done
 
 if [ "$MODE" = "prod" ]; then
-    http_ok "$(nginx_health_url)" || die "La verificación /health de Nginx falló."
+    nginx_internal_health compose_prod
+    if [ "${PUBLIC_SMOKE:-0}" = "1" ]; then
+        public_nginx_health || die "El smoke público de Nginx falló; revise DNS, TLS y certificado."
+    else
+        printf 'Smoke público omitido; ejecútelo con PUBLIC_SMOKE=1 cuando DNS/TLS estén disponibles.\n'
+    fi
 else
     http_ok "http://127.0.0.1:$(env_get DEV_API_PORT)/health" || die "La verificación /health del backend falló."
     http_ok "http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)/" || die "El frontend no responde."

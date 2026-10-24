@@ -24,8 +24,8 @@ Actualiza una instalación de producción existente. Requiere:
 Pasos: valida configuración, exige la red de entrada exclusiva y Traefik en
 ejecución, arranca/verifica MySQL, exige base inicializada, crea un respaldo
 verificado, construye imágenes, aplica migraciones, recrea servicios, espera
-salud y comprueba /health. No ejecuta seeders, no restaura datos y no elimina
-volúmenes.
+salud y comprueba el health interno de Nginx. El smoke público es opcional con
+PUBLIC_SMOKE=1. No ejecuta seeders, no restaura datos y no elimina volúmenes.
 USAGE
         exit 0
         ;;
@@ -88,7 +88,12 @@ for service in db backend frontend nginx; do
     wait_for_service compose_prod "$service" 90
 done
 
-http_ok "$(nginx_health_url)" || die "La verificación /health falló después del despliegue."
+nginx_internal_health compose_prod
+if [ "${PUBLIC_SMOKE:-0}" = "1" ]; then
+    public_nginx_health || die "El smoke público de Nginx falló; revise DNS, TLS y certificado."
+else
+    printf 'Smoke público omitido; ejecútelo con PUBLIC_SMOKE=1 cuando DNS/TLS estén disponibles.\n'
+fi
 printf '\nDespliegue completado correctamente.\n'
 printf 'Proyecto: %s\n' "$(project_name)"
 printf 'Frontend: %s\n' "$(env_get APP_URL)"
