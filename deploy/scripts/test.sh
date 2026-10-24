@@ -20,7 +20,7 @@ ni modifica datos de producción.
   backend     PHPUnit dentro del contenedor backend
   frontend    npm test + lint + build dentro del contenedor frontend
   http        smoke HTTP no destructivo contra el stack de desarrollo activo
-  smoke       smoke tests históricos en un MySQL temporal aislado en Docker
+  smoke       suite de humo aislada en un MySQL temporal con esquema por suite
   validation  validación de variables y health interno sin DNS público
 
 Opciones:
@@ -41,7 +41,7 @@ printf 'Validando configuración antes de las pruebas...\n'
 "$ROOT/deploy/scripts/validate.sh" --dev
 
 if [ "$TARGET" = "smoke" ]; then
-    "$ROOT/deploy/scripts/smoke.sh"
+    "$ROOT/deploy/scripts/smoke.sh" || exit $?
     exit 0
 fi
 

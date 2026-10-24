@@ -86,8 +86,11 @@ final class HtmlSanitizerTest extends TestCase
 
     public function testReglaTextoMaxIgnoraEtiquetas(): void
     {
-        $ok = '<p>' . str_repeat('a', 10000) . '</p>';
-        Validador::validar(['descripcion' => $ok], ['descripcion' => ['texto_max:10000']]);
+        foreach ([9999, 10000] as $longitud) {
+            $ok = '<p>' . str_repeat('a', $longitud) . '</p>';
+            Validador::validar(['descripcion' => $ok], ['descripcion' => ['texto_max:10000']]);
+            $this->assertSame($longitud, Validador::longitudTexto($ok));
+        }
 
         $this->expectException(ApiException::class);
         Validador::validar(['descripcion' => '<p>' . str_repeat('a', 10001) . '</p>'], ['descripcion' => ['texto_max:10000']]);

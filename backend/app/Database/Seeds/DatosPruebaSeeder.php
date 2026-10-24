@@ -43,6 +43,17 @@ class DatosPruebaSeeder extends Seeder
                 'updated_at'    => $now,
             ]);
             $adminId = (int) $this->db->insertID();
+        } else {
+            $admin = $this->db->table('users')->select('email')->where('id', $adminId)->get()->getRowArray();
+            if ($admin !== null && trim((string) ($admin['email'] ?? '')) === '') {
+                // SystemSeeder recibe INITIAL_ADMIN_USERNAME/Password, pero no
+                // un correo. El fixture debe completar el email para que las
+                // pruebas de login administrativo por correo sean deterministas.
+                $this->db->table('users')->where('id', $adminId)->update([
+                    'email'      => 'admin@mdjlo.gob.pe',
+                    'updated_at' => $now,
+                ]);
+            }
         }
 
         // ------------------------------------------------ empresa de prueba

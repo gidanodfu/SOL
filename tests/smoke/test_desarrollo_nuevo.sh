@@ -14,7 +14,7 @@ trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
 jq_p() { python3 -c 'import sys,json;d=json.load(sys.stdin);print(eval("d"+sys.argv[1]) if sys.argv[1].startswith("[") else d[sys.argv[1]] if sys.argv[1] in d else "")' "$1" 2>/dev/null; }
-tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])'; }
+tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token"), "FAIL login sin access_token";print(d["data"]["access_token"])'; }
 
 RUC=20100047218
 CORREO=mesadepartes.test@credito.com.pe
@@ -38,7 +38,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content
 
 echo "== 6. admin aprueba => devuelve enlace =="
 LINK=$(curl -s -X POST "$B/api/admin/solicitudes-empresa/$SID/aprobar" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["link"])')
-echo "link=${LINK:0:60}..."
+echo "enlace de activación generado"
 TOKEN=${LINK##*/}
 
 echo "== 7. ver enlace público (GET activar-cuenta/token) =="
@@ -52,7 +52,7 @@ curl -s -X POST "$B/api/activar-cuenta/$TOKEN" -H 'Content-Type: application/jso
 
 echo "== 10. login por RUC => 200 =="
 TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$RUC\",\"password\":\"Clave12345!\"}" | tok)
-echo "token empresa: ${TE:0:20}..."
+echo "login empresa: OK"
 
 echo "== 11. login con el correo corporativo => 401 (ya no es identificador) =="
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$CORREO\",\"password\":\"Clave12345!\"}"
@@ -85,7 +85,7 @@ curl -s -X POST "$B/api/admin/solicitudes-empresa/$SID/rechazar" -H "Authorizati
 echo
 echo "== 19. enlace regenerado por admin (obtenerEnlace) =="
 LINK2=$(curl -s "$B/api/admin/solicitudes-empresa/$SID/enlace" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["link"])')
-echo "link2=${LINK2:0:40}...  (el anterior quedó invalidado)"
+echo "nuevo enlace de activación generado"
 curl -s -o /dev/null -w "enlace viejo tras regenerar http:%{http_code} (esperado 401)\n" "$B/api/activar-cuenta/$TOKEN"
 
 echo
