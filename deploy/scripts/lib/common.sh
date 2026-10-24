@@ -159,7 +159,9 @@ assert_compose_project() {
 require_prod_project() {
     require_project_name
     [ "$(env_get CI_ENVIRONMENT)" = "production" ] || die "El entorno de producción exige CI_ENVIRONMENT=production en $ENV_FILE."
-    [ "$(project_name)" != "sol_dev" ] || die "Producción no puede usar COMPOSE_PROJECT_NAME=sol_dev. Defina un nombre propio, por ejemplo sol_prod."
+    case "$(project_name)" in
+        sol_dev|sol_dev_*) die "Producción no puede usar un proyecto de desarrollo. Defina un nombre propio, por ejemplo sol_prod." ;;
+    esac
 }
 
 require_dev_project() {
@@ -168,7 +170,10 @@ require_dev_project() {
         development|testing) ;;
         *) die "El entorno de desarrollo exige CI_ENVIRONMENT=development o testing en $ENV_FILE." ;;
     esac
-    [ "$(project_name)" != "sol_prod" ] || die "Desarrollo no puede usar el nombre de proyecto de producción (sol_prod)."
+    case "$(project_name)" in
+        sol_prod|sol_prod_*) die "Desarrollo no puede usar un proyecto de producción (sol_prod*)." ;;
+    esac
+    [ "$(project_name)" = "sol_dev" ] || warn "Desarrollo usa COMPOSE_PROJECT_NAME=$(project_name); el valor recomendado es sol_dev."
 }
 
 # Resuelve una ruta relativa al directorio deploy/ o devuelve una absoluta.
@@ -197,6 +202,306 @@ valid_ipv4() {
         END { exit ok ? 0 : 1 }
     '
 }
+
+trim_value() {
+    printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+lower_value() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+valid_hostname() {
+    _host=$(lower_value "$(trim_value "$1")")
+    [ -n "$_host" ] || return 1
+    [ "${#_host}" -le 253 ] || return 1
+    case "$_host" in
+        *[!a-z0-9.-]*|.*|*.|*..*) return 1 ;;
+    esac
+    printf '%s\n' "$_host" | awk -F. '
+        { ok=1; for (i=1; i<=NF; i++) if ($i == "" || length($i) > 63 || $i ~ /^-/ || $i ~ /-$/) ok=0 }
+        END { exit ok ? 0 : 1 }
+    '
+}
+
+valid_origin() {
+    _origin=$(trim_value "$1")
+    case "$_origin" in
+        http://*|https://*) ;;
+        *) return 1 ;;
+    esac
+    _rest=${_origin#*://}
+    [ -n "$_rest" ] || return 1
+    case "$_rest" in
+        */*|*'?'*|*'#'*) return 1 ;;
+    esac
+    _hostport=$_rest
+    _host=${_hostport%%:*}
+    [ -n "$_host" ] || return 1
+    valid_hostname "$_host" || valid_ipv4 "$_host" || return 1
+    if [ "$_hostport" != "$_host" ]; then
+        _port=${_hostport#"$_host"}
+        case "$_port" in
+            :[0-9]*) ;;
+            *) return 1 ;;
+        esac
+        _digits=${_port#:}
+        [ "${#_digits}" -le 5 ] || return 1
+        [ "$_digits" -ge 1 ] 2>/dev/null || return 1
+        [ "$_digits" -le 65535 ] 2>/dev/null || return 1
+    fi
+    return 0
+}
+
+origin_from_url() {
+    _url=$(trim_value "$1")
+    case "$_url" in
+        http://*|https://*) ;;
+        *) return 1 ;;
+    esac
+    _scheme=${_url%%://*}
+    _rest=${_url#*://}
+    _authority=${_rest%%/*}
+    case "$_authority" in
+        ''|*'?'*|*'#'*) return 1 ;;
+    esac
+    printf '%s://%s' "$_scheme" "$_authority"
+}
+
+url_is_origin() {
+    _url=$(trim_value "$1")
+    _expected=$(origin_from_url "$_url") || return 1
+    _normalized=${_url%/}
+    [ "$(lower_value "$_normalized")" = "$(lower_value "$_expected")" ]
+}
+
+list_has() {
+    _list=$1
+    _want=$(lower_value "$(trim_value "$2")")
+    [ -n "$_want" ] || return 1
+    for _item in $(printf '%s' "$_list" | tr ',' ' '); do
+        _item=$(lower_value "$(trim_value "$_item")")
+        [ "$_item" = "$_want" ] && return 0
+    done
+    return 1
+}
+
+is_enabled() {
+    case "$(lower_value "$(trim_value "$1")")" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+is_disabled() {
+    case "$(lower_value "$(trim_value "$1")")" in
+        ''|0|false|no|off) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+dev_port() {
+    _port=$(trim_value "$(env_get "$1")")
+    case "$_port" in
+        ''|*[!0-9]*) printf '%s' "$2" ;;
+        *) printf '%s' "$_port" ;;
+    esac
+}
+
+local_origin_matches() {
+    _origin=$(lower_value "$(trim_value "$1")")
+    _port=$2
+    [ "$_origin" = "http://localhost:$_port" ] || [ "$_origin" = "http://127.0.0.1:$_port" ]
+}
+
+validate_turnstile() {
+    _environment=$1
+    _enabled=$(env_get turnstile.enabled)
+    if is_enabled "$_enabled"; then
+        _turnstile_on=1
+    elif is_disabled "$_enabled"; then
+        _turnstile_on=0
+    else
+        die "turnstile.enabled debe ser un booleano (true/false)."
+    fi
+
+    if [ "$_environment" = "production" ] && [ "$_turnstile_on" != "1" ]; then
+        die "Turnstile debe estar habilitado en producción: configure turnstile.enabled=true."
+    fi
+    [ "$_turnstile_on" = "1" ] || return 0
+
+    [ -n "$(env_get turnstile.secretKey)" ] || die "Falta turnstile.secretKey en $ENV_FILE."
+    [ -n "$(env_get VITE_TURNSTILE_SITE_KEY)" ] || die "Falta VITE_TURNSTILE_SITE_KEY en $ENV_FILE."
+
+    _hosts=$(env_get turnstile.hostnames)
+    [ -n "$_hosts" ] || die "turnstile.hostnames no puede estar vacío cuando Turnstile está habilitado."
+    for _item in $(printf '%s' "$_hosts" | tr ',' ' '); do
+        _item=$(lower_value "$(trim_value "$_item")")
+        valid_hostname "$_item" \
+            || die "turnstile.hostnames debe contener hostnames sin protocolo, ruta ni puerto."
+    done
+
+    _app_domain=$(lower_value "$(trim_value "$(env_get APP_DOMAIN)")")
+    list_has "$_hosts" "$_app_domain" \
+        || die "turnstile.hostnames debe incluir $_app_domain."
+}
+
+validate_google_oauth() {
+    _google_backend=$(trim_value "$(env_get google.clientId)")
+    _google_frontend=$(trim_value "$(env_get VITE_GOOGLE_CLIENT_ID)")
+
+    if [ -n "$_google_backend" ] || [ -n "$_google_frontend" ]; then
+        [ -n "$_google_backend" ] && [ -n "$_google_frontend" ] \
+            || die "Google OAuth requiere google.clientId y VITE_GOOGLE_CLIENT_ID juntos."
+        [ "$_google_backend" = "$_google_frontend" ] \
+            || die "google.clientId y VITE_GOOGLE_CLIENT_ID deben corresponder al mismo cliente web."
+    fi
+}
+
+validate_domains_and_urls() {
+    _environment=$1
+    _app_domain=$(lower_value "$(trim_value "$(env_get APP_DOMAIN)")")
+    _api_domain=$(lower_value "$(trim_value "$(env_get API_DOMAIN)")")
+    [ -n "$_api_domain" ] || _api_domain=$_app_domain
+
+    valid_hostname "$_app_domain" \
+        || die "APP_DOMAIN debe ser un hostname válido, sin protocolo ni ruta."
+    valid_hostname "$_api_domain" \
+        || die "API_DOMAIN debe ser un hostname válido, sin protocolo ni ruta."
+
+    case "$(env_get NGINX_MODE)" in
+        same-domain)
+            [ "$_app_domain" = "$_api_domain" ] \
+                || die "NGINX_MODE=same-domain exige APP_DOMAIN=API_DOMAIN."
+            ;;
+        subdomain)
+            [ "$_app_domain" != "$_api_domain" ] \
+                || die "NGINX_MODE=subdomain exige APP_DOMAIN distinto de API_DOMAIN."
+            ;;
+    esac
+
+    _app_url=$(trim_value "$(env_get APP_URL)")
+    url_is_origin "$_app_url" \
+        || die "APP_URL debe ser un origen http(s) sin ruta."
+    _app_origin=$(origin_from_url "$_app_url")
+
+    _base_url=$(trim_value "$(env_get app.baseURL)")
+    url_is_origin "$_base_url" \
+        || die "app.baseURL debe ser una URL http(s) raíz, sin ruta adicional."
+    _base_origin=$(origin_from_url "$_base_url")
+
+    _frontend_port=$(dev_port DEV_FRONTEND_PORT 5173)
+    _api_port=$(dev_port DEV_API_PORT 8080)
+
+    if [ "$_environment" = "production" ]; then
+        [ "$(lower_value "$_app_origin")" = "https://$_app_domain" ] \
+            || die "APP_URL debe corresponder a https://$_app_domain."
+        [ "$(lower_value "$_base_origin")" = "https://$_api_domain" ] \
+            || die "app.baseURL debe corresponder a https://$_api_domain/."
+        _expected_public_api="https://$_api_domain"
+    else
+        local_origin_matches "$_app_origin" "$_frontend_port" \
+            || die "APP_URL debe apuntar a http://localhost:$_frontend_port (o 127.0.0.1)."
+        local_origin_matches "$_base_origin" "$_api_port" \
+            || die "app.baseURL debe apuntar a http://localhost:$_api_port/ (o 127.0.0.1)."
+        _expected_public_api="http://localhost:$_api_port"
+    fi
+
+    _cors=$(env_get cors.allowedOrigins)
+    if [ -z "$(trim_value "$_cors")" ]; then
+        if [ "$_environment" = "production" ]; then
+            die "cors.allowedOrigins debe incluir $_app_origin."
+        fi
+        warn "cors.allowedOrigins está vacío; se usará el valor por defecto del backend."
+    else
+        for _origin in $(printf '%s' "$_cors" | tr ',' ' '); do
+            _origin=$(trim_value "$_origin")
+            valid_origin "$_origin" \
+                || die "cors.allowedOrigins contiene un origen inválido; use esquema, host y puerto opcional, sin ruta."
+        done
+        list_has "$_cors" "$_app_origin" \
+            || die "cors.allowedOrigins debe incluir $_app_origin."
+    fi
+
+    _vite_api=$(trim_value "$(env_get VITE_API_URL)")
+    if [ -n "$_vite_api" ]; then
+        url_is_origin "$_vite_api" \
+            || die "VITE_API_URL debe ser un origen http(s), sin ruta."
+        _vite_origin=$(origin_from_url "$_vite_api")
+    else
+        _vite_origin=""
+    fi
+
+    if [ "$_app_domain" = "$_api_domain" ]; then
+        if [ -n "$_vite_origin" ]; then
+            if [ "$_environment" = "production" ]; then
+                [ "$(lower_value "$_vite_origin")" = "https://$_app_domain" ] \
+                    || die "En dominio único, VITE_API_URL debe estar vacío o ser https://$_app_domain."
+            else
+                local_origin_matches "$_vite_origin" "$_api_port" \
+                    || die "En desarrollo, VITE_API_URL debe apuntar a http://localhost:$_api_port (o 127.0.0.1)."
+            fi
+        fi
+    else
+        [ -n "$_vite_origin" ] \
+            || die "VITE_API_URL es obligatorio cuando APP_DOMAIN y API_DOMAIN son distintos."
+        [ "$(lower_value "$_vite_origin")" = "$(lower_value "$_expected_public_api")" ] \
+            || die "VITE_API_URL debe corresponder a $_expected_public_api."
+    fi
+}
+
+validate_secrets() {
+    _environment=$1
+    _db_password=$(env_get DB_PASSWORD)
+    _db_root=$(env_get DB_ROOT_PASSWORD)
+    _jwt=$(env_get jwt.secret)
+    _encryption=$(env_get encryption.key)
+
+    [ -n "$_encryption" ] || die "Falta encryption.key en $ENV_FILE."
+    case "$_encryption" in
+        cambie-*|change-me*|changeme*|example*|password|secret) die "encryption.key no puede ser un valor de ejemplo." ;;
+    esac
+    case "$_jwt" in
+        cambie-*|change-me*|changeme*|example*|password|secret) die "jwt.secret no puede ser un valor de ejemplo." ;;
+    esac
+    case "$_db_password" in
+        ''|password|secret|changeme|change-me) die "DB_PASSWORD no puede estar vacío ni ser un valor de ejemplo." ;;
+    esac
+    case "$_db_root" in
+        ''|password|secret|changeme|change-me) die "DB_ROOT_PASSWORD no puede estar vacío ni ser un valor de ejemplo." ;;
+    esac
+
+    if [ "$_environment" = "production" ]; then
+        [ "${#_db_password}" -ge 12 ] 2>/dev/null || die "DB_PASSWORD debe tener al menos 12 caracteres en producción."
+        [ "${#_db_root}" -ge 12 ] 2>/dev/null || die "DB_ROOT_PASSWORD debe tener al menos 12 caracteres en producción."
+        [ "${#_encryption}" -ge 32 ] 2>/dev/null || die "encryption.key debe tener al menos 32 caracteres en producción."
+        [ "${#_jwt}" -ge 32 ] 2>/dev/null || die "jwt.secret debe tener al menos 32 caracteres en producción."
+        [ "$_db_password" != "$_db_root" ] || die "DB_PASSWORD y DB_ROOT_PASSWORD deben ser distintas."
+        [ "$_jwt" != "$_encryption" ] || die "jwt.secret y encryption.key deben ser claves distintas."
+    else
+        if [ "${#_db_password}" -lt 12 ] 2>/dev/null; then
+            warn "DB_PASSWORD tiene menos de 12 caracteres; use una contraseña más fuerte."
+        fi
+        if [ "$_db_password" = "$_db_root" ]; then
+            warn "DB_PASSWORD y DB_ROOT_PASSWORD son iguales; use contraseñas distintas."
+        fi
+        if [ "$_jwt" = "$_encryption" ]; then
+            warn "jwt.secret y encryption.key son iguales; use claves distintas."
+        fi
+    fi
+
+    case "$(env_get storage.driver)" in
+        ''|local) ;;
+        supabase)
+            require_env storage.bucket "Defina el bucket privado de almacenamiento."
+            require_env s3.endpoint "Defina el endpoint S3 de Supabase."
+            require_env s3.accessKey "Defina la access key S3."
+            require_env s3.secretKey "Defina la secret key S3."
+            ;;
+        *) die "storage.driver debe ser local o supabase." ;;
+    esac
+}
+
 
 require_sol_entry_network() {
     network=$(sol_entry_network)
@@ -259,6 +564,25 @@ http_ok() {
     url="$1"
     require_cmd curl
     curl -fsS --max-time 10 "$url" >/dev/null
+}
+
+# Health check interno: no usa DNS público, Cloudflare ni certificados.
+# Se ejecuta dentro del contenedor Nginx con el Host de la API.
+nginx_internal_health() {
+    compose_cmd="$1"
+    api_domain=$(env_get API_DOMAIN)
+    [ -n "$api_domain" ] || api_domain=$(env_get APP_DOMAIN)
+    [ -n "$api_domain" ] || die "Falta API_DOMAIN o APP_DOMAIN para el health check interno."
+
+    id=$($compose_cmd ps -q nginx 2>/dev/null || true)
+    [ -n "$id" ] || die "El servicio nginx no está iniciado; no se puede ejecutar el health check interno."
+    docker exec "$id" wget -qO- --header="Host: $api_domain" http://127.0.0.1/health >/dev/null 2>&1 \
+        || die "El health check interno de Nginx falló (Host: $api_domain). No depende de DNS público."
+}
+
+# Smoke público separado: requiere DNS, TLS y certificado válidos.
+public_nginx_health() {
+    http_ok "$(nginx_health_url)"
 }
 
 nginx_health_url() {
@@ -329,15 +653,8 @@ validate_env_basics() {
     require_env DB_PASSWORD "Defina la contraseña de la base de datos."
     require_env DB_ROOT_PASSWORD "Defina la contraseña root de MySQL."
     require_env jwt.secret "Defina una clave JWT exclusiva del entorno."
+    require_env encryption.key "Defina una clave de cifrado exclusiva del entorno."
 
-    case "$(env_get APP_URL)" in
-        http://*|https://*) ;;
-        *) die "APP_URL debe comenzar con http:// o https://." ;;
-    esac
-    case "$(env_get app.baseURL)" in
-        http://*|https://*) ;;
-        *) die "app.baseURL debe comenzar con http:// o https://." ;;
-    esac
     case "$(env_get DB_PORT)" in
         ''|*[!0-9]*) die "DB_PORT debe ser numérico." ;;
     esac
@@ -346,47 +663,42 @@ validate_env_basics() {
         *) die "NGINX_MODE debe ser http, same-domain o subdomain." ;;
     esac
 
-    case "$(env_get CI_ENVIRONMENT)" in
+    environment=$(env_get CI_ENVIRONMENT)
+    case "$environment" in
         production)
-            if [ "$(env_get jwt.secret)" = "cambie-esta-clave-por-una-aleatoria-de-64-caracteres" ]; then
-                die "No use el jwt.secret de .env.example en producción."
-            fi
-            jwt_secret=$(env_get jwt.secret)
-            if [ "${#jwt_secret}" -lt 32 ] 2>/dev/null; then
-                die "jwt.secret debe tener al menos 32 caracteres en producción."
-            fi
-            [ "$(project_name)" != "sol_dev" ] || die "Producción no puede usar COMPOSE_PROJECT_NAME=sol_dev."
+            require_prod_project
             require_env SOL_ENTRY_NETWORK "Defina la red de entrada exclusiva Traefik ↔ SOL, por ejemplo sol_entry."
             require_env TRAEFIK_ENTRY_IP "Defina la IP fija de Traefik en la red de entrada, por ejemplo 172.31.0.2."
+            require_env API_DOMAIN "Defina el dominio de la API (puede ser igual a APP_DOMAIN)."
             [ "$(env_get SOL_ENTRY_NETWORK)" != "proxy" ] || die "SOL_ENTRY_NETWORK no puede ser 'proxy'; use una red exclusiva Traefik ↔ SOL."
             valid_ipv4 "$(env_get TRAEFIK_ENTRY_IP)" || die "TRAEFIK_ENTRY_IP debe ser una dirección IPv4 válida."
-            require_env API_DOMAIN "Defina el dominio de la API (puede ser igual a APP_DOMAIN)."
             [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
-            case "$(env_get APP_DOMAIN)" in
+            case "$(lower_value "$(trim_value "$(env_get APP_DOMAIN)")")" in
                 localhost|127.0.0.1) die "APP_DOMAIN no puede ser localhost en producción." ;;
             esac
-            case "$(env_get API_DOMAIN)" in
+            case "$(lower_value "$(trim_value "$(env_get API_DOMAIN)")")" in
                 localhost|127.0.0.1) die "API_DOMAIN no puede ser localhost en producción." ;;
             esac
-            case "$(env_get APP_URL)" in
-                https://*) ;;
-                *) warn "APP_URL no usa HTTPS en producción; confirme que un proxy externo termina TLS." ;;
-            esac
-            case "$(env_get app.baseURL)" in
-                https://*) ;;
-                *) warn "app.baseURL no usa HTTPS en producción; confirme que un proxy externo termina TLS." ;;
-            esac
-            case "$(env_get NGINX_MODE)" in
-                http) warn "NGINX_MODE=http en producción solo es válido si un proxy externo termina TLS." ;;
-            esac
-            if [ "$(env_get DB_PASSWORD)" = "$(env_get DB_ROOT_PASSWORD)" ]; then
-                warn "DB_PASSWORD y DB_ROOT_PASSWORD son iguales; use contraseñas distintas."
-            fi
             ;;
+        development|testing)
+            require_dev_project
+            ;;
+        *) die "CI_ENVIRONMENT debe ser development, testing o production." ;;
     esac
 
-    jwt_secret=$(env_get jwt.secret)
-    if [ "${#jwt_secret}" -lt 32 ] 2>/dev/null; then
-        warn "jwt.secret tiene menos de 32 caracteres; use una clave aleatoria más larga."
+    validate_domains_and_urls "$environment"
+    validate_turnstile "$environment"
+    validate_google_oauth
+    validate_secrets "$environment"
+
+    if [ "$environment" = "production" ]; then
+        case "$(env_get APP_URL)" in
+            https://*) ;;
+            *) die "APP_URL debe usar HTTPS en producción." ;;
+        esac
+        case "$(env_get app.baseURL)" in
+            https://*) ;;
+            *) die "app.baseURL debe usar HTTPS en producción." ;;
+        esac
     fi
 }

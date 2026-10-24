@@ -1,0 +1,70 @@
+name: CI SOL
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Validación y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar entorno sintético de CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          sed -i 's|^CI_ENVIRONMENT=.*|CI_ENVIRONMENT=development|' .env
+          sed -i 's|^COMPOSE_PROJECT_NAME=.*|COMPOSE_PROJECT_NAME=sol_dev|' .env
+          sed -i 's|^DB_PASSWORD=.*|DB_PASSWORD=ci-db-password-123456|' .env
+          sed -i 's|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=ci-root-password-654321|' .env
+          sed -i 's|^jwt\.secret=.*|jwt.secret=ci-jwt-0123456789abcdef0123456789abcdef0123456789abcdef|' .env
+          sed -i 's|^encryption\.key=.*|encryption.key=ci-encryption-fedcba9876543210fedcba9876543210|' .env
+          sed -i 's|^turnstile\.enabled=.*|turnstile.enabled=false|' .env
+          sed -i 's|^google\.clientId=.*|google.clientId=|' .env
+          sed -i 's|^VITE_GOOGLE_CLIENT_ID=.*|VITE_GOOGLE_CLIENT_ID=|' .env
+          sed -i 's|^APP_DOMAIN=.*|APP_DOMAIN=localhost|' .env
+          sed -i 's|^API_DOMAIN=.*|API_DOMAIN=localhost|' .env
+          sed -i 's|^APP_URL=.*|APP_URL=http://localhost:5173|' .env
+          sed -i 's|^app\.baseURL=.*|app.baseURL=http://localhost:8080/|' .env
+          sed -i 's|^cors\.allowedOrigins=.*|cors.allowedOrigins=http://localhost:5173|' .env
+          sed -i 's|^VITE_API_URL=.*|VITE_API_URL=http://localhost:8080|' .env
+          sed -i 's|^turnstile\.hostnames=.*|turnstile.hostnames=localhost,127.0.0.1|' .env
+          chmod 600 .env
+
+      - name: Validar scripts y configuración de desarrollo
+        run: ./deploy/scripts/validate.sh --dev
+
+      - name: Validación preventiva y health interno
+        run: ./deploy/scripts/test.sh validation
+
+      - name: Pruebas backend, frontend y build
+        run: ./deploy/scripts/test.sh all
+
+      - name: Levantar stack de desarrollo aislado
+        run: ./deploy/scripts/dev.sh up --no-build
+
+      - name: Aplicar esquema en base de desarrollo efímera
+        run: ./deploy/scripts/dev.sh migrate
+
+      - name: Cargar datos de prueba en base efímera
+        run: ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes
+
+      - name: Smoke HTTP local
+        run: ./deploy/scripts/test.sh http
+
+      - name: Smoke histórico (no bloqueante, aserciones heredadas)
+        continue-on-error: true
+        run: ./deploy/scripts/test.sh smoke
+
+      - name: Detener stack de CI (conserva volúmenes efímeros)
+        if: always()
+        run: ./deploy/scripts/dev.sh down

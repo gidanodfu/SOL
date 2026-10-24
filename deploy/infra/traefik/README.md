@@ -55,17 +55,115 @@ docker compose --env-file .env -f compose.yaml logs -f traefik
 
 No hay dashboard público. El API de Traefik no se expone.
 
-## TLS y renovación
+## TLS, ACME y una única fuente de verdad
+
+La configuración ACME vive en `traefik.yml`, que es una **plantilla estática**.
+Al arrancar, `entrypoint.sh` sustituye de forma segura:
+
+- `__ACME_EMAIL__` ← `ACME_EMAIL`
+- `__ACME_CA_SERVER__` ← `ACME_CA_SERVER`
+- `__PROXY_NETWORK__` ← `PROXY_NETWORK`
+
+y escribe `/tmp/traefik.rendered.yml`; Traefik carga únicamente ese archivo.
+El correo y el CA no se versionan.
+
+> Causa de la discrepancia detectada: Traefik no aplica las opciones
+> `--certificatesresolvers...` cuando se inicia junto con `--configFile`. La
+> configuración que funcionaba en el VPS era la que estaba dentro del archivo
+> estático. Por eso el repositorio no debe declarar ACME en dos lugares: la
+> plantilla estática es la fuente única y Compose solo la renderiza.
+
+El resolver se llama exactamente `letsencrypt`, que es el nombre que usa el
+router de `deploy/compose.prod.yaml`.
 
 Se usa **Let's Encrypt con HTTP-01**:
 
 - `entryPoints.web` (80) redirige a `websecure` (443).
-- `certificatesResolvers.letsencrypt` solicita y renueva certificados.
-- Los certificados se guardan en el volumen `traefik_acme`.
+- `certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web`.
+- Los certificados se guardan en `/acme/acme.json`, dentro del volumen
+  persistente `sol_infra_traefik_acme` (proyecto `sol_infra` + volumen
+  `traefik_acme`).
 - La renovación es automática mientras Traefik esté activo y el puerto 80
   siga accesible.
-- Para ensayos, `ACME_CA_SERVER` puede apuntar al directorio staging de Let's
-  Encrypt; no use staging para producción.
+- `ACME_CA_SERVER` debe apuntar a producción solo después de validar staging.
+  Nunca use staging para el certificado público definitivo.
+- El dashboard permanece deshabilitado y `api.insecure` es `false`.
+
+Verificación de la configuración y del resolver:
+
+```bash
+# Desde la raíz del repositorio, sin secretos reales:
+./deploy/scripts/validate.sh --dev
+./deploy/scripts/test.sh validation
+```
+
+El segundo comando levanta un Traefik temporal sin publicar puertos y verifica
+que el resolver `letsencrypt` se inicializa y que un router temporal puede
+usarlo. No contacta Let's Encrypt: usa un CA local inalcanzable.
+
+Para una instalación real, verifique el volumen y los permisos sin imprimir su
+contenido:
+
+```bash
+docker volume inspect sol_infra_traefik_acme
+docker exec "$(docker ps -q --filter label=com.sol.infra=traefik)" \
+  stat -c '%a %U:%G %n' /acme/acme.json
+./deploy/infra/traefik/check-acme.sh
+```
+
+`acme.json` debe ser un archivo persistente y no debe copiarse al repositorio.
+No elimine el volumen si quiere conservar certificados y estado ACME.
+
+Comprobación automatizada de permisos:
+
+```bash
+cd deploy/infra/traefik
+./check-acme.sh
+```
+
+El script es de solo lectura; no imprime el contenido de `acme.json`.
+
+### Prueba aislada con staging
+
+No reutilice el volumen ACME de producción para staging. Use un proyecto
+Compose, red y volumen temporales, o el test de infraestructura:
+
+```bash
+./tests/infra/test_traefik_acme.sh
+```
+
+Para una prueba manual con un dominio de staging autorizado:
+
+1. Use un dominio de pruebas que resuelva al VPS y no esté en Cloudflare como
+   proxy si su configuración lo impide.
+2. Configure `ACME_CA_SERVER=https://acme-staging-v02.api.letsencrypt.org/directory`.
+3. Use un proyecto y volumen ACME temporales; no monte
+   `sol_infra_traefik_acme`.
+4. No publique 80/443 desde el entorno temporal si el Traefik real ya los usa;
+   use un proxy de prueba o detenga el stack temporal antes de la prueba real.
+5. Verifique el certificado de staging y luego destruya el entorno temporal.
+6. No cambie el `ACME_CA_SERVER` de producción ni el volumen real durante la
+   prueba.
+
+### Reconciliación de la configuración manual del VPS
+
+El VPS pudo haber quedado con el resolver escrito directamente en su
+`traefik.yml`. Antes de aplicar esta versión, en una ventana de mantenimiento y
+con respaldo del archivo de configuración:
+
+1. No copie el `.env`, certificados ni `acme.json` al repositorio.
+2. Registre el `ACME_EMAIL` y `ACME_CA_SERVER` operativos en el `.env` privado
+   de infraestructura.
+3. Sustituya la configuración local por `traefik.yml` (plantilla),
+   `entrypoint.sh` y el `compose.yaml` de este repositorio.
+4. Recrea solo el servicio Traefik. El volumen
+   `sol_infra_traefik_acme` debe conservarse.
+5. Verifique que el resolver se llama `letsencrypt`, que el router de SOL usa
+   `certresolver: letsencrypt` y que HTTPS sigue respondiendo.
+6. Si algo falla, restaure la copia de seguridad del `traefik.yml` operativo y
+   no elimine el volumen.
+
+No ejecute `docker compose down -v` ni `docker volume rm`.
 
 El **TLS termina en Traefik**. SOL Nginx recibe HTTP por la red privada.
 
@@ -192,7 +290,7 @@ Si Traefik no arranca, revise:
 - que `TRAEFIK_ENTRY_IP` esté dentro de `SOL_ENTRY_SUBNET`;
 - los logs de `socket-proxy` y `traefik`.
 
-No ejecute `docker compose down -v` ni elimine el volumen `traefik_acme` si
+No ejecute `docker compose down -v` ni elimine el volumen `sol_infra_traefik_acme` si
 quiere conservar certificados y estado ACME.
 
 ## Limitaciones

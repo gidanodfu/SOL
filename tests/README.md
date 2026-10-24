@@ -10,8 +10,29 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit en el contenedor backend
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo
+./deploy/scripts/test.sh validation # validación preventiva, health interno y ACME
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
+
+`test.sh validation` ejecuta:
+
+- `tests/deploy/test_validation.sh`: Turnstile, Google OAuth, dominios, URLs,
+  CORS, VITE, secretos y configuración de subdominios, sin leer el `.env` real.
+- `tests/deploy/test_internal_health.sh`: health de Nginx sin resolución DNS.
+- `tests/infra/test_traefik_acme.sh`: inicialización real del resolver
+  `letsencrypt` y uso por un router temporal, sin contactar Let's Encrypt ni
+  publicar puertos.
+
+La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
+secretos reales, DNS de producción, Cloudflare ni certificados.
+
+> `test.sh smoke` conserva pruebas históricas con aserciones desactualizadas
+> respecto de la API actual. En la ejecución de esta tarea quedan
+> `WARN` en `test_api.sh`, `test_fase3.sh`, `test_fase4.sh`, `test_rte.sh` y
+> `test_reporte_empresa.sh`, y `FAIL` en `test_identidad.sh` (por ejemplo,
+> expectativas de correo duplicado/perfil que ya no coinciden con la API). Se
+> ejecuta como evidencia no bloqueante y no se usa para validar una
+> instalación. No modifica datos reales: usa un MySQL temporal en `tmpfs`.
 
 `test.sh http` requiere el stack activo (`./deploy/scripts/dev.sh up`) y comprueba
 `/health`, `/`, `/api/ofertas`, el `401` de `/api/auth/me`, CORS y el frontend.

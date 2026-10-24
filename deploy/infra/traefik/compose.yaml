@@ -47,19 +47,20 @@ services:
     restart: unless-stopped
     depends_on:
       - socket-proxy
+    entrypoint:
+      - /entrypoint.sh
     command:
-      - --configFile=/etc/traefik/traefik.yml
-      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?Defina ACME_EMAIL en deploy/infra/traefik/.env}
-      - --certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.letsencrypt.acme.caserver=${ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
-      - --providers.docker.network=${PROXY_NETWORK:-proxy}
+      - --configFile=/tmp/traefik.rendered.yml
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?Defina ACME_EMAIL en deploy/infra/traefik/.env}
+      ACME_CA_SERVER: ${ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
+      PROXY_NETWORK: ${PROXY_NETWORK:-proxy}
     ports:
       - "${TRAEFIK_HTTP_PORT:-80}:80"
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
     volumes:
-      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml.template:ro
+      - ./entrypoint.sh:/entrypoint.sh:ro
       - ./dynamic:/etc/traefik/dynamic:ro
       - traefik_acme:/acme
     security_opt:

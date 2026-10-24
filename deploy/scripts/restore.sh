@@ -30,6 +30,8 @@ Uso: deploy/scripts/restore.sh --env <dev|prod> --db <archivo.sql> \
 Restaura una base y, opcionalmente, el volumen writable. Es una operación
 destructiva: sobrescribe la base de datos de destino. Crea un respaldo de
 seguridad antes de restaurar, detiene la aplicación y no borra volúmenes.
+La verificación final es el health interno de Nginx; el smoke público queda
+separado y requiere DNS/TLS.
 
 Para producción se exige además --allow-production y un proyecto distinto de
 sol_dev. Verifique el destino y practique primero en un entorno desechable.
@@ -119,7 +121,12 @@ for service in $wait_services; do
 done
 
 if [ "$TARGET" = "prod" ]; then
-    http_ok "$(nginx_health_url)" || die "La verificación /health de producción falló."
+    nginx_internal_health "$compose_cmd"
+    if [ "${PUBLIC_SMOKE:-0}" = "1" ]; then
+        public_nginx_health || die "El smoke público de Nginx falló; revise DNS, TLS y certificado."
+    else
+        printf 'Smoke público omitido; ejecútelo con PUBLIC_SMOKE=1 cuando DNS/TLS estén disponibles.\n'
+    fi
 else
     http_ok "http://127.0.0.1:$(env_get DEV_API_PORT)/health" || die "La verificación /health del backend falló."
     http_ok "http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)/" || die "El frontend no responde."
