@@ -17,7 +17,7 @@
      contenido quede visualmente pegado al borde izquierdo. */
   --post-shell-w: min(1360px, calc(100% - 80px));
 }
-.app-postulante a { color: inherit; }
+.app-postulante a:where(:not(.btn)) { color: inherit; }
 
 /* ---------- Barra superior ---------- */
 /* Una fila: logo · navegación · buscador (flexible) · acciones de usuario.
@@ -111,7 +111,11 @@
   transition: background 0.15s, color 0.15s;
 }
 .app-postulante .post-nav a:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
-.app-postulante .post-nav a.active { background: var(--blue); color: #fff; }
+.app-postulante .post-nav a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.app-postulante .post-nav a.active {
+  background: var(--accion-primario);
+  color: var(--accion-primario-texto);
+}
 .app-postulante .post-nav a i,
 .app-postulante .post-nav a svg { vertical-align: -2px; margin-right: 6px; }
 /* Iconos Lucide (SVG): el tamaño escala con el texto del enlace (1em). */
@@ -178,6 +182,11 @@
   font: inherit;
   color: inherit;
 }
+.app-postulante .user-block:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: var(--radius-md);
+}
 .app-postulante .user-chevron { display: inline-flex; align-items: center; color: #C7D6E8; }
 .app-postulante .user-info { display: block; text-align: right; user-select: none; min-width: 0; }
 .app-postulante .user-info .who {
@@ -196,8 +205,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--blue);
-  color: #fff;
+  background: var(--accion-primario);
+  color: var(--accion-primario-texto);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -328,6 +337,11 @@
 .app-postulante .pill.active .pill-btn .pill-label .clear-btn { display: inline-flex; }
 .app-postulante .pill-btn i { font-size: 16px; color: var(--text-2); transition: transform 0.18s, color 0.15s; }
 .app-postulante .pill-btn:hover { border-color: var(--blue); }
+.app-postulante .pill-btn:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+.app-postulante .pill-btn:active { transform: translateY(1px); }
 .app-postulante .pill.open .pill-btn { border-color: var(--blue); background: var(--sky); color: var(--enlace); }
 .app-postulante .pill.open .pill-btn i { transform: rotate(180deg); color: var(--enlace); }
 .app-postulante .pill.active .pill-btn { border-color: var(--blue); background: var(--navy); color: #fff; }
@@ -423,6 +437,10 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .app-postulante .job-card:hover { border-color: var(--blue); box-shadow: var(--sombra-tarjeta); }
+.app-postulante .job-card:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
 .app-postulante .job-card .job-fila { display: flex; gap: 18px; align-items: flex-start; min-width: 0; }
 .app-postulante .job-avatar {
   padding: 0;
@@ -471,7 +489,12 @@
   gap: 6px;
   transition: background 0.15s;
 }
-.app-postulante .btn-detail:hover { background: var(--primario-hover); }
+.app-postulante .btn-detail:hover { background: var(--navy-2); }
+.app-postulante .btn-detail:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+.app-postulante .btn-detail:active { filter: brightness(0.92); }
 
 .app-postulante .job-detalle {
   margin-top: 14px;
@@ -619,17 +642,23 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .app-postulante .guest-link:hover {
-  background: var(--blue);
-  border-color: var(--blue);
-  color: #fff;
+  background: var(--accion-primario);
+  border-color: var(--accion-primario);
+  color: var(--accion-primario-texto);
 }
 .app-postulante .guest-link.solid {
-  background: var(--blue);
-  border-color: var(--blue);
+  background: var(--accion-primario);
+  border-color: var(--accion-primario);
+  color: var(--accion-primario-texto);
 }
 .app-postulante .guest-link.solid:hover {
-  background: var(--primario-hover);
-  border-color: var(--primario-hover);
+  background: var(--accion-primario-hover);
+  border-color: var(--accion-primario-hover);
+  color: var(--accion-primario-texto);
+}
+.app-postulante .guest-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 /* Avatar del postulante en la navbar (misma imagen del perfil, recorte circular). */
@@ -967,6 +996,11 @@
   font-size: 16px;
 }
 .app-postulante .panel-close:hover { background: var(--line); color: var(--text-1); }
+.app-postulante .panel-close:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+.app-postulante .panel-close:active { filter: brightness(0.94); }
 /* Panel de detalle sin selección: deja que el componente `Empty` (styles.css)
    ocupe y centre el espacio interior. */
 .app-postulante .panel-caja-vacia { height: 100%; display: flex; flex-direction: column; }

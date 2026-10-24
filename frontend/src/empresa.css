@@ -12,7 +12,7 @@
   background: var(--fondo);
   color: var(--text-1);
 }
-.app-empresa a { color: inherit; }
+.app-empresa a:where(:not(.btn)) { color: inherit; }
 
 /* ---------- Barra lateral (geometría común en styles.css) ---------- */
 
@@ -74,7 +74,16 @@
   transition: all 0.15s;
 }
 .app-empresa .chip:hover { border-color: var(--blue); color: var(--enlace); }
-.app-empresa .chip.activo { background: var(--blue); border-color: var(--blue); color: #fff; }
+.app-empresa .chip:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+.app-empresa .chip:active { transform: translateY(1px); }
+.app-empresa .chip.activo {
+  background: var(--accion-primario);
+  border-color: var(--accion-primario);
+  color: var(--accion-primario-texto);
+}
 
 /* ---------- Ofertas ---------- */
 .app-empresa .oferta-item { border-bottom: 1px solid var(--line); padding: 16px 4px; }
