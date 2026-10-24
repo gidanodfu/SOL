@@ -8,17 +8,17 @@ SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
-tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])'; }
+tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token"), "FAIL login sin access_token";print(d["data"]["access_token"])'; }
 TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"20601234567","password":"Empresa123!"}' | tok)
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
 TP=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"12345678","password":"Postu123!"}' | tok)
 
 echo "== 1. registrar contrato sobre postulación PENDIENTE => 409 =="
-curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"postulacion_id":1,"fecha_contratacion":"2026-09-03","cargo":"Operario"}'
+curl -s -o /dev/null -w "pendiente->contrato http:%{http_code} (esperado 409)\n" -X POST "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"postulacion_id":1,"fecha_contratacion":"2026-09-03","cargo":"Operario"}'
 
 echo "== 2. avance hasta seleccionado =="
-for s in en_revision preseleccionado contactado seleccionado; do
-  curl -s -o /dev/null -X PUT "$B/api/empresa/postulaciones/1/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"estado\":\"$s\"}"
+for s in en_revision seleccionado; do
+  curl -s -o /dev/null -w "estado $s http:%{http_code} (200)\n" -X PUT "$B/api/empresa/postulaciones/1/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"estado\":\"$s\"}"
 done
 echo "estado ahora:"; curl -s "$B/api/empresa/postulaciones/1" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["estado"])'
 

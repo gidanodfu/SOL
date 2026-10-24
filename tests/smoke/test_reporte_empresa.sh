@@ -14,7 +14,7 @@ trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
 paso() { printf '\n== %s ==\n' "$1"; }
-tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])'; }
+tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token"), "FAIL login sin access_token";print(d["data"]["access_token"])'; }
 xlsx_texto() {
   python3 - "$1" <<'PY'
 import sys, zipfile
@@ -67,10 +67,16 @@ paso "9. formato de fecha inválido => 422"
 curl -s -o /dev/null -w "http:%{http_code} (422)\n" "$B/api/empresa/reportes/excel?desde=01/01/2026" -H "Authorization: Bearer $TA_EMP"
 
 paso "10. aislamiento: empresa A no ve datos de empresa B"
-RUC_B="2069$(date +%s | cut -c4-10)"
-NOMBRE_B="Servicios Beta $RUC_B SAC"
-curl -s -o /dev/null -w "crear empresa B http:%{http_code}\n" -X POST "$B/api/admin/empresas" -H "Authorization: Bearer $TA_ADM" -H 'Content-Type: application/json' \
-  -d "{\"ruc\":\"$RUC_B\",\"razon_social\":\"$NOMBRE_B\",\"email\":\"beta$RUC_B@prueba.pe\",\"telefono\":\"987654321\",\"password\":\"Beta12345!\",\"evaluacion_presencial\":true}"
+RUC_B="20690000001"
+PHONE_B="999000123"
+NOMBRE_B="Servicios Beta SAC"
+CREATE_B=$(curl -s -o /tmp/opencode/reporte_crear_b.json -w '%{http_code}' -X POST "$B/api/admin/empresas" -H "Authorization: Bearer $TA_ADM" -H 'Content-Type: application/json' \
+  -d "{\"ruc\":\"$RUC_B\",\"razon_social\":\"$NOMBRE_B\",\"email\":\"beta$RUC_B@prueba.pe\",\"telefono\":\"$PHONE_B\",\"password\":\"Beta12345!\",\"evaluacion_presencial\":true}")
+if [ "$CREATE_B" != "201" ]; then
+  printf 'FAIL crear empresa B http:%s (esperado 201)\n' "$CREATE_B"
+  cat /tmp/opencode/reporte_crear_b.json
+  exit 1
+fi
 TB_EMP=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d "{\"username\":\"$RUC_B\",\"password\":\"Beta12345!\"}" | tok)
 
 curl -s -o /tmp/opencode/rep_A.xlsx "$B/api/empresa/reportes/excel" -H "Authorization: Bearer $TA_EMP"

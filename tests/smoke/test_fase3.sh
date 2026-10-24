@@ -10,7 +10,7 @@ SRV=$!
 trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
-tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])'; }
+tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token"), "FAIL login sin access_token";print(d["data"]["access_token"])'; }
 
 TP=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"12345678","password":"Postu123!"}' | tok)
 TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"20601234567","password":"Empresa123!"}' | tok)
@@ -29,8 +29,7 @@ curl -s "$B/api/postulante/ofertas/1" -H "Authorization: Bearer $TP" | python3 -
 # ni fecha de nacimiento/dirección, así que se completan antes de los pasos 3-5.
 echo "== 2b. completar contacto + cargar CV (RF-19 ampliado) =="
 curl -s -o /dev/null -w "perfil http:%{http_code}\n" -X PUT "$B/api/postulante/perfil" -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d '{"nombres":"Ana","apellidos":"Torres Rojas","email":"ana.torres@mail.com","telefono":"987654321","fecha_nacimiento":"1995-04-10","direccion":"Av. Las Magnolias 320, JLO"}'
-head -c 3000 /dev/urandom > /tmp/opencode/cv-fase3.pdf
-curl -s -o /dev/null -w "cv http:%{http_code}\n" -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/tmp/opencode/cv-fase3.pdf;type=application/pdf;filename=cv-ana.pdf"
+curl -s -o /dev/null -w "cv http:%{http_code}\n" -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv-ana.pdf"
 
 echo "== 3. duplicado de postulación a oferta 1 => 409 =="
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/postulante/postulaciones" -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d '{"oferta_id":1}'

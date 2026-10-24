@@ -13,7 +13,7 @@ trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
 paso() { printf '\n== %s ==\n' "$1"; }
-tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])'; }
+tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token"), "FAIL login sin access_token";print(d["data"]["access_token"])'; }
 
 echo "== login empresa =="
 TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"20601234567","password":"Empresa123!"}' | tok)

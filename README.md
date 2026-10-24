@@ -512,13 +512,14 @@ preflight CORS y el frontend. No crea ni modifica datos.
 ```
 
 El runner construye una imagen de pruebas con `bash`, `python3` y `curl`,
-levanta un MySQL **temporal en tmpfs** dentro de una red efímera, aplica
-migraciones y seeds, y ejecuta los scripts históricos con `php spark serve`
-**dentro del contenedor**. No toca `sol_dev_*`, no publica puertos y no usa
-herramientas de aplicación del host. `test_desarrollo_nuevo.sh` queda excluido
-porque depende de SUNAT/RUC real; consulte [`tests/README.md`](tests/README.md).
-El runner marca `WARN`/`FAIL` si un script histórico conserva aserciones
-desactualizadas.
+levanta un MySQL **temporal en tmpfs** dentro de una red efímera, crea un
+esquema distinto por suite, aplica migraciones y seeds, y ejecuta los scripts
+con `php spark serve` **dentro del contenedor**. No toca `sol_dev_*`, no publica
+puertos y no usa herramientas de aplicación del host. `test_desarrollo_nuevo.sh`
+queda excluido porque depende de SUNAT/RUC real; consulte
+[`tests/README.md`](tests/README.md). El runner agrega fallos y devuelve código
+distinto de cero ante aserciones, errores de Python/JSON o estados HTTP
+inesperados; no imprime JWT ni refresh tokens.
 
 > El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
 > se validaron manualmente contra la API; aún no tienen pruebas automatizadas.

@@ -61,8 +61,7 @@ jobs:
       - name: Smoke HTTP local
         run: ./deploy/scripts/test.sh http
 
-      - name: Smoke histórico (no bloqueante, aserciones heredadas)
-        continue-on-error: true
+      - name: Smoke completo aislado
         run: ./deploy/scripts/test.sh smoke
 
       - name: Detener stack de CI (conserva volúmenes efímeros)

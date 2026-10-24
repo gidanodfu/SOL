@@ -14,7 +14,12 @@ trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
 paso() { printf '\n== %s ==\n' "$1"; }
-tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])'; }
+fallos=0
+check_code() {
+  nombre="$1"; esperado="$2"; real="$3"
+  if [ "$real" = "$esperado" ]; then printf 'OK   %-52s %s\n' "$nombre" "$real"; else printf 'FAIL %-52s %s (esperado %s)\n' "$nombre" "$real" "$esperado"; fallos=$((fallos + 1)); fi
+}
+tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token"), "FAIL login sin access_token";print(d["data"]["access_token"])'; }
 
 TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"20601234567","password":"Empresa123!"}' | tok)
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
@@ -58,16 +63,30 @@ PY
 paso "3. texto plano heredado se conserva sin cambios"
 python3 - > /tmp/opencode/rte_plano.json <<'PY'
 import json
-print(json.dumps({"puesto": "Tester plano", "vacantes": 1, "descripcion": "Se requiere experiencia\n\nLinea dos"}))
+print(json.dumps({"puesto": "Tester plano", "vacantes": 1, "descripcion": "Se requiere experiencia\n\nLinea dos", "funciones": "Funciones de prueba"}))
 PY
 PID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d @/tmp/opencode/rte_plano.json | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s "$B/api/empresa/ofertas/$PID" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("plano conservado:", d["descripcion"] == "Se requiere experiencia\n\nLinea dos", "->", repr(d["descripcion"]))'
 
-paso "4. límite por TEXTO visible (10.000 pasa, 10.001 rechaza)"
-python3 -c 'import json;print(json.dumps({"puesto":"RTE exacto","vacantes":1,"descripcion":"<p>"+"a"*10000+"</p>"}))' > /tmp/opencode/rte_10k.json
-python3 -c 'import json;print(json.dumps({"puesto":"RTE excedido","vacantes":1,"descripcion":"<p>"+"a"*10001+"</p>"}))' > /tmp/opencode/rte_10k1.json
-curl -s -o /dev/null -w "10000 visibles http:%{http_code}\n" -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d @/tmp/opencode/rte_10k.json
-curl -s -o /dev/null -w "10001 visibles http:%{http_code}\n" -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d @/tmp/opencode/rte_10k1.json
+paso "4. límite por TEXTO visible (9.999, 10.000 pasan; 10.001 rechaza)"
+for n in 9999 10000 10001; do
+  python3 - "$n" > "/tmp/opencode/rte_${n}.json" <<'PY'
+import json, sys
+n = int(sys.argv[1])
+print(json.dumps({
+    "puesto": "RTE exacto " + str(n),
+    "vacantes": 1,
+    "descripcion": "<p>" + ("a" * n) + "</p>",
+    "funciones": "<p>Funciones de prueba</p>",
+}))
+PY
+  code=$(curl -s -o "/tmp/opencode/rte_${n}.out" -w '%{http_code}' -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d @"/tmp/opencode/rte_${n}.json")
+  if [ "$n" -le 10000 ]; then
+    check_code "texto visible $n" 201 "$code"
+  else
+    check_code "texto visible $n" 422 "$code"
+  fi
+done
 
 paso "5. actividad con HTML malicioso se sanea (público)"
 python3 - > /tmp/opencode/rte_actividad.json <<'PY'
@@ -98,3 +117,4 @@ PY
 
 echo
 echo "FIN test_rte"
+[ "$fallos" -eq 0 ] || exit 1
