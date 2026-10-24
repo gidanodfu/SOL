@@ -33,9 +33,9 @@ variables `VITE_*` públicas por variables de proceso o build args.
 
 Variables principales:
 
-- Aplicación: `CI_ENVIRONMENT`, `COMPOSE_PROJECT_NAME`, `APP_URL`,
-  `app.baseURL`, `app.appTimezone`, `cors.allowedOrigins`, `APP_DOMAIN`,
-  `API_DOMAIN`, `NGINX_MODE`.
+- Aplicación: `CI_ENVIRONMENT`, `COMPOSE_PROJECT_NAME`, `PROXY_NETWORK`,
+  `PROXY_SUBNET`, `APP_URL`, `app.baseURL`, `app.appTimezone`,
+  `cors.allowedOrigins`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`.
 - Base de datos: `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`,
   `DB_ROOT_PASSWORD`, `DB_DRIVER` y `DB_PREFIX`.
 - Seguridad: `encryption.key`, `jwt.secret`, duraciones JWT,
@@ -101,20 +101,27 @@ stack de desarrollo y requiere `dev.sh up`.
 ## 4. Instalación nueva en VPS
 
 1. Clonar el repositorio y entrar en él.
-2. Copiar `.env.example` a `.env` y completar dominios, base de datos,
+2. Desplegar primero la infraestructura compartida de Traefik:
+   `deploy/infra/traefik/README.md`. Debe existir la red `proxy`, DNS apuntando
+   al VPS y `ACME_EMAIL` configurado.
+3. Copiar `.env.example` a `.env` y completar dominios, base de datos,
    `INITIAL_ADMIN_*`, JWT, correo, almacenamiento e integraciones.
-3. Usar `COMPOSE_PROJECT_NAME` distinto de `sol_dev`, por ejemplo `sol_prod`.
-4. Configurar `NGINX_MODE` y los certificados si se usa HTTPS.
-5. Ejecutar, revisando antes el entorno de destino:
+4. Usar `COMPOSE_PROJECT_NAME` distinto de `sol_dev`, por ejemplo `sol_prod`.
+5. Configurar `PROXY_NETWORK=proxy`, `PROXY_SUBNET=172.30.0.0/24`,
+   `NGINX_MODE=http`, `APP_URL` y `app.baseURL` con HTTPS público. **No**
+   configure certificados TLS dentro de SOL en este modo: los gestiona
+   Traefik.
+6. Ejecutar, revisando antes el entorno de destino:
 
 ```bash
 ./deploy/scripts/bootstrap.sh --prod --authorize
 ```
 
-El script exige `--authorize`, valida que la base esté vacía, construye imágenes,
-espera MySQL, aplica migraciones, ejecuta **solo** `SystemSeeder`, verifica el
-administrador y levanta Nginx. Si la base ya contiene usuarios se detiene: para
-actualizar use `deploy.sh`. No se ejecuta desde `up`, `restart` ni `deploy.sh`.
+El script exige `--authorize`, comprueba que Traefik y la red `proxy` existan,
+valida que la base esté vacía, construye imágenes, espera MySQL, aplica
+migraciones, ejecuta **solo** `SystemSeeder`, verifica el administrador y
+levanta Nginx. Si la base ya contiene usuarios se detiene: para actualizar use
+`deploy.sh`. No se ejecuta desde `up`, `restart` ni `deploy.sh`.
 
 ## 5. Actualizaciones
 
@@ -124,10 +131,10 @@ actualizar use `deploy.sh`. No se ejecuta desde `up`, `restart` ni `deploy.sh`.
 ```
 
 `deploy.sh` exige `CI_ENVIRONMENT=production`, un proyecto distinto de
-`sol_dev`, valida certificados si corresponden, verifica que la base ya tenga
-usuarios, crea un respaldo verificado, construye imágenes, aplica migraciones y
-recrea los servicios sin eliminar volúmenes. **No ejecuta SystemSeeder** y no
-restablece contraseñas de administradores existentes.
+`sol_dev`, `NGINX_MODE=http`, la red `proxy` y Traefik en ejecución; verifica
+que la base ya tenga usuarios, crea un respaldo verificado, construye imágenes,
+aplica migraciones y recrea los servicios sin eliminar volúmenes. **No ejecuta
+SystemSeeder** y no restablece contraseñas de administradores existentes.
 
 Si una comprobación crítica falla, el proceso se detiene con código distinto de
 cero. No use `down -v` para "arreglar" el problema: conserve el estado y el
@@ -203,26 +210,30 @@ No use `down -v`, `docker volume rm` ni `docker volume prune` para restaurar.
 No sobrescriba el volumen bueno sin un respaldo verificado. El respaldo de
 seguridad generado por `restore.sh` es la vía de reversión.
 
-## 8. Nginx y certificados
+## 8. Traefik, Nginx y certificados
 
-Modos:
+La arquitectura oficial de producción usa un **Traefik compartido**:
 
-- `http`: útil detrás de un proxy TLS externo o en pruebas.
-- `same-domain`: frontend y `/api` en el mismo dominio (recomendado).
-- `subdomain`: frontend y API en dominios distintos; ajuste CORS,
-  `VITE_API_URL` y `app.baseURL`.
+- Traefik publica 80/443 y termina TLS.
+- Crea la red externa `proxy`.
+- SOL Nginx se conecta a `proxy` y a su red `internal`, sin `ports` al host.
+- Traefik enruta `APP_DOMAIN` y `API_DOMAIN` al Nginx de SOL por HTTP interno.
+- PHP-FPM y MySQL no se conectan a `proxy` ni publican puertos.
 
-Coloque `fullchain.pem` y `privkey.pem` en `TLS_CERTS_DIR` y use
-`NGINX_MODE=same-domain` o `subdomain`. No versione certificados ni claves.
+Los modos `same-domain` y `subdomain` de las plantillas Nginx quedan como
+legado para un Nginx standalone con TLS propio. En el flujo oficial SOL usa
+`NGINX_MODE=http`; no monta certificados.
 
-Procedimiento de renovación recomendado:
+Procedimiento TLS:
 
-1. Emita/renueve el certificado en el host con Certbot.
-2. Copie o sincronice `fullchain.pem` y `privkey.pem` al directorio configurado.
-3. Compruebe correspondencia, fechas y nombres de dominio.
-4. Recargue Nginx mediante el procedimiento de despliegue
-   (`./deploy/scripts/deploy.sh`) o una recarga controlada del contenedor.
-5. Verifique HTTPS y `/health`.
+1. Configure DNS A/AAAA de los dominios hacia el VPS.
+2. Complete `ACME_EMAIL` en `deploy/infra/traefik/.env`.
+3. Levante Traefik; Let's Encrypt HTTP-01 emitirá y renovará los certificados.
+4. Para pruebas, use `ACME_CA_SERVER` de staging y no lo deje en producción.
+5. Verifique HTTPS y `/health` a través del dominio público.
+
+Consulte `deploy/infra/traefik/README.md` para logs, red, recuperación y alta de
+otros proyectos. No se incluyen dominios ni credenciales reales en el repo.
 
 No se generan certificados ficticios ni se incluyen claves privadas en Git.
 

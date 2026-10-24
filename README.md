@@ -16,14 +16,20 @@ SOL/
 ├── frontend/              React + Vite (Node 22.23.4 en Docker) — SPA
 ├── tests/smoke/           Smoke HTTP y pruebas de integración en Docker
 ├── docs/                  Requerimientos, cumplimiento y operaciones
-├── deploy/                Compose, Nginx, scripts y certificados
+├── deploy/                Compose, Nginx, scripts y certificados legado
+├── deploy/infra/traefik/  Proxy compartido del VPS (red `proxy`)
 ├── .env.example           Plantilla única de configuración
 └── backend|frontend/      Dockerfiles, php.ini y configuración de servidor
 ```
 
 ```
-React ──HTTP──▶ CodeIgniter API ──▶ MySQL        (fuente de verdad)
-                     └────────────▶ Supabase Storage (CV, S3-compatible)
+Internet ──80/443──▶ Traefik (infra compartida)
+                         │ red proxy
+                         ▼
+                    SOL Nginx interno
+                    ├── /api ──▶ PHP-FPM ──▶ MySQL
+                    │              └──────▶ Supabase Storage (CV, S3)
+                    └── /    ──▶ Nginx frontend (dist)
 ```
 
 Principio rector: **frontend y backend son proyectos independientes**. React es solo
@@ -184,7 +190,7 @@ La fuente única es `.env` en la raíz. Las variables principales son:
 | Almacenamiento | `storage.driver`, `storage.bucket`, `s3.*` |
 | Servicios externos | `sunat.token`, `jsonpe.token` (alias legado `dni.token` aceptado por compatibilidad), `RESEND_*`, `email.*`, `google.clientId`, `turnstile.*` |
 | Frontend público | `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_TURNSTILE_SITE_KEY` |
-| Docker/Nginx | `COMPOSE_PROJECT_NAME`, `DEV_*`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `TLS_*` |
+| Docker/Nginx | `COMPOSE_PROJECT_NAME`, `PROXY_NETWORK`, `PROXY_SUBNET`, `DEV_*`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `TLS_*` |
 
 `COMPOSE_PROJECT_NAME` debe ser único por entorno. Desarrollo usa `sol_dev` por
 defecto; producción debe usar otro nombre, por ejemplo `sol_prod`. Los scripts de
@@ -329,13 +335,16 @@ curl -i http://localhost:8080/health
 
 ### Public API URL
 
-La API pública se sirve mediante `deploy/compose.prod.yaml` y Nginx. Complete
-`APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `APP_URL`, `app.baseURL` y
-`cors.allowedOrigins` en el `.env` del servidor. El health check queda disponible
-en `https://<dominio>/health` (modalidad same-domain) o
-`https://<api-dominio>/health` (subdominio).
+La API pública se sirve mediante Traefik (infraestructura compartida) y el
+Nginx interno de `deploy/compose.prod.yaml`. Complete `APP_DOMAIN`,
+`API_DOMAIN`, `PROXY_NETWORK`, `PROXY_SUBNET`, `APP_URL`, `app.baseURL` y
+`cors.allowedOrigins` en el `.env` del servidor. Use `NGINX_MODE=http`: TLS
+termina en Traefik. El health check queda disponible en
+`https://<dominio>/health` (same-domain) o `https://<api-dominio>/health`
+(subdomain).
 
-Consulte [`deploy/README.md`](deploy/README.md) y
+Consulte [`deploy/README.md`](deploy/README.md),
+[`deploy/infra/traefik/README.md`](deploy/infra/traefik/README.md) y
 [`docs/operaciones.md`](docs/operaciones.md) para bootstrap, TLS y despliegue.
 
 ## 11. Ejecución frontend
@@ -497,23 +506,30 @@ desactualizadas.
 - Configuración única en `.env` raíz, con secretos propios de producción.
 - `COMPOSE_PROJECT_NAME` debe ser distinto de `sol_dev` (por ejemplo `sol_prod`);
   `deploy.sh` y `bootstrap.sh` lo exigen.
+- Infraestructura compartida: `deploy/infra/traefik/` publica 80/443 y crea la
+  red externa `proxy`. Debe desplegarse antes que SOL.
+- SOL usa `PROXY_NETWORK=proxy`, `PROXY_SUBNET=172.30.0.0/24` y
+  `NGINX_MODE=http`; su Nginx es interno y no publica puertos. Traefik termina
+  TLS y enruta por dominio.
 - Instalación nueva: `./deploy/scripts/bootstrap.sh --prod --authorize`.
 - Actualizaciones: `./deploy/scripts/deploy.sh` (no ejecuta `SystemSeeder`).
-- Nginx: `deploy/compose.prod.yaml`; modos `http`, `same-domain` o `subdomain`.
-- Certificados: `deploy/nginx/certs/` (o `TLS_CERTS_DIR`) montados en solo lectura.
+- Certificados/ACME: gestionados por Traefik en `deploy/infra/traefik`.
+  Las plantillas HTTPS de `deploy/nginx/` se conservan solo para un Nginx
+  standalone legado.
 - Persistencia: volúmenes `sol_<proyecto>_mysql_data` y
   `sol_<proyecto>_backend_writable`.
 - Almacenamiento de CV: `storage.driver=supabase` con credenciales S3 privadas.
-- Entorno: `CI_ENVIRONMENT=production` y HTTPS.
+- Entorno: `CI_ENVIRONMENT=production` y HTTPS público.
 - Respaldos: `./deploy/scripts/backup.sh prod`; restauración controlada:
   `./deploy/scripts/restore.sh --env prod --db <archivo.sql> --confirm "RESTORE:<proyecto>:prod" --allow-production`.
 - Pendiente: DNS/dominios, certificados reales, Google OAuth, Turnstile,
   Supabase, Resend/SMTP, SUNAT/RENIEC y revisión de credenciales.
-- La API envía cabeceras de seguridad (`secureheaders`) y Nginx añade HSTS en
-  HTTPS; no se aplica CSP global. Configurar CSP en el hosting del frontend.
+- La API envía cabeceras de seguridad (`secureheaders`); Traefik añade HSTS en
+  HTTPS. No se aplica CSP global. Configurar CSP en el hosting del frontend.
 
 Procedimiento completo:
-[`deploy/README.md`](deploy/README.md) y [`docs/operaciones.md`](docs/operaciones.md).
+[`deploy/README.md`](deploy/README.md), [`deploy/infra/traefik/README.md`](deploy/infra/traefik/README.md)
+y [`docs/operaciones.md`](docs/operaciones.md).
 
 ### Dominios, subdominios y SPA fallback
 
@@ -524,9 +540,11 @@ Procedimiento completo:
 | producción subdomain | `https://APIDOMAIN/` | `https://APPDOMAIN` | `https://APPDOMAIN` | `https://APIDOMAIN` |
 
 - `APP_URL` es obligatoria para los enlaces de activación.
+- En producción, `APP_DOMAIN` y `API_DOMAIN` se enrutan desde Traefik; SOL mantiene
+  `NGINX_MODE=http` y no monta TLS.
 - CORS sin cookies (`supportsCredentials=false`): autenticación JWT Bearer.
-- El frontend incluye SPA fallback en su `frontend/nginx.conf`; Nginx de borde
-  proxyfica el frontend.
+- El frontend incluye SPA fallback en su `frontend/nginx.conf`; el Nginx interno
+  de SOL proxyfica el frontend y Traefik hace la entrada pública.
 
 ## Convenciones del backend
 

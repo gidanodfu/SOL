@@ -183,6 +183,40 @@ volume_name() {
     printf '%s_%s' "$(project_name)" "$1"
 }
 
+proxy_network() {
+    name=$(env_get PROXY_NETWORK)
+    printf '%s' "${name:-proxy}"
+}
+
+require_proxy_network() {
+    network=$(proxy_network)
+    docker network inspect "$network" >/dev/null 2>&1 \
+        || die "No existe la red externa '$network'. Despliegue primero deploy/infra/traefik/compose.yaml."
+}
+
+require_traefik_running() {
+    id=""
+    if [ -n "${TRAEFIK_CONTAINER:-}" ]; then
+        id=$(docker ps -q --filter "name=$TRAEFIK_CONTAINER" --filter status=running)
+    fi
+    if [ -z "$id" ]; then
+        id=$(docker ps -q --filter 'label=com.sol.infra=traefik' --filter status=running)
+    fi
+    [ -n "$id" ] || die "No se detectó un Traefik compartido en ejecución. Despliegue deploy/infra/traefik o defina TRAEFIK_CONTAINER."
+}
+
+require_proxy_subnet() {
+    expected=$(env_get PROXY_SUBNET)
+    [ -n "$expected" ] || die "Falta PROXY_SUBNET para validar la red del proxy."
+    network=$(proxy_network)
+    actual=$(docker network inspect "$network" --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}' 2>/dev/null || true)
+    [ -n "$actual" ] || die "No se pudo leer la subred de '$network'."
+    case " $actual " in
+        *" $expected "*) ;;
+        *) die "PROXY_SUBNET=$expected no coincide con la subred de '$network' ($actual)." ;;
+    esac
+}
+
 wait_for_service() {
     compose_cmd="$1"
     service="$2"
@@ -193,7 +227,6 @@ wait_for_service() {
         if [ -n "$id" ]; then
             status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || true)
             [ "$status" = "healthy" ] && return 0
-            [ "$status" = "running" ] && [ "$service" = "nginx" ] && return 0
         fi
         sleep 2
         i=$((i + 1))
@@ -300,8 +333,15 @@ validate_env_basics() {
                 die "jwt.secret debe tener al menos 32 caracteres en producción."
             fi
             [ "$(project_name)" != "sol_dev" ] || die "Producción no puede usar COMPOSE_PROJECT_NAME=sol_dev."
+            require_env PROXY_NETWORK "Defina la red externa compartida, por ejemplo proxy."
+            require_env PROXY_SUBNET "Defina la subred de la red proxy, por ejemplo 172.30.0.0/24."
+            require_env API_DOMAIN "Defina el dominio de la API (puede ser igual a APP_DOMAIN)."
+            [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
             case "$(env_get APP_DOMAIN)" in
                 localhost|127.0.0.1) die "APP_DOMAIN no puede ser localhost en producción." ;;
+            esac
+            case "$(env_get API_DOMAIN)" in
+                localhost|127.0.0.1) die "API_DOMAIN no puede ser localhost en producción." ;;
             esac
             case "$(env_get APP_URL)" in
                 https://*) ;;

@@ -25,7 +25,13 @@ if [ "$mode" = "subdomain" ] && [ -z "${API_DOMAIN:-}" ]; then
     exit 1
 fi
 
+# En modo http el valor se usa para real_ip. Se permite un valor por defecto
+# para compatibilidad con un Nginx standalone; en producción debe coincidir
+# con PROXY_SUBNET y con la red proxy real.
+PROXY_SUBNET=${PROXY_SUBNET:-172.30.0.0/24}
+export PROXY_SUBNET
+
 mkdir -p /etc/nginx/conf.d
-envsubst '${APP_DOMAIN} ${API_DOMAIN} ${TLS_CERT_PATH} ${TLS_KEY_PATH}' \
+envsubst '${APP_DOMAIN} ${API_DOMAIN} ${PROXY_SUBNET} ${TLS_CERT_PATH} ${TLS_KEY_PATH}' \
     < "/etc/nginx/templates-sol/$template" \
     > /etc/nginx/conf.d/default.conf

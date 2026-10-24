@@ -23,8 +23,8 @@ Inicializa una instalación NUEVA de forma explícita. No se ejecuta desde up,
 restart ni deploy.sh.
 
   --dev         usa el entorno de desarrollo y su proyecto Compose.
-  --prod        usa producción; exige CI_ENVIRONMENT=production y un proyecto
-                distinto de sol_dev.
+  --prod        usa producción; exige CI_ENVIRONMENT=production, un proyecto
+                distinto de sol_dev, NGINX_MODE=http y Traefik en la red proxy.
   --authorize   confirma que se crearán el administrador inicial y los datos
                 base. Sin esta bandera el script no hace cambios.
 
@@ -49,14 +49,10 @@ export_admin_credentials
 
 if [ "$MODE" = "prod" ]; then
     require_prod_project
-    MODE_TLS=$(env_get NGINX_MODE)
-    if [ "$MODE_TLS" != "http" ]; then
-        CERT_DIR=$(env_get TLS_CERTS_DIR)
-        [ -n "$CERT_DIR" ] || die "Falta TLS_CERTS_DIR para HTTPS."
-        [ -f "$(resolve_deploy_path "$CERT_DIR")/fullchain.pem" ] || die "Falta ${CERT_DIR}/fullchain.pem."
-        [ -f "$(resolve_deploy_path "$CERT_DIR")/privkey.pem" ] || die "Falta ${CERT_DIR}/privkey.pem."
-        [ "$MODE_TLS" = "subdomain" ] && require_env API_DOMAIN "Defina el dominio de la API para subdomain."
-    fi
+    [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
+    require_proxy_network
+    require_proxy_subnet
+    require_traefik_running
     run_compose() { compose_prod "$@"; }
     compute_cmd=compose_prod
     wait_services="db backend frontend nginx"
