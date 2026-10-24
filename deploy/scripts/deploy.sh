@@ -17,14 +17,15 @@ Uso: deploy/scripts/deploy.sh
 Actualiza una instalación de producción existente. Requiere:
   - CI_ENVIRONMENT=production en el .env activo.
   - COMPOSE_PROJECT_NAME distinto de sol_dev.
-  - La red externa del proxy y Traefik en ejecución.
+  - La red exclusiva de entrada Traefik ↔ SOL y Traefik en ejecución.
   - NGINX_MODE=http; el TLS termina en Traefik.
   - Una base ya inicializada con usuarios.
 
-Pasos: valida configuración, exige el proxy compartido y Traefik en ejecución,
-arranca/verifica MySQL, exige base inicializada, crea un respaldo verificado,
-construye imágenes, aplica migraciones, recrea servicios, espera salud y
-comprueba /health. No ejecuta seeders, no restaura datos y no elimina volúmenes.
+Pasos: valida configuración, exige la red de entrada exclusiva y Traefik en
+ejecución, arranca/verifica MySQL, exige base inicializada, crea un respaldo
+verificado, construye imágenes, aplica migraciones, recrea servicios, espera
+salud y comprueba /health. No ejecuta seeders, no restaura datos y no elimina
+volúmenes.
 USAGE
         exit 0
         ;;
@@ -38,12 +39,11 @@ validate_env_basics
 require_prod_project
 require_env APP_DOMAIN "Defina el dominio público del frontend."
 assert_compose_project compose_prod
-require_proxy_network
-require_proxy_subnet
-require_traefik_running
+require_sol_entry_network
+require_traefik_entry
 
 [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
-printf 'Proxy compartido: %s (Traefik en ejecución)\n' "$(proxy_network)"
+printf 'Red de entrada exclusiva: %s (Traefik en %s)\n' "$(sol_entry_network)" "$(env_get TRAEFIK_ENTRY_IP)"
 
 printf 'Entorno de destino: producción\n'
 printf 'Proyecto Compose: %s\n' "$(project_name)"

@@ -1,8 +1,32 @@
-# Modalidad HTTP (gateway interno detrás de Traefik o HTTP directo standalone).
+# Modalidad HTTP de dominio único (gateway interno detrás de Traefik).
 # Generado por render.sh; no editar el archivo generado.
+#
+# Este Nginx solo debe ser alcanzado por Traefik por la red de entrada
+# exclusiva. La confianza en X-Forwarded-* se limita a la IP fija de Traefik;
+# no se confía en la subred compartida del proxy.
 map $http_x_forwarded_proto $sol_https {
     default off;
     https   on;
+}
+map $http_x_forwarded_proto $sol_forwarded_proto {
+    default http;
+    https   https;
+}
+# $realip_remote_addr conserva el par original aunque real_ip sustituya
+# $remote_addr por la IP del cliente. Solo el propio Nginx y Traefik pueden
+# abrir una conexión directa al gateway.
+geo $realip_remote_addr $sol_edge_allowed {
+    default 0;
+    127.0.0.1/32 1;
+    ::1/128 1;
+    ${TRAEFIK_ENTRY_IP}/32 1;
+}
+
+# Un Host no declarado no debe caer accidentalmente en el frontend.
+server {
+    listen 80 default_server;
+    server_name _;
+    return 444;
 }
 
 server {
@@ -11,8 +35,11 @@ server {
     server_tokens off;
     client_max_body_size 12m;
 
-    # Traefik es el único origen de tráfico en esta red.
-    set_real_ip_from ${PROXY_SUBNET};
+    if ($sol_edge_allowed = 0) {
+        return 403;
+    }
+
+    set_real_ip_from ${TRAEFIK_ENTRY_IP};
     real_ip_header X-Forwarded-For;
     real_ip_recursive on;
 
@@ -27,7 +54,7 @@ server {
         fastcgi_param DOCUMENT_ROOT /var/www/sol/backend/public;
         fastcgi_param REQUEST_URI $request_uri;
         fastcgi_param PATH_INFO $uri;
-        fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $sol_forwarded_proto;
         fastcgi_param HTTPS $sol_https;
         fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
         fastcgi_pass backend:9000;
@@ -41,7 +68,7 @@ server {
         fastcgi_param DOCUMENT_ROOT /var/www/sol/backend/public;
         fastcgi_param REQUEST_URI $request_uri;
         fastcgi_param PATH_INFO $uri;
-        fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $sol_forwarded_proto;
         fastcgi_param HTTPS $sol_https;
         fastcgi_param HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
         fastcgi_pass backend:9000;
@@ -54,6 +81,6 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $sol_forwarded_proto;
     }
 }

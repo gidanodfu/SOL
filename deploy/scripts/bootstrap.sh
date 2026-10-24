@@ -24,7 +24,8 @@ restart ni deploy.sh.
 
   --dev         usa el entorno de desarrollo y su proyecto Compose.
   --prod        usa producción; exige CI_ENVIRONMENT=production, un proyecto
-                distinto de sol_dev, NGINX_MODE=http y Traefik en la red proxy.
+                distinto de sol_dev, NGINX_MODE=http, la red exclusiva
+                Traefik ↔ SOL y Traefik en ejecución.
   --authorize   confirma que se crearán el administrador inicial y los datos
                 base. Sin esta bandera el script no hace cambios.
 
@@ -50,9 +51,8 @@ export_admin_credentials
 if [ "$MODE" = "prod" ]; then
     require_prod_project
     [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
-    require_proxy_network
-    require_proxy_subnet
-    require_traefik_running
+    require_sol_entry_network
+    require_traefik_entry
     run_compose() { compose_prod "$@"; }
     compute_cmd=compose_prod
     wait_services="db backend frontend nginx"

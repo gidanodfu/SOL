@@ -67,8 +67,10 @@ services:
     labels:
       com.sol.infra: traefik
     networks:
-      - proxy
-      - socket
+      proxy:
+      socket:
+      sol_entry:
+        ipv4_address: ${TRAEFIK_ENTRY_IP:-172.31.0.2}
     logging:
       driver: json-file
       options:
@@ -89,3 +91,10 @@ networks:
     name: ${TRAEFIK_SOCKET_NETWORK:-traefik_socket}
     driver: bridge
     internal: true
+  sol_entry:
+    name: ${SOL_ENTRY_NETWORK:-sol_entry}
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${SOL_ENTRY_SUBNET:-172.31.0.0/29}

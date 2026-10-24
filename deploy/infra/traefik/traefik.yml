@@ -1,4 +1,5 @@
-# Configuración estática de Traefik para la red compartida `proxy`.
+# Configuración estática de Traefik para la red compartida `proxy` y la red
+# exclusiva de entrada de SOL `sol_entry`.
 # El correo ACME y el CA se pasan por variables/args en compose.yaml.
 global:
   checkNewVersion: false

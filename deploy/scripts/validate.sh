@@ -24,7 +24,7 @@ básica sin imprimir secretos. Por defecto valida la sintaxis de ambos entornos.
 
   --dev         exige que el .env activo sea de desarrollo.
   --prod        exige CI_ENVIRONMENT=production, un proyecto distinto de
-                sol_dev y la red externa del proxy disponible.
+                sol_dev y la red exclusiva Traefik ↔ SOL disponible.
   --build       construye las imágenes de desarrollo.
   --build-prod  construye las imágenes de producción (requiere .env de producción).
   --runtime     comprueba servicios y endpoints del entorno seleccionado.
@@ -47,6 +47,10 @@ validate_env_basics
 [ -f "$ROOT/frontend/Dockerfile" ] || die "Falta frontend/Dockerfile."
 [ -f "$ROOT/frontend/nginx.conf" ] || die "Falta frontend/nginx.conf."
 [ -f "$ROOT/deploy/nginx/render.sh" ] || die "Falta deploy/nginx/render.sh."
+[ -f "$ROOT/deploy/nginx/templates/app.http.conf.template" ] || die "Falta la plantilla Nginx HTTP de dominio único."
+[ -f "$ROOT/deploy/nginx/templates/app.http.subdomain.conf.template" ] || die "Falta la plantilla Nginx HTTP de subdominios."
+[ -f "$ROOT/deploy/nginx/templates/app.https.same-domain.conf.template" ] || die "Falta la plantilla Nginx HTTPS same-domain legado."
+[ -f "$ROOT/deploy/nginx/templates/app.https.subdomain.conf.template" ] || die "Falta la plantilla Nginx HTTPS subdomain legado."
 [ -f "$ROOT/deploy/scripts/restore.sh" ] || die "Falta deploy/scripts/restore.sh."
 [ -f "$ROOT/deploy/scripts/smoke.sh" ] || die "Falta deploy/scripts/smoke.sh."
 [ -f "$ROOT/tests/smoke/test_docker_http.sh" ] || die "Falta tests/smoke/test_docker_http.sh."
@@ -55,14 +59,14 @@ case "$TARGET" in
     dev) require_dev_project ;;
     prod)
         require_prod_project
-        require_proxy_network
-        require_proxy_subnet
+        require_sol_entry_network
+        require_traefik_entry
         ;;
     all)
         if [ "$(env_get CI_ENVIRONMENT)" = "production" ]; then
             require_prod_project
-            require_proxy_network
-            require_proxy_subnet
+            require_sol_entry_network
+            require_traefik_entry
         else
             printf 'Aviso: el .env activo no es de producción; se valida la sintaxis de prod sin sus guardias.\n'
         fi
@@ -101,10 +105,22 @@ if ! compose_prod config 2>/dev/null | awk '
     /^  nginx:/ { in_nginx=1; next }
     /^  [a-zA-Z0-9_-]+:/ { if (in_nginx) exit }
     in_nginx && /^    networks:/ { in_net=1; next }
+    in_net && index($0, "      entry:") == 1 { found=1; exit }
+    END { exit found ? 0 : 1 }
+'; then
+    die "El Nginx de SOL no está conectado a la red de entrada exclusiva 'entry'."
+fi
+if compose_prod config 2>/dev/null | awk '
+    /^  nginx:/ { in_nginx=1; next }
+    /^  [a-zA-Z0-9_-]+:/ { if (in_nginx) exit }
+    in_nginx && /^    networks:/ { in_net=1; next }
     in_net && index($0, "      proxy:") == 1 { found=1; exit }
     END { exit found ? 0 : 1 }
 '; then
-    die "El Nginx de SOL no está conectado a la red externa del proxy."
+    die "El Nginx de SOL no debe unirse a la red compartida 'proxy'; use la red de entrada exclusiva."
+fi
+if ! compose_prod config 2>/dev/null | grep -Fq "traefik.docker.network: $(sol_entry_network)"; then
+    die "El Nginx de SOL no apunta a la red de entrada '$(sol_entry_network)' en sus labels."
 fi
 if ! compose_prod config 2>/dev/null | grep -q 'traefik.http.routers.sol.rule'; then
     die "Faltan las labels de enrutamiento de Traefik en el Nginx de SOL."
@@ -183,8 +199,8 @@ fi
 if [ "$RUNTIME" = "1" ]; then
     printf 'Comprobando servicios en ejecución...\n'
     if [ "$TARGET" = "prod" ]; then
-        require_proxy_network
-        require_traefik_running
+        require_sol_entry_network
+        require_traefik_entry
         compose_prod ps
         http_ok "$(nginx_health_url)" || die "Nginx de producción no responde en /health."
     else

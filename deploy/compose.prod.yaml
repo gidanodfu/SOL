@@ -15,10 +15,12 @@ services:
       API_DOMAIN: ${API_DOMAIN}
       # Traefik termina TLS y habla HTTP con este Nginx interno.
       NGINX_MODE: http
-      PROXY_SUBNET: ${PROXY_SUBNET:-172.30.0.0/24}
+      # Solo se confía en esta IP para X-Forwarded-For/Proto. Debe ser la IP
+      # fija de Traefik en la red exclusiva de entrada.
+      TRAEFIK_ENTRY_IP: ${TRAEFIK_ENTRY_IP:-172.31.0.2}
     labels:
       traefik.enable: "true"
-      traefik.docker.network: ${PROXY_NETWORK:-proxy}
+      traefik.docker.network: ${SOL_ENTRY_NETWORK:-sol_entry}
       traefik.http.routers.sol.rule: Host(`${APP_DOMAIN}`) || Host(`${API_DOMAIN}`)
       traefik.http.routers.sol.entrypoints: websecure
       traefik.http.routers.sol.tls: "true"
@@ -35,7 +37,7 @@ services:
       - ./nginx/render.sh:/docker-entrypoint.d/40-render-sol.sh:ro
       - nginx_conf:/etc/nginx/conf.d
     healthcheck:
-      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 && wget -qO- http://127.0.0.1/health >/dev/null"]
+      test: ["CMD-SHELL", "nginx -t >/dev/null 2>&1 && wget -qO- --header=\"Host: $$API_DOMAIN\" http://127.0.0.1/health >/dev/null"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -47,12 +49,15 @@ services:
         max-file: "3"
     networks:
       - internal
-      - proxy
+      - entry
 
 volumes:
   nginx_conf:
 
 networks:
-  proxy:
+  # Red exclusiva Traefik ↔ Nginx de SOL. Los contenedores de otros proyectos
+  # no se unen a esta red, por lo que no pueden alcanzar el gateway de SOL
+  # directamente ni falsificar encabezados reenviados.
+  entry:
     external: true
-    name: ${PROXY_NETWORK:-proxy}
+    name: ${SOL_ENTRY_NETWORK:-sol_entry}
