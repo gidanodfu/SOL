@@ -40,6 +40,36 @@ class PostulacionRepository
     }
 
     /**
+     * Indica si el postulante ya tiene una postulación ACTIVA a la oferta.
+     * La restricción de unicidad de la base de datos sigue siendo la última
+     * defensa ante dos solicitudes simultáneas.
+     */
+    public function tienePostulacionActiva(int $postulanteId, int $ofertaId): bool
+    {
+        return $this->db->table('postulaciones')
+            ->where('postulante_id', $postulanteId)
+            ->where('oferta_id', $ofertaId)
+            ->where('activo', 1)
+            ->countAllResults() > 0;
+    }
+
+    /**
+     * Selección formal del postulante dentro de una empresa (RN-18).
+     *
+     * Se consulta por estado `seleccionado` sin filtrar por `activo`: la
+     * selección es un hito terminal y no debe poder eludirse desactivando la
+     * postulación desde la bandeja de la empresa.
+     */
+    public function seleccionadoEnEmpresa(int $postulanteId, int $empresaId): bool
+    {
+        return $this->db->table('postulaciones')
+            ->where('postulante_id', $postulanteId)
+            ->where('empresa_id', $empresaId)
+            ->where('estado', 'seleccionado')
+            ->countAllResults() > 0;
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function deEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null, ?string $q = null): array

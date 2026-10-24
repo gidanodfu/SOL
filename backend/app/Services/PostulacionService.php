@@ -84,53 +84,73 @@ class PostulacionService
             );
         }
 
-        $oferta = $this->ofertas->detalle($ofertaId);
-        if ($oferta === null || $oferta['estado'] !== 'publicada') {
-            throw ApiException::noEncontrado('La oferta no está disponible para postular.');
+        $db = $this->postulaciones->db;
+
+        // El bloqueo del postulante serializa esta creación con una selección
+        // concurrente de la misma persona. Sin él, dos solicitudes podrían leer
+        // "no seleccionado" antes de que la otra confirme la selección.
+        $db->transBegin();
+
+        try {
+            $this->bloquearPostulante($postulanteId);
+            $this->bloquearOferta($ofertaId);
+
+            $oferta = $this->ofertas->detalle($ofertaId);
+            if ($oferta === null || $oferta['estado'] !== 'publicada') {
+                throw ApiException::noEncontrado('La oferta no está disponible para postular.');
+            }
+            if (OfertaService::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta ya cerró sus postulaciones.');
+            }
+
+            // La selección formal en cualquier oferta de la empresa bloquea
+            // nuevas postulaciones a esa misma empresa, aunque la postulación
+            // seleccionada se haya desactivado posteriormente.
+            if ($this->repository->seleccionadoEnEmpresa($postulanteId, (int) $oferta['empresa_id'])) {
+                throw ApiException::conflicto(
+                    'Ya fuiste seleccionado por esta empresa. No puedes postular a otra de sus ofertas.',
+                );
+            }
+
+            // RN-14: evita doble postulación activa a la misma oferta.
+            if ($this->repository->tienePostulacionActiva($postulanteId, $ofertaId)) {
+                throw ApiException::conflicto('Ya se registró su postulación a esta oferta.');
+            }
+
+            $ahora = date('Y-m-d H:i:s');
+            // El historial referencia users.id (no postulantes.id).
+            $usuarioId = $this->perfiles->usuarioIdDe($postulanteId) ?? $postulanteId;
+
+            $this->postulaciones->insert([
+                'postulante_id'     => $postulanteId,
+                'oferta_id'         => $ofertaId,
+                'empresa_id'        => (int) $oferta['empresa_id'],
+                'fecha_postulacion' => $ahora,
+                'estado'            => 'pendiente',
+                'activo'            => 1,
+            ]);
+            $id = $this->postulaciones->getInsertID();
+
+            $this->postulaciones->db->table('postulacion_historial')->insert([
+                'postulacion_id'  => $id,
+                'estado_anterior' => null,
+                'estado_nuevo'    => 'pendiente',
+                'usuario_id'      => $usuarioId,
+                'created_at'      => $ahora,
+            ]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo registrar la postulación. Ya existe una postulación activa a esta oferta.');
+            }
+
+            $db->transCommit();
+
+            return $id;
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
         }
-        if (OfertaService::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta ya cerró sus postulaciones.');
-        }
-
-        // RN-14: evita doble postulación activa a la misma oferta.
-        $yaPostulada = $this->postulaciones->db->table('postulaciones')
-            ->where('postulante_id', $postulanteId)
-            ->where('oferta_id', $ofertaId)
-            ->where('activo', 1)
-            ->countAllResults();
-        if ($yaPostulada) {
-            throw ApiException::conflicto('Ya se registró su postulación a esta oferta.');
-        }
-
-        $ahora = date('Y-m-d H:i:s');
-        // El historial referencia users.id (no postulantes.id).
-        $usuarioId = $this->perfiles->usuarioIdDe($postulanteId) ?? $postulanteId;
-
-        $this->postulaciones->db->transStart();
-        $this->postulaciones->insert([
-            'postulante_id'     => $postulanteId,
-            'oferta_id'         => $ofertaId,
-            'empresa_id'        => (int) $oferta['empresa_id'],
-            'fecha_postulacion' => $ahora,
-            'estado'            => 'pendiente',
-            'activo'            => 1,
-        ]);
-        $id = $this->postulaciones->getInsertID();
-
-        $this->postulaciones->db->table('postulacion_historial')->insert([
-            'postulacion_id'  => $id,
-            'estado_anterior' => null,
-            'estado_nuevo'    => 'pendiente',
-            'usuario_id'      => $usuarioId,
-            'created_at'      => $ahora,
-        ]);
-        $this->postulaciones->db->transComplete();
-
-        if (! $this->postulaciones->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo registrar la postulación. Ya existe una postulación activa a esta oferta.');
-        }
-
-        return $id;
     }
 
     public function retirar(int $postulanteId, int $postulacionId): void
@@ -190,35 +210,52 @@ class PostulacionService
      */
     public function cambiarEstadoDeEmpresa(int $empresaId, int $id, string $nuevoEstado): void
     {
+        // Primera lectura: valida pertenencia antes de abrir transacción. Así
+        // una empresa ajena recibe 404 sin tocar bloqueos ni datos.
         $postulacion = $this->exigirEmpresa($empresaId, $id);
+        $db = $this->postulaciones->db;
 
-        if ((int) $postulacion['activo'] !== 1) {
-            throw ApiException::conflicto('Debe activar la postulación antes de cambiar su estado.');
-        }
-        $permitidos = self::TRANSICIONES[$postulacion['estado']] ?? [];
-        if (! in_array($nuevoEstado, $permitidos, true)) {
-            throw ApiException::conflicto(
-                "No puede pasar de \"{$postulacion['estado']}\" a \"{$nuevoEstado}\".",
-            );
-        }
+        $db->transBegin();
 
-        $ahora = date('Y-m-d H:i:s');
+        try {
+            $this->bloquearPostulante((int) $postulacion['postulante_id']);
 
-        $this->postulaciones->db->transStart();
-        $this->postulaciones->update($id, ['estado' => $nuevoEstado]);
-        // Historial del cambio (RF-39); el primer paso a "en_revision" alimenta el
-        // tiempo de atención (RF-59).
-        $this->postulaciones->db->table('postulacion_historial')->insert([
-            'postulacion_id'  => $id,
-            'estado_anterior' => $postulacion['estado'],
-            'estado_nuevo'    => $nuevoEstado,
-            'usuario_id'      => $this->usuarioEmpresa($empresaId),
-            'created_at'      => $ahora,
-        ]);
-        $this->postulaciones->db->transComplete();
+            // Relectura bajo bloqueo: otra solicitud pudo seleccionar o
+            // desactivar esta postulación mientras esperábamos el turno.
+            $postulacion = $this->exigirEmpresa($empresaId, $id);
 
-        if (! $this->postulaciones->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo actualizar el estado.');
+            if ((int) $postulacion['activo'] !== 1) {
+                throw ApiException::conflicto('Debe activar la postulación antes de cambiar su estado.');
+            }
+            $permitidos = self::TRANSICIONES[$postulacion['estado']] ?? [];
+            if (! in_array($nuevoEstado, $permitidos, true)) {
+                throw ApiException::conflicto(
+                    "No puede pasar de \"{$postulacion['estado']}\" a \"{$nuevoEstado}\".",
+                );
+            }
+
+            $ahora = date('Y-m-d H:i:s');
+
+            $this->postulaciones->update($id, ['estado' => $nuevoEstado]);
+            // Historial del cambio (RF-39); el primer paso a "en_revision" alimenta el
+            // tiempo de atención (RF-59).
+            $this->postulaciones->db->table('postulacion_historial')->insert([
+                'postulacion_id'  => $id,
+                'estado_anterior' => $postulacion['estado'],
+                'estado_nuevo'    => $nuevoEstado,
+                'usuario_id'      => $this->usuarioEmpresa($empresaId),
+                'created_at'      => $ahora,
+            ]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar el estado.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
         }
     }
 
@@ -310,5 +347,30 @@ class PostulacionService
             ->getRowArray();
 
         return $empresa ? (int) $empresa['user_id'] : null;
+    }
+
+    /**
+     * Bloqueo pesimista del postulante. Es la fila común que serializa la
+     * creación de postulaciones con la selección formal de la empresa.
+     */
+    private function bloquearPostulante(int $postulanteId): void
+    {
+        $this->postulaciones->db->query(
+            'SELECT id FROM postulantes WHERE id = ? FOR UPDATE',
+            [$postulanteId],
+        );
+    }
+
+    /**
+     * Bloquea la oferta durante la validación y el alta para que un cambio
+     * concurrente de estado o fecha de cierre no se pierda entre la lectura y
+     * el INSERT.
+     */
+    private function bloquearOferta(int $ofertaId): void
+    {
+        $this->postulaciones->db->query(
+            'SELECT id FROM ofertas WHERE id = ? FOR UPDATE',
+            [$ofertaId],
+        );
     }
 }

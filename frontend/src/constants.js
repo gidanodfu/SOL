@@ -23,7 +23,7 @@ export const PANEL_POR_ROL = {
 
 export const rutaPanel = (rol, porDefecto = RUTA_INICIO_PUBLICA) => PANEL_POR_ROL[rol] || porDefecto;
 
-export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'rechazada', 'observada', 'cerrada'];
+export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'vencida', 'rechazada', 'observada', 'cerrada'];
 export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 
 /** Situación laboral posterior de una contratación (RF-58). Máximo 4 estados. */
@@ -54,6 +54,7 @@ export const ETIQUETA_ESTADO_OFERTA = {
   borrador: 'Borrador',
   pendiente: 'Pendiente de revisión',
   publicada: 'Publicada',
+  vencida: 'Vencida',
   rechazada: 'Rechazada',
   observada: 'Observada',
   cerrada: 'Cerrada',

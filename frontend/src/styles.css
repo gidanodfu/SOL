@@ -674,6 +674,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .badge-en_revision { background: var(--blue-bg2); color: var(--blue-tx); }
 .badge-borrador, .badge-cerrada, .badge-no_seleccionado, .badge-inactivo,
 .badge-cancelado, .badge-finalizado { background: var(--gray-bg); color: var(--gray-tx); }
+.badge-vencida { background: var(--amber-bg); color: var(--amber-tx); }
 .badge-rechazada { background: var(--red-bg); color: var(--red-tx); }
 .badge-observada { background: var(--blue-bg2); color: var(--blue-tx); }
 

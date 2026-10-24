@@ -93,7 +93,7 @@ export default function Ofertas() {
               key={o.id}
               icono={Briefcase}
               titulo={o.puesto}
-              badge={<Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />}
+              badge={<Estado valor={o.estado_efectivo || o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />}
               onClick={() => setSeleccionada(o)}
               meta={(
                 <>
@@ -141,6 +141,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
 
   if (!oferta) return null;
   const o = detalle || oferta;
+  const estado = o.estado_efectivo || o.estado;
 
   const actuar = async (fn, mensaje) => {
     try {
@@ -180,7 +181,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
     // `rechazada` es terminal: sin acciones de edición ni publicación.
     rechazada: null,
     cerrada: null,
-  }[o.estado] || null;
+  }[estado] || null;
 
   return (
     <Modal
@@ -192,11 +193,12 @@ function DetalleOferta({ oferta, alCerrar, alCambio, alEditar }) {
       tamano="ancho"
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
-        <Estado valor={o.estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
-        {o.estado === 'pendiente' && <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>En revisión municipal: aún no es visible para los postulantes.</span>}
-        {o.estado === 'publicada' && <span style={{ color: 'var(--green-tx)', fontSize: '0.85rem' }}>Publicada: visible para los postulantes.</span>}
-        {o.estado === 'observada' && <span style={{ color: 'var(--blue-tx)', fontSize: '0.85rem' }}>Observada: la Municipalidad solicitó correcciones. Corrige y guarda; la oferta volverá a revisión y NO se publica automáticamente.</span>}
-        {o.estado === 'rechazada' && <span style={{ color: 'var(--red-tx)', fontSize: '0.85rem' }}>Rechazada: la oferta está bloqueada para edición y publicación.</span>}
+        <Estado valor={estado} diccionario={ETIQUETA_ESTADO_OFERTA} />
+        {estado === 'pendiente' && <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>En revisión municipal: aún no es visible para los postulantes.</span>}
+        {estado === 'publicada' && <span style={{ color: 'var(--green-tx)', fontSize: '0.85rem' }}>Publicada: visible para los postulantes.</span>}
+        {estado === 'vencida' && <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>Vencida: el plazo de postulación terminó. Se conserva el historial y ya no admite nuevas postulaciones.</span>}
+        {estado === 'observada' && <span style={{ color: 'var(--blue-tx)', fontSize: '0.85rem' }}>Observada: la Municipalidad solicitó correcciones. Corrige y guarda; la oferta volverá a revisión y NO se publica automáticamente.</span>}
+        {estado === 'rechazada' && <span style={{ color: 'var(--red-tx)', fontSize: '0.85rem' }}>Rechazada: la oferta está bloqueada para edición y publicación.</span>}
       </div>
 
       <Mensaje>{error}</Mensaje>

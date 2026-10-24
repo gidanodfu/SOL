@@ -29,7 +29,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-19/20 Perfil laboral + actualización | ✔ | datos personales/contacto + CV; **para postular solo se exige contacto completo + CV vigente** (las secciones de formación/experiencia/habilidades/cursos se retiraron del producto) |
 | RF-21 CV cargar/consultar | ✔ | `POST/GET /api/postulante/cv*` · "Mi perfil y CV"; máximo **4 CV/mes** (ver RT-CV y endurecimiento 2026-09) |
 | RF-22 Registro de ofertas | ✔ | `api/empresa/ofertas*` · Ofertas (empresa) |
-| RF-23 Estados de oferta | ✔ | pendiente → publicada / rechazada → cerrada; `borrador` solo heredado |
+| RF-23 Estados de oferta | ✔ | pendiente → publicada / rechazada → cerrada; `borrador` solo heredado. `vencida` es un estado efectivo derivado de `publicada` + `fecha_cierre`, distinto del cierre manual |
 | RF-24 La empresa envía a revisión; no publica por sí misma | ✔ | `PUT /api/empresa/ofertas/{id}/enviar-revision`; el `POST` nace `pendiente` |
 | RF-25/26 Aprobación y rechazo municipal (+ cierre) | ✔ | `PUT /api/admin/ofertas/{id}/aprobar|rechazar|cerrar` (solo `rol:admin`) |
 | RF-27/28 Consulta + búsqueda públicas (sin sesión) | ✔ | `GET /api/ofertas` con filtros (categoría, ubicación, formación, experiencia) · "Buscar empleo". El filtro "Puesto o empresa" (`q`) se retiró el 2026-09-15 |
@@ -43,7 +43,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-36 Gestión de estado | ✔ | `PUT .../estado` con transiciones validadas |
 | RF-37/38 Activar/desactivar sin eliminar | ✔ | `PUT .../activacion` |
 | RF-39 Historial de estados | ✔ | tabla `postulacion_historial` (cada cambio, usuario y fecha) |
-| RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18) |
+| RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18). Un postulante seleccionado no puede postular a otra oferta de la misma empresa |
 | RF-41/42/43 Atenciones con tipos y seguimiento | ✘ retirado (2026-09) | módulo de atenciones eliminado de la API y el frontend; la tabla `atenciones` queda sin uso |
 | RF-44/45/46/47 Ferias, eventos, talleres, capacitaciones | ✔ | `api/admin/actividades*` · Actividades (admin) |
 | RF-48 Sección de difusión de oportunidades | ✔ | `GET /api/oportunidades` · "Ferias y oportunidades" (postulante) |

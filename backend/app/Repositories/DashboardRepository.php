@@ -27,10 +27,7 @@ class DashboardRepository
         $empresas    = $this->db->table('empresas')->select("COUNT(*) total, SUM(estado = 'activo') activas")->get()->getRowArray();
         $postulantes = $this->db->table('users')->where('rol', 'postulante')->where('estado', 'activo')->countAllResults();
 
-        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada', 'observada'], 0);
-        foreach ($this->db->table('ofertas')->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
-            $ofertas[$fila['estado']] = (int) $fila['n'];
-        }
+        $ofertas = $this->contarOfertasPorEstado();
 
         $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'], 0);
         $builder = $this->db->table('postulaciones')->select('estado, COUNT(*) n')->where('activo', 1);
@@ -173,11 +170,7 @@ class DashboardRepository
      */
     public function empresa(int $empresaId, ?string $desde = null, ?string $hasta = null): array
     {
-        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'cerrada', 'rechazada', 'observada'], 0);
-        foreach ($this->db->table('ofertas')->where('empresa_id', $empresaId)
-            ->select('estado, COUNT(*) n')->groupBy('estado')->get()->getResultArray() as $fila) {
-            $ofertas[$fila['estado']] = (int) $fila['n'];
-        }
+        $ofertas = $this->contarOfertasPorEstado($empresaId);
 
         $postulaciones = array_fill_keys(['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'], 0);
         $builder = $this->db->table('postulaciones')->where('empresa_id', $empresaId)->where('activo', 1);
@@ -215,6 +208,37 @@ class DashboardRepository
             'postulaciones'      => $postulaciones,
             'pendientes_recientes' => $pendientesRecientes,
         ];
+    }
+
+    /**
+     * Conteos de ofertas por estado efectivo. Una oferta publicada con cierre
+     * anterior a hoy se agrupa como `vencida` (estado derivado, no persistido),
+     * para que paneles y reportes no la sigan contando como publicada.
+     *
+     * @return array<string, int>
+     */
+    private function contarOfertasPorEstado(?int $empresaId = null): array
+    {
+        $ofertas = array_fill_keys(['borrador', 'pendiente', 'publicada', 'vencida', 'cerrada', 'rechazada', 'observada'], 0);
+        $hoy = $this->db->escape(date('Y-m-d'));
+        $estadoEfectivo = "CASE WHEN estado = 'publicada' AND fecha_cierre IS NOT NULL AND fecha_cierre < {$hoy} "
+            . "THEN 'vencida' ELSE estado END";
+
+        $builder = $this->db->table('ofertas')
+            ->select("{$estadoEfectivo} AS estado, COUNT(*) n", false);
+        if ($empresaId !== null) {
+            $builder->where('empresa_id', $empresaId);
+        }
+
+        // GROUP BY debe repetir la expresión, no el alias: MySQL con
+        // ONLY_FULL_GROUP_BY no puede inferir la dependencia de fecha_cierre.
+        foreach ($builder->groupBy($estadoEfectivo, false)->get()->getResultArray() as $fila) {
+            if (isset($ofertas[$fila['estado']])) {
+                $ofertas[$fila['estado']] = (int) $fila['n'];
+            }
+        }
+
+        return $ofertas;
     }
 
     /**
@@ -279,12 +303,21 @@ class DashboardRepository
     public function empleabilidad(): array
     {
         $totalOfertas = (int) $this->db->table('ofertas')->countAllResults();
-        $vigentes     = (int) $this->db->table('ofertas')->where('estado', 'publicada')->countAllResults();
+        $hoy = date('Y-m-d');
+        $vigentes = (int) $this->db->table('ofertas')
+            ->where('estado', 'publicada')
+            ->groupStart()
+                ->where('fecha_cierre IS NULL')
+                ->orWhere('fecha_cierre >=', $hoy)
+            ->groupEnd()
+            ->countAllResults();
 
         $porEmpresa = $this->db->table('ofertas o')
-            ->select('e.id AS empresa_id, e.razon_social, e.ruc,
+            ->select("e.id AS empresa_id, e.razon_social, e.ruc,
                       COUNT(o.id) AS total_ofertas,
-                      SUM(o.estado = \'publicada\') AS vigentes')
+                      SUM(CASE WHEN o.estado = 'publicada'
+                          AND (o.fecha_cierre IS NULL OR o.fecha_cierre >= " . $this->db->escape($hoy) . ")
+                          THEN 1 ELSE 0 END) AS vigentes", false)
             ->join('empresas e', 'e.id = o.empresa_id')
             ->groupBy('e.id, e.razon_social, e.ruc')
             ->orderBy('total_ofertas', 'DESC')

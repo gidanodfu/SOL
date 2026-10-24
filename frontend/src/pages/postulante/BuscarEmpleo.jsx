@@ -554,11 +554,18 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
       queryClient.invalidateQueries({ queryKey: ['oferta-detalle', oferta.id] });
       // La actividad laboral vive dentro de /postulante/perfil desde la migración.
       queryClient.invalidateQueries({ queryKey: ['perfil-postulante'] });
-    } catch { /* error visible */ }
+    } catch {
+      // El backend pudo rechazar por vencimiento o por una selección que el
+      // navegador aún no conocía: refresca el detalle para reflejar el estado
+      // efectivo sin confiar en la copia local.
+      queryClient.invalidateQueries({ queryKey: ['oferta-detalle', oferta.id] });
+      queryClient.invalidateQueries({ queryKey: ['buscar-ofertas'] });
+    }
   };
 
   const yaPostulo = detalle?.ya_postule === true;
-  const puedePostular = Boolean(detalle) && !enviando && !yaPostulo && !perfilIncompleto;
+  const seleccionadoEmpresa = detalle?.ya_seleccionado_empresa === true;
+  const puedePostular = Boolean(detalle) && !enviando && !yaPostulo && !seleccionadoEmpresa && !perfilIncompleto;
 
   return (
     <div className="panel-caja">
@@ -595,12 +602,17 @@ function DetalleOferta({ oferta, onCerrar, perfilIncompleto }) {
           type="button"
           className="btn-detail btn-postular"
           disabled={!puedePostular}
-          style={{ opacity: !puedePostular ? 0.6 : 1, cursor: yaPostulo ? 'default' : 'pointer' }}
+          style={{ opacity: !puedePostular ? 0.6 : 1, cursor: (yaPostulo || seleccionadoEmpresa || perfilIncompleto) ? 'default' : 'pointer' }}
           onClick={postularse}
         >
-          {enviando ? 'Procesando…' : !detalle ? 'Cargando…' : yaPostulo ? 'Ya te postulaste a esta oferta' : perfilIncompleto ? 'Completa tus datos y CV para postular' : 'Postular ahora'}
+          {enviando ? 'Procesando…' : !detalle ? 'Cargando…' : seleccionadoEmpresa ? 'Ya fuiste seleccionado por esta empresa' : yaPostulo ? 'Ya te postulaste a esta oferta' : perfilIncompleto ? 'Completa tus datos y CV para postular' : 'Postular ahora'}
           {puedePostular ? <i className="ti ti-send" /> : null}
         </button>
+        {seleccionadoEmpresa && (
+          <p style={{ fontSize: '0.85rem', color: 'var(--amber-tx)', margin: '10px 0 0' }}>
+            La empresa ya te seleccionó en otra oferta. No puedes postularte a otra oferta de la misma empresa.
+          </p>
+        )}
         {!usuario && (
           <p style={{ fontSize: '0.85rem', color: 'var(--text-2)', margin: '10px 0 0' }}>
             Para postularte debes <b>iniciar sesión</b>. Si aún no tienes cuenta, <b>regístrate como postulante</b>.

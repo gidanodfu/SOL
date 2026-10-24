@@ -26,7 +26,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 12 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 13 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -64,6 +64,11 @@ de MIME/firma/rol.
 El límite de texto enriquecido es inclusivo: se cuentan caracteres visibles
 después de sanear/decodificar, sin etiquetas HTML; 9.999 y 10.000 se aceptan y
 10.001 se rechaza. Está cubierto en `HtmlSanitizerTest` y `test_rte.sh`.
+
+`test_reglas_ofertas.sh` cubre el vencimiento efectivo (búsqueda, detalle,
+postulación directa, bandejas y contadores) y la selección formal por empresa:
+bloquea nuevas postulaciones a la misma empresa, no a otras, y persiste aunque
+la postulación seleccionada se desactive.
 
 
 ### Backend

@@ -1020,9 +1020,10 @@ paths:
       summary: Bandeja de ofertas (admin)
       description: |
         Lista todas las ofertas. El estado se valida (422 "Estado de oferta no válido." si
-        no está en la lista). Orden por `estado` ASC (alfabético) y luego `created_at DESC`;
-        esto NO prioriza las ofertas pendientes. Sin paginación ni límite. Las filas no
-        incluyen `habilidades` ni `cantidad_postulaciones`.
+        no está en la lista). `vencida` filtra el estado efectivo derivado de
+        `publicada` + `fecha_cierre`; el filtro `publicada` excluye esas ofertas.
+        Orden por prioridad de estado y luego `created_at DESC`. Sin paginación ni límite.
+        Las filas no incluyen `habilidades` ni `cantidad_postulaciones`.
       security:
         - bearerAuth: []
       parameters:
@@ -2621,11 +2622,10 @@ paths:
       operationId: postulanteVerOferta
       summary: Detalle de oferta publicada
       description: |
-        Solo devuelve ofertas en estado `publicada` (si no, 404 "La oferta no está
-        disponible."). **Hallazgo**: no valida vigencia, por lo que una oferta vencida no
-        aparece en la búsqueda pero sí es accesible por su URL directa. Incluye
-        `habilidades`, `cantidad_postulaciones` y `ya_postule` (si el postulante tiene
-        perfil y ya postuló activamente).
+        Solo devuelve ofertas en estado `publicada` y con vigencia efectiva (si no,
+        404 "La oferta no está disponible."). Incluye `habilidades`,
+        `cantidad_postulaciones`, `ya_postule` y `ya_seleccionado_empresa` (si el
+        postulante tiene perfil).
       security:
         - bearerAuth: []
       parameters:
@@ -3034,7 +3034,8 @@ paths:
       summary: Detalle de oferta publicada (público)
       description: |
         Detalle público de la oferta. Si la petición incluye un token válido de un
-        postulante activo, la respuesta agrega `ya_postule`.
+        postulante activo, la respuesta agrega `ya_postule` y
+        `ya_seleccionado_empresa`. Una oferta vencida responde 404.
       parameters:
         - $ref: '#/components/parameters/IdPath'
       responses:
@@ -3703,10 +3704,10 @@ components:
     EstadoOferta:
       name: estado
       in: query
-      description: Filtro por estado de la oferta. Se valida (valor inválido responde 422).
+      description: Filtro por estado de la oferta. Se valida (valor inválido responde 422). `vencida` incluye ofertas publicadas con fecha de cierre pasada.
       schema:
         type: string
-        enum: [borrador, pendiente, publicada, rechazada, observada, cerrada]
+        enum: [borrador, pendiente, publicada, vencida, rechazada, observada, cerrada]
     EstadoActividad:
       name: estado
       in: query
@@ -4352,6 +4353,13 @@ components:
             razon_social:
               type: string
               nullable: true
+            estado_efectivo:
+              type: string
+              description: |
+                Estado operativo para paneles. Es `vencida` cuando `estado` es
+                `publicada` y `fecha_cierre` ya pasó; en los demás casos replica
+                `estado`. No se persiste en el ENUM.
+              enum: [borrador, pendiente, publicada, vencida, rechazada, observada, cerrada]
 
     OfertaDetalle:
       type: object
@@ -4371,6 +4379,9 @@ components:
             ya_postule:
               type: boolean
               description: 'Solo presente en el detalle público del postulante con perfil: si ya tiene postulación activa.'
+            ya_seleccionado_empresa:
+              type: boolean
+              description: 'Solo presente en el detalle público del postulante con perfil: si fue seleccionado formalmente por la empresa de esta oferta.'
 
     OfertaBody:
       type: object

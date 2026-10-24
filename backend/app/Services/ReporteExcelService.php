@@ -29,11 +29,12 @@ class ReporteExcelService
 
     private const COLOR_TITULO = '0E2A47';
 
-    private const ORDEN_OFERTAS = ['publicada', 'borrador', 'cerrada'];
+    private const ORDEN_OFERTAS = ['publicada', 'vencida', 'borrador', 'cerrada'];
 
     private const ETIQUETA_ESTADO_OFERTA = [
         'borrador'  => 'Borrador',
         'publicada' => 'Publicada',
+        'vencida'   => 'Vencida',
         'cerrada'   => 'Cerrada',
     ];
 
@@ -286,6 +287,7 @@ class ReporteExcelService
 
         $metricas = [
             'Ofertas publicadas'                => $ofertas['publicada'],
+            'Ofertas vencidas'                  => $ofertas['vencida'],
             'Ofertas en borrador'               => $ofertas['borrador'],
             'Ofertas cerradas'                  => $ofertas['cerrada'],
             'Postulaciones recibidas (periodo)' => array_sum($postulaciones),
@@ -362,9 +364,10 @@ class ReporteExcelService
     {
         $filas = [];
         foreach ($ofertas as $o) {
+            $estado = OfertaService::estadoEfectivo($o);
             $filas[] = [
                 $o['puesto'] ?? '',
-                self::ETIQUETA_ESTADO_OFERTA[$o['estado']] ?? (string) ($o['estado'] ?? ''),
+                self::ETIQUETA_ESTADO_OFERTA[$estado] ?? (string) $estado,
                 ! empty($o['fecha_publicacion']) ? date('d/m/Y', strtotime((string) $o['fecha_publicacion'])) : '',
                 ! empty($o['fecha_cierre']) ? date('d/m/Y', strtotime((string) $o['fecha_cierre'])) : '',
                 (int) ($o['vacantes'] ?? 0),

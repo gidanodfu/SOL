@@ -16,6 +16,7 @@ import { errorApi, fechaHora } from '../../utils';
 
 const OFERTAS_DONA = [
   { estado: 'publicada', etiqueta: 'Publicada', color: 'var(--green)' },
+  { estado: 'vencida', etiqueta: 'Vencida', color: 'var(--amber)' },
   { estado: 'pendiente', etiqueta: 'Pendiente de revisión', color: 'var(--amber)' },
   { estado: 'observada', etiqueta: 'Observada', color: 'var(--blue-c)' },
   { estado: 'rechazada', etiqueta: 'Rechazada', color: 'var(--red-c)' },

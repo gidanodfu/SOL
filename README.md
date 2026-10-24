@@ -67,8 +67,15 @@ MySQL es la fuente de verdad.
   oferta publicada también la devuelve a revisión. La empresa puede editar `borrador`,
   `pendiente`, `publicada` y `observada`, pero **no** `rechazada` ni `cerrada`. Estados:
   `borrador|pendiente → publicada|observada|rechazada → cerrada` (`borrador` solo heredado).
-  Endpoints: `PUT /api/admin/ofertas/{id}/aprobar|observar|rechazar|cerrar` y
+  Una oferta `publicada` cuya `fecha_cierre` ya pasó se expone como **Vencida**
+  (`estado_efectivo`, derivado de la fecha; no se persiste) y deja de recibir
+  postulaciones. `vencida` se distingue de `cerrada` (cierre manual). Endpoints:
+  `PUT /api/admin/ofertas/{id}/aprobar|observar|rechazar|cerrar` y
   `PUT /api/empresa/ofertas/{id}/enviar-revision|cerrar`.
+- **Selección por empresa**: cuando una empresa marca una postulación como
+  `seleccionado`, el postulante no puede crear nuevas postulaciones a ninguna
+  oferta de esa empresa. Puede seguir postulando a otras empresas. La regla se
+  valida en backend y se coordina con bloqueo transaccional del postulante.
 - **Modo oscuro**: tema claro/oscuro global (admin, empresa, postulante y público) con una
   única fuente (`ThemeContext` + variables CSS) y preferencia persistida; botón con iconos
   Lucide en el sidebar y las cabeceras.
