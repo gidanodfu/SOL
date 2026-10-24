@@ -166,23 +166,41 @@ export default function CvUploader() {
 
       {!isLoading && cv?.historial?.length > 1 && (
         <div className="cv-historial">
-          <button type="button" className="btn btn-enlace" onClick={() => setVerHistorial(!verHistorial)}>
+          <button
+            type="button"
+            className="btn btn-enlace cv-historial-toggle"
+            aria-expanded={verHistorial}
+            aria-controls="cv-historial-versiones"
+            onClick={() => setVerHistorial(!verHistorial)}
+          >
             <i className={verHistorial ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} aria-hidden="true" />
             Historial de versiones ({cv.historial.length})
           </button>
           {verHistorial && (
-            <table>
-              <thead><tr><th>Versión</th><th>Archivo</th><th>Estado</th></tr></thead>
-              <tbody>
-                {cv.historial.map((v) => (
-                  <tr key={v.id}>
-                    <td>v{v.version}</td>
-                    <td>{v.nombre_original}</td>
-                    <td>{v.activo ? 'Vigente' : 'Anterior'}</td>
+            <div className="cv-historial-tabla">
+              <table className="cv-historial-versiones" id="cv-historial-versiones">
+                <thead>
+                  <tr>
+                    <th scope="col" className="cv-col-version">Versión</th>
+                    <th scope="col" className="cv-col-archivo">Archivo</th>
+                    <th scope="col" className="cv-col-estado">Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {cv.historial.map((v) => (
+                    <tr key={v.id}>
+                      <td className="cv-col-version" data-label="Versión">v{v.version}</td>
+                      <td className="cv-col-archivo" data-label="Archivo">{v.nombre_original}</td>
+                      <td className="cv-col-estado" data-label="Estado">
+                        {v.activo
+                          ? <span className="badge badge-green">Vigente</span>
+                          : <span className="cv-estado-anterior">Anterior</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
