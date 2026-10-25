@@ -29,13 +29,25 @@ class ReporteExcelService
 
     private const COLOR_TITULO = '0E2A47';
 
-    private const ORDEN_OFERTAS = ['publicada', 'vencida', 'borrador', 'cerrada'];
+    // Se conserva el orden previo y se añaden las categorías que faltaban.
+    private const ORDEN_OFERTAS = [
+        'publicada',
+        'vencida',
+        'borrador',
+        'cerrada',
+        'pendiente',
+        'observada',
+        'rechazada',
+    ];
 
     private const ETIQUETA_ESTADO_OFERTA = [
-        'borrador'  => 'Borrador',
-        'publicada' => 'Publicada',
-        'vencida'   => 'Vencida',
-        'cerrada'   => 'Cerrada',
+        'borrador'   => 'Borrador',
+        'pendiente'  => 'Pendiente de revisión',
+        'publicada'  => 'Publicada',
+        'vencida'    => 'Vencida',
+        'cerrada'    => 'Cerrada',
+        'observada'  => 'Observada',
+        'rechazada'  => 'Rechazada',
     ];
 
     private const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
@@ -151,7 +163,17 @@ class ReporteExcelService
         $filas[] = ['Total', array_sum(array_map(static fn ($f) => (int) $f[1], $filas))];
 
         $this->encabezarTabla($hoja, ['Estado', 'Cantidad']);
-        $this->escribirTabla($hoja, $filas);
+
+        // fromArray() omite los valores 0 cuando no se usa comparación estricta.
+        // La hoja debe distinguir explícitamente un estado sin registros de una
+        // celda vacía, por lo que se escriben las cantidades una a una.
+        $fila = 2;
+        foreach ($filas as [$estado, $cantidad]) {
+            $hoja->setCellValue("A{$fila}", $estado);
+            $hoja->setCellValue("B{$fila}", $cantidad);
+            ++$fila;
+        }
+
         $this->resaltarTotal($hoja, count($filas));
     }
 
