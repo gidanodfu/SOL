@@ -36,7 +36,7 @@ crear_oferta() {
     token="$1"; puesto="$2"; cierre="$3"
     curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $token" \
         -H 'Content-Type: application/json' \
-        -d "{\"puesto\":\"$puesto\",\"vacantes\":1,\"descripcion\":\"Descripción de concurrencia\",\"funciones\":\"Funciones de concurrencia\",\"fecha_cierre\":\"$cierre\"}"
+        -d "{\"puesto\":\"$puesto\",\"categoria_id\":1,\"tipo_empleo\":\"tiempo_completo\",\"ubicacion\":\"Chiclayo\",\"vacantes\":1,\"remuneracion\":\"1200.00\",\"formacion_requerida\":\"Secundaria completa\",\"experiencia_requerida\":\"Sin experiencia\",\"fecha_cierre\":\"$cierre\",\"habilidades\":[\"Trabajo en equipo\"],\"descripcion\":\"Descripción de concurrencia\",\"funciones\":\"Funciones de concurrencia\",\"requisitos\":\"Requisitos de concurrencia\"}"
 }
 
 aprobar_oferta() {
@@ -174,6 +174,33 @@ if [ "$CODE_W" = "200" ]; then ok 'oferta B aprobada'; else fail "aprobar oferta
 P_W=$(curl -s -o /tmp/opencode/concurrencia-post-b.json -w '%{http_code}' -X POST "$B2/api/postulante/postulaciones" \
     -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d "{\"oferta_id\":$W}")
 if [ "$P_W" = "201" ]; then ok 'postulación a empresa distinta permitida tras selección'; else fail "postulación a empresa distinta ($P_W)"; fi
+P_W_ID=$(id_json < /tmp/opencode/concurrencia-post-b.json)
+
+printf '\n== retiro del postulante vs reactivación de la empresa ==\n'
+R1=/tmp/opencode/concurrencia-retiro.code
+A1=/tmp/opencode/concurrencia-reactivacion.code
+curl -s -o /tmp/opencode/concurrencia-retiro.json -w '%{http_code}' \
+    -X PUT "$B/api/postulante/postulaciones/$P_W_ID/retirar" -H "Authorization: Bearer $TP" > "$R1" &
+RET_PID=$!
+curl -s -o /tmp/opencode/concurrencia-reactivacion.json -w '%{http_code}' \
+    -X PUT "$B2/api/empresa/postulaciones/$P_W_ID/activacion" -H "Authorization: Bearer $TE2" \
+    -H 'Content-Type: application/json' -d '{"activo":true}' > "$A1" &
+ACT_PID=$!
+wait "$RET_PID" "$ACT_PID"
+RET_CODE=$(cat "$R1"); ACT_CODE=$(cat "$A1")
+if [ "$RET_CODE" = "200" ]; then ok "retiro concurrente aplicado ($RET_CODE)"; else fail "retiro concurrente ($RET_CODE)"; fi
+if [ "$ACT_CODE" = "200" ] || [ "$ACT_CODE" = "409" ]; then ok "reactivación concurrente devolvió $ACT_CODE"; else fail "reactivación concurrente ($ACT_CODE)"; fi
+FINAL=$(php -r '
+$pdo = new PDO("mysql:host=" . getenv("DB_HOST") . ";dbname=" . getenv("DB_DATABASE"), getenv("DB_USER"), getenv("DB_PASSWORD"), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$stmt = $pdo->query("SELECT activo, retirada_postulante FROM postulaciones WHERE id = " . (int) $argv[1]);
+$fila = $stmt->fetch(PDO::FETCH_ASSOC);
+echo (int) $fila["activo"] . ":" . (int) $fila["retirada_postulante"];
+' "$P_W_ID")
+if [ "$FINAL" = "0:1" ]; then
+    ok 'la carrera termina siempre con retiro persistido y sin reactivación'
+else
+    fail "estado final inesperado tras la carrera ($FINAL)"
+fi
 
 printf '\nFIN concurrencia\n'
 [ "$fallos" -eq 0 ] || exit 1

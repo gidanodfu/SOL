@@ -26,7 +26,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 15 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 17 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -70,10 +70,21 @@ postulación directa, bandejas y contadores) y la selección formal por empresa:
 bloquea nuevas postulaciones a la misma empresa, no a otras, y persiste aunque
 la postulación seleccionada se desactive.
 
+`test_ofertas_campos.sh` valida el catálogo compartido de ubicaciones, la
+obligatoriedad de todos los campos de creación, los editores enriquecidos
+vacíos, salario/vacantes, la fecha de cierre de Lima y la conservación de una
+oferta histórica con ubicación o fecha no pertenecientes al catálogo actual.
+
+`test_retiro_postulacion.sh` retira una postulación como postulante y comprueba
+que la empresa recibe `409` al intentar reactivarla, sin cambios de estado,
+actividad ni historial; también verifica que una desactivación propia sí puede
+reactivarse y que otra empresa recibe `404`.
+
 `test_concurrencia.sh` levanta dos procesos `spark serve` sobre el mismo MySQL
 para enviar peticiones realmente paralelas: valida que dos altas simultáneas a
-la misma oferta produzcan un único registro activo y que una selección y una
-nueva postulación a la misma empresa sigan un orden serial consistente.
+la misma oferta produzcan un único registro activo, que una selección y una
+nueva postulación sigan un orden serial consistente y que un retiro concurrente
+con una reactivación termine siempre con el retiro persistido.
 
 `test_reporte_ofertas.sh` inserta una oferta por cada estado en un esquema
 aislado, incluida una `publicada` con cierre pasado y otra sin cierre, y verifica
@@ -85,9 +96,9 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 
 `tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
 `SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
-`ActividadVencimientoTest`, `ReporteExcelServiceTest`, `HtmlSanitizerTest`,
-`PostulacionAuthorizationTest`, `TerminosTest`, `EnlaceActivacionTest` y las
-pruebas de correo.
+`OfertaCatalogoTest`, `ActividadVencimientoTest`, `ReporteExcelServiceTest`,
+`HtmlSanitizerTest`, `PostulacionAuthorizationTest`, `TerminosTest`,
+`EnlaceActivacionTest` y las pruebas de correo.
 
 ```bash
 ./deploy/scripts/test.sh backend

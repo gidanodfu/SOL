@@ -14,11 +14,11 @@ import ProfileImage from '../../components/ProfileImage';
 import EmpresaModal from '../../components/EmpresaModal';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '../../components/Empty';
 import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES, TIPOS_EMPLEO } from '../../constants';
+import { UBICACIONES_OFERTA } from '../../data/ubicaciones';
 import { errorApi, fechaCalendario, urlArchivo } from '../../utils';
 import { useClickFuera } from '../../hooks/useClickFuera';
 import { useAccion } from '../../hooks/useAccion';
 
-const OPCIONES_UBICACION = ['Chiclayo', 'José Leonardo Ortiz', 'La Victoria', 'Pimentel', 'Lambayeque'];
 const OPCIONES_FORMACION = OPCIONES_FORMACION_REQUERIDA;
 const OPCIONES_EXPERIENCIA = OPCIONES_EXPERIENCIA_REQUERIDA;
 const OPCIONES_ORDEN = [
@@ -201,7 +201,7 @@ export default function BuscarEmpleo() {
         <FiltroPill
           icono="ti ti-map-pin"
           titulo="Ubicación"
-          opciones={comoOpciones(OPCIONES_UBICACION)}
+          opciones={comoOpciones(UBICACIONES_OFERTA)}
           valor={sel.ubicacion?.valor}
           abierto={abierto === 'ubicacion'}
           onToggle={toggler('ubicacion')}

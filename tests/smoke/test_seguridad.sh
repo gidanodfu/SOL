@@ -47,7 +47,7 @@ CODE=$(curl -s -o /dev/null -w "%{http_code}" "$B/api/admin/dashboard?desde=2026
 check_code "fecha dashboard inválida" 422 "$CODE"
 CODE=$(curl -s -o /dev/null -w "%{http_code}" "$B/api/admin/contrataciones?desde=2026-02-31" -H "Authorization: Bearer $TA")
 check_code "fecha contrataciones inválida" 422 "$CODE"
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Fecha mala","vacantes":1,"fecha_cierre":"2026-02-31"}')
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Fecha mala","categoria_id":1,"tipo_empleo":"tiempo_completo","ubicacion":"Pimentel","vacantes":1,"remuneracion":"1000.00","formacion_requerida":"Secundaria completa","experiencia_requerida":"Sin experiencia","fecha_cierre":"2026-02-31","habilidades":["Excel"],"descripcion":"Descripción","funciones":"Funciones","requisitos":"Requisitos"}')
 check_code "fecha oferta inválida" 422 "$CODE"
 
 paso "6. mass assignment en registro: rol/estado manipulados se ignoran"

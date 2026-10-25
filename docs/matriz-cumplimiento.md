@@ -28,7 +28,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-18 Registro de postulantes (manual DNI + Google) | ✔ | `POST /api/registro/postulante` y `POST /api/auth/google` · Registro |
 | RF-19/20 Perfil laboral + actualización | ✔ | datos personales/contacto + CV; **para postular solo se exige contacto completo + CV vigente** (las secciones de formación/experiencia/habilidades/cursos se retiraron del producto) |
 | RF-21 CV cargar/consultar | ✔ | `POST/GET /api/postulante/cv*` · "Mi perfil y CV"; máximo **4 CV/mes** (ver RT-CV y endurecimiento 2026-09) |
-| RF-22 Registro de ofertas | ✔ | `api/empresa/ofertas*` · Ofertas (empresa) |
+| RF-22 Registro de ofertas | ✔ | `api/empresa/ofertas*` · Ofertas (empresa); campos de negocio obligatorios, ubicación del catálogo compartido y cierre no anterior a hoy |
 | RF-23 Estados de oferta | ✔ | pendiente → publicada / rechazada → cerrada; `borrador` solo heredado. `vencida` es un estado efectivo derivado de `publicada` + `fecha_cierre`, distinto del cierre manual |
 | RF-24 La empresa envía a revisión; no publica por sí misma | ✔ | `PUT /api/empresa/ofertas/{id}/enviar-revision`; el `POST` nace `pendiente` |
 | RF-25/26 Aprobación y rechazo municipal (+ cierre) | ✔ | `PUT /api/admin/ofertas/{id}/aprobar|rechazar|cerrar` (solo `rol:admin`) |
@@ -41,7 +41,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-34 Pendientes primero, recientes dentro de estado | ✔ | orden `FIELD(estado…)` + `fecha_postulacion DESC` |
 | RF-35 Detalle del postulante (datos de contacto, CV, oferta) | ✔ | `GET /api/empresa/postulaciones/{id}` |
 | RF-36 Gestión de estado | ✔ | `PUT .../estado` con transiciones validadas |
-| RF-37/38 Activar/desactivar sin eliminar | ✔ | `PUT .../activacion` |
+| RF-37/38 Activar/desactivar sin eliminar | ✔ | `PUT .../activacion`; el retiro voluntario del postulante no puede reactivarse desde la empresa |
 | RF-39 Historial de estados | ✔ | tabla `postulacion_historial` (cada cambio, usuario y fecha) |
 | RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18). Un postulante seleccionado no puede postular a otra oferta de la misma empresa |
 | RF-41/42/43 Atenciones con tipos y seguimiento | ✘ retirado (2026-09) | módulo de atenciones eliminado de la API y el frontend; la tabla `atenciones` queda sin uso |

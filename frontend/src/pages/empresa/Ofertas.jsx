@@ -15,16 +15,19 @@ import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import { useToast } from '../../components/Feedbacks';
 import { Briefcase, Lock, Pencil, Plus, Send, X } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, TIPOS_EMPLEO } from '../../constants';
-import { TEXTO_MAX, errorApi, excedeLimiteTexto, fechaCalendario, textoEnriquecidoVacio } from '../../utils';
+import { UBICACIONES_OFERTA } from '../../data/ubicaciones';
+import {
+  TEXTO_MAX, errorApi, esFechaCalendario, excedeLimiteTexto, fechaCalendario, fechaHoyLima, textoEnriquecidoVacio,
+} from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 
 // El editor (TiPTap) se carga solo cuando se abre el formulario de oferta.
 const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
 
 const FORM_VACIO = {
-  puesto: '', categoria_id: '', tipo_empleo: 'tiempo_completo', descripcion: '', funciones: '',
+  puesto: '', categoria_id: '', tipo_empleo: '', descripcion: '', funciones: '',
   requisitos: '', formacion_requerida: '', experiencia_requerida: '', ubicacion: '',
-  remuneracion: '', vacantes: 1, fecha_cierre: '', habilidades: '',
+  remuneracion: '', vacantes: '', fecha_cierre: '', habilidades: '',
 };
 
 export default function Ofertas() {
@@ -259,10 +262,10 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
     esNueva
       ? FORM_VACIO
       : {
-          puesto: inicial.puesto, categoria_id: inicial.categoria_id || '', tipo_empleo: inicial.tipo_empleo || 'tiempo_completo',
+          puesto: inicial.puesto, categoria_id: inicial.categoria_id || '', tipo_empleo: inicial.tipo_empleo || '',
           descripcion: inicial.descripcion || '', funciones: inicial.funciones || '', requisitos: inicial.requisitos || '',
           formacion_requerida: inicial.formacion_requerida || '', experiencia_requerida: inicial.experiencia_requerida || '',
-          ubicacion: inicial.ubicacion || '', remuneracion: inicial.remuneracion || '', vacantes: inicial.vacantes,
+          ubicacion: inicial.ubicacion || '', remuneracion: inicial.remuneracion || '', vacantes: inicial.vacantes ?? '',
           fecha_cierre: inicial.fecha_cierre || '', habilidades: (inicial.habilidades || []).join(', '),
         },
   );
@@ -275,45 +278,105 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
     const { value } = e.target;
     setForm((previo) => ({ ...previo, [k]: value }));
     setErrores((previo) => (previo[k] ? { ...previo, [k]: '' } : previo));
+    setError(null);
   };
 
-  // Si una oferta anterior guarda un texto fuera de las opciones actuales, se
-  // agrega como opción para no perder el valor al editarla.
+  // Si una oferta anterior guarda un valor fuera de las opciones actuales, se
+  // agrega como opción para no perder el dato al editarla.
   const lista = (opciones, actual) => (actual && !opciones.includes(actual) ? [...opciones, actual] : opciones);
+  const ubicaciones = lista(UBICACIONES_OFERTA, form.ubicacion);
   const formaciones = lista(OPCIONES_FORMACION_REQUERIDA, form.formacion_requerida);
   const experiencias = lista(OPCIONES_EXPERIENCIA_REQUERIDA, form.experiencia_requerida);
 
+  // En creación todos los campos de negocio son obligatorios. En edición se
+  // exige el contenido que ya existía, pero se permite conservar campos
+  // históricos vacíos (p. ej. fecha_cierre NULL) sin inventar datos.
+  const obligatorio = (campo) => esNueva || Boolean(inicial?.[campo]);
+
   const guardar = async () => {
-    // Campos obligatorios (RF-22): puesto, vacantes y los editores Descripción y
-    // Funciones. Un editor con solo etiquetas/espacios cuenta como vacío, igual que
-    // en el backend.
     const nuevos = {};
-    if (!form.puesto.trim()) nuevos.puesto = 'El puesto es obligatorio.';
-    const vacantes = Number(form.vacantes);
-    if (!Number.isInteger(vacantes) || vacantes < 1) nuevos.vacantes = 'Indique al menos una vacante.';
-    if (textoEnriquecidoVacio(form.descripcion)) nuevos.descripcion = 'La descripción del puesto es obligatoria.';
-    if (textoEnriquecidoVacio(form.funciones)) nuevos.funciones = 'Las funciones del puesto son obligatorias.';
+    const marcar = (campo, mensaje) => { nuevos[campo] = nuevos[campo] || mensaje; };
+    const vacio = (valor) => String(valor ?? '').trim() === '';
+    const habilidades = form.habilidades.split(',').map((h) => h.trim()).filter(Boolean);
+    const ubicacionPermitida = UBICACIONES_OFERTA.includes(form.ubicacion)
+      || (!esNueva && form.ubicacion === (inicial?.ubicacion || ''));
+    const formacionPermitida = OPCIONES_FORMACION_REQUERIDA.includes(form.formacion_requerida)
+      || (!esNueva && form.formacion_requerida === (inicial?.formacion_requerida || ''));
+    const experienciaPermitida = OPCIONES_EXPERIENCIA_REQUERIDA.includes(form.experiencia_requerida)
+      || (!esNueva && form.experiencia_requerida === (inicial?.experiencia_requerida || ''));
+
+    if (obligatorio('puesto') && vacio(form.puesto)) marcar('puesto', 'Ingresa el puesto de trabajo.');
+    if (obligatorio('categoria_id') && vacio(form.categoria_id)) {
+      marcar('categoria_id', 'Selecciona una categoría.');
+    } else if (form.categoria_id && !categorias.some((c) => String(c.id) === String(form.categoria_id))) {
+      marcar('categoria_id', 'Selecciona una categoría válida.');
+    }
+    if ((obligatorio('tipo_empleo') || form.tipo_empleo) && !TIPOS_EMPLEO.includes(form.tipo_empleo)) {
+      marcar('tipo_empleo', 'Selecciona el tipo de empleo.');
+    }
+    if ((obligatorio('ubicacion') || form.ubicacion) && !ubicacionPermitida) {
+      marcar('ubicacion', 'Selecciona una ubicación válida.');
+    }
+    if (obligatorio('vacantes') || form.vacantes !== '') {
+      const vacantes = Number(form.vacantes);
+      if (!Number.isInteger(vacantes) || vacantes < 1) {
+        marcar('vacantes', vacio(form.vacantes) ? 'Indica el número de vacantes.' : 'Ingresa un número entero de vacantes mayor o igual a 1.');
+      }
+    }
+    if (obligatorio('remuneracion') || form.remuneracion !== '') {
+      if (vacio(form.remuneracion)) {
+        marcar('remuneracion', 'Ingresa el salario.');
+      } else if (!/^\d{1,10}(\.\d{1,2})?$/.test(String(form.remuneracion))) {
+        marcar('remuneracion', 'Ingresa un salario válido, sin negativos y con hasta dos decimales.');
+      }
+    }
+    if ((obligatorio('formacion_requerida') || form.formacion_requerida) && !formacionPermitida) {
+      marcar('formacion_requerida', 'Selecciona la formación requerida.');
+    }
+    if ((obligatorio('experiencia_requerida') || form.experiencia_requerida) && !experienciaPermitida) {
+      marcar('experiencia_requerida', 'Selecciona la experiencia requerida.');
+    }
+    if (obligatorio('fecha_cierre') || form.fecha_cierre) {
+      if (vacio(form.fecha_cierre)) {
+        marcar('fecha_cierre', 'Selecciona la fecha de cierre.');
+      } else if (!esFechaCalendario(form.fecha_cierre)) {
+        marcar('fecha_cierre', 'Ingresa una fecha de cierre válida.');
+      } else if (form.fecha_cierre < fechaHoyLima()) {
+        marcar('fecha_cierre', 'La fecha de cierre no puede ser anterior a hoy.');
+      }
+    }
+    if ((obligatorio('habilidades') || !vacio(form.habilidades)) && habilidades.length === 0) {
+      marcar('habilidades', 'Agrega al menos una habilidad.');
+    }
+    if (obligatorio('descripcion') && textoEnriquecidoVacio(form.descripcion)) {
+      marcar('descripcion', 'Escribe la descripción del puesto.');
+    }
+    if (obligatorio('funciones') && textoEnriquecidoVacio(form.funciones)) {
+      marcar('funciones', 'Describe las funciones del puesto.');
+    }
+    if (obligatorio('requisitos') && textoEnriquecidoVacio(form.requisitos)) {
+      marcar('requisitos', 'Escribe los requisitos del puesto.');
+    }
 
     // Mismo límite que el backend: 10.000 caracteres de TEXTO visible.
     const excedidos = [
-      ['Descripción', form.descripcion],
-      ['Funciones', form.funciones],
-      ['Requisitos', form.requisitos],
-    ].filter(([, texto]) => excedeLimiteTexto(texto));
+      ['Descripción', 'descripcion', form.descripcion],
+      ['Funciones', 'funciones', form.funciones],
+      ['Requisitos', 'requisitos', form.requisitos],
+    ].filter(([, , texto]) => excedeLimiteTexto(texto));
+    for (const [nombre, campo] of excedidos) {
+      marcar(campo, `El texto de ${nombre} supera el límite de ${TEXTO_MAX} caracteres.`);
+    }
 
     if (Object.keys(nuevos).length > 0) {
       setErrores(nuevos);
-      setError(excedidos.length > 0 ? `El texto de ${excedidos.map(([nombre]) => nombre).join(', ')} supera el límite de ${TEXTO_MAX} caracteres.` : null);
+      setError('Revisa los campos marcados en el formulario.');
       // Lleva el foco al primer campo inválido (incluye el editor enriquecido).
       requestAnimationFrame(() => {
         const primero = document.querySelector('.campo-error input, .campo-error select, .rte-error [contenteditable="true"]');
         primero?.focus?.();
         primero?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
       });
-      return;
-    }
-    if (excedidos.length > 0) {
-      setError(`El texto de ${excedidos.map(([nombre]) => nombre).join(', ')} supera el límite de ${TEXTO_MAX} caracteres.`);
       return;
     }
 
@@ -335,6 +398,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
   const setRte = (campo) => (html) => {
     setForm((previo) => ({ ...previo, [campo]: html }));
     setErrores((previo) => (previo[campo] ? { ...previo, [campo]: '' } : previo));
+    setError(null);
   };
 
   return (
@@ -344,47 +408,52 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
       </div>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
-        <Campo etiqueta="Puesto *" value={form.puesto} onChange={set('puesto')} error={errores.puesto} />
-        <Selecto etiqueta="Categoría" value={form.categoria_id} onChange={set('categoria_id')}>
-          <option value="">Sin categoría</option>
+        <Campo etiqueta="Puesto *" required value={form.puesto} onChange={set('puesto')} error={errores.puesto} />
+        <Selecto etiqueta="Categoría *" required value={form.categoria_id} onChange={set('categoria_id')} error={errores.categoria_id}>
+          <option value="">Selecciona una categoría</option>
           {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </Selecto>
-        <Selecto etiqueta="Tipo de empleo" value={form.tipo_empleo} onChange={set('tipo_empleo')}>
+        <Selecto etiqueta="Tipo de empleo *" required value={form.tipo_empleo} onChange={set('tipo_empleo')} error={errores.tipo_empleo}>
+          <option value="">Selecciona…</option>
           {TIPOS_EMPLEO.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_EMPLEO[t]}</option>)}
         </Selecto>
-        <Campo etiqueta="Ubicación / lugar de trabajo" value={form.ubicacion} onChange={set('ubicacion')} />
-        <Campo etiqueta="Número de vacantes *" type="number" min="1" value={form.vacantes} onChange={set('vacantes')} error={errores.vacantes} />
-        <Campo etiqueta="Salario (S/, opcional)" type="number" value={form.remuneracion} onChange={set('remuneracion')} />
-        <Selecto etiqueta="Formación requerida" value={form.formacion_requerida} onChange={set('formacion_requerida')}>
-          <option value="">Seleccione…</option>
+        <Selecto etiqueta="Ubicación / lugar de trabajo *" required value={form.ubicacion} onChange={set('ubicacion')} error={errores.ubicacion}>
+          <option value="">Selecciona una ubicación</option>
+          {ubicaciones.map((v) => <option key={v} value={v}>{v}</option>)}
+        </Selecto>
+        <Campo etiqueta="Número de vacantes *" required type="number" min="1" step="1" value={form.vacantes} onChange={set('vacantes')} error={errores.vacantes} />
+        <Campo etiqueta="Salario (S/) *" required type="number" min="0" step="0.01" inputMode="decimal" value={form.remuneracion} onChange={set('remuneracion')} error={errores.remuneracion} />
+        <Selecto etiqueta="Formación requerida *" required value={form.formacion_requerida} onChange={set('formacion_requerida')} error={errores.formacion_requerida}>
+          <option value="">Selecciona…</option>
           {formaciones.map((v) => <option key={v} value={v}>{v}</option>)}
         </Selecto>
-        <Selecto etiqueta="Experiencia requerida" value={form.experiencia_requerida} onChange={set('experiencia_requerida')}>
-          <option value="">Seleccione…</option>
+        <Selecto etiqueta="Experiencia requerida *" required value={form.experiencia_requerida} onChange={set('experiencia_requerida')} error={errores.experiencia_requerida}>
+          <option value="">Selecciona…</option>
           {experiencias.map((v) => <option key={v} value={v}>{v}</option>)}
         </Selecto>
-        <Campo etiqueta="Fecha de cierre" type="date" value={form.fecha_cierre} onChange={set('fecha_cierre')} />
-        <Campo etiqueta="Habilidades (separadas por coma)" value={form.habilidades} onChange={set('habilidades')} />
+        <Campo etiqueta="Fecha de cierre *" required type="date" min={fechaHoyLima()} value={form.fecha_cierre} onChange={set('fecha_cierre')} error={errores.fecha_cierre} />
+        <Campo etiqueta="Habilidades (separadas por coma) *" required value={form.habilidades} onChange={set('habilidades')} error={errores.habilidades} />
       </div>
       <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
         <EditorTextoEnriquecido
-          etiqueta="Descripción del puesto"
+          etiqueta="Descripción del puesto *"
           valor={form.descripcion}
           onChange={setRte('descripcion')}
           error={errores.descripcion}
           placeholder="Describe el puesto, el equipo y el contexto del trabajo…"
         />
         <EditorTextoEnriquecido
-          etiqueta="Funciones"
+          etiqueta="Funciones *"
           valor={form.funciones}
           onChange={setRte('funciones')}
           error={errores.funciones}
           placeholder="Enumera las funciones del puesto (puedes usar viñetas)…"
         />
         <EditorTextoEnriquecido
-          etiqueta="Requisitos"
+          etiqueta="Requisitos *"
           valor={form.requisitos}
           onChange={setRte('requisitos')}
+          error={errores.requisitos}
           placeholder="Enumera los requisitos (puedes usar viñetas)…"
         />
       </Suspense>

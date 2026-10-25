@@ -29,7 +29,7 @@ export default function MisPostulaciones() {
   const retirar = async (id) => {
     const ok = await confirmar({
       titulo: 'Retirar postulación',
-      mensaje: '¿Retirar esta postulación? Quedará registrada como inactiva (no se elimina).',
+      mensaje: '¿Retirar esta postulación? Quedará registrada como retirada por ti (no se elimina) y la empresa no podrá reactivarla.',
       textoConfirmar: 'Retirar',
       variante: 'peligro',
     });
@@ -99,7 +99,9 @@ export default function MisPostulaciones() {
                 {p.activo === 1 ? (
                   <Boton variante="peligro" onClick={(e) => { e.stopPropagation(); retirar(p.id); }}>Retirar</Boton>
                 ) : (
-                  <span className="badge badge-gray">Retirada</span>
+                  <span className="badge badge-gray">
+                    {Number(p.retirada_postulante) === 1 ? 'Retirada por ti' : 'Desactivada'}
+                  </span>
                 )}
               </div>
             </div>
