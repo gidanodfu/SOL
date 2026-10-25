@@ -78,7 +78,8 @@ nueva postulación a la misma empresa sigan un orden serial consistente.
 ### Backend
 
 `tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
-`SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`, `HtmlSanitizerTest`,
+`SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
+`ActividadVencimientoTest`, `HtmlSanitizerTest`,
 `PostulacionAuthorizationTest`, `TerminosTest`, `EnlaceActivacionTest` y las
 pruebas de correo.
 

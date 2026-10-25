@@ -96,8 +96,8 @@ export default function Oportunidades() {
                 key={a.id}
                 media={<ActivityImage src={urlArchivo(a.imagen_url)} alt={`Imagen de la actividad ${a.nombre}`} expandible />}
                 badge={(
-                  <span className={`badge ${CLASE_ESTADO_ACTIVIDAD[a.estado] || 'badge-gray'}`}>
-                    {ETIQUETA_ESTADO_ACTIVIDAD[a.estado] || a.estado}
+                  <span className={`badge ${CLASE_ESTADO_ACTIVIDAD[a.estado_efectivo || a.estado] || 'badge-gray'}`}>
+                    {ETIQUETA_ESTADO_ACTIVIDAD[a.estado_efectivo || a.estado] || a.estado}
                   </span>
                 )}
                 titulo={a.nombre}

@@ -137,6 +137,11 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 ### 5.8 Ferias, eventos y capacitaciones
 - **RF-44** Ferias de empleo. **RF-45** Eventos. **RF-46** Talleres.
 - **RF-47** Capacitaciones y formación para el empleo.
+  El listado público solo muestra actividades programadas o en curso cuya
+  `fecha_fin` no haya llegado; canceladas y finalizadas no se publican. Sin
+  `fecha_fin` no se inventa un vencimiento: la disponibilidad depende del
+  estado manual. El panel administrativo conserva el historial y muestra
+  `estado_efectivo`.
 
 ### 5.9 Difusión
 - **RF-48** Sección de oportunidades de distintas fuentes.

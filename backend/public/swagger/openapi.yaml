@@ -422,9 +422,11 @@ paths:
       operationId: divulgacionActividades
       summary: Ferias y actividades programadas (públicas)
       description: |
-        Lista actividades con estado `programado` o `en_curso`, ordenadas por
-        `fecha_inicio DESC`, con tope fijo de 200 filas (sin paginación). No filtra por
-        fecha: una actividad "programado" con fecha pasada sigue apareciendo aquí.
+        Lista actividades con estado `programado` o `en_curso` y vigencia efectiva,
+        ordenadas por `fecha_inicio DESC`, con tope fijo de 200 filas (sin paginación).
+        Las actividades con `fecha_fin` alcanzada, canceladas o finalizadas no se
+        publican. Sin `fecha_fin` no se inventa un vencimiento: la actividad depende
+        de su estado manual.
       security:
         - bearerAuth: []
       responses:
@@ -3711,7 +3713,7 @@ components:
     EstadoActividad:
       name: estado
       in: query
-      description: Filtro por estado de la actividad (sin validación del valor).
+      description: Filtro por estado efectivo de la actividad. El valor no se valida; si no coincide, no devuelve filas.
       schema:
         type: string
         enum: [programado, en_curso, finalizado, cancelado]
@@ -4496,6 +4498,12 @@ components:
           nullable: true
         estado:
           type: string
+          enum: [programado, en_curso, finalizado, cancelado]
+        estado_efectivo:
+          type: string
+          description: |
+            `finalizado` cuando la fecha_fin ya se alcanzó, aunque el estado persistido
+            siga siendo programado o en_curso. En los demás casos replica `estado`.
           enum: [programado, en_curso, finalizado, cancelado]
         created_at:
           type: string
