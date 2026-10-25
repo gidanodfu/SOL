@@ -26,7 +26,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 14 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 15 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -75,11 +75,17 @@ para enviar peticiones realmente paralelas: valida que dos altas simultáneas a
 la misma oferta produzcan un único registro activo y que una selección y una
 nueva postulación a la misma empresa sigan un orden serial consistente.
 
+`test_reporte_ofertas.sh` inserta una oferta por cada estado en un esquema
+aislado, incluida una `publicada` con cierre pasado y otra sin cierre, y verifica
+que el Excel administrativo contenga las siete categorías, que sus conteos y
+total coincidan con el dashboard y que el Excel de empresa traduzca todos los
+estados y muestre `Vencida` para el vencimiento efectivo.
+
 ### Backend
 
 `tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
 `SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
-`ActividadVencimientoTest`, `HtmlSanitizerTest`,
+`ActividadVencimientoTest`, `ReporteExcelServiceTest`, `HtmlSanitizerTest`,
 `PostulacionAuthorizationTest`, `TerminosTest`, `EnlaceActivacionTest` y las
 pruebas de correo.
 
