@@ -35,7 +35,7 @@ echo "== 3. duplicado de postulación a oferta 1 => 409 =="
 curl -s -o /dev/null -w "%{http_code}\n" -X POST "$B/api/postulante/postulaciones" -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d '{"oferta_id":1}'
 
 echo "== 4. empresa crea oferta y el admin la aprueba (revisión municipal) =="
-OID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Digitador","categoria_id":1,"ubicacion":"JLO","vacantes":2,"descripcion":"Digitación de datos","funciones":"Ingresar información","habilidades":["Word","Excel"]}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+OID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Digitador","categoria_id":1,"tipo_empleo":"tiempo_completo","ubicacion":"José Leonardo Ortiz","vacantes":2,"remuneracion":"1200.00","formacion_requerida":"Secundaria completa","experiencia_requerida":"Sin experiencia","fecha_cierre":"2026-12-31","habilidades":["Word","Excel"],"descripcion":"Digitación de datos","funciones":"Ingresar información","requisitos":"Manejo de Office"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s -o /dev/null -w "aprobar http:%{http_code}\n" -X PUT "$B/api/admin/ofertas/$OID/aprobar" -H "Authorization: Bearer $TA"
 echo "oferta nueva aprobada id=$OID"
 

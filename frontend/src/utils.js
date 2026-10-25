@@ -102,6 +102,33 @@ export const fechaCalendario = (v) => {
   return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : '—';
 };
 
+/** Fecha de hoy en America/Lima, en formato MySQL DATE (`YYYY-MM-DD`). */
+export const fechaHoyLima = () => {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const valor = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
+  return `${valor.year}-${valor.month}-${valor.day}`;
+};
+
+/** true si el valor es una fecha calendárica real en formato `YYYY-MM-DD`. */
+export const esFechaCalendario = (valor) => {
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(valor ?? ''));
+  if (!coincidencia) return false;
+
+  const anio = Number(coincidencia[1]);
+  const mes = Number(coincidencia[2]);
+  const dia = Number(coincidencia[3]);
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+
+  return fecha.getUTCFullYear() === anio
+    && fecha.getUTCMonth() === mes - 1
+    && fecha.getUTCDate() === dia;
+};
+
 export const iniciar = (nombre) => (nombre ? nombre.split(' ').slice(0, 2).join(' ') : '');
 
 /**

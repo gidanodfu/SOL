@@ -66,6 +66,7 @@ class PostulacionService
         return array_map(static function (array $fila): array {
             $fila['logo_url'] = ! empty($fila['logo_key']) ? '/api/empresas/' . (int) $fila['empresa_id'] . '/logo' : null;
             $fila['empresa_antiguedad'] = AntiguedadService::texto($fila['empresa_created_at'] ?? null);
+            $fila['retirada_postulante'] = (int) ($fila['retirada_postulante'] ?? 0);
             unset($fila['logo_key'], $fila['empresa_created_at']);
 
             return $fila;
@@ -155,16 +156,42 @@ class PostulacionService
 
     public function retirar(int $postulanteId, int $postulacionId): void
     {
-        $postulacion = $this->repository->delPostulante($postulanteId, $postulacionId);
-        if ($postulacion === null) {
-            throw ApiException::noEncontrado('La postulación no existe.');
-        }
-        if ((int) $postulacion['activo'] !== 1) {
-            throw ApiException::conflicto('La postulación ya se encuentra retirada.');
-        }
+        $db = $this->postulaciones->db;
+        $db->transBegin();
 
-        // Desactivación, no eliminación (RF-38/RN-17).
-        $this->postulaciones->update((int) $postulacion['id'], ['activo' => 0]);
+        try {
+            // Bloquea la fila para que un intento simultáneo de la empresa no
+            // pueda reactivarla mientras se registra el retiro voluntario.
+            $db->query(
+                'SELECT id FROM postulaciones WHERE id = ? AND postulante_id = ? FOR UPDATE',
+                [$postulacionId, $postulanteId],
+            );
+
+            $postulacion = $this->repository->delPostulante($postulanteId, $postulacionId);
+            if ($postulacion === null) {
+                throw ApiException::noEncontrado('La postulación no existe.');
+            }
+            if ((int) $postulacion['activo'] !== 1) {
+                throw ApiException::conflicto('La postulación ya se encuentra retirada.');
+            }
+
+            // Desactivación, no eliminación. La marca distingue este retiro
+            // voluntario de una desactivación hecha por la empresa.
+            $this->postulaciones->update((int) $postulacion['id'], [
+                'activo'              => 0,
+                'retirada_postulante' => 1,
+            ]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo registrar el retiro de la postulación.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
+        }
     }
 
     /* ---------------------- Bandeja de la empresa (RF-33..RF-40) ---------------------- */
@@ -176,6 +203,7 @@ class PostulacionService
             $fila['foto_url'] = ! empty($fila['foto_key'])
                 ? '/api/postulantes/' . (int) $fila['postulante_id'] . '/foto'
                 : null;
+            $fila['retirada_postulante'] = (int) ($fila['retirada_postulante'] ?? 0);
             // `oferta_estado` conserva el valor del ENUM; el panel y cualquier
             // integración deben usar además el estado efectivo (vencida).
             $fila['oferta_estado_efectivo'] = OfertaService::estadoEfectivo([
@@ -196,11 +224,12 @@ class PostulacionService
         $postulacion = $this->exigirEmpresa($empresaId, $id);
 
         return [
-            'id'              => (int) $postulacion['id'],
-            'fecha_postulacion' => $postulacion['fecha_postulacion'],
-            'estado'          => $postulacion['estado'],
-            'activo'          => (int) $postulacion['activo'],
-            'oferta'          => [
+            'id'                  => (int) $postulacion['id'],
+            'fecha_postulacion'   => $postulacion['fecha_postulacion'],
+            'estado'              => $postulacion['estado'],
+            'activo'              => (int) $postulacion['activo'],
+            'retirada_postulante' => (int) ($postulacion['retirada_postulante'] ?? 0),
+            'oferta'              => [
                 'id' => (int) $postulacion['oferta_id'],
                 'puesto' => $postulacion['puesto'],
                 'ubicacion' => $postulacion['ubicacion'],
@@ -235,6 +264,11 @@ class PostulacionService
             // desactivar esta postulación mientras esperábamos el turno.
             $postulacion = $this->exigirEmpresa($empresaId, $id);
 
+            if ((int) ($postulacion['retirada_postulante'] ?? 0) === 1) {
+                throw ApiException::conflicto(
+                    'Esta postulación fue retirada por el postulante y no puede modificarse desde la empresa.',
+                );
+            }
             if ((int) $postulacion['activo'] !== 1) {
                 throw ApiException::conflicto('Debe activar la postulación antes de cambiar su estado.');
             }
@@ -272,16 +306,59 @@ class PostulacionService
 
     /**
      * Activar/desactivar postulación sin eliminarla (RF-37/38, RN-17).
+     *
+     * Una postulación retirada voluntariamente por el postulante no puede ser
+     * reactivada por la empresa. El bloqueo se decide en backend y se coordina
+     * con el retiro mediante bloqueo pesimista de la misma fila.
      */
     public function cambiarActivacionDeEmpresa(int $empresaId, int $id, bool $activo): void
     {
+        // Primera lectura: resuelve pertenencia y el caso sin cambios sin abrir
+        // transacción. La comprobación decisiva se repite bajo bloqueo.
         $postulacion = $this->exigirEmpresa($empresaId, $id);
-
+        if ($activo && (int) ($postulacion['retirada_postulante'] ?? 0) === 1) {
+            throw ApiException::conflicto(
+                'Esta postulación fue retirada por el postulante y no puede reactivarse desde la empresa.',
+            );
+        }
         if ((int) $postulacion['activo'] === (int) $activo) {
             return;
         }
 
-        $this->postulaciones->update($id, ['activo' => (int) $activo]);
+        $db = $this->postulaciones->db;
+        $db->transBegin();
+
+        try {
+            $db->query(
+                'SELECT id FROM postulaciones WHERE id = ? AND empresa_id = ? FOR UPDATE',
+                [$id, $empresaId],
+            );
+
+            $postulacion = $this->exigirEmpresa($empresaId, $id);
+
+            if ($activo && (int) ($postulacion['retirada_postulante'] ?? 0) === 1) {
+                throw ApiException::conflicto(
+                    'Esta postulación fue retirada por el postulante y no puede reactivarse desde la empresa.',
+                );
+            }
+            if ((int) $postulacion['activo'] === (int) $activo) {
+                $db->transCommit();
+
+                return;
+            }
+
+            $this->postulaciones->update($id, ['activo' => (int) $activo]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar la activación de la postulación.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
+        }
     }
 
     /**

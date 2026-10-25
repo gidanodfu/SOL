@@ -33,7 +33,7 @@ crear_oferta() {
     token="$1"; puesto="$2"; cierre="$3"
     curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $token" \
         -H 'Content-Type: application/json' \
-        -d "{\"puesto\":\"$puesto\",\"vacantes\":1,\"descripcion\":\"Descripción de prueba\",\"funciones\":\"Funciones de prueba\",\"fecha_cierre\":\"$cierre\"}"
+        -d "{\"puesto\":\"$puesto\",\"categoria_id\":1,\"tipo_empleo\":\"tiempo_completo\",\"ubicacion\":\"Chiclayo\",\"vacantes\":1,\"remuneracion\":\"1200.00\",\"formacion_requerida\":\"Secundaria completa\",\"experiencia_requerida\":\"Sin experiencia\",\"fecha_cierre\":\"$cierre\",\"habilidades\":[\"Trabajo en equipo\"],\"descripcion\":\"Descripción de prueba\",\"funciones\":\"Funciones de prueba\",\"requisitos\":\"Requisitos de prueba\"}"
 }
 
 aprobar_oferta() {

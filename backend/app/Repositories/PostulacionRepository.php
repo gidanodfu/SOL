@@ -24,7 +24,7 @@ class PostulacionRepository
     public function dePostulante(int $postulanteId): array
     {
         return $this->db->table('postulaciones p')
-            ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
+            ->select('p.id, p.estado, p.activo, p.retirada_postulante, p.fecha_postulacion, p.oferta_id,
                       of.puesto, of.ubicacion, of.remuneracion, of.fecha_cierre,
                       emp.id AS empresa_id, emp.razon_social, emp.nombre_comercial, emp.ruc,
                       emp.direccion, emp.info_adicional, emp.logo_key, emp.created_at AS empresa_created_at,
@@ -75,7 +75,7 @@ class PostulacionRepository
     public function deEmpresa(int $empresaId, ?string $estado = null, ?int $ofertaId = null, ?string $desde = null, ?string $hasta = null, ?string $q = null): array
     {
         $builder = $this->db->table('postulaciones p')
-            ->select('p.id, p.estado, p.activo, p.fecha_postulacion, p.oferta_id,
+            ->select('p.id, p.estado, p.activo, p.retirada_postulante, p.fecha_postulacion, p.oferta_id,
                       of.puesto, of.ubicacion, of.estado AS oferta_estado, of.fecha_cierre,
                       po.id AS postulante_id, po.tipo_documento, po.dni, po.nombres, po.apellidos, po.telefono, po.foto_key')
             ->join('ofertas of', 'of.id = p.oferta_id')

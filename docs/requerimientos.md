@@ -95,8 +95,11 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 
 ### 5.4 Gestión de ofertas laborales
 - **RF-22** Registro de ofertas: puesto, descripción, funciones, requisitos, formación,
-  experiencia, habilidades, tipo de empleo, lugar, remuneración, vacantes, fechas de
-  publicación y cierre.
+  experiencia, habilidades, tipo de empleo, lugar, remuneración, vacantes y fecha de
+  cierre. Todos estos campos de negocio son obligatorios al crear una oferta; `lugar`
+  usa el catálogo compartido con el filtro público (`Chiclayo`, `José Leonardo Ortiz`,
+  `La Victoria`, `Pimentel`, `Lambayeque`). El backend rechaza valores arbitrarios y
+  una oferta nueva exige `fecha_cierre` igual o posterior al día actual de Lima.
 - **RF-23** Estados vigentes: **Pendiente de revisión** (`pendiente`), **Publicada**
   (`publicada`), **Rechazada** (`rechazada`) y **Cerrada** (`cerrada`); `borrador` se
   conserva solo para ofertas heredadas. Toda oferta nueva nace `pendiente`. Una oferta
@@ -123,8 +126,11 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-34** Priorizar pendientes; dentro de cada estado, más recientes primero.
 - **RF-35** Detalle: postulante, CV, oferta, fecha y estado.
 - **RF-36** Estados de postulación: Pendiente, En revisión, Seleccionado, No seleccionado.
-- **RF-37** Activar/desactivar postulación.
-- **RF-38** Sin eliminación física; la desactivación solo cambia su activación.
+- **RF-37** Activar/desactivar postulación. Una postulación retirada voluntariamente
+  por el postulante no puede ser reactivada por la empresa; las desactivaciones
+  realizadas por la empresa sí conservan su comportamiento de reactivación.
+- **RF-38** Sin eliminación física; la desactivación solo cambia su activación y el
+  retiro voluntario se conserva con su marca de trazabilidad.
 - **RF-39** Conservar historial de estados (el historial referencia `users.id`).
 - **RF-40** La empresa selecciona candidatos; la Municipalidad supervisa y reporta.
   La selección formal (`seleccionado`) bloquea nuevas postulaciones del mismo

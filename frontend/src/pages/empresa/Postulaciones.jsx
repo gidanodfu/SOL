@@ -128,7 +128,11 @@ export default function Postulaciones() {
               badge={(
                 <>
                   <Estado valor={p.estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
-                  {p.activo !== 1 && <span className="badge badge-gray" style={{ marginLeft: 6 }}>Desactivada</span>}
+                  {p.activo !== 1 && (
+                    <span className="badge badge-gray" style={{ marginLeft: 6 }}>
+                      {Number(p.retirada_postulante) === 1 ? 'Retirada por el postulante' : 'Desactivada'}
+                    </span>
+                  )}
                 </>
               )}
               onClick={() => setSeleccionada(p)}
@@ -166,6 +170,7 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
   const p = detalle?.postulante || null;
   const estado = detalle?.estado || postulacion.estado;
   const activo = detalle ? detalle.activo : postulacion.activo;
+  const retirada = Number(detalle?.retirada_postulante ?? postulacion.retirada_postulante ?? 0) === 1;
 
   const guardar = async (fn) => {
     try {
@@ -174,6 +179,8 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
       alCambio();
     } catch (e) {
       setError(errorApi(e));
+      // Refresca para reflejar el estado real si otra petición cambió la fila.
+      alCambio();
     }
   };
 
@@ -202,6 +209,14 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
             <Boton variante="gris" cargando={enviando} onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, false))}>
               <UserX size={16} aria-hidden="true" />Desactivar
             </Boton>
+          ) : retirada ? (
+            <Boton
+              variante="gris"
+              disabled
+              title="El postulante retiró esta postulación; la empresa no puede reactivarla."
+            >
+              <UserCheck size={16} aria-hidden="true" />No se puede reactivar
+            </Boton>
           ) : (
             <Boton variante="exito" cargando={enviando} onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, true))}>
               <UserCheck size={16} aria-hidden="true" />Reactivar
@@ -219,10 +234,19 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
           size={48}
         />
         <Estado valor={estado} diccionario={ETIQUETA_ESTADO_POSTULACION} />
-        {activo !== 1 && <span className="badge badge-gray">Postulación desactivada</span>}
+        {activo !== 1 && (
+          <span className={`badge ${retirada ? 'badge-amber' : 'badge-gray'}`}>
+            {retirada ? 'Retirada por el postulante' : 'Postulación desactivada'}
+          </span>
+        )}
       </div>
 
       <Mensaje>{error}</Mensaje>
+      {retirada && (
+        <p className="modal-texto" style={{ color: 'var(--amber-tx)' }}>
+          El postulante retiró voluntariamente esta postulación. Se conserva el historial, pero la empresa no puede reactivarla.
+        </p>
+      )}
       {isLoading && !detalle && <p className="vacio">Cargando detalle…</p>}
 
       <FichaDatos

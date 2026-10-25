@@ -13,6 +13,7 @@ class PostulacionModel extends Model
 
     protected $allowedFields = [
         'postulante_id', 'oferta_id', 'empresa_id', 'fecha_postulacion', 'estado', 'activo',
+        'retirada_postulante',
     ];
 
     protected $useTimestamps = true;

@@ -28,6 +28,13 @@ class OfertaService
 {
     public const TIPOS_EMPLEO = ['tiempo_completo', 'medio_tiempo', 'por_horas', 'practicas', 'freelance', 'remoto'];
 
+    /** Catálogo canónico compartido con el selector del frontend. */
+    public const UBICACIONES = ['Chiclayo', 'José Leonardo Ortiz', 'La Victoria', 'Pimentel', 'Lambayeque'];
+
+    public const FORMACIONES = ['Primaria completa', 'Secundaria completa', 'Técnico', 'Universitario'];
+
+    public const EXPERIENCIAS = ['Sin experiencia', '6 meses', '1 año', '2 años', '3 años o más'];
+
     /**
      * `vencida` no existe en el ENUM porque es un estado efectivo derivado de
      * `publicada` + `fecha_cierre`; se admite como filtro de la bandeja.
@@ -177,7 +184,7 @@ class OfertaService
      */
     public function crear(int $empresaId, array $datos): int
     {
-        $datos = $this->validar($datos);
+        $datos = $this->validar($datos, null);
 
         $this->ofertas->insert([
             'empresa_id'            => $empresaId,
@@ -220,7 +227,7 @@ class OfertaService
             throw ApiException::conflicto('La oferta ya venció; no puede volver a publicación ni editarse.');
         }
 
-        $datos = $this->validar($datos);
+        $datos = $this->validar($datos, $oferta);
 
         // Control del flujo: editar una oferta publicada o corregir una oferta
         // observada la devuelve a revisión municipal. Corregir una observación
@@ -556,11 +563,18 @@ class OfertaService
     }
 
     /**
+     * Valida los campos de negocio de una oferta.
+     *
+     * En creación todos son obligatorios. En edición se exige el contenido que
+     * ya existía, pero un campo histórico vacío (por ejemplo, `fecha_cierre`
+     * NULL o una ubicación heredada) puede conservarse sin inventar datos.
+     *
      * @param array<string, mixed> $datos
+     * @param array<string, mixed>|null $existente
      *
      * @return array<string, mixed>
      */
-    private function validar(array $datos): array
+    private function validar(array $datos, ?array $existente = null): array
     {
         // Campos con editor enriquecido: se sanea el HTML antes de validar y su
         // límite de 10.000 se aplica al TEXTO VISIBLE, no a las etiquetas.
@@ -568,43 +582,126 @@ class OfertaService
         $datos['funciones']   = $this->html->limpiar($datos['funciones'] ?? null);
         $datos['requisitos']  = $this->html->limpiar($datos['requisitos'] ?? null);
 
+        $habilidades = $datos['habilidades'] ?? [];
+        if (is_string($habilidades)) {
+            $habilidades = explode(',', $habilidades);
+        }
+        $datos['habilidades'] = array_values(array_filter(
+            array_map('trim', (array) $habilidades),
+            static fn ($habilidad) => $habilidad !== '',
+        ));
+
+        $this->exigirObligatorios($datos, $existente);
+
         Validador::validar($datos, [
-            'puesto'                 => ['required', 'max:150'],
-            'descripcion'            => ['required', 'texto_max:10000'],
-            'funciones'              => ['required', 'texto_max:10000'],
-            'requisitos'             => ['texto_max:10000'],
-            'formacion_requerida'    => ['max:200'],
-            'experiencia_requerida'  => ['max:200'],
-            'ubicacion'              => ['max:150'],
-            'tipo_empleo'            => ['enum:' . implode(',', self::TIPOS_EMPLEO)],
-            'remuneracion'           => ['regex:/^\d{1,10}(\.\d{1,2})?$/'],
-            'fecha_cierre'           => ['fecha'],
-            'categoria_id'           => ['regex:/^\d+$/'],
+            'puesto'                => ['max:150'],
+            'descripcion'           => ['texto_max:10000'],
+            'funciones'             => ['texto_max:10000'],
+            'requisitos'            => ['texto_max:10000'],
+            'formacion_requerida'   => ['max:200'],
+            'experiencia_requerida' => ['max:200'],
+            'ubicacion'             => ['max:150'],
         ]);
 
-        // Entero puro, no solo "(int) >= 1": "3abc" no es una cantidad válida.
-        if (! isset($datos['vacantes']) || ! preg_match('/^\d+$/', (string) $datos['vacantes']) || (int) $datos['vacantes'] < 1) {
-            throw ApiException::validacion('Indique al menos una vacante.', ['Indique al menos una vacante.']);
+        if (! empty($datos['tipo_empleo']) && ! in_array($datos['tipo_empleo'], self::TIPOS_EMPLEO, true)) {
+            throw ApiException::validacion('Selecciona un tipo de empleo válido.', ['Selecciona un tipo de empleo válido.']);
         }
+        $this->validarCatalogo($datos, $existente, 'ubicacion', self::UBICACIONES, 'Selecciona una ubicación válida.');
+        $this->validarCatalogo($datos, $existente, 'formacion_requerida', self::FORMACIONES, 'Selecciona la formación requerida.');
+        $this->validarCatalogo($datos, $existente, 'experiencia_requerida', self::EXPERIENCIAS, 'Selecciona la experiencia requerida.');
+
+        // Entero puro, no solo "(int) >= 1": "3abc" no es una cantidad válida.
+        if (($datos['vacantes'] ?? null) !== null && $datos['vacantes'] !== ''
+            && (! preg_match('/^\d+$/', (string) $datos['vacantes']) || (int) $datos['vacantes'] < 1)) {
+            throw ApiException::validacion('Indica un número de vacantes mayor o igual a 1.', ['Indica un número de vacantes mayor o igual a 1.']);
+        }
+
+        $remuneracion = $datos['remuneracion'] ?? null;
+        if ($remuneracion !== null && $remuneracion !== ''
+            && (! is_scalar($remuneracion) || ! preg_match('/^\d{1,10}(\.\d{1,2})?$/', (string) $remuneracion))) {
+            throw ApiException::validacion('Ingresa un salario válido, sin negativos y con hasta dos decimales.', ['Ingresa un salario válido, sin negativos y con hasta dos decimales.']);
+        }
+
         if (! empty($datos['fecha_cierre'])) {
-            $cierre = strtotime($datos['fecha_cierre']);
-            if ($cierre === false) {
-                throw ApiException::validacion('La fecha de cierre no es válida.', ['La fecha de cierre no es válida.']);
+            $fechaCierre = (string) $datos['fecha_cierre'];
+            if (! Validador::esFecha($fechaCierre)) {
+                throw ApiException::validacion('Ingresa una fecha de cierre válida.', ['Ingresa una fecha de cierre válida.']);
             }
-            if ($cierre < strtotime(date('Y-m-d'))) {
+            if (strtotime($fechaCierre) < strtotime(date('Y-m-d'))) {
                 throw ApiException::validacion('La fecha de cierre no puede ser anterior a hoy.', ['La fecha de cierre no puede ser anterior a hoy.']);
             }
         }
-        if (! empty($datos['categoria_id']) && ! $this->ofertas->db->table('categorias')->where('id', $datos['categoria_id'])->countAllResults()) {
-            throw ApiException::validacion('La categoría seleccionada no existe.', ['La categoría seleccionada no existe.']);
-        }
 
-        $habilidades = $datos['habilidades'] ?? [];
-        if (is_string($habilidades)) {
-            $habilidades = array_filter(array_map('trim', explode(',', $habilidades)));
+        if (! empty($datos['categoria_id'])) {
+            if (! preg_match('/^\d+$/', (string) $datos['categoria_id'])
+                || ! $this->ofertas->db->table('categorias')->where('id', (int) $datos['categoria_id'])->countAllResults()) {
+                throw ApiException::validacion('Selecciona una categoría válida.', ['Selecciona una categoría válida.']);
+            }
         }
-        $datos['habilidades'] = array_values(array_filter(array_map('trim', (array) $habilidades)));
 
         return $datos;
+    }
+
+    /**
+     * @param array<string, mixed> $datos
+     * @param array<string, mixed>|null $existente
+     */
+    private function exigirObligatorios(array $datos, ?array $existente): void
+    {
+        $mensajes = [
+            'puesto'                => 'Ingresa el puesto de trabajo.',
+            'categoria_id'          => 'Selecciona una categoría.',
+            'tipo_empleo'           => 'Selecciona el tipo de empleo.',
+            'ubicacion'             => 'Selecciona una ubicación válida.',
+            'vacantes'              => 'Indica el número de vacantes.',
+            'remuneracion'          => 'Ingresa el salario.',
+            'formacion_requerida'   => 'Selecciona la formación requerida.',
+            'experiencia_requerida' => 'Selecciona la experiencia requerida.',
+            'fecha_cierre'          => 'Selecciona la fecha de cierre.',
+            'habilidades'           => 'Agrega al menos una habilidad.',
+            'descripcion'           => 'Escribe la descripción del puesto.',
+            'funciones'             => 'Describe las funciones del puesto.',
+            'requisitos'            => 'Escribe los requisitos del puesto.',
+        ];
+
+        $errores = [];
+        foreach ($mensajes as $campo => $mensaje) {
+            $obligatorio = $existente === null || ! $this->vacio($existente[$campo] ?? null);
+            if ($obligatorio && $this->vacio($datos[$campo] ?? null)) {
+                $errores[] = $mensaje;
+            }
+        }
+
+        if ($errores !== []) {
+            throw ApiException::validacion('Hay errores en los datos enviados.', $errores);
+        }
+    }
+
+    /**
+     * Acepta un valor del catálogo actual o, al editar, el valor histórico que
+     * ya estaba almacenado y no se ha cambiado.
+     *
+     * @param array<string, mixed> $datos
+     * @param array<string, mixed>|null $existente
+     * @param list<string> $permitidos
+     */
+    private function validarCatalogo(array $datos, ?array $existente, string $campo, array $permitidos, string $mensaje): void
+    {
+        $valor = trim((string) ($datos[$campo] ?? ''));
+        if ($valor === '' || in_array($valor, $permitidos, true)) {
+            return;
+        }
+        if ($existente !== null && $valor === trim((string) ($existente[$campo] ?? ''))) {
+            return;
+        }
+
+        throw ApiException::validacion($mensaje, [$mensaje]);
+    }
+
+    private function vacio(mixed $valor): bool
+    {
+        return $valor === null
+            || (is_string($valor) && trim($valor) === '')
+            || (is_array($valor) && $valor === []);
     }
 }

@@ -29,7 +29,15 @@ python3 - > /tmp/opencode/rte_oferta.json <<'PY'
 import json
 print(json.dumps({
   "puesto": "Tester RTE",
+  "categoria_id": 1,
+  "tipo_empleo": "tiempo_completo",
+  "ubicacion": "Chiclayo",
   "vacantes": 1,
+  "remuneracion": "1500.00",
+  "formacion_requerida": "Universitario",
+  "experiencia_requerida": "1 año",
+  "fecha_cierre": "2026-12-31",
+  "habilidades": ["Pruebas"],
   "descripcion": '<p>Hola <strong>mundo</strong>.</p><script>alert(1)</script><a href="javascript:alert(1)">malo</a>',
   "funciones": '<ul><li>Función uno</li><li>Función dos</li></ul><p><img src=x onerror=alert(1)>Texto</p>',
   "requisitos": '<p style="color:red" onclick="x()">Req <iframe src="x"></iframe><svg onload=alert(1)></svg></p><p><a href="https://example.com" target="_blank">ok</a></p>',
@@ -63,7 +71,21 @@ PY
 paso "3. texto plano heredado se conserva sin cambios"
 python3 - > /tmp/opencode/rte_plano.json <<'PY'
 import json
-print(json.dumps({"puesto": "Tester plano", "vacantes": 1, "descripcion": "Se requiere experiencia\n\nLinea dos", "funciones": "Funciones de prueba"}))
+print(json.dumps({
+    "puesto": "Tester plano",
+    "categoria_id": 1,
+    "tipo_empleo": "tiempo_completo",
+    "ubicacion": "Pimentel",
+    "vacantes": 1,
+    "remuneracion": "1200.00",
+    "formacion_requerida": "Secundaria completa",
+    "experiencia_requerida": "6 meses",
+    "fecha_cierre": "2026-12-31",
+    "habilidades": ["Pruebas"],
+    "descripcion": "Se requiere experiencia\n\nLinea dos",
+    "funciones": "Funciones de prueba",
+    "requisitos": "Requisitos de prueba",
+}))
 PY
 PID=$(curl -s -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d @/tmp/opencode/rte_plano.json | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s "$B/api/empresa/ofertas/$PID" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("plano conservado:", d["descripcion"] == "Se requiere experiencia\n\nLinea dos", "->", repr(d["descripcion"]))'
@@ -75,9 +97,18 @@ import json, sys
 n = int(sys.argv[1])
 print(json.dumps({
     "puesto": "RTE exacto " + str(n),
+    "categoria_id": 1,
+    "tipo_empleo": "tiempo_completo",
+    "ubicacion": "Lambayeque",
     "vacantes": 1,
+    "remuneracion": "1200.00",
+    "formacion_requerida": "Secundaria completa",
+    "experiencia_requerida": "6 meses",
+    "fecha_cierre": "2026-12-31",
+    "habilidades": ["Pruebas"],
     "descripcion": "<p>" + ("a" * n) + "</p>",
     "funciones": "<p>Funciones de prueba</p>",
+    "requisitos": "<p>Requisitos de prueba</p>",
 }))
 PY
   code=$(curl -s -o "/tmp/opencode/rte_${n}.out" -w '%{http_code}' -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d @"/tmp/opencode/rte_${n}.json")

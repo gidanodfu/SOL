@@ -69,9 +69,16 @@ MySQL es la fuente de verdad.
   `borrador|pendiente → publicada|observada|rechazada → cerrada` (`borrador` solo heredado).
   Una oferta `publicada` cuya `fecha_cierre` ya pasó se expone como **Vencida**
   (`estado_efectivo`, derivado de la fecha; no se persiste) y deja de recibir
-  postulaciones. `vencida` se distingue de `cerrada` (cierre manual). Endpoints:
+  postulaciones. `vencida` se distingue de `cerrada` (cierre manual). Al crear una
+  oferta son obligatorios todos los campos de negocio, la ubicación debe pertenecer
+  al catálogo compartido con el filtro público y la fecha de cierre no puede ser
+  anterior al día actual de Lima. Endpoints:
   `PUT /api/admin/ofertas/{id}/aprobar|observar|rechazar|cerrar` y
   `PUT /api/empresa/ofertas/{id}/enviar-revision|cerrar`.
+- **Retiro de postulaciones**: el postulante puede retirar su postulación; el registro
+  se conserva inactivo y marcado como retiro voluntario. La empresa no puede reactivar
+  ese mismo registro, pero sí puede reactivar desactivaciones propias. El postulante
+  puede crear una nueva postulación independiente si las demás reglas lo permiten.
 - **Selección por empresa**: cuando una empresa marca una postulación como
   `seleccionado`, el postulante no puede crear nuevas postulaciones a ninguna
   oferta de esa empresa. Puede seguir postulando a otras empresas. La regla se
