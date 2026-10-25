@@ -176,6 +176,12 @@ class PostulacionService
             $fila['foto_url'] = ! empty($fila['foto_key'])
                 ? '/api/postulantes/' . (int) $fila['postulante_id'] . '/foto'
                 : null;
+            // `oferta_estado` conserva el valor del ENUM; el panel y cualquier
+            // integración deben usar además el estado efectivo (vencida).
+            $fila['oferta_estado_efectivo'] = OfertaService::estadoEfectivo([
+                'estado' => $fila['oferta_estado'] ?? null,
+                'fecha_cierre' => $fila['fecha_cierre'] ?? null,
+            ]);
             unset($fila['foto_key']);
 
             return $fila;
@@ -200,6 +206,11 @@ class PostulacionService
                 'ubicacion' => $postulacion['ubicacion'],
                 'remuneracion' => $postulacion['remuneracion'],
                 'fecha_cierre' => $postulacion['fecha_cierre'],
+                'estado' => $postulacion['oferta_estado'] ?? null,
+                'estado_efectivo' => OfertaService::estadoEfectivo([
+                    'estado' => $postulacion['oferta_estado'] ?? null,
+                    'fecha_cierre' => $postulacion['fecha_cierre'] ?? null,
+                ]),
             ],
             'postulante' => $this->perfiles->perfilCompleto((int) $postulacion['postulante_id']),
         ];

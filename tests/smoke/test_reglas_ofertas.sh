@@ -57,6 +57,7 @@ TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d 
 TP=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"12345678","password":"Postu123!"}' | tok)
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
 
+HOY=$(php -r 'echo date("Y-m-d");')
 FUTURO=$(php -r 'echo date("Y-m-d", strtotime("+30 days"));')
 AYER=$(php -r 'echo date("Y-m-d", strtotime("-1 day"));')
 
@@ -73,6 +74,14 @@ CV=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/postulante/cv" \
 check_code 'cargar CV para postular' 201 "$CV"
 
 printf '\n== vencimiento de oferta ==\n'
+H=$(crear_oferta "$TE" "Oferta del último día" "$HOY" | id_json)
+check_code 'aprobar oferta del último día' 200 "$(aprobar_oferta "$TA" "$H")"
+if curl -s "$B/api/ofertas" | H="$H" python3 -c 'import os,sys,json; d=json.load(sys.stdin).get("data",[]); assert any(o.get("id")==int(os.environ["H"]) for o in d)'; then
+    ok 'oferta del último día sigue disponible'
+else
+    fail 'oferta del último día no aparece en búsqueda'
+fi
+
 V=$(crear_oferta "$TE" "Oferta que vence" "$FUTURO" | id_json)
 check_code 'aprobar oferta de vencimiento' 200 "$(aprobar_oferta "$TA" "$V")"
 

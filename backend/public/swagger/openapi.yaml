@@ -4790,7 +4790,10 @@ components:
           nullable: true
         oferta_estado:
           type: string
-          description: Estado de la oferta asociada.
+          description: Estado persistido de la oferta asociada.
+        oferta_estado_efectivo:
+          type: string
+          description: Estado efectivo de la oferta asociada; puede ser `vencida`.
         fecha_cierre:
           type: string
           nullable: true
@@ -4838,6 +4841,12 @@ components:
               type: string
               nullable: true
               format: date
+            estado:
+              type: string
+              description: Estado persistido de la oferta.
+            estado_efectivo:
+              type: string
+              description: Estado efectivo; puede ser `vencida`.
         postulante:
           $ref: '#/components/schemas/PerfilPostulante'
 
