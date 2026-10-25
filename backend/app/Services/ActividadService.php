@@ -56,17 +56,31 @@ class ActividadService
         $builder = $this->actividades->db->table('actividades');
 
         if ($soloPublicas) {
-            $builder->whereIn('estado', ['programado', 'en_curso']);
+            // Una actividad vencida no se publica aunque su estado persistido
+            // siga siendo programado o en_curso. El límite es inclusivo hasta
+            // el instante anterior a fecha_fin (a igualdad ya está vencida).
+            $builder->whereIn('estado', ['programado', 'en_curso'])
+                ->groupStart()
+                    ->where('fecha_fin IS NULL')
+                    ->orWhere('fecha_fin >', self::ahora())
+                ->groupEnd();
         } elseif (! empty($filtros['tipo'])) {
             $builder->where('tipo', $filtros['tipo']);
         }
-        if (! empty($filtros['estado'])) {
-            $builder->where('estado', $filtros['estado']);
-        }
 
         $filas = $builder->orderBy('fecha_inicio', 'DESC')->limit(200)->get()->getResultArray();
+        $filas = array_map([$this, 'conImagenPublica'], $filas);
 
-        return array_map([$this, 'conImagenPublica'], $filas);
+        if (! $soloPublicas && ! empty($filtros['estado'])) {
+            // El filtro administrativo usa el estado efectivo. Así una
+            // actividad en_curso vencida aparece en Finalizadas, no en En curso.
+            $filas = array_values(array_filter(
+                $filas,
+                static fn (array $fila): bool => $fila['estado_efectivo'] === $filtros['estado'],
+            ));
+        }
+
+        return $filas;
     }
 
     /**
@@ -80,9 +94,88 @@ class ActividadService
     {
         $tiene = ! empty($fila['imagen_key']);
         $fila['imagen_url'] = $tiene ? '/api/actividades/' . $fila['id'] . '/imagen' : null;
+        $fila['estado_efectivo'] = self::estadoEfectivo($fila);
         unset($fila['imagen_key']);
 
         return $fila;
+    }
+
+    /**
+     * Una actividad está vencida cuando existe una fecha de fin y el instante
+     * actual ya la alcanzó. Sin fecha de fin no se inventa un vencimiento: la
+     * actividad depende exclusivamente de su estado manual.
+     *
+     * Se usa la zona horaria de la aplicación, no la del sistema operativo ni
+     * una función de fecha de MySQL. Esto evita que una consulta SQL y una
+     * validación PHP difieran alrededor de medianoche.
+     */
+    public static function vencida(?string $fechaFin, ?string $ahora = null): bool
+    {
+        return self::fechaAlcanzada($fechaFin, $ahora);
+    }
+
+    /**
+     * `estado_efectivo` deriva el estado mostrado sin reescribir el ENUM:
+     * una actividad programada cuyo inicio ya llegó se muestra en curso, y una
+     * actividad en curso/programada con fecha de fin alcanzada se muestra
+     * finalizada. Los estados manuales terminales/cancelados no se alteran.
+     *
+     * @param array<string, mixed> $fila
+     */
+    public static function estadoEfectivo(array $fila, ?string $ahora = null): string
+    {
+        $estado = (string) ($fila['estado'] ?? '');
+
+        if (! in_array($estado, ['programado', 'en_curso'], true)) {
+            return $estado;
+        }
+
+        if (self::vencida($fila['fecha_fin'] ?? null, $ahora)) {
+            return 'finalizado';
+        }
+
+        if (self::fechaAlcanzada($fila['fecha_inicio'] ?? null, $ahora)) {
+            return 'en_curso';
+        }
+
+        return 'programado';
+    }
+
+    private static function fechaAlcanzada(?string $fecha, ?string $ahora = null): bool
+    {
+        $fecha = $fecha !== null ? trim($fecha) : '';
+        if ($fecha === '') {
+            return false;
+        }
+
+        $zona = self::zonaHoraria();
+        try {
+            $objetivo = new \DateTimeImmutable($fecha, $zona);
+            $referencia = $ahora !== null
+                ? new \DateTimeImmutable($ahora, $zona)
+                : new \DateTimeImmutable('now', $zona);
+        } catch (\Throwable) {
+            // Una fecha corrupta no debe seguir publicando la actividad.
+            return true;
+        }
+
+        return $referencia >= $objetivo;
+    }
+
+    private static function ahora(): string
+    {
+        return (new \DateTimeImmutable('now', self::zonaHoraria()))->format('Y-m-d H:i:s');
+    }
+
+    private static function zonaHoraria(): \DateTimeZone
+    {
+        $configurada = config('App')->appTimezone ?? date_default_timezone_get();
+
+        try {
+            return new \DateTimeZone($configurada);
+        } catch (\Throwable) {
+            return new \DateTimeZone(date_default_timezone_get());
+        }
     }
 
     /**
@@ -204,13 +297,31 @@ class ActividadService
 
     public function cambiarEstado(int $id, string $estado): void
     {
-        $actividad = $this->exigir($id);
-        $permitidos = self::TRANSICIONES[$actividad['estado']] ?? [];
-        if (! in_array($estado, $permitidos, true)) {
-            throw ApiException::conflicto("No puede pasar de \"{$actividad['estado']}\" a \"{$estado}\".");
-        }
+        // Serializa transiciones concurrentes de la misma actividad: dos
+        // peticiones no deben leer el mismo estado y aplicar transiciones
+        // incompatibles (por ejemplo finalizar y cancelar a la vez).
+        $db = $this->actividades->db;
+        $db->transBegin();
 
-        $this->actividades->update($id, ['estado' => $estado]);
+        try {
+            $actividad = $this->exigirBloqueada($id);
+            $permitidos = self::TRANSICIONES[$actividad['estado']] ?? [];
+            if (! in_array($estado, $permitidos, true)) {
+                throw ApiException::conflicto("No puede pasar de \"{$actividad['estado']}\" a \"{$estado}\".");
+            }
+
+            $this->actividades->update($id, ['estado' => $estado]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar el estado de la actividad.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
+        }
     }
 
     /**
@@ -286,6 +397,22 @@ class ActividadService
     private function exigir(int $id): array
     {
         $fila = $this->actividades->find($id);
+        if ($fila === null) {
+            throw ApiException::noEncontrado('La actividad no existe.');
+        }
+
+        return $fila;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function exigirBloqueada(int $id): array
+    {
+        $fila = $this->actividades->db
+            ->query('SELECT * FROM actividades WHERE id = ? FOR UPDATE', [$id])
+            ->getRowArray();
+
         if ($fila === null) {
             throw ApiException::noEncontrado('La actividad no existe.');
         }

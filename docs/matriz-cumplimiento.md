@@ -45,7 +45,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-39 Historial de estados | ✔ | tabla `postulacion_historial` (cada cambio, usuario y fecha) |
 | RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18). Un postulante seleccionado no puede postular a otra oferta de la misma empresa |
 | RF-41/42/43 Atenciones con tipos y seguimiento | ✘ retirado (2026-09) | módulo de atenciones eliminado de la API y el frontend; la tabla `atenciones` queda sin uso |
-| RF-44/45/46/47 Ferias, eventos, talleres, capacitaciones | ✔ | `api/admin/actividades*` · Actividades (admin) |
+| RF-44/45/46/47 Ferias, eventos, talleres, capacitaciones | ✔ | `api/admin/actividades*` · Actividades (admin); listado público filtra por estado y `fecha_fin`, y distingue estado efectivo |
 | RF-48 Sección de difusión de oportunidades | ✔ | `GET /api/oportunidades` · "Ferias y oportunidades" (postulante) |
 | RF-49 Empleos Perú | ✔ | fuente `empleos_peru` en `oportunidades` |
 | RF-50 MYPE locales | ✔ | fuente `mype_local` (y empresas afiliadas) |

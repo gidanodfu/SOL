@@ -85,7 +85,7 @@ export default function Actividades() {
               lateral={<ActivityImage variante="tarjeta" src={urlArchivo(a.imagen_url)} alt={`Imagen de la actividad ${a.nombre}`} />}
               icono={CalendarDays}
               titulo={a.nombre}
-              badge={<Estado valor={a.estado} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />}
+              badge={<Estado valor={a.estado_efectivo || a.estado} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />}
               onClick={() => setSeleccionada(a)}
               meta={(
                 <>
@@ -120,6 +120,7 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
 
   if (!actividad) return null;
 
+  const estadoEfectivo = actividad.estado_efectivo || actividad.estado;
   const cambiar = async (estado) => {
     try {
       await ejecutar(() => cambiarEstadoActividad(actividad.id, estado));
@@ -131,12 +132,17 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
     }
   };
 
-  const proximos = {
+  const transiciones = {
     programado: ['en_curso', 'finalizado', 'cancelado'],
     en_curso: ['finalizado', 'cancelado'],
     cancelado: ['programado'],
     finalizado: [],
   }[actividad.estado] || [];
+  // Una actividad vencida ya no debe ofrecer "En curso"; sí permite finalizar
+  // manualmente el estado persistido para reconciliar el historial.
+  const proximos = estadoEfectivo === 'finalizado' && actividad.estado !== 'finalizado'
+    ? transiciones.filter((estado) => estado !== 'en_curso')
+    : transiciones;
 
   return (
     <Modal
@@ -164,7 +170,12 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
       )}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
-        <Estado valor={actividad.estado} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />
+        <Estado valor={estadoEfectivo} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />
+        {estadoEfectivo !== actividad.estado && (
+          <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>
+            Finalizada por fecha de fin; se conserva el estado administrativo persistido.
+          </span>
+        )}
       </div>
 
       <Mensaje>{error}</Mensaje>
