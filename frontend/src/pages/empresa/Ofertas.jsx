@@ -390,7 +390,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
       </Suspense>
       <div className="form-fila">
         <Boton variante="primario" cargando={enviando} onClick={guardar}>{esNueva ? 'Enviar a revisión' : 'Guardar cambios'}</Boton>
-        {!esNueva && inicial.estado === 'publicada' && <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>Al guardar, la oferta volverá a revisión municipal.</span>}
+        {!esNueva && (inicial.estado_efectivo || inicial.estado) === 'publicada' && <span style={{ color: 'var(--text-2)', fontSize: '0.85rem' }}>Al guardar, la oferta volverá a revisión municipal.</span>}
       </div>
     </div>
   );

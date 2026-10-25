@@ -26,7 +26,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 13 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 14 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -70,6 +70,10 @@ postulación directa, bandejas y contadores) y la selección formal por empresa:
 bloquea nuevas postulaciones a la misma empresa, no a otras, y persiste aunque
 la postulación seleccionada se desactive.
 
+`test_concurrencia.sh` levanta dos procesos `spark serve` sobre el mismo MySQL
+para enviar peticiones realmente paralelas: valida que dos altas simultáneas a
+la misma oferta produzcan un único registro activo y que una selección y una
+nueva postulación a la misma empresa sigan un orden serial consistente.
 
 ### Backend
 
