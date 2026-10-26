@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { Link } from 'react-router-dom';
 import AuthFooter from '../../components/AuthFooter';
+import LogoMunicipal from '../../components/LogoMunicipal';
 import { LEGAL_DOCUMENTS, LEGAL_LINKS } from '../../legal/documentos';
 
 /**
@@ -15,7 +16,7 @@ export default function LegalPage({ documentKey, children }) {
     <div className="legal-page">
       <header className="legal-topbar">
         <Link to="/" className="legal-brand" aria-label="Empleo MDJLO — ir al portal">
-          <img src="/favicon.jpeg" alt="" />
+          <LogoMunicipal decorative />
           <span>
             <strong>Empleo MDJLO</strong>
             <small>Municipalidad Distrital de José Leonardo Ortiz</small>

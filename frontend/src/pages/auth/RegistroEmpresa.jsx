@@ -7,11 +7,10 @@ import { Boton, Mensaje } from '../../components/UI';
 import Turnstile from '../../components/Turnstile';
 import TermsCheckbox from '../../components/TermsCheckbox';
 import AuthFooter from '../../components/AuthFooter';
+import LogoMunicipal from '../../components/LogoMunicipal';
 import { useTema } from '../../context/ThemeContext';
 import { enviarSolicitudEmpresa, verificarRuc } from '../../services/solicitudes';
 import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
-
-const LOGO_URL = 'https://www.image2url.com/r2/default/images/1788530622409-c587704d-1068-43f2-b9e1-9b8ab867e021.jpeg';
 
 export default function RegistroEmpresa() {
   const { modoEfectivo } = useTema();
@@ -111,7 +110,7 @@ export default function RegistroEmpresa() {
     <div className="login-institucional">
       <main className="login-main">
         <div className="login-marca">
-          <img src={LOGO_URL} alt="Escudo de la Municipalidad Distrital de José Leonardo Ortiz" className="login-logo" />
+          <LogoMunicipal className="login-logo" />
           <h1 className="login-municipio-nombre">MUNICIPALIDAD DISTRITAL DE JOSÉ LEONARDO ORTIZ</h1>
           <p className="login-sistema">Unidad Funcional del Empleo (UFE) · Sistema de Ofertas Laborales (JLO)</p>
         </div>

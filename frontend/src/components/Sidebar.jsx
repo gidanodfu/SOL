@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight, Menu, X } from 'lucide-react';
 import BotonSalir from './BotonSalir';
+import LogoMunicipal from './LogoMunicipal';
 
 /**
  * Sidebar compartido por admin y empresa: misma estructura, estilos y
@@ -40,6 +41,7 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle, i
         </button>
 
         <Link to={marca.to} className="side-movil-marca" onClick={() => setAbiertoMovil(false)}>
+          <LogoMunicipal className="side-movil-logo" decorative />
           <span className="side-movil-nombre">{marca.nombre}</span>
         </Link>
 
@@ -70,6 +72,7 @@ export default function Sidebar({ marca, grupos, usuario, colapsado, onToggle, i
       <aside className={`sidebar${colapsado ? ' colapsado' : ''}${abiertoMovil ? ' abierto' : ''}`}>
         <header className="side-cabecera">
           <Link to={marca.to} className="side-brand" title={marca.nombre} onClick={() => setAbiertoMovil(false)}>
+            <LogoMunicipal className="side-brand-logo" decorative />
             <span className="brand-text">
               <span className="name">{marca.nombre}</span>
               <span className="tag">{marca.tag}</span>
