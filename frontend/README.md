@@ -66,6 +66,10 @@ src/
 
 - **Portal institucional** (login, registro, registro-empresa, activar-cuenta): cabecera
   azul marino `#0B2542`, escudo municipal, tipografía institucional y franja de sistema.
+- **Logo municipal**: única fuente `public/sol-logo.png`, renderizada mediante
+  `components/LogoMunicipal.jsx` con proporción y transparencia originales. No se usan
+  URLs externas ni copias del escudo. El favicon y `apple-touch-icon` se componen en un
+  lienzo cuadrado transparente desde el master, sin estirarlo ni generar archivos extra.
 - **Empresa y postulante**: layouts propios con navegación por rol, tarjetas de oferta
   (`job-card`), filtros tipo *pill*, chips de estado y diseño responsive; cada rol está
   scoped bajo su clase contenedora (`.app-empresa`, `.app-postulante`).

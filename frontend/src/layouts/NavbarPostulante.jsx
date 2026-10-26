@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { CalendarDays, House } from 'lucide-react';
 import BuscadorNavbar from '../components/BuscadorNavbar';
-
-// Logotipo local de la aplicación (mismo asset del favicon); sin dependencias externas.
-const LOGO_URL = '/favicon.jpeg';
+import LogoMunicipal from '../components/LogoMunicipal';
 
 const NAV = [
   { to: '/postulante/buscar', Icono: House, texto: 'Inicio', corto: 'Inicio' },
@@ -22,15 +19,11 @@ const NAV = [
  * flujos de autenticación.
  */
 export function NavbarPostulante({ children, className = '' }) {
-  const [logoError, setLogoError] = useState(false);
-
   return (
     <header className={`post-header${className ? ` ${className}` : ''}`}>
       <Link to="/postulante/buscar" className="brand" aria-label="Empleo MDJLO — sistema de intermediación laboral">
         <span className="brand-mark">
-          {logoError
-            ? 'EM'
-            : <img src={LOGO_URL} alt="Municipalidad Distrital de José Leonardo Ortiz" onError={() => setLogoError(true)} />}
+          <LogoMunicipal decorative />
         </span>
         <span className="brand-text">
           <span className="name">Empleo MDJLO</span>

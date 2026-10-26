@@ -9,8 +9,8 @@
       content="Sistema de intermediación laboral de la Municipalidad Distrital de José Leonardo Ortiz: ofertas de empleo, postulaciones y CV."
     />
     <title>Sistema de Ofertas Laborales · Empleo MDJLO</title>
-    <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
+    <link id="sol-favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" />
+    <link id="sol-touch-icon" rel="apple-touch-icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&display=swap" rel="stylesheet">
@@ -19,6 +19,52 @@
       // backend y se hidrata después; así nunca se pinta oscuro por error.
       document.documentElement.dataset.theme = 'light';
       document.documentElement.style.colorScheme = 'light';
+    </script>
+    <script>
+      // El maestro del escudo es vertical. Para la pestaña se compone un lienzo
+      // cuadrado transparente con la imagen centrada y contenida: así el
+      // navegador no la estira ni la recorta. No se crea ningún archivo nuevo.
+      (() => {
+        const RECURSO = '/sol-logo.png?v=20261025-1';
+        const TAMANO = 180;
+        const imagen = new Image();
+        imagen.decoding = 'async';
+
+        imagen.onload = () => {
+          if (!imagen.naturalWidth || !imagen.naturalHeight) return;
+
+          const lienzo = document.createElement('canvas');
+          lienzo.width = TAMANO;
+          lienzo.height = TAMANO;
+
+          const contexto = lienzo.getContext('2d');
+          if (!contexto) return;
+
+          const escala = Math.min(TAMANO / imagen.naturalWidth, TAMANO / imagen.naturalHeight);
+          const ancho = Math.round(imagen.naturalWidth * escala);
+          const alto = Math.round(imagen.naturalHeight * escala);
+          const x = Math.round((TAMANO - ancho) / 2);
+          const y = Math.round((TAMANO - alto) / 2);
+
+          contexto.imageSmoothingQuality = 'high';
+          contexto.drawImage(imagen, x, y, ancho, alto);
+
+          const href = lienzo.toDataURL('image/png');
+          for (const id of ['sol-favicon', 'sol-touch-icon']) {
+            const enlace = document.getElementById(id);
+            if (!enlace) continue;
+
+            // Se reemplaza el nodo para forzar al navegador a releer el icono
+            // aunque conserve en caché la referencia anterior.
+            const nuevo = enlace.cloneNode();
+            nuevo.href = href;
+            nuevo.sizes = `${TAMANO}x${TAMANO}`;
+            enlace.replaceWith(nuevo);
+          }
+        };
+
+        imagen.src = RECURSO;
+      })();
     </script>
   </head>
   <body>

@@ -111,7 +111,9 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 ./deploy/scripts/test.sh frontend
 ```
 
-Incluye las pruebas estáticas de documentos legales, lint y build. La imagen de
+Incluye las pruebas estáticas de documentos legales, catálogo de ubicaciones, uso
+centralizado del logo municipal (sin URLs externas ni favicons antiguos), lint y
+build. La imagen de
 desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
 La ejecución actual reporta **19 advertencias de Oxlint y 0 errores**: 10 de
 `only-export-components`, 7 de `set-state-in-effect` y 2 de `refs`. Son

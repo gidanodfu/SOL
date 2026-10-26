@@ -109,10 +109,9 @@ export default function PoliticaTecnologiasWeb() {
             para publicidad ni analítica en SOL.
           </li>
           <li>
-            <strong>Recursos externos de imagen:</strong> las pantallas de autenticación
-            actuales cargan un escudo desde un dominio externo. Es una solicitud de imagen, no
-            una cookie propia de SOL, pero el proveedor puede recibir la IP y datos técnicos
-            de la conexión.
+            <strong>Recursos propios del sitio:</strong> el escudo municipal se sirve desde el
+            mismo dominio de SOL (`/sol-logo.png`); no se realizan solicitudes a terceros para
+            cargar el logo.
           </li>
           <li>
             <strong>Supabase Storage:</strong> cuando el CV se descarga mediante una URL

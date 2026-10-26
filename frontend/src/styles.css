@@ -74,6 +74,16 @@
   --panel-sombra: var(--sombra-tarjeta);
 }
 
+/* Logo institucional: fuente única. El tamaño lo define cada contexto; la
+   imagen conserva proporción, transparencia y encuadre sin fondo artificial. */
+.logo-municipal {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 /* ==========================================================================
    MODO OSCURO — única fuente de tema. El atributo `data-theme` lo aplica
    ThemeContext; todos los componentes consumen estas variables.
@@ -1012,11 +1022,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   margin-bottom: 2.2rem;
 }
 .login-logo {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: #ffffff;
-  object-fit: contain;
+  width: 92px;
+  height: auto;
   margin-bottom: 1.1rem;
 }
 .login-municipio-nombre {
@@ -1340,6 +1347,27 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   border-top: 1px solid #e2eaf3;
   background: rgba(255, 255, 255, 0.6);
 }
+.login-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.login-footer-logo {
+  width: auto;
+  height: 28px;
+  flex: none;
+}
+.login-footer-inner .login-footer-links {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+}
 .login-footer-links {
   display: flex;
   flex-wrap: wrap;
@@ -1454,12 +1482,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   color: var(--navy);
   text-decoration: none;
 }
-.legal-brand img {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border-radius: 50%;
-  object-fit: cover;
+.legal-brand .logo-municipal {
+  width: auto;
+  height: 38px;
+  flex: 0 0 auto;
+  object-fit: contain;
 }
 .legal-brand span { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .legal-brand strong { font-size: 15px; }
@@ -1596,7 +1623,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 
 @media (max-width: 420px) {
   .login-main { padding: 1.6rem 0.9rem 1.2rem; }
-  .login-logo { width: 86px; height: 86px; }
+  .login-logo { width: 76px; height: auto; }
   .login-formulario { padding: 1.6rem 1.15rem; border-radius: var(--radius-lg); }
   .login-formulario-titulo { font-size: 1.32rem; }
   .login-sistema { font-size: 0.82rem; }
@@ -1611,6 +1638,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
    44 px de altura. A partir de 601 px se conserva el diseño existente. */
 @media (max-width: 600px) {
   .login-institucional .login-footer { padding: 0.55rem 1rem; }
+  .login-institucional .login-footer-inner { gap: 8px; }
+  .login-institucional .login-footer-logo { height: 24px; }
   .login-institucional .login-footer-links {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1719,6 +1748,12 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   min-width: 0;
   color: inherit;
   text-decoration: none;
+}
+
+.side-brand .side-brand-logo {
+  width: auto;
+  height: 40px;
+  flex: none;
 }
 
 .side-brand .brand-text { min-width: 0; }
@@ -2011,6 +2046,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
+}
+.side-movil-logo {
+  width: auto;
+  height: 34px;
+  flex: none;
 }
 .side-movil-nombre {
   font-size: 15px;
