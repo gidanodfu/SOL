@@ -11,6 +11,40 @@ export const errorApi = (e) => {
   return 'Ocurrió un error inesperado. Intente nuevamente.';
 };
 
+/**
+ * Error de una descarga binaria. Axios entrega el JSON de la API como Blob
+ * cuando se usa responseType: 'blob'; se lee para conservar el mensaje 422.
+ */
+export async function errorApiDescarga(e, mensajePorDefecto = 'No se pudo generar el archivo.') {
+  const data = e?.response?.data;
+  if (typeof Blob !== 'undefined' && data instanceof Blob) {
+    try {
+      const json = JSON.parse(await data.text());
+      if (json?.message) return json.message;
+    } catch {
+      // El cuerpo no era JSON: se usa el mensaje genérico de errorApi.
+    }
+  }
+  const mensaje = errorApi(e);
+  return mensaje === 'Ocurrió un error inesperado. Intente nuevamente.' ? mensajePorDefecto : mensaje;
+}
+
+/** Descarga un Blob ya recibido. Rechaza respuestas vacías. */
+export function descargarBlob(blob, nombreArchivo) {
+  if (typeof Blob === 'undefined' || !(blob instanceof Blob) || blob.size === 0) {
+    throw new Error('El archivo descargado está vacío.');
+  }
+
+  const enlace = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  enlace.href = url;
+  enlace.download = nombreArchivo || 'reporte';
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  URL.revokeObjectURL(url);
+}
+
 /** El backend valida 9 u 11 dígitos; el frontend usa el mismo criterio. */
 export const soloDigitos = (v) => String(v ?? '').replace(/\D/g, '');
 export const esTelefonoValido = (v) => v == null || v === '' || /^(?:\d{9}|\d{11})$/.test(String(v));

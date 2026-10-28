@@ -83,6 +83,10 @@ MySQL es la fuente de verdad.
   `seleccionado`, el postulante no puede crear nuevas postulaciones a ninguna
   oferta de esa empresa. Puede seguir postulando a otras empresas. La regla se
   valida en backend y se coordina con bloqueo transaccional del postulante.
+- **Reportes**: los dashboards de administración y empresa exportan Excel y PDF por el
+  mismo periodo aplicado. El PDF es un documento A4 institucional (azul/blanco, escudo en
+  todas las páginas, secciones independientes y numeración) y reutiliza exactamente los
+  datos del Excel; el alcance de la empresa se resuelve solo desde la sesión.
 - **Modo oscuro**: tema claro/oscuro global (admin, empresa, postulante y público) con una
   única fuente (`ThemeContext` + variables CSS) y preferencia persistida; botón con iconos
   Lucide en el sidebar y las cabeceras.
@@ -525,8 +529,9 @@ preflight CORS y el frontend. No crea ni modifica datos.
 ./deploy/scripts/test.sh smoke
 ```
 
-El runner construye una imagen de pruebas con `bash`, `python3` y `curl`,
-levanta un MySQL **temporal en tmpfs** dentro de una red efímera, crea un
+El runner construye una imagen de pruebas con `bash`, `python3`, `curl` y
+`poppler-utils` (para verificar PDF), levanta un MySQL **temporal en tmpfs**
+dentro de una red efímera, crea un
 esquema distinto por suite, aplica migraciones y seeds, y ejecuta los scripts
 con `php spark serve` **dentro del contenedor**. No toca `sol_dev_*`, no publica
 puertos y no usa herramientas de aplicación del host. `test_desarrollo_nuevo.sh`
@@ -537,6 +542,37 @@ inesperados; no imprime JWT ni refresh tokens.
 
 > El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
 > se validaron manualmente contra la API; aún no tienen pruebas automatizadas.
+
+### Reportes Excel y PDF
+
+- Administración: `GET /api/admin/reportes/excel` y `GET /api/admin/reportes/pdf`.
+- Empresa: `GET /api/empresa/reportes/excel` y `GET /api/empresa/reportes/pdf`.
+- Ambos formatos aceptan `desde`/`hasta` opcionales (`AAAA-MM-DD`, inclusivos) y
+  comparten la validación de `DashboardService::validarRango` (422 si el rango
+  es inválido). El PDF reutiliza exactamente los datos del Excel: no tiene
+  consultas SQL paralelas.
+- El PDF se genera con `dompdf/dompdf ^3.1` (A4, azul/blanco, secciones en
+  páginas independientes, encabezado con escudo en todas las páginas y pie con
+  numeración). La empresa se identifica solo desde la sesión; un `empresa_id`
+  enviado por el navegador se ignora.
+- El logo maestro es `frontend/public/sol-logo.png`. Como la imagen de
+  producción del backend no copia el frontend, se mantiene una copia exacta en
+  `backend/public/sol-logo.png`. Al actualizar el escudo, sincronizar ambas y
+  actualizar el hash compartido de las pruebas:
+
+```bash
+cp frontend/public/sol-logo.png backend/public/sol-logo.png
+sha256sum frontend/public/sol-logo.png backend/public/sol-logo.png
+# Hash institucional actual:
+# db7638707560fbc046f397e33cfd90cb8790506b802504c3f537081c48f3cd76
+```
+
+- Pruebas específicas: `ReportePdfServiceTest` (PHPUnit), `test_reporte_pdf.sh`
+  (smoke con PDF real, paginación, logo, permisos y aislamiento) y
+  `frontend/tests/reportes-pdf.test.mjs` (botones, fechas aplicadas y endpoints).
+- Se actualizó `phpoffice/phpspreadsheet` de 5.9.0 a 5.10.0 para incorporar las
+  correcciones de los avisos de seguridad detectados durante la resolución de
+  dependencias; la suite de Excel se mantiene como no regresión.
 
 ## 19. Producción
 

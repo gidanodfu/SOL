@@ -58,7 +58,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-57 Seleccionados y empresas con procesos | ✔ | indicadores `seleccionados`, `empresas_con_procesos` |
 | RF-58 Contrataciones | ✔ | `api/empresa/contrataciones*`, supervisión admin |
 | RF-59 Tiempo postulación→contacto/selección | ✔ | promedio en días desde `postulacion_historial` |
-| RF-60 Reportes por periodo | ✔ | `GET /api/admin/reportes?desde=&hasta=` (con export CSV) |
+| RF-60 Reportes por periodo | ✔ | `GET /api/admin/reportes?desde=&hasta=`; export CSV/Excel/PDF en admin y Excel/PDF en empresa |
 | RF-61 Registro de actividades | ✔ | tabla `auditoria` (login, altas, activaciones, aprobaciones, resets…) |
 | RF-62 Historial conservado | ✔ | flags `activo`/estado + tablas históricas |
 | RF-63 Trazabilidad de acciones administrativas | ✔ | `auditoria.user_id` + fecha; historial de postulación |

@@ -12,8 +12,9 @@
     "require": {
         "php": "^8.2",
         "codeigniter4/framework": "^4.7",
+        "dompdf/dompdf": "^3.1",
         "firebase/php-jwt": "^7.1",
-        "phpoffice/phpspreadsheet": "^5.9",
+        "phpoffice/phpspreadsheet": "^5.10",
         "resend/resend-php": "^1.16",
         "symfony/html-sanitizer": "^7.4"
     },

@@ -26,6 +26,9 @@ export const pendientesEmpresa = () => api.get('/empresa/pendientes').then((r) =
 export const exportarReporteEmpresa = (params = {}) =>
   api.get('/empresa/reportes/excel', { params, responseType: 'blob' }).then((r) => r.data);
 
+export const exportarReporteEmpresaPdf = (params = {}) =>
+  api.get('/empresa/reportes/pdf', { params, responseType: 'blob' }).then((r) => r.data);
+
 /* Bandeja de postulaciones (RF-33..RF-40) */
 export const listarPostulacionesEmpresa = (params = {}) => api.get('/empresa/postulaciones', { params }).then((r) => r.data.data);
 export const detallePostulacionEmpresa = (id) => api.get(`/empresa/postulaciones/${id}`).then((r) => r.data.data);

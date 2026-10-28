@@ -1529,6 +1529,41 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorInterno'
 
+  /api/admin/reportes/pdf:
+    get:
+      tags: [Admin]
+      operationId: adminReportesPdf
+      summary: Exportar reporte PDF
+      description: |
+        Respuesta NO JSON: `application/pdf` con `Content-Disposition: attachment;
+        filename="reporte-empleo[-desde_hasta|-desde-...|-hasta-...].pdf"` y
+        `Cache-Control: private, no-store`. Incluye resumen de gestión, actividad
+        mensual, ofertas por estado, postulaciones por estado y detalle de
+        contrataciones en páginas independientes. Reutiliza exactamente los datos
+        del reporte Excel y la misma validación de rango (`422` si es inválido).
+        El escudo institucional aparece en el encabezado de todas las páginas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Desde'
+        - $ref: '#/components/parameters/Hasta'
+      responses:
+        '200':
+          description: Archivo PDF del reporte.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
   /api/admin/contrataciones:
     get:
       tags: [Admin]
@@ -2189,6 +2224,56 @@ paths:
           description: Archivo XLSX del reporte de la empresa.
           content:
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/empresa/reportes/pdf:
+    get:
+      tags: [Empresa]
+      operationId: empresaReportePdf
+      summary: Reporte PDF de la propia empresa
+      description: |
+        Genera un PDF con la actividad de la empresa **autenticada** (Resumen,
+        Ofertas, Postulaciones y Contrataciones). El alcance lo fija el backend con
+        la empresa de la sesión: no se acepta ningún identificador de empresa por
+        parámetro. Filtros opcionales `desde`/`hasta` (AAAA-MM-DD, inclusivos); un
+        rango inválido responde `422`, y una cuenta sin perfil empresarial `404`.
+        Respuesta binaria `application/pdf` con `Content-Disposition: attachment` y
+        `Cache-Control: private, no-store`. El escudo institucional se repite en
+        todas las páginas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: desde
+          in: query
+          description: Fecha inicial inclusive.
+          schema:
+            type: string
+            format: date
+            example: '2026-01-01'
+        - name: hasta
+          in: query
+          description: Fecha final inclusive.
+          schema:
+            type: string
+            format: date
+            example: '2026-12-31'
+      responses:
+        '200':
+          description: Archivo PDF del reporte de la empresa.
+          content:
+            application/pdf:
               schema:
                 type: string
                 format: binary

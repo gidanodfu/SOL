@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardEmpresa, exportarReporteEmpresa } from '../../services/empresas';
+import { dashboardEmpresa, exportarReporteEmpresa, exportarReporteEmpresaPdf } from '../../services/empresas';
 import { listarContratacionesEmpresa } from '../../services/contrataciones';
 import { Mensaje, EstadoCarga } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
@@ -12,7 +12,7 @@ import DashboardGrid from '../../components/dashboard/DashboardGrid';
 import ActivityCard from '../../components/dashboard/ActivityCard';
 import BarChartCard from '../../components/dashboard/BarChartCard';
 import { DONA_ESTADO_POSTULACION } from '../../constants';
-import { errorApi, fechaHora } from '../../utils';
+import { descargarBlob, errorApi, errorApiDescarga, fechaHora } from '../../utils';
 
 const OFERTAS_DONA = [
   { estado: 'publicada', etiqueta: 'Publicada', color: 'var(--green)' },
@@ -39,8 +39,12 @@ export default function Dashboard() {
   const [form, setForm] = useState({ desde: '', hasta: '' });
   const [filtro, setFiltro] = useState({ desde: '', hasta: '' });
   const [descargando, setDescargando] = useState(false);
+  const [descargandoPdf, setDescargandoPdf] = useState(false);
   const [errorExportar, setErrorExportar] = useState(null);
+  const [errorExportarPdf, setErrorExportarPdf] = useState(null);
   const [mensajeExito, setMensajeExito] = useState(null);
+  const [mensajeExitoPdf, setMensajeExitoPdf] = useState(null);
+  const exportacionEnCurso = useRef({ excel: false, pdf: false });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard-empresa', filtro.desde, filtro.hasta],
@@ -66,8 +70,11 @@ export default function Dashboard() {
   const postulacionesItems = DONA_ESTADO_POSTULACION.map((o) => ({ etiqueta: o.etiqueta, valor: postulaciones[o.estado] || 0, color: o.color }));
 
   const aplicar = () => {
-    setMensajeExito(null);
     setFiltro({ ...form });
+    setMensajeExito(null);
+    setErrorExportar(null);
+    setMensajeExitoPdf(null);
+    setErrorExportarPdf(null);
   };
 
   const limpiar = () => {
@@ -75,30 +82,55 @@ export default function Dashboard() {
     setFiltro({ desde: '', hasta: '' });
     setMensajeExito(null);
     setErrorExportar(null);
+    setMensajeExitoPdf(null);
+    setErrorExportarPdf(null);
   };
 
-  const exportar = async () => {
+  const exportarExcel = async () => {
+    if (exportacionEnCurso.current.excel) return;
+    exportacionEnCurso.current.excel = true;
     setDescargando(true);
     setErrorExportar(null);
+    setErrorExportarPdf(null);
     setMensajeExito(null);
+    setMensajeExitoPdf(null);
     try {
       const blob = await exportarReporteEmpresa({
         desde: filtro.desde || undefined,
         hasta: filtro.hasta || undefined,
       });
       const sufijo = [filtro.desde, filtro.hasta].filter(Boolean).join('_');
-      const enlace = document.createElement('a');
-      enlace.href = URL.createObjectURL(blob);
-      enlace.download = `reporte-empresa-${sufijo || new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(enlace);
-      enlace.click();
-      enlace.remove();
-      URL.revokeObjectURL(enlace.href);
-      setMensajeExito('Reporte generado. Revise su descarga.');
-    } catch {
-      setErrorExportar('No se pudo generar el reporte Excel. Intente nuevamente.');
+      descargarBlob(blob, `reporte-empresa-${sufijo || new Date().toISOString().slice(0, 10)}.xlsx`);
+      setMensajeExito('Reporte Excel generado. Revise su descarga.');
+    } catch (e) {
+      setErrorExportar(await errorApiDescarga(e, 'No se pudo generar el reporte Excel. Intente nuevamente.'));
     } finally {
+      exportacionEnCurso.current.excel = false;
       setDescargando(false);
+    }
+  };
+
+  const exportarPdf = async () => {
+    if (exportacionEnCurso.current.pdf) return;
+    exportacionEnCurso.current.pdf = true;
+    setDescargandoPdf(true);
+    setErrorExportar(null);
+    setErrorExportarPdf(null);
+    setMensajeExito(null);
+    setMensajeExitoPdf(null);
+    try {
+      const blob = await exportarReporteEmpresaPdf({
+        desde: filtro.desde || undefined,
+        hasta: filtro.hasta || undefined,
+      });
+      const sufijo = [filtro.desde, filtro.hasta].filter(Boolean).join('_');
+      descargarBlob(blob, `reporte-empresa-${sufijo || new Date().toISOString().slice(0, 10)}.pdf`);
+      setMensajeExitoPdf('Reporte PDF generado. Revise su descarga.');
+    } catch (e) {
+      setErrorExportarPdf(await errorApiDescarga(e, 'No se pudo generar el reporte PDF. Intente nuevamente.'));
+    } finally {
+      exportacionEnCurso.current.pdf = false;
+      setDescargandoPdf(false);
     }
   };
 
@@ -120,10 +152,14 @@ export default function Dashboard() {
         onCambiar={setForm}
         onAplicar={aplicar}
         onLimpiar={limpiar}
-        onExportar={exportar}
+        onExportar={exportarExcel}
+        onExportarPdf={exportarPdf}
         exportando={descargando}
+        exportandoPdf={descargandoPdf}
         errorExportar={errorExportar}
+        errorExportarPdf={errorExportarPdf}
         mensajeExito={mensajeExito}
+        mensajeExitoPdf={mensajeExitoPdf}
       />
 
       {error && <Mensaje>{errorApi(error)}</Mensaje>}

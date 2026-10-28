@@ -27,10 +27,11 @@ COPY backend/ ./
 COPY --from=vendor-dev /app/vendor ./vendor
 CMD ["php", "spark", "serve", "--host", "0.0.0.0", "--port", "8080"]
 
-# Imagen de integración: añade herramientas de prueba (bash, python3 y curl)
-# sobre el target dev. No se usa en desarrollo ni en producción.
+# Imagen de integración: añade herramientas de prueba (bash, python3, curl y
+# poppler-utils para verificar PDF) sobre el target dev. No se usa en desarrollo
+# ni en producción.
 FROM dev AS test
-RUN apk add --no-cache bash python3 curl \
+RUN apk add --no-cache bash python3 curl poppler-utils \
     && mkdir -p /tmp/opencode
 CMD ["php", "spark", "serve", "--host", "0.0.0.0", "--port", "8080"]
 
