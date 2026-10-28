@@ -79,28 +79,32 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
     });
 
     // Administración municipal (RF-07, RF-08..RF-17, RF-52..RF-60).
-    $routes->group('admin', ['namespace' => 'App\Controllers\Api\Admin', 'filter' => ['jwt', 'rol:admin']], static function ($routes) {
-        $routes->get('usuarios', 'UsuariosController::index');
-        $routes->get('usuarios/(:num)', 'UsuariosController::show/$1');
-        $routes->post('usuarios', 'UsuariosController::store');
-        $routes->put('usuarios/(:num)', 'UsuariosController::update/$1');
-        $routes->put('usuarios/(:num)/estado', 'UsuariosController::estado/$1');
-        $routes->put('usuarios/(:num)/password', 'UsuariosController::resetPassword/$1');
+    // `rol:admin` conserva la identidad municipal; `permiso:municipal.lectura`
+    // exige un perfil municipal válido y las rutas de escritura añaden su
+    // permiso específico (usuarios, empresas, solicitudes, ofertas, etc.).
+    $routes->group('admin', ['namespace' => 'App\Controllers\Api\Admin', 'filter' => ['jwt', 'rol:admin', 'permiso:municipal.lectura']], static function ($routes) {
+        $routes->get('usuarios', 'UsuariosController::index', ['filter' => 'permiso:usuarios']);
+        $routes->get('usuarios/(:num)', 'UsuariosController::show/$1', ['filter' => 'permiso:usuarios']);
+        $routes->post('usuarios', 'UsuariosController::store', ['filter' => 'permiso:usuarios']);
+        $routes->put('usuarios/(:num)', 'UsuariosController::update/$1', ['filter' => 'permiso:usuarios']);
+        $routes->put('usuarios/(:num)/estado', 'UsuariosController::estado/$1', ['filter' => 'permiso:usuarios']);
+        $routes->put('usuarios/(:num)/password', 'UsuariosController::resetPassword/$1', ['filter' => 'permiso:usuarios']);
+        $routes->put('usuarios/(:num)/perfil', 'UsuariosController::perfil/$1', ['filter' => 'permiso:usuarios']);
 
         $routes->get('empresas', 'EmpresasController::index');
         $routes->get('empresas/(:num)', 'EmpresasController::show/$1');
-        $routes->post('empresas', 'EmpresasController::store');
-        $routes->put('empresas/(:num)', 'EmpresasController::update/$1');
-        $routes->put('empresas/(:num)/estado', 'EmpresasController::estado/$1');
-        $routes->put('empresas/(:num)/password', 'EmpresasController::resetPassword/$1');
+        $routes->post('empresas', 'EmpresasController::store', ['filter' => 'permiso:empresas']);
+        $routes->put('empresas/(:num)', 'EmpresasController::update/$1', ['filter' => 'permiso:empresas']);
+        $routes->put('empresas/(:num)/estado', 'EmpresasController::estado/$1', ['filter' => 'permiso:empresas']);
+        $routes->put('empresas/(:num)/password', 'EmpresasController::resetPassword/$1', ['filter' => 'permiso:empresas']);
 
         // Solicitudes de auto-registro de empresas.
         $routes->get('solicitudes-empresa', 'SolicitudesEmpresaController::index');
         $routes->get('solicitudes-empresa/(:num)', 'SolicitudesEmpresaController::show/$1');
-        $routes->post('solicitudes-empresa/(:num)/aprobar', 'SolicitudesEmpresaController::aprobar/$1');
-        $routes->post('solicitudes-empresa/(:num)/rechazar', 'SolicitudesEmpresaController::rechazar/$1');
-        $routes->post('solicitudes-empresa/(:num)/reenviar', 'SolicitudesEmpresaController::reenviar/$1');
-        $routes->get('solicitudes-empresa/(:num)/enlace', 'SolicitudesEmpresaController::enlace/$1');
+        $routes->post('solicitudes-empresa/(:num)/aprobar', 'SolicitudesEmpresaController::aprobar/$1', ['filter' => 'permiso:solicitudes']);
+        $routes->post('solicitudes-empresa/(:num)/rechazar', 'SolicitudesEmpresaController::rechazar/$1', ['filter' => 'permiso:solicitudes']);
+        $routes->post('solicitudes-empresa/(:num)/reenviar', 'SolicitudesEmpresaController::reenviar/$1', ['filter' => 'permiso:solicitudes']);
+        $routes->get('solicitudes-empresa/(:num)/enlace', 'SolicitudesEmpresaController::enlace/$1', ['filter' => 'permiso:solicitudes']);
 
         $routes->get('dashboard', 'DashboardController::index');
         $routes->get('pendientes', 'DashboardController::pendientes');
@@ -109,27 +113,27 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('ofertas', 'OfertasController::index');
         $routes->get('ofertas/(:num)', 'OfertasController::show/$1');
         // Revisión municipal: aprobar publica; rechazar deja la oferta no visible.
-        $routes->put('ofertas/(:num)/aprobar', 'OfertasController::aprobar/$1');
-        $routes->put('ofertas/(:num)/rechazar', 'OfertasController::rechazar/$1');
-        $routes->put('ofertas/(:num)/observar', 'OfertasController::observar/$1');
-        $routes->put('ofertas/(:num)/cerrar', 'OfertasController::cerrar/$1');
+        $routes->put('ofertas/(:num)/aprobar', 'OfertasController::aprobar/$1', ['filter' => 'permiso:ofertas']);
+        $routes->put('ofertas/(:num)/rechazar', 'OfertasController::rechazar/$1', ['filter' => 'permiso:ofertas']);
+        $routes->put('ofertas/(:num)/observar', 'OfertasController::observar/$1', ['filter' => 'permiso:ofertas']);
+        $routes->put('ofertas/(:num)/cerrar', 'OfertasController::cerrar/$1', ['filter' => 'permiso:ofertas']);
 
         $routes->get('actividades', 'ActividadesController::index');
-        $routes->post('actividades', 'ActividadesController::store');
-        $routes->put('actividades/(:num)', 'ActividadesController::update/$1');
-        $routes->put('actividades/(:num)/estado', 'ActividadesController::estado/$1');
-        $routes->post('actividades/(:num)/imagen', 'ActividadesController::subirImagen/$1');
-        $routes->delete('actividades/(:num)/imagen', 'ActividadesController::eliminarImagen/$1');
+        $routes->post('actividades', 'ActividadesController::store', ['filter' => 'permiso:actividades']);
+        $routes->put('actividades/(:num)', 'ActividadesController::update/$1', ['filter' => 'permiso:actividades']);
+        $routes->put('actividades/(:num)/estado', 'ActividadesController::estado/$1', ['filter' => 'permiso:actividades']);
+        $routes->post('actividades/(:num)/imagen', 'ActividadesController::subirImagen/$1', ['filter' => 'permiso:actividades']);
+        $routes->delete('actividades/(:num)/imagen', 'ActividadesController::eliminarImagen/$1', ['filter' => 'permiso:actividades']);
 
         $routes->get('oportunidades', 'OportunidadesController::index');
-        $routes->post('oportunidades', 'OportunidadesController::store');
-        $routes->put('oportunidades/(:num)', 'OportunidadesController::update/$1');
-        $routes->put('oportunidades/(:num)/activacion', 'OportunidadesController::activacion/$1');
+        $routes->post('oportunidades', 'OportunidadesController::store', ['filter' => 'permiso:oportunidades']);
+        $routes->put('oportunidades/(:num)', 'OportunidadesController::update/$1', ['filter' => 'permiso:oportunidades']);
+        $routes->put('oportunidades/(:num)/activacion', 'OportunidadesController::activacion/$1', ['filter' => 'permiso:oportunidades']);
 
         $routes->get('reportes', 'ReportesController::index');
-        $routes->get('reportes/csv', 'ReportesController::csv');
-        $routes->get('reportes/excel', 'ReportesController::excel');
-        $routes->get('reportes/pdf', 'ReportesController::pdf');
+        $routes->get('reportes/csv', 'ReportesController::csv', ['filter' => 'permiso:reportes_csv']);
+        $routes->get('reportes/excel', 'ReportesController::excel', ['filter' => 'permiso:reportes']);
+        $routes->get('reportes/pdf', 'ReportesController::pdf', ['filter' => 'permiso:reportes']);
         $routes->get('contrataciones', 'ContratacionesController::index');
     });
 

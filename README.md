@@ -83,6 +83,12 @@ MySQL es la fuente de verdad.
   `seleccionado`, el postulante no puede crear nuevas postulaciones a ninguna
   oferta de esa empresa. Puede seguir postulando a otras empresas. La regla se
   valida en backend y se coordina con bloqueo transaccional del postulante.
+- **Perfiles municipales**: las cuentas con rol `admin` se diferencian mediante
+  `perfil_municipal`: `admin` (administración completa), `moderador` (gestión operativa
+  sin cuentas ni permisos) y `solo_lectura` (consulta sin escritura ni exportaciones
+  masivas). La autorización se valida en backend con `AutorizacionMunicipalService` y el
+  filtro `permiso`; el frontend consume los permisos efectivos de la sesión. El perfil se
+  asigna explícitamente al crear la cuenta y se puede cambiar desde Usuarios (ADMIN).
 - **Reportes**: los dashboards de administración y empresa exportan Excel y PDF por el
   mismo periodo aplicado. El PDF es un documento A4 institucional (azul/blanco, escudo en
   todas las páginas, secciones independientes y numeración) y reutiliza exactamente los
@@ -645,6 +651,11 @@ y [`docs/operaciones.md`](docs/operaciones.md).
   regex/enum/igual`).
 - Auth: JWT (access corto) + refresh token rotativo; el filtro consulta el usuario en
   MySQL en cada request (revocación inmediata al desactivar).
+- Autorización municipal: `rol=admin` conserva el acceso a `/api/admin`; dentro de ese
+  rol, `perfil_municipal` (`admin`, `moderador`, `solo_lectura`) se evalúa en cada request
+  con `AutorizacionMunicipalService` y el filtro `permiso`. Los permisos efectivos se
+  entregan en la sesión; un cambio de perfil invalida de inmediato las facultades de los
+  tokens ya emitidos.
 - Endpoints y esquema documentados en
   [`backend/public/swagger/openapi.yaml`](backend/public/swagger/openapi.yaml) (Swagger UI
   en `backend/public/swagger/`; validación con `backend/docs/_validate_openapi.py`).

@@ -26,7 +26,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 18 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 19 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -86,6 +86,11 @@ la misma oferta produzcan un único registro activo, que una selección y una
 nueva postulación sigan un orden serial consistente y que un retiro concurrente
 con una reactivación termine siempre con el retiro persistido.
 
+`test_perfiles_municipales.sh` cubre la migración `perfil_municipal`, su reversión y
+backfill, la creación de cuentas ADMIN/MODERADOR/SOLO LECTURA, la matriz de permisos,
+los cambios de perfil con tokens vigentes, el bloqueo del último administrador, la
+auditoría y el aislamiento de empresas/postulantes.
+
 `test_reporte_pdf.sh` genera PDF reales (Dompdf) con el backend en Docker y
 verifica MIME, descarga privada, nombre con periodo, contenido institucional,
 logo en todas las páginas, numeración, secciones vacías, validación 422,
@@ -103,7 +108,7 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 `tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
 `SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
 `OfertaCatalogoTest`, `ActividadVencimientoTest`, `ReporteExcelServiceTest`,
-`ReportePdfServiceTest`,
+`ReportePdfServiceTest`, `AutorizacionMunicipalServiceTest`,
 `HtmlSanitizerTest`, `PostulacionAuthorizationTest`, `TerminosTest`,
 `EnlaceActivacionTest` y las pruebas de correo.
 
@@ -120,7 +125,8 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 
 Incluye las pruebas estáticas de documentos legales, catálogo de ubicaciones, uso
 centralizado del logo municipal (sin URLs externas ni favicons antiguos), botones
-y fechas de exportación Excel/PDF, lint y build. La imagen de
+fechas de exportación Excel/PDF, selector de perfil municipal, permisos de UI y rutas
+protegidas, lint y build. La imagen de
 desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
 La ejecución actual reporta **19 advertencias de Oxlint y 0 errores**: 10 de
 `only-export-components`, 7 de `set-state-in-effect` y 2 de `refs`. Son

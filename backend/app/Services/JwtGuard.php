@@ -35,6 +35,11 @@ class JwtGuard
         return $this->usuario?->rol ?? '';
     }
 
+    public function perfilMunicipal(): ?string
+    {
+        return $this->usuario?->perfil_municipal;
+    }
+
     public function nombreCompleto(): string
     {
         return $this->usuario?->nombreCompleto() ?? '';

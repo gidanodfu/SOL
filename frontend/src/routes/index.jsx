@@ -68,7 +68,7 @@ export function Rutas() {
       >
         <Route element={<RutaProtegida roles={[ROLES.ADMIN]}><Outlet /></RutaProtegida>}>
           <Route path="admin/dashboard" element={<DashboardAdmin />} />
-          <Route path="admin/usuarios" element={<UsuariosAdmin />} />
+          <Route path="admin/usuarios" element={<RutaProtegida perfil="admin"><UsuariosAdmin /></RutaProtegida>} />
           <Route path="admin/empresas" element={<EmpresasAdmin />} />
           <Route path="admin/solicitudes-empresa" element={<SolicitudesEmpresaAdmin />} />
           <Route path="admin/ofertas" element={<OfertasAdmin />} />

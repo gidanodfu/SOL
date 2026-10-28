@@ -17,6 +17,7 @@ import {
 } from '../../constants';
 import { TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto, fechaHora, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 // El editor (TiPTap) se carga solo cuando se abre el formulario de actividad.
 const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
@@ -25,6 +26,8 @@ const aLocal = (v) => (v ? String(v).slice(0, 16).replace(' ', 'T') : '');
 const VACIO = { tipo: 'taller', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: 'presencial', organizador: '', enlace: '' };
 
 export default function Actividades() {
+  const { puede } = usePermisosMunicipales();
+  const puedeGestionar = puede('actividades');
   const queryClient = useQueryClient();
   const toast = useToast();
   const [filtros, setFiltros] = useState({ tipo: '', estado: '' });
@@ -37,7 +40,7 @@ export default function Actividades() {
   });
 
   // Precarga el chunk del editor al entrar a la página (no engorda el bundle inicial).
-  useEffect(() => { import('../../components/EditorTextoEnriquecido'); }, []);
+  useEffect(() => { if (puedeGestionar) import('../../components/EditorTextoEnriquecido'); }, [puedeGestionar]);
 
   const refrescar = () => queryClient.invalidateQueries({ queryKey: ['actividades-admin'] });
 
@@ -45,11 +48,11 @@ export default function Actividades() {
     <div>
       <Tarjeta
         titulo="Ferias, eventos, talleres y capacitaciones"
-        acciones={
+        acciones={puedeGestionar ? (
           <Boton variante="acento" onClick={() => setEditor(editor ? null : {})}>
             {editor ? 'Cancelar' : 'Nueva actividad'}
           </Boton>
-        }
+        ) : null}
       >
         <div className="form-fila filtros">
           <Selecto etiqueta="" value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
@@ -65,7 +68,7 @@ export default function Actividades() {
         {data && data.length === 0 && <ListaVacia />}
       </Tarjeta>
 
-      {editor && (!editor.id || editor.fila) && (
+      {puedeGestionar && editor && (!editor.id || editor.fila) && (
         <EditorActividad
           key={editor.id ?? 'nueva'}
           inicial={editor.id ? editor.fila : null}
@@ -106,6 +109,7 @@ export default function Actividades() {
 
       <DetalleActividad
         actividad={seleccionada}
+        puedeGestionar={puedeGestionar}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
         alEditar={(actividad) => { setSeleccionada(null); setEditor({ id: actividad.id, fila: actividad }); }}
@@ -114,7 +118,7 @@ export default function Actividades() {
   );
 }
 
-function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
+function DetalleActividad({ actividad, puedeGestionar, alCerrar, alCambio, alEditar }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
@@ -151,7 +155,7 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
       subtitulo={ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo]}
       alCerrar={alCerrar}
       tamano="ancho"
-      acciones={(
+      acciones={puedeGestionar ? (
         <>
           <Boton variante="gris" onClick={() => alEditar(actividad)}>
             <Pencil size={16} aria-hidden="true" />Editar
@@ -167,7 +171,7 @@ function DetalleActividad({ actividad, alCerrar, alCambio, alEditar }) {
             </Boton>
           ))}
         </>
-      )}
+      ) : null}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <Estado valor={estadoEfectivo} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />

@@ -11,12 +11,15 @@ import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, KeyRound, Power } from 'lucide-react';
 import { errorApi, fecha, fechaCalendario, soloDigitos, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 import PasswordRequirements from '../../components/PasswordRequirements';
 import { passwordCumple } from '../../utils/password';
 
 const estadosEmpresa = { activo: 'activo', inactivo: 'inactivo' };
 
 export default function Empresas() {
+  const { puede } = usePermisosMunicipales();
+  const puedeGestionar = puede('empresas');
   const queryClient = useQueryClient();
   const toast = useToast();
   const { pedirTexto } = useDialogo();
@@ -67,15 +70,15 @@ export default function Empresas() {
   return (
     <Tarjeta
       titulo="Empresas afiliadas"
-      acciones={
+      acciones={puedeGestionar ? (
         <Boton variante="acento" onClick={() => setMostrarNuevo((v) => !v)}>
           {mostrarNuevo ? 'Cancelar' : 'Registrar empresa'}
         </Boton>
-      }
+      ) : null}
     >
       {nota && <Mensaje tipo="exito">{nota}</Mensaje>}
 
-      {mostrarNuevo && (
+      {puedeGestionar && mostrarNuevo && (
         <NuevaEmpresa
           alCrear={(datos) => {
             setMostrarNuevo(false);
@@ -134,10 +137,14 @@ export default function Empresas() {
                       <Boton variante="gris" onClick={() => setSeleccionada(e)}>
                         <Eye size={16} aria-hidden="true" />Ver
                       </Boton>
-                      <Boton variante={e.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => alternar(e)} disabled={enviando}>
-                        {e.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                      </Boton>
-                      <Boton variante="gris" onClick={() => resetPassword(e)} disabled={enviando}>Cambiar clave</Boton>
+                      {puedeGestionar && (
+                        <>
+                          <Boton variante={e.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => alternar(e)} disabled={enviando}>
+                            {e.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                          </Boton>
+                          <Boton variante="gris" onClick={() => resetPassword(e)} disabled={enviando}>Cambiar clave</Boton>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -153,6 +160,7 @@ export default function Empresas() {
 
       <DetalleEmpresa
         empresa={seleccionada}
+        puedeGestionar={puedeGestionar}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
       />
@@ -160,7 +168,7 @@ export default function Empresas() {
   );
 }
 
-function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
+function DetalleEmpresa({ empresa, puedeGestionar, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
   const toast = useToast();
   const { pedirTexto } = useDialogo();
@@ -206,7 +214,7 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
       subtitulo={`${empresa.nombre_comercial || 'Empresa afiliada'} · RUC ${empresa.ruc}`}
       alCerrar={alCerrar}
       tamano="ancho"
-      acciones={(
+      acciones={puedeGestionar ? (
         <>
           <Boton variante={empresa.estado === 'activo' ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
             <Power size={16} aria-hidden="true" />{empresa.estado === 'activo' ? 'Desactivar' : 'Activar'}
@@ -215,7 +223,7 @@ function DetalleEmpresa({ empresa, alCerrar, alCambio }) {
             <KeyRound size={16} aria-hidden="true" />Cambiar clave
           </Boton>
         </>
-      )}
+      ) : null}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <Estado valor={empresa.estado} diccionario={estadosEmpresa} />

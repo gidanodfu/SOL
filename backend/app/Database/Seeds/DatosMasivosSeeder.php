@@ -78,6 +78,7 @@ class DatosMasivosSeeder extends Seeder
                 'username'      => sprintf('muni%02d', $i),
                 'password_hash' => $hash(self::PASSWORD_ADMIN),
                 'rol'           => 'admin',
+                'perfil_municipal' => 'admin',
                 'nombres'       => $nombre,
                 'apellidos'     => $apellidos[array_rand($apellidos)] . ' ' . $apellidos[array_rand($apellidos)],
                 'email'         => sprintf('muni%02d@mdjlo-ficticio.pe', $i),

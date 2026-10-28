@@ -86,6 +86,7 @@ class UsuarioService
             'email'     => ['email', 'max:150'],
             'telefono'  => ['telefono'],
             'password'  => ['required', 'password'],
+            'perfil_municipal' => ['required', 'enum:admin,moderador,solo_lectura'],
         ]);
 
         if ($this->users->buscarPorUsername($datos['username']) !== null) {
@@ -102,6 +103,7 @@ class UsuarioService
                 'username'      => $datos['username'],
                 'password_hash' => password_hash($datos['password'], PASSWORD_DEFAULT),
                 'rol'           => 'admin',
+                'perfil_municipal' => $datos['perfil_municipal'],
                 'nombres'       => $datos['nombres'],
                 'apellidos'     => $datos['apellidos'],
                 'email'         => $datos['email'],
@@ -129,7 +131,10 @@ class UsuarioService
             throw $e;
         }
 
-        $this->auditoria->registrar($adminId, 'crear_usuario', 'user', $id, ['username' => $datos['username']]);
+        $this->auditoria->registrar($adminId, 'crear_usuario', 'user', $id, [
+            'username' => $datos['username'],
+            'perfil_municipal' => $datos['perfil_municipal'],
+        ]);
 
         return $id;
     }
@@ -203,9 +208,21 @@ class UsuarioService
             return;
         }
 
+        $protegeUltimoAdmin = $usuario->rol === 'admin'
+            && $usuario->perfil_municipal === AutorizacionMunicipalService::ADMIN
+            && $usuario->estado === 'activo'
+            && $estado === 'inactivo';
+
         // Usuario y empresa asociada se actualizan juntos: un fallo parcial dejaría
         // el estado de bloqueo desincronizado (RF-16/RN-11).
         $this->users->db->transStart();
+        if ($protegeUltimoAdmin) {
+            if ($this->bloquearAdministradoresActivos() <= 1) {
+                $this->users->db->transRollback();
+                throw ApiException::conflicto('No se puede desactivar al último administrador activo.');
+            }
+        }
+
         $this->users->update($id, ['estado' => $estado]);
 
         // Sincroniza el estado de la empresa asociada: una empresa inactiva tampoco
@@ -219,7 +236,51 @@ class UsuarioService
             throw ApiException::conflicto('No se pudo actualizar el estado del usuario.');
         }
 
-        $this->auditoria->registrar($adminId, $estado === 'activo' ? 'activar_usuario' : 'desactivar_usuario', 'user', $id);
+        $this->auditoria->registrar(
+            $adminId,
+            $estado === 'activo' ? 'activar_usuario' : 'desactivar_usuario',
+            'user',
+            $id,
+            ['estado' => $estado],
+        );
+    }
+
+    public function cambiarPerfil(int $adminId, int $id, string $perfil): void
+    {
+        $usuario = $this->exigirExistente($id);
+        if ($usuario->rol !== 'admin') {
+            throw ApiException::validacion('Solo las cuentas municipales tienen perfil municipal.');
+        }
+
+        Validador::validar(['perfil_municipal' => $perfil], [
+            'perfil_municipal' => ['required', 'enum:admin,moderador,solo_lectura'],
+        ]);
+
+        if ($usuario->perfil_municipal === $perfil) {
+            return;
+        }
+
+        $this->users->db->transStart();
+        if ($usuario->perfil_municipal === AutorizacionMunicipalService::ADMIN
+            && $usuario->estado === 'activo'
+            && $perfil !== AutorizacionMunicipalService::ADMIN) {
+            if ($this->bloquearAdministradoresActivos() <= 1) {
+                $this->users->db->transRollback();
+                throw ApiException::conflicto('No se puede degradar al último administrador activo.');
+            }
+        }
+
+        $this->users->update($id, ['perfil_municipal' => $perfil]);
+        $this->users->db->transComplete();
+        if (! $this->users->db->transStatus()) {
+            $this->users->db->transRollback();
+            throw ApiException::conflicto('No se pudo actualizar el perfil municipal.');
+        }
+
+        $this->auditoria->registrar($adminId, 'cambiar_perfil_municipal', 'user', $id, [
+            'anterior' => $usuario->perfil_municipal,
+            'nuevo'    => $perfil,
+        ]);
     }
 
     public function resetearContrasena(int $adminId, int $id, string $password): void
@@ -235,6 +296,15 @@ class UsuarioService
 
         $this->users->update($id, ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
         $this->auditoria->registrar($adminId, 'resetear_contrasena', 'user', $id);
+    }
+
+    private function bloquearAdministradoresActivos(): int
+    {
+        $tabla = $this->users->db->prefixTable('users');
+
+        return count($this->users->db
+            ->query("SELECT id FROM {$tabla} WHERE rol = 'admin' AND perfil_municipal = 'admin' AND estado = 'activo' FOR UPDATE")
+            ->getResultArray());
     }
 
     private function exigirExistente(int $id): Usuario
@@ -256,6 +326,7 @@ class UsuarioService
             'id'            => $usuario->id,
             'username'      => $usuario->username,
             'rol'           => $usuario->rol,
+            'perfil_municipal' => $usuario->perfil_municipal,
             'nombres'       => $usuario->nombres,
             'apellidos'     => $usuario->apellidos,
             'email'         => $usuario->email,

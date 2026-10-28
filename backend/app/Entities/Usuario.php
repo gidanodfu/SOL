@@ -20,6 +20,7 @@ class Usuario extends Entity
         'id'        => 'integer',
         'username'  => 'string',
         'rol'       => 'string',
+        'perfil_municipal' => '?string',
         'proveedor' => 'string',
         'nombres'   => 'string',
         'apellidos' => 'string',

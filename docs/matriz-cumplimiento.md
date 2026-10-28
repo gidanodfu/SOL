@@ -12,9 +12,9 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-02 Auth en backend CI4 vs MySQL | ✔ | `Services/AuthService`, `UserModel` |
 | RF-03 MySQL fuente de verdad | ✔ | JWT solo transporta id; rol/estado se recargan de BD (`JwtAuthFilter`) |
 | RF-04 Rol desde BD, no elegible | ✔ | columna `users.rol`; no editable por frontend |
-| RF-05 Control de acceso | ✔ | filtros `jwt` + `rol:...` por ruta |
+| RF-05 Control de acceso | ✔ | filtros `jwt` + `rol:...` + `permiso:...` por ruta |
 | RF-06 Cuentas activo/inactivo | ✔ | login bloqueado; admin activa/desactiva (`UsuariosController`, `EmpresasController`) |
-| RF-07 Administración de usuarios | ✔ | `api/admin/usuarios*` · Usuarios (admin); un admin **no puede desactivar su propia cuenta** (`UsuarioService::cambiarEstado`, 403) |
+| RF-07 Administración de usuarios | ✔ | `api/admin/usuarios*` · Usuarios (ADMIN); perfiles `admin/moderador/solo_lectura`; no autodesactivación ni degradación del último admin |
 | RF-08 Empresas se registran por solicitud pública + aprobación municipal | ✔ | `POST /api/solicitudes-empresa` · `api/admin/solicitudes-empresa*` (auto-registro con verificación de RUC) |
 | RF-09 Evaluación presencial | ⬤ | asumida en la aprobación de la solicitud (`evaluacion_presencial=1`) |
 | RF-10 Perfil de empresa | ✔ | CRUD admin + auto-edición de la empresa (`empresa/perfil`) |

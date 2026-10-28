@@ -55,6 +55,18 @@ class UsuariosController extends BaseApiController
         return $this->sinContenido('Estado del usuario actualizado.');
     }
 
+    public function perfil($id)
+    {
+        $cuerpo = $this->cuerpo();
+        (new UsuarioService())->cambiarPerfil(
+            service('guard')->id(),
+            (int) $id,
+            (string) ($cuerpo['perfil_municipal'] ?? ''),
+        );
+
+        return $this->sinContenido('Perfil municipal actualizado.');
+    }
+
     public function resetPassword($id)
     {
         $cuerpo = $this->cuerpo();

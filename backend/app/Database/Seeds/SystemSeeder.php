@@ -61,12 +61,20 @@ class SystemSeeder extends Seeder
                 );
             }
 
+            if (empty($existente['perfil_municipal'])) {
+                $this->db->table('users')->where('id', (int) $existente['id'])->update([
+                    'perfil_municipal' => 'admin',
+                    'updated_at'       => $now,
+                ]);
+            }
+
             echo "SystemSeeder: el administrador '{$username}' ya existe; no se modificó su contraseña.\n";
         } else {
             $this->db->table('users')->insert([
                 'username'      => $username,
                 'password_hash' => password_hash($password, PASSWORD_DEFAULT),
                 'rol'           => 'admin',
+                'perfil_municipal' => 'admin',
                 'proveedor'     => 'local',
                 'nombres'       => 'Administrador',
                 'apellidos'     => 'Municipal',
@@ -79,6 +87,7 @@ class SystemSeeder extends Seeder
             if (
                 $creado === null
                 || ($creado['rol'] ?? '') !== 'admin'
+                || ($creado['perfil_municipal'] ?? '') !== 'admin'
                 || ($creado['estado'] ?? '') !== 'activo'
                 || ($creado['proveedor'] ?? '') !== 'local'
                 || empty($creado['password_hash'])

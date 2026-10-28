@@ -2,30 +2,36 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  cambiarEstadoUsuario, crearUsuario, listarUsuarios, resetPasswordUsuario,
+  cambiarEstadoUsuario, cambiarPerfilUsuario, crearUsuario, listarUsuarios, resetPasswordUsuario,
 } from '../../services/usuarios';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
 import { useToast, useDialogo } from '../../components/Feedbacks';
-import { Eye, KeyRound, Power } from 'lucide-react';
-import { ETIQUETA_ROL } from '../../constants';
+import { Eye, KeyRound, Power, UserCog } from 'lucide-react';
+import {
+  ETIQUETA_PERFIL_MUNICIPAL, ETIQUETA_ROL, ORDEN_PERFILES_MUNICIPALES, PERFILES_MUNICIPALES,
+} from '../../constants';
 import { errorApi, fechaHora, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 import { useAuth } from '../../context/AuthContext';
 import PasswordRequirements from '../../components/PasswordRequirements';
 import { passwordCumple } from '../../utils/password';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 const estadosUsuarios = { activo: 'activo', inactivo: 'inactivo' };
 
 export default function Usuarios() {
   const queryClient = useQueryClient();
-  const { usuario: usuarioActual } = useAuth();
+  const { usuario: usuarioActual, refrescarUsuario } = useAuth();
+  const { puede } = usePermisosMunicipales();
+  const puedeGestionar = puede('usuarios');
   const toast = useToast();
   const { pedirTexto } = useDialogo();
   const [filtros, setFiltros] = useState({ rol: '', estado: '', q: '' });
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [seleccionado, setSeleccionado] = useState(null);
+  const [perfilUsuario, setPerfilUsuario] = useState(null);
   const { ejecutar, enviando, error, setError } = useAccion(async (fn) => fn());
 
   const { data, isLoading } = useQuery({
@@ -69,13 +75,13 @@ export default function Usuarios() {
   return (
     <Tarjeta
       titulo="Usuarios del sistema"
-      acciones={
+      acciones={puedeGestionar ? (
         <Boton variante="acento" onClick={() => setMostrarNuevo((v) => !v)}>
           {mostrarNuevo ? 'Cancelar' : 'Nuevo usuario municipal'}
         </Boton>
-      }
+      ) : null}
     >
-      {mostrarNuevo && <NuevoUsuario alCrear={() => { setMostrarNuevo(false); refrescar(); }} />}
+      {puedeGestionar && mostrarNuevo && <NuevoUsuario alCrear={() => { setMostrarNuevo(false); refrescar(); }} />}
 
       <div className="form-fila filtros">
         <input placeholder="Buscar por usuario, nombre o empresa…" value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value })} />
@@ -102,6 +108,7 @@ export default function Usuarios() {
                 <th className="col-identificador">Usuario</th>
                 <th>Nombre</th>
                 <th>Rol</th>
+                <th>Perfil municipal</th>
                 <th>Estado</th>
                 <th className="col-fecha">Último acceso</th>
                 <th className="col-acciones">Acciones</th>
@@ -113,6 +120,11 @@ export default function Usuarios() {
                   <td className="col-identificador" data-label="Usuario"><strong>{u.username}</strong></td>
                   <td data-label="Nombre">{u.rol === 'empresa' ? (u.razon_social || '—') : `${u.nombres} ${u.apellidos}`}</td>
                   <td data-label="Rol"><Estado valor={u.rol} diccionario={ETIQUETA_ROL} /></td>
+                  <td data-label="Perfil municipal">
+                    {u.rol === 'admin' && u.perfil_municipal
+                      ? <Estado valor={u.perfil_municipal} diccionario={ETIQUETA_PERFIL_MUNICIPAL} />
+                      : <span style={{ color: 'var(--text-3)' }}>—</span>}
+                  </td>
                   <td data-label="Estado"><Estado valor={u.estado} diccionario={estadosUsuarios} /></td>
                   <td className="col-fecha" data-label="Último acceso">{fechaHora(u.ultimo_acceso)}</td>
                   <td className="col-acciones">
@@ -120,14 +132,23 @@ export default function Usuarios() {
                       <Boton variante="gris" onClick={() => setSeleccionado(u)}>
                         <Eye size={16} aria-hidden="true" />Ver
                       </Boton>
-                      {/* Un administrador no puede desactivar su propia cuenta (el backend también lo impide). */}
-                      {u.id !== usuarioActual?.id && (
-                        <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
-                          {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                      {puedeGestionar && u.rol === 'admin' && (
+                        <Boton variante="gris" onClick={() => setPerfilUsuario(u)}>
+                          <UserCog size={16} aria-hidden="true" />Perfil
                         </Boton>
                       )}
-                      {u.proveedor !== 'google' && (
-                        <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
+                      {puedeGestionar && (
+                        <>
+                          {/* Un administrador no puede desactivar su propia cuenta (el backend también lo impide). */}
+                          {u.id !== usuarioActual?.id && (
+                            <Boton variante={u.estado === 'activo' ? 'peligro' : 'exito'} onClick={() => accionEstado(u)} disabled={enviando}>
+                              {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                            </Boton>
+                          )}
+                          {u.proveedor !== 'google' && (
+                            <Boton variante="gris" onClick={() => resetPassword(u)} disabled={enviando}>Cambiar clave</Boton>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
@@ -144,14 +165,28 @@ export default function Usuarios() {
       <DetalleUsuario
         usuario={seleccionado}
         propio={seleccionado?.id === usuarioActual?.id}
+        puedeGestionar={puedeGestionar}
+        alCambiarPerfil={() => { setSeleccionado(null); setPerfilUsuario(seleccionado); }}
         alCerrar={() => setSeleccionado(null)}
         alCambio={(mensaje) => { setError(null); if (mensaje) toast.success(mensaje); refrescar(); }}
+      />
+
+      <CambiarPerfilModal
+        key={perfilUsuario?.id || 'sin-perfil'}
+        usuario={perfilUsuario}
+        alCerrar={() => setPerfilUsuario(null)}
+        alCambiado={(mensaje) => {
+          setPerfilUsuario(null);
+          toast.success(mensaje);
+          refrescar();
+          if (perfilUsuario?.id === usuarioActual?.id) refrescarUsuario();
+        }}
       />
     </Tarjeta>
   );
 }
 
-function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
+function DetalleUsuario({ usuario, propio, puedeGestionar, alCambiarPerfil, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
   const toast = useToast();
   const { pedirTexto } = useDialogo();
@@ -197,8 +232,13 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
       subtitulo={`Usuario ${usuario.username} · ${ETIQUETA_ROL[usuario.rol] || usuario.rol}`}
       alCerrar={alCerrar}
       tamano="ancho"
-      acciones={(
+      acciones={puedeGestionar ? (
         <>
+          {usuario.rol === 'admin' && (
+            <Boton variante="gris" onClick={alCambiarPerfil}>
+              <UserCog size={16} aria-hidden="true" />Cambiar perfil
+            </Boton>
+          )}
           {!propio && (
             <Boton variante={usuario.estado === 'activo' ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
               <Power size={16} aria-hidden="true" />{usuario.estado === 'activo' ? 'Desactivar' : 'Activar'}
@@ -214,7 +254,7 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
             </Boton>
           )}
         </>
-      )}
+      ) : null}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <Estado valor={usuario.rol} diccionario={ETIQUETA_ROL} />
@@ -227,6 +267,10 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
       <FichaDatos
         items={[
           { etiqueta: 'Usuario', valor: usuario.username },
+          {
+            etiqueta: 'Perfil municipal',
+            valor: usuario.rol === 'admin' ? (ETIQUETA_PERFIL_MUNICIPAL[usuario.perfil_municipal] || 'Sin perfil') : '—',
+          },
           { etiqueta: 'Correo', valor: usuario.email },
           { etiqueta: 'Teléfono', valor: usuario.telefono },
           { etiqueta: 'Proveedor de acceso', valor: usuario.proveedor === 'google' ? 'Google' : 'Local' },
@@ -240,13 +284,19 @@ function DetalleUsuario({ usuario, propio, alCerrar, alCambio }) {
 }
 
 function NuevoUsuario({ alCrear }) {
-  const [form, setForm] = useState({ username: '', nombres: '', apellidos: '', email: '', telefono: '', password: '' });
+  const [form, setForm] = useState({
+    username: '', nombres: '', apellidos: '', email: '', telefono: '', password: '', perfil_municipal: '',
+  });
   const [error, setError] = useState(null);
+  const [perfilError, setPerfilError] = useState(null);
   const [intentoPassword, setIntentoPassword] = useState(false);
   const { ejecutar, enviando } = useAccion(() => crearUsuario(form));
 
   const enviar = async () => {
     setIntentoPassword(true);
+    const faltaPerfil = !PERFILES_MUNICIPALES[form.perfil_municipal];
+    setPerfilError(faltaPerfil ? 'Seleccione un perfil municipal.' : null);
+    if (faltaPerfil) return;
     if (!passwordCumple(form.password)) {
       setError('La contraseña no cumple los requisitos de seguridad.');
       return;
@@ -255,14 +305,31 @@ function NuevoUsuario({ alCrear }) {
       await ejecutar();
       alCrear();
     } catch (e) {
-      setError(errorApi(e));
+      const det = e?.response?.data?.errors;
+      setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
     }
   };
 
   return (
     <section style={{ border: '1px solid var(--borde)', borderRadius: 'var(--radius-lg)', padding: '1rem', margin: '1rem 0' }}>
-      <h3>Nuevo personal municipal (acceso administrador)</h3>
+      <h3>Nuevo personal municipal</h3>
+      <p className="tarjeta-sub">
+        El perfil municipal determina las operaciones que podrá realizar. El backend valida
+        nuevamente el perfil y cada acción protegida.
+      </p>
       <Mensaje>{error}</Mensaje>
+
+      <SelectorPerfil
+        valor={form.perfil_municipal}
+        onChange={(perfil) => {
+          setForm({ ...form, perfil_municipal: perfil });
+          setPerfilError(null);
+          setError(null);
+        }}
+        error={perfilError}
+        idPrefix="perfil-nuevo"
+      />
+
       <div className="form-malla">
         <Campo etiqueta="Usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
         <div><Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setError(null); }} /><PasswordRequirements password={form.password} intento={intentoPassword} /></div>
@@ -273,5 +340,93 @@ function NuevoUsuario({ alCrear }) {
       </div>
       <Boton variante="primario" cargando={enviando} onClick={enviar}>Crear usuario</Boton>
     </section>
+  );
+}
+
+function SelectorPerfil({ valor, onChange, error = null, idPrefix = 'perfil' }) {
+  return (
+    <fieldset
+      className={`perfil-selector${error ? ' con-error' : ''}`}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? `${idPrefix}-error` : undefined}
+    >
+      <legend>Perfil municipal <span aria-hidden="true">*</span></legend>
+      <div className="perfil-opciones">
+        {ORDEN_PERFILES_MUNICIPALES.map((clave) => {
+          const opcion = PERFILES_MUNICIPALES[clave];
+          return (
+            <label key={clave} className={`perfil-opcion${valor === clave ? ' seleccionado' : ''}`}>
+              <input
+                type="radio"
+                name={idPrefix}
+                value={clave}
+                checked={valor === clave}
+                onChange={() => onChange(clave)}
+                required
+              />
+              <span className="perfil-opcion-texto">
+                <strong>{opcion.etiqueta}</strong>
+                <small>{opcion.descripcion}</small>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      {error && <span id={`${idPrefix}-error`} className="campo-mensaje" role="alert">{error}</span>}
+    </fieldset>
+  );
+}
+
+function CambiarPerfilModal({ usuario, alCerrar, alCambiado }) {
+  const [perfil, setPerfil] = useState(usuario?.perfil_municipal || '');
+  const [error, setError] = useState(null);
+  const { ejecutar, enviando } = useAccion(() => cambiarPerfilUsuario(usuario.id, perfil));
+
+  if (!usuario) return null;
+
+  const anterior = ETIQUETA_PERFIL_MUNICIPAL[usuario.perfil_municipal] || 'Sin perfil';
+  const nuevo = ETIQUETA_PERFIL_MUNICIPAL[perfil] || 'Seleccione un perfil';
+  const sinCambio = !perfil || perfil === usuario.perfil_municipal;
+
+  const confirmar = async () => {
+    if (sinCambio) return;
+    try {
+      await ejecutar();
+      alCambiado(`Perfil actualizado a ${nuevo}.`);
+    } catch (e) {
+      setError(errorApi(e));
+    }
+  };
+
+  return (
+    <Modal
+      abierto
+      titulo="Cambiar perfil municipal"
+      subtitulo={`Usuario ${usuario.username} · Perfil actual: ${anterior}`}
+      alCerrar={alCerrar}
+      acciones={(
+        <>
+          <Boton variante="gris" onClick={alCerrar}>Cancelar</Boton>
+          <Boton variante="primario" cargando={enviando} onClick={confirmar} disabled={sinCambio}>
+            Guardar cambio
+          </Boton>
+        </>
+      )}
+    >
+      <p className="perfil-cambio-resumen">
+        Perfil actual: <strong>{anterior}</strong>
+        {!sinCambio && <> → Nuevo perfil: <strong>{nuevo}</strong></>}
+      </p>
+      <Mensaje>{error}</Mensaje>
+      <SelectorPerfil
+        valor={perfil}
+        onChange={(nuevoPerfil) => { setPerfil(nuevoPerfil); setError(null); }}
+        idPrefix="perfil-cambio"
+      />
+      <p className="nota-perfil">
+        El cambio se aplica en las siguientes solicitudes de la cuenta. Si el sistema quedara
+        sin otro administrador activo, el backend rechazará la operación.
+      </p>
+    </Modal>
   );
 }

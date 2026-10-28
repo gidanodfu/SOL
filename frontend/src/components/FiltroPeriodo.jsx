@@ -14,6 +14,7 @@ export default function FiltroPeriodo({
   onLimpiar,
   onExportar,
   onExportarPdf,
+  mostrarExportaciones = true,
   exportando = false,
   exportandoPdf = false,
   errorExportar = null,
@@ -52,26 +53,30 @@ export default function FiltroPeriodo({
         <div className="filters-acciones">
           <button className="filter-button" type="button" onClick={onAplicar}>Aplicar filtros</button>
           <button className="filter-button limpiar" type="button" onClick={onLimpiar}>Limpiar filtros</button>
-          <button
-            className="filter-button exportar"
-            type="button"
-            onClick={onExportar}
-            disabled={exportando}
-            aria-busy={exportando}
-          >
-            <Download size={16} aria-hidden="true" />
-            {exportando ? 'Generando…' : 'Exportar Excel'}
-          </button>
-          <button
-            className="filter-button exportar pdf"
-            type="button"
-            onClick={onExportarPdf}
-            disabled={exportandoPdf}
-            aria-busy={exportandoPdf}
-          >
-            <FileText size={16} aria-hidden="true" />
-            {exportandoPdf ? 'Generando…' : 'Exportar PDF'}
-          </button>
+          {mostrarExportaciones && (
+            <>
+              <button
+                className="filter-button exportar"
+                type="button"
+                onClick={onExportar}
+                disabled={exportando}
+                aria-busy={exportando}
+              >
+                <Download size={16} aria-hidden="true" />
+                {exportando ? 'Generando…' : 'Exportar Excel'}
+              </button>
+              <button
+                className="filter-button exportar pdf"
+                type="button"
+                onClick={onExportarPdf}
+                disabled={exportandoPdf}
+                aria-busy={exportandoPdf}
+              >
+                <FileText size={16} aria-hidden="true" />
+                {exportandoPdf ? 'Generando…' : 'Exportar PDF'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
