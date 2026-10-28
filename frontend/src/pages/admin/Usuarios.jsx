@@ -330,13 +330,20 @@ function NuevoUsuario({ alCrear }) {
         idPrefix="perfil-nuevo"
       />
 
-      <div className="form-malla">
+      <div className="form-malla form-malla-usuario">
         <Campo etiqueta="Usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-        <div><Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setError(null); }} /><PasswordRequirements password={form.password} intento={intentoPassword} /></div>
+        <Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setError(null); }} />
         <Campo etiqueta="Nombres" value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} />
         <Campo etiqueta="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
         <Campo etiqueta="Correo" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
+        <div className="form-usuario-inferior">
+          <div className="form-usuario-telefono">
+            <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
+          </div>
+          <div className="form-usuario-requisitos">
+            <PasswordRequirements password={form.password} intento={intentoPassword} />
+          </div>
+        </div>
       </div>
       <Boton variante="primario" cargando={enviando} onClick={enviar}>Crear usuario</Boton>
     </section>

@@ -73,3 +73,16 @@ test('el servicio de cambio de perfil usa el endpoint explícito', () => {
   assert.match(servicio, /\/admin\/usuarios\/\$\{id\}\/perfil/);
   assert.match(servicio, /perfil_municipal/);
 });
+
+test('el formulario municipal alinea Teléfono con Usuario y los requisitos con Contraseña', () => {
+  const usuarios = leer('src/pages/admin/Usuarios.jsx');
+  const estilos = leer('src/styles.css');
+
+  assert.match(usuarios, /form-malla form-malla-usuario/);
+  assert.match(usuarios, /form-usuario-inferior/);
+  assert.match(usuarios, /form-usuario-telefono[\s\S]*etiqueta="Teléfono"[\s\S]*form-usuario-requisitos[\s\S]*PasswordRequirements/);
+  assert.match(estilos, /\.form-malla\.form-malla-usuario\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(estilos, /\.form-usuario-inferior\s*\{[^}]*grid-column:\s*1\s*\/\s*-1[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)[^}]*gap:\s*0\s+1rem/s);
+  assert.match(estilos, /\.form-usuario-telefono\s*\{[^}]*grid-column:\s*1;[^}]*width:\s*100%/s);
+  assert.match(estilos, /\.form-usuario-requisitos\s*\{[^}]*grid-column:\s*2\s*\/\s*4/s);
+});
