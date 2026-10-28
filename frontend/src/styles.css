@@ -797,6 +797,51 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .form-malla { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 1rem; }
 .form-fila { display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap; }
 
+/* Formulario de alta municipal: cinco campos en la fila principal y, debajo,
+   Teléfono en la columna de «Usuario» y los requisitos de contraseña en la de
+   «Contraseña inicial». La fila secundaria replica las columnas de la fila
+   superior para que ambos bloques queden alineados. */
+.form-malla.form-malla-usuario {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.form-usuario-inferior {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0 1rem;
+  align-items: start;
+}
+.form-usuario-telefono {
+  grid-column: 1;
+  min-width: 0;
+  width: 100%;
+}
+.form-usuario-telefono .campo { margin-bottom: 0.9rem; }
+.form-usuario-requisitos {
+  grid-column: 2 / 4;
+  min-width: 0;
+}
+.form-usuario-requisitos .password-requisitos { margin-top: 0; }
+
+@media (max-width: 1180px) {
+  .form-malla.form-malla-usuario { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .form-usuario-inferior { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .form-usuario-requisitos { grid-column: 2 / 4; }
+}
+
+@media (max-width: 760px) {
+  .form-malla.form-malla-usuario { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-usuario-inferior { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-usuario-requisitos { grid-column: 2 / 3; }
+}
+
+@media (max-width: 520px) {
+  .form-malla.form-malla-usuario { grid-template-columns: 1fr; }
+  .form-usuario-inferior { grid-template-columns: 1fr; }
+  .form-usuario-telefono,
+  .form-usuario-requisitos { grid-column: auto; }
+}
+
 /* Layout semántico del formulario de actividades (una sola superficie) */
 .form-actividad-basica {
   display: grid;
