@@ -34,6 +34,7 @@ class DatosPruebaSeeder extends Seeder
                 'username'      => 'admin',
                 'password_hash' => password_hash('Admin123!', PASSWORD_DEFAULT),
                 'rol'           => 'admin',
+                'perfil_municipal' => 'admin',
                 'proveedor'     => 'local',
                 'nombres'       => 'Administrador',
                 'apellidos'     => 'Municipal',
@@ -55,6 +56,12 @@ class DatosPruebaSeeder extends Seeder
                 ]);
             }
         }
+
+        $this->asegurarPerfilMunicipal($adminId, 'admin');
+
+        // --------------------------------- perfiles municipales de prueba
+        $this->crearMunicipalPrueba('moderador', 'Moderador123!', 'moderador', 'Moderador', 'Municipal');
+        $this->crearMunicipalPrueba('lectura', 'Lectura123!', 'solo_lectura', 'Consulta', 'Municipal');
 
         // ------------------------------------------------ empresa de prueba
         $empresaUserId = $this->usuarioId('20601234567');
@@ -190,7 +197,42 @@ class DatosPruebaSeeder extends Seeder
             ]);
         }
 
-        echo "DatosPruebaSeeder: fixtures de prueba listos (admin, empresa, postulante, oferta).\n";
+        echo "DatosPruebaSeeder: fixtures de prueba listos (admin, moderador, solo lectura, empresa, postulante, oferta).\n";
+    }
+
+    private function crearMunicipalPrueba(string $username, string $password, string $perfil, string $nombres, string $apellidos): void
+    {
+        $id = $this->usuarioId($username);
+        if ($id === null) {
+            $now = date('Y-m-d H:i:s');
+            $this->db->table('users')->insert([
+                'username'          => $username,
+                'password_hash'     => password_hash($password, PASSWORD_DEFAULT),
+                'rol'               => 'admin',
+                'perfil_municipal'  => $perfil,
+                'proveedor'         => 'local',
+                'nombres'           => $nombres,
+                'apellidos'         => $apellidos,
+                'estado'            => 'activo',
+                'created_at'        => $now,
+                'updated_at'        => $now,
+            ]);
+
+            return;
+        }
+
+        $this->asegurarPerfilMunicipal($id, $perfil);
+    }
+
+    private function asegurarPerfilMunicipal(int $id, string $perfil): void
+    {
+        $fila = $this->db->table('users')->select('perfil_municipal')->where('id', $id)->get()->getRowArray();
+        if ($fila !== null && empty($fila['perfil_municipal'])) {
+            $this->db->table('users')->where('id', $id)->update([
+                'perfil_municipal' => $perfil,
+                'updated_at'       => date('Y-m-d H:i:s'),
+            ]);
+        }
     }
 
     private function usuarioId(string $username): ?int

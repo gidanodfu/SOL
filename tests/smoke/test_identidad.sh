@@ -49,7 +49,7 @@ esperar 'solicitud: RUC existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"
 esperar 'solicitud: correo existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20999999999","email":"admin@mdjlo.gob.pe","telefono":"999888774","representante":"Prueba","terms_accepted":true}'
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and d.get("data",{}).get("access_token"), "FAIL login admin";print(d["data"]["access_token"])')
-esperar 'admin: alta usuario con correo existente' 409 POST '/api/admin/usuarios' '{"username":"prueba.identidad","nombres":"Prueba","apellidos":"Identidad","email":"admin@mdjlo.gob.pe","telefono":"988777111","password":"Clave123!"}' "Authorization: Bearer $TA"
+esperar 'admin: alta usuario con correo existente' 409 POST '/api/admin/usuarios' '{"username":"prueba.identidad","nombres":"Prueba","apellidos":"Identidad","email":"admin@mdjlo.gob.pe","telefono":"988777111","password":"Clave123!","perfil_municipal":"admin"}' "Authorization: Bearer $TA"
 esperar 'admin: alta empresa con RUC existente' 409 POST '/api/admin/empresas' '{"ruc":"20601234567","razon_social":"Duplicada SAC","password":"Clave123!","evaluacion_presencial":true}' "Authorization: Bearer $TA"
 
 [ "$fallos" -eq 0 ] || exit 1

@@ -14,9 +14,11 @@ import {
   Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePermisosMunicipales } from '../hooks/usePermisosMunicipales';
 import Sidebar from '../components/Sidebar';
 import { useSidebarColapsado } from '../hooks/useSidebarColapsado';
 import { pendientesAdmin } from '../services/dashboard';
+import { ETIQUETA_PERFIL_MUNICIPAL } from '../constants';
 
 const GRUPOS = [
   {
@@ -68,8 +70,13 @@ const TITULO_POR_RUTA = {
 
 export function LayoutAdmin() {
   const { usuario } = useAuth();
+  const { perfil, puede } = usePermisosMunicipales();
   const { pathname } = useLocation();
   const { colapsado, alternar } = useSidebarColapsado();
+  const grupos = GRUPOS.map((grupo) => ({
+    ...grupo,
+    items: grupo.items.filter((item) => item.to !== '/admin/usuarios' || puede('usuarios')),
+  }));
 
   // Indicadores de atención pendiente (conteos reales), sin sistema de leídos.
   const { data: pendientes } = useQuery({
@@ -94,8 +101,8 @@ export function LayoutAdmin() {
     <div className={`app-admin${colapsado ? ' colapsado' : ''}`}>
       <Sidebar
         marca={MARCA}
-        grupos={GRUPOS}
-        usuario={{ nombre, rol: 'Municipalidad', respaldo: 'AD' }}
+        grupos={grupos}
+        usuario={{ nombre, rol: ETIQUETA_PERFIL_MUNICIPAL[perfil] || 'Municipalidad', respaldo: 'AD' }}
         colapsado={colapsado}
         onToggle={alternar}
         indicadores={indicadores}

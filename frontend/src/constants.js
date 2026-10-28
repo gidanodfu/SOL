@@ -90,6 +90,31 @@ export const ETIQUETA_ROL = {
 };
 
 /**
+ * Perfiles del personal municipal. Las etiquetas/descripciones son de UI; la
+ * autorización efectiva la entrega el backend en `permisos_municipales`.
+ */
+export const PERFILES_MUNICIPALES = {
+  admin: {
+    etiqueta: 'ADMIN',
+    descripcion: 'Administración completa del sistema.',
+  },
+  moderador: {
+    etiqueta: 'MODERADOR',
+    descripcion: 'Gestión operativa sin administración de usuarios.',
+  },
+  solo_lectura: {
+    etiqueta: 'SOLO LECTURA',
+    descripcion: 'Consulta sin modificaciones ni exportaciones masivas.',
+  },
+};
+
+export const ORDEN_PERFILES_MUNICIPALES = ['admin', 'moderador', 'solo_lectura'];
+
+export const ETIQUETA_PERFIL_MUNICIPAL = Object.fromEntries(
+  Object.entries(PERFILES_MUNICIPALES).map(([clave, valor]) => [clave, valor.etiqueta]),
+);
+
+/**
  * Transiciones de estado que la empresa puede aplicar (espejo del backend, RF-36).
  * El backend es la autoridad final; aquí solo se usan para mostrar las opciones.
  */

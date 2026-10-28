@@ -18,6 +18,7 @@ import { Check, Eye, Lock, MessageSquareWarning, XCircle } from 'lucide-react';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_TIPO_EMPLEO } from '../../constants';
 import { errorApi, fechaCalendario, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 const FILTROS = [
   ['', 'Todas'],
@@ -30,6 +31,8 @@ const FILTROS = [
 ];
 
 export default function Ofertas() {
+  const { puede } = usePermisosMunicipales();
+  const puedeRevisar = puede('ofertas');
   const queryClient = useQueryClient();
   const toast = useToast();
   const [filtro, setFiltro] = useState('');
@@ -49,12 +52,18 @@ export default function Ofertas() {
 
   return (
     <Tarjeta titulo="Revisión de ofertas laborales">
-      <p style={{ color: 'var(--gris)', fontSize: '0.85rem', marginBottom: '0.6rem' }}>
-        Las empresas envían sus ofertas a revisión municipal. Apruébalas para publicarlas en
-        la bolsa de empleo, <b>obsérvalas</b> para que la empresa corrija (no se publican) o
-        <b> recházalas</b> definitivamente (quedan bloqueadas). También puedes cerrar una
-        oferta publicada.
-      </p>
+      {puedeRevisar ? (
+        <p style={{ color: 'var(--gris)', fontSize: '0.85rem', marginBottom: '0.6rem' }}>
+          Las empresas envían sus ofertas a revisión municipal. Apruébalas para publicarlas en
+          la bolsa de empleo, <b>obsérvalas</b> para que la empresa corrija (no se publican) o
+          <b> recházalas</b> definitivamente (quedan bloqueadas). También puedes cerrar una
+          oferta publicada.
+        </p>
+      ) : (
+        <p style={{ color: 'var(--gris)', fontSize: '0.85rem', marginBottom: '0.6rem' }}>
+          Consulta de ofertas laborales. Tu perfil no permite aprobar, observar, rechazar ni cerrar ofertas.
+        </p>
+      )}
       <div className="form-fila filtros" style={{ marginBottom: '0.8rem' }}>
         {FILTROS.map(([valor, etiqueta]) => (
           <Boton
@@ -111,6 +120,7 @@ export default function Ofertas() {
 
       <DetalleOferta
         oferta={seleccionada}
+        puedeRevisar={puedeRevisar}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { toast.success(mensaje); refrescar({ cerrar: true }); }}
       />
@@ -118,7 +128,7 @@ export default function Ofertas() {
   );
 }
 
-function DetalleOferta({ oferta, alCerrar, alCambio }) {
+function DetalleOferta({ oferta, puedeRevisar, alCerrar, alCambio }) {
   const [error, setError] = useState(null);
   const { confirmar, pedirTexto } = useDialogo();
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
@@ -190,7 +200,7 @@ function DetalleOferta({ oferta, alCerrar, alCambio }) {
     </Boton>
   );
 
-  const acciones = {
+  const acciones = !puedeRevisar ? null : {
     pendiente: (
       <>
         <Boton variante="exito" cargando={enviando} onClick={aprobar}>

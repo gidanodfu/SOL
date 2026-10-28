@@ -11,6 +11,7 @@ import { ExternalLink, EyeOff, Megaphone, Pencil, Upload } from 'lucide-react';
 import { ETIQUETA_FUENTE_OPORTUNIDAD, FUENTES_OPORTUNIDAD } from '../../constants';
 import { errorApi, esEnlaceSeguro, fechaCalendario } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 const VACIO = { fuente: 'empleos_peru', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '' };
 
@@ -26,6 +27,8 @@ function BadgePublicacion({ estado }) {
 }
 
 export default function Oportunidades() {
+  const { puede } = usePermisosMunicipales();
+  const puedeGestionar = puede('oportunidades');
   const queryClient = useQueryClient();
   const toast = useToast();
   const [filtros, setFiltros] = useState({ fuente: '' });
@@ -43,11 +46,11 @@ export default function Oportunidades() {
     <div>
       <Tarjeta
         titulo="Difusión de oportunidades (Empleos Perú / MYPE)"
-        acciones={
+        acciones={puedeGestionar ? (
           <Boton variante="acento" onClick={() => setEditor(editor ? null : {})}>
             {editor ? 'Cancelar' : 'Nueva oportunidad'}
           </Boton>
-        }
+        ) : null}
       >
         <Selecto etiqueta="" value={filtros.fuente} onChange={(e) => setFiltros({ ...filtros, fuente: e.target.value })}>
           <option value="">Todas las fuentes</option>
@@ -57,7 +60,7 @@ export default function Oportunidades() {
         {data && data.length === 0 && <ListaVacia />}
       </Tarjeta>
 
-      {editor && (
+      {puedeGestionar && editor && (
         <EditorOportunidad
           inicial={editor.id ? editor.fila : null}
           alGuardar={() => { setEditor(null); toast.success('Oportunidad guardada.'); refrescar(); }}
@@ -94,6 +97,7 @@ export default function Oportunidades() {
 
       <DetalleOportunidad
         oportunidad={seleccionada}
+        puedeGestionar={puedeGestionar}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
         alEditar={(o) => { setSeleccionada(null); setEditor({ id: o.id, fila: o }); }}
@@ -102,7 +106,7 @@ export default function Oportunidades() {
   );
 }
 
-function DetalleOportunidad({ oportunidad, alCerrar, alCambio, alEditar }) {
+function DetalleOportunidad({ oportunidad, puedeGestionar, alCerrar, alCambio, alEditar }) {
   const [error, setError] = useState(null);
   const { ejecutar, enviando } = useAccion(async (fn) => fn());
 
@@ -126,7 +130,7 @@ function DetalleOportunidad({ oportunidad, alCerrar, alCambio, alEditar }) {
       subtitulo={ETIQUETA_FUENTE_OPORTUNIDAD[oportunidad.fuente]}
       alCerrar={alCerrar}
       tamano="ancho"
-      acciones={(
+      acciones={puedeGestionar ? (
         <>
           <Boton variante="gris" onClick={() => alEditar(oportunidad)}>
             <Pencil size={16} aria-hidden="true" />Editar
@@ -137,7 +141,7 @@ function DetalleOportunidad({ oportunidad, alCerrar, alCambio, alEditar }) {
               : <><Upload size={16} aria-hidden="true" />Publicar</>}
           </Boton>
         </>
-      )}
+      ) : null}
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <BadgePublicacion estado={oportunidad.estado_publicacion} />

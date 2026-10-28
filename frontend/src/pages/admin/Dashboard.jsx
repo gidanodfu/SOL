@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 import {
   BadgeCheck,
   Briefcase,
@@ -48,6 +49,7 @@ function indicadores(d) {
 }
 
 export default function Dashboard() {
+  const { puede } = usePermisosMunicipales();
   const [form, setForm] = useState({ desde: '', hasta: '' });
   const [filtro, setFiltro] = useState({ desde: '', hasta: '' });
   const [descargando, setDescargando] = useState(false);
@@ -136,6 +138,7 @@ export default function Dashboard() {
         onLimpiar={limpiar}
         onExportar={exportarExcel}
         onExportarPdf={exportarPdf}
+        mostrarExportaciones={puede('reportes')}
         exportando={descargando}
         exportandoPdf={descargandoPdf}
         errorExportar={errorExportar}

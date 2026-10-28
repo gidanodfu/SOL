@@ -15,7 +15,7 @@ class UserModel extends Model
     protected $useTimestamps = true;
 
     protected $allowedFields = [
-        'username', 'password_hash', 'rol', 'proveedor', 'proveedor_id',
+        'username', 'password_hash', 'rol', 'perfil_municipal', 'proveedor', 'proveedor_id',
         'nombres', 'apellidos', 'email', 'telefono', 'estado', 'ultimo_acceso',
         'terms_accepted_at', 'terms_version',
     ];

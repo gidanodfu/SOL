@@ -26,6 +26,10 @@ info:
       petición; no se confía en el `rol` del token.
     * **Roles**: los grupos de rutas aplican `rol:admin`, `rol:empresa` o
       `rol:postulante`. Un rol distinto recibe `403`.
+    * **Perfiles municipales**: dentro de `rol=admin`, `perfil_municipal` puede ser
+      `admin`, `moderador` o `solo_lectura`. El filtro central `permiso` aplica la matriz
+      de `AutorizacionMunicipalService` en cada petición; el perfil se recarga de MySQL y
+      no viaja como autoridad en el JWT. Un perfil sin el permiso recibe `403`.
     * **Importante (comportamiento real, no un error de esta documentación)**:
       el helper `sinContenido()` del backend responde **HTTP 200** (no 204) con
       `data: null`. No existe ningún `204` en esta API.
@@ -553,9 +557,9 @@ paths:
       operationId: adminCrearUsuario
       summary: Crear usuario (admin)
       description: |
-        Crea personal municipal: **siempre** con rol `admin` (no existe campo `rol` en el
-        cuerpo). Los roles empresa/postulante se crean por sus propios flujos. El username
-        debe ser único.
+        Crea personal municipal: **siempre** con rol `admin` y un `perfil_municipal` explícito
+        (`admin`, `moderador` o `solo_lectura`). Los roles empresa/postulante se crean por
+        sus propios flujos. El username debe ser único. El backend valida el perfil.
       security:
         - bearerAuth: []
       requestBody:
@@ -673,8 +677,8 @@ paths:
       summary: Activar/desactivar usuario (admin)
       description: |
         Cambia `users.estado` a `activo` o `inactivo`. Si el usuario es rol `empresa`,
-        sincroniza también `empresas.estado`. Si el valor ya es el actual no hace nada
-        (no-op) y responde igual.
+        sincroniza también `empresas.estado`. No permite autodesactivarse ni desactivar al
+        último administrador activo. Si el valor ya es el actual no hace nada (no-op).
       security:
         - bearerAuth: []
       parameters:
@@ -726,6 +730,45 @@ paths:
           $ref: '#/components/responses/Prohibido'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '422':
+          $ref: '#/components/responses/Validacion'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
+
+  /api/admin/usuarios/{id}/perfil:
+    put:
+      tags: [Admin]
+      operationId: adminCambiarPerfilUsuario
+      summary: Cambiar perfil municipal (admin)
+      description: |
+        Cambia únicamente `perfil_municipal` de una cuenta con rol `admin`. El actor debe
+        tener permiso `usuarios`. No se puede degradar al último administrador activo
+        (HTTP 409). La operación queda auditada con el perfil anterior y el nuevo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerfilMunicipalBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/OkVacio200'
+        '401':
+          $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '409':
+          description: La operación dejaría al sistema sin administrador activo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
         '422':
           $ref: '#/components/responses/Validacion'
         '500':
@@ -3960,6 +4003,16 @@ components:
         rol:
           type: string
           enum: [admin, empresa, postulante]
+        perfil_municipal:
+          type: string
+          nullable: true
+          enum: [admin, moderador, solo_lectura]
+          description: Solo para rol admin. NULL para empresa y postulante.
+        permisos_municipales:
+          type: array
+          items:
+            type: string
+          description: Permisos efectivos calculados por el backend para este perfil.
         nombres:
           type: string
         apellidos:
@@ -4000,6 +4053,10 @@ components:
         rol:
           type: string
           enum: [admin, empresa, postulante]
+        perfil_municipal:
+          type: string
+          nullable: true
+          enum: [admin, moderador, solo_lectura]
         nombres:
           type: string
         apellidos:
@@ -4032,6 +4089,10 @@ components:
         rol:
           type: string
           enum: [admin, empresa, postulante]
+        perfil_municipal:
+          type: string
+          nullable: true
+          enum: [admin, moderador, solo_lectura]
         nombres:
           type: string
         apellidos:
@@ -4072,7 +4133,7 @@ components:
 
     UsuarioCrearBody:
       type: object
-      required: [username, nombres, apellidos, password]
+      required: [username, nombres, apellidos, password, perfil_municipal]
       properties:
         username:
           type: string
@@ -4098,6 +4159,18 @@ components:
           format: password
           minLength: 8
           description: Al menos 8 caracteres, una letra, un número y un símbolo especial. El rol siempre es `admin` (no se recibe del cuerpo).
+        perfil_municipal:
+          type: string
+          enum: [admin, moderador, solo_lectura]
+          description: Perfil municipal obligatorio; el backend lo valida de nuevo.
+
+    PerfilMunicipalBody:
+      type: object
+      required: [perfil_municipal]
+      properties:
+        perfil_municipal:
+          type: string
+          enum: [admin, moderador, solo_lectura]
 
     UsuarioActualizarBody:
       type: object

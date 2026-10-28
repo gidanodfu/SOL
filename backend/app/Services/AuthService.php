@@ -135,7 +135,9 @@ class AuthService
         $throttler->remove($claveThrottle);
 
         $this->users->update($usuario->id, ['ultimo_acceso' => date('Y-m-d H:i:s')]);
-        $this->auditoria->registrar($usuario->id, 'login', 'user', $usuario->id);
+        $this->auditoria->registrar($usuario->id, 'login', 'user', $usuario->id, [
+            'perfil_municipal' => $usuario->perfil_municipal ?? null,
+        ]);
 
         return $this->sesionIniciada($usuario);
     }
@@ -553,6 +555,8 @@ class AuthService
             'id'        => $usuario->id,
             'username'  => $usuario->username,
             'rol'       => $usuario->rol,
+            'perfil_municipal' => $usuario->perfil_municipal ?? null,
+            'permisos_municipales' => AutorizacionMunicipalService::permisosDe($usuario->perfil_municipal ?? null),
             'proveedor' => $usuario->proveedor ?? 'local',
             'nombres'   => $usuario->nombres,
             'apellidos' => $usuario->apellidos,

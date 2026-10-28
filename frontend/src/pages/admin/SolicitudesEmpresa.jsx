@@ -15,6 +15,7 @@ import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, Link2, Send, XCircle } from 'lucide-react';
 import { errorApi, fechaHora } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
+import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 const estadosSolicitud = {
   pendiente: 'Pendiente',
@@ -33,6 +34,8 @@ async function copiarTexto(texto) {
 }
 
 export default function SolicitudesEmpresa() {
+  const { puede } = usePermisosMunicipales();
+  const puedeGestionar = puede('solicitudes');
   const queryClient = useQueryClient();
   const [filtro, setFiltro] = useState('');
   const [q, setQ] = useState('');
@@ -117,6 +120,7 @@ export default function SolicitudesEmpresa() {
 
       <DetalleSolicitud
         solicitud={seleccionada}
+        puedeGestionar={puedeGestionar}
         alCerrar={() => setSeleccionada(null)}
         alCambio={refrescar}
         alGenerarEnlace={setEnlaceActivacion}
@@ -160,7 +164,7 @@ function ModalEnlace({ enlace, alCerrar }) {
   );
 }
 
-function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
+function DetalleSolicitud({ solicitud, puedeGestionar, alCerrar, alCambio, alGenerarEnlace }) {
   const toast = useToast();
   const [error, setError] = useState(null);
   const { pedirTexto } = useDialogo();
@@ -237,7 +241,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
     : null;
   const estaActivada = solicitud.estado === 'aprobada' && Boolean(solicitud.activada_en_efectiva);
 
-  const acciones = (
+  const acciones = puedeGestionar ? (
     <>
       {solicitud.estado === 'pendiente' && (
         <>
@@ -260,7 +264,7 @@ function DetalleSolicitud({ solicitud, alCerrar, alCambio, alGenerarEnlace }) {
         </>
       )}
     </>
-  );
+  ) : null;
 
   return (
     <Modal

@@ -51,7 +51,7 @@ class UsuarioRepository
         // Columnas explícitas: password_hash nunca debe salir en la respuesta JSON
         // (RT-20/RNF-05). No usar users.* aunque la entidad tenga $hidden.
         return $this->db->table('users')
-            ->select('users.id, users.username, users.rol, users.proveedor, users.nombres,
+            ->select('users.id, users.username, users.rol, users.perfil_municipal, users.proveedor, users.nombres,
                 users.apellidos, users.email, users.telefono, users.estado,
                 users.ultimo_acceso, users.terms_accepted_at, users.terms_version,
                 users.created_at, users.updated_at')

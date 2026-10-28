@@ -62,10 +62,12 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-02** Autenticación procesada por el backend CI4 contra MySQL.
 - **RF-03** MySQL es la fuente de verdad de identidad, rol, estado y relaciones.
 - **RF-04** El rol se identifica automáticamente desde la BD; el usuario no puede elegirlo.
-- **RF-05** El backend verifica rol y permisos antes de cada operación.
+- **RF-05** El backend verifica rol y permisos antes de cada operación. En el ámbito
+  municipal, `perfil_municipal` (ADMIN/MODERADOR/SOLO LECTURA) se evalúa en cada request.
 - **RF-06** Estados de cuenta: Activo / Inactivo; inactivos no inician sesión.
-- **RF-07** El admin crea, consulta, modifica, activa y desactiva usuarios; **no puede
-  desactivar su propia cuenta** (validado en backend y reflejado en la UI).
+- **RF-07** El ADMIN crea, consulta, modifica, activa y desactiva usuarios y asigna
+  perfiles municipales; **no puede desactivarse a sí mismo ni degradar al último
+  administrador activo** (validado en backend y reflejado en la UI).
 
 ### 5.2 Registro y administración de empresas
 - **RF-08** La empresa envía una **solicitud pública de afiliación** (auto-registro) con RUC
