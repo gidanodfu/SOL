@@ -129,6 +129,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('reportes', 'ReportesController::index');
         $routes->get('reportes/csv', 'ReportesController::csv');
         $routes->get('reportes/excel', 'ReportesController::excel');
+        $routes->get('reportes/pdf', 'ReportesController::pdf');
         $routes->get('contrataciones', 'ContratacionesController::index');
     });
 
@@ -164,8 +165,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->post('contrataciones', 'ContratacionesController::store');
         $routes->put('contrataciones/(:num)', 'ContratacionesController::update/$1');
 
-        // Reporte Excel de la propia empresa (alcance por sesión, no por parámetros).
+        // Reportes de la propia empresa (alcance por sesión, no por parámetros).
         $routes->get('reportes/excel', 'ReportesController::excel');
+        $routes->get('reportes/pdf', 'ReportesController::pdf');
     });
 
     // Rol postulante: perfil, CV, búsqueda de empleo y postulaciones.

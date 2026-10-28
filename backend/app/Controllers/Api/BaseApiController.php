@@ -39,6 +39,27 @@ abstract class BaseApiController extends BaseController
     }
 
     /**
+     * Respuesta binaria de PDF con descarga privada. El nombre se sanea para
+     * evitar cabeceras mal formadas; los documentos no deben quedar en cachés
+     * compartidas.
+     */
+    protected function respuestaPdf(string $bytes, string $nombre)
+    {
+        $nombre = preg_replace('/[^A-Za-z0-9._-]+/', '-', $nombre) ?: 'reporte.pdf';
+
+        return $this->response
+            ->setContentType('application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
+            ->removeHeader('Cache-Control')
+            ->setHeader('Cache-Control', 'private, no-store, max-age=0')
+            ->setHeader('Pragma', 'no-cache')
+            ->setHeader('Expires', '0')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Content-Length', (string) strlen($bytes))
+            ->setBody($bytes);
+    }
+
+    /**
      * Cuerpo JSON de la petición como arreglo asociativo.
      *
      * @return array<string, mixed>

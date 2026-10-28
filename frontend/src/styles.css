@@ -2254,6 +2254,21 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .filter-button.exportar:hover { background: var(--sky); border-color: var(--blue); }
 .filter-button.exportar:disabled { opacity: 0.6; cursor: default; }
 
+/* PDF: acción institucional sólida, junto a Excel (que permanece outlined). */
+.filter-button.pdf {
+  background: var(--accion-primario);
+  border-color: var(--accion-primario);
+  color: var(--accion-primario-texto);
+  white-space: nowrap;
+}
+.filter-button.pdf:hover {
+  background: var(--accion-primario-hover);
+  border-color: var(--accion-primario-hover);
+}
+.filter-button.pdf:disabled { opacity: 0.6; cursor: default; }
+
+.filtros-mensajes { display: flex; flex-direction: column; }
+
 .filter-button.limpiar {
   background: var(--white);
   border: 1px solid var(--line);

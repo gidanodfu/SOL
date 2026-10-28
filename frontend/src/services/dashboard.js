@@ -9,3 +9,6 @@ export const empleabilidadAdmin = () => api.get('/admin/empleabilidad').then((r)
 
 export const exportarReporteAdmin = (params = {}) =>
   api.get('/admin/reportes/excel', { params, responseType: 'blob' }).then((r) => r.data);
+
+export const exportarReporteAdminPdf = (params = {}) =>
+  api.get('/admin/reportes/pdf', { params, responseType: 'blob' }).then((r) => r.data);

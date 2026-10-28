@@ -26,7 +26,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 17 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 18 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -43,7 +43,7 @@ No crea ni modifica datos.
 
 `test.sh smoke` ejecuta `deploy/scripts/smoke.sh`, que:
 
-1. Construye el target `test` del backend con `bash`, `python3` y `curl`.
+1. Construye el target `test` del backend con `bash`, `python3`, `curl` y `poppler-utils`.
 2. Crea una red efímera y un MySQL `8.0.46` con `/var/lib/mysql` en `tmpfs`.
 3. Crea un esquema distinto por suite y aplica migraciones + `SystemSeeder` +
    `DatosPruebaSeeder` dentro de cada esquema.
@@ -86,6 +86,12 @@ la misma oferta produzcan un único registro activo, que una selección y una
 nueva postulación sigan un orden serial consistente y que un retiro concurrente
 con una reactivación termine siempre con el retiro persistido.
 
+`test_reporte_pdf.sh` genera PDF reales (Dompdf) con el backend en Docker y
+verifica MIME, descarga privada, nombre con periodo, contenido institucional,
+logo en todas las páginas, numeración, secciones vacías, validación 422,
+autorización por rol y aislamiento entre empresas; también comprueba que Excel
+siga disponible. Usa `poppler-utils` solo en la imagen de pruebas.
+
 `test_reporte_ofertas.sh` inserta una oferta por cada estado en un esquema
 aislado, incluida una `publicada` con cierre pasado y otra sin cierre, y verifica
 que el Excel administrativo contenga las siete categorías, que sus conteos y
@@ -97,6 +103,7 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 `tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
 `SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
 `OfertaCatalogoTest`, `ActividadVencimientoTest`, `ReporteExcelServiceTest`,
+`ReportePdfServiceTest`,
 `HtmlSanitizerTest`, `PostulacionAuthorizationTest`, `TerminosTest`,
 `EnlaceActivacionTest` y las pruebas de correo.
 
@@ -112,8 +119,8 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 ```
 
 Incluye las pruebas estáticas de documentos legales, catálogo de ubicaciones, uso
-centralizado del logo municipal (sin URLs externas ni favicons antiguos), lint y
-build. La imagen de
+centralizado del logo municipal (sin URLs externas ni favicons antiguos), botones
+y fechas de exportación Excel/PDF, lint y build. La imagen de
 desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
 La ejecución actual reporta **19 advertencias de Oxlint y 0 errores**: 10 de
 `only-export-components`, 7 de `set-state-in-effect` y 2 de `refs`. Son

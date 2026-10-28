@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +29,14 @@ test('el logo maestro existe, conserva transparencia y no fue redimensionado', (
   assert.equal(png.readUInt32BE(20), 1471);
   // Color type 6 = RGBA; conserva el canal alfa original.
   assert.equal(png[25], 6);
+});
+
+test('el maestro conserva el hash institucional compartido con el PDF', () => {
+  const png = readFileSync(join(publicDir, 'sol-logo.png'));
+  assert.equal(
+    createHash('sha256').update(png).digest('hex'),
+    'db7638707560fbc046f397e33cfd90cb8790506b802504c3f537081c48f3cd76',
+  );
 });
 
 test('el componente centraliza la ruta y el texto alternativo accesible', () => {

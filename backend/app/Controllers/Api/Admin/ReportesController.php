@@ -8,6 +8,7 @@ use App\Controllers\Api\BaseApiController;
 use App\Services\ContratacionService;
 use App\Services\DashboardService;
 use App\Services\ReporteExcelService;
+use App\Services\ReportePdfService;
 
 /**
  * Reportes de efectividad por periodo (RF-52..RF-60). Combina los indicadores
@@ -55,6 +56,30 @@ class ReportesController extends BaseApiController
             ->setContentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
             ->setBody($bytes);
+    }
+
+    /**
+     * Exportación PDF del reporte municipal por periodo. Reutiliza exactamente
+     * los indicadores y contrataciones del Excel; la validación del rango la
+     * realiza DashboardService::validarRango (422 si es inválido).
+     */
+    public function pdf()
+    {
+        $desde = $this->request->getGet('desde') ?: null;
+        $hasta = $this->request->getGet('hasta') ?: null;
+
+        $bytes = (new ReportePdfService())->generar($desde, $hasta);
+
+        $nombre = 'reporte-empleo';
+        if ($desde !== null && $hasta !== null) {
+            $nombre .= '-' . $desde . '_' . $hasta;
+        } elseif ($desde !== null) {
+            $nombre .= '-desde-' . $desde;
+        } elseif ($hasta !== null) {
+            $nombre .= '-hasta-' . $hasta;
+        }
+
+        return $this->respuestaPdf($bytes, $nombre . '.pdf');
     }
 
     /**
