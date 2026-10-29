@@ -66,7 +66,7 @@ export default function AcercaDe() {
           <div className="about-separador" role="presentation" />
 
           <PerfilDesarrollo
-            nombre="Jesus Andre"
+            nombre="JesusAndreBS"
             usuario="JesusAndreBS"
             rol="Colaborador"
             url={PERFIL_JESUS_GITHUB}
