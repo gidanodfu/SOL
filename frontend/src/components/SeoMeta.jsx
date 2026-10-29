@@ -57,6 +57,10 @@ const PAGINAS = {
     titulo: 'Mi cuenta',
     descripcion: 'Administra la seguridad y la contraseña de tu cuenta de postulante.',
   },
+  '/about': {
+    titulo: 'Acerca de',
+    descripcion: 'Información del sistema Empleo MDJLO y de su desarrollo.',
+  },
   '/empresa/dashboard': {
     titulo: 'Panel de empresa',
     descripcion: 'Gestiona tus ofertas laborales, postulaciones y contrataciones desde un solo panel.',

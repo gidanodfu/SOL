@@ -29,6 +29,7 @@ import MisPostulaciones from '../pages/postulante/MisPostulaciones';
 import OportunidadesPostulante from '../pages/postulante/Oportunidades';
 import Cuenta from '../pages/cuenta/Cuenta';
 import Temas from '../pages/configuracion/Temas';
+import AcercaDe from '../pages/acerca/AcercaDe';
 import PoliticaPrivacidad from '../pages/legal/PoliticaPrivacidad';
 import TerminosCondiciones from '../pages/legal/TerminosCondiciones';
 import AvisoLegal from '../pages/legal/AvisoLegal';
@@ -95,10 +96,11 @@ export function Rutas() {
           <Route path="postulante/cuenta" element={<Cuenta />} />
         </Route>
 
-        {/* Configuración de apariencia: disponible para los paneles con selector
-            de temas (Administrador, Empresa y Postulante). */}
+        {/* Configuración de apariencia e información institucional: disponibles
+            para los tres perfiles autenticados dentro de su layout habitual. */}
         <Route element={<RutaProtegida roles={[ROLES.ADMIN, ROLES.EMPRESA, ROLES.POSTULANTE]}><Outlet /></RutaProtegida>}>
           <Route path="configuracion/temas" element={<Temas />} />
+          <Route path="about" element={<AcercaDe />} />
         </Route>
 
         <Route path="cuenta" element={<Cuenta />} />

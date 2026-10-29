@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardList,
   FileCheck2,
+  Info,
   LayoutDashboard,
   Megaphone,
   Palette,
@@ -46,6 +47,12 @@ const GRUPOS = [
       { to: '/configuracion/temas', icono: Palette, texto: 'Temas' },
     ],
   },
+  {
+    titulo: 'Acerca de',
+    items: [
+      { to: '/about', icono: Info, texto: 'Acerca de' },
+    ],
+  },
 ];
 
 const MARCA = {
@@ -65,6 +72,7 @@ const TITULO_POR_RUTA = {
   '/admin/empresas': ['Empresas', 'Empresas afiliadas'],
   '/admin/solicitudes-empresa': ['Solicitudes', 'Solicitudes de afiliación de empresas'],
   '/configuracion/temas': ['Temas', 'Personaliza la apariencia de tu espacio de trabajo'],
+  '/about': ['Acerca de', 'Información del sistema y de su desarrollo'],
   '/cuenta': ['Mi cuenta', 'Tu cuenta y contraseña'],
 };
 

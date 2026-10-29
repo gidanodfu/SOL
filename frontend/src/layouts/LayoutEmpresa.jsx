@@ -6,6 +6,7 @@ import {
   Building2,
   ClipboardCheck,
   FileCheck2,
+  Info,
   LayoutDashboard,
   Palette,
   UserCircle,
@@ -31,6 +32,12 @@ const GRUPOS = [
     titulo: 'Configuración',
     items: [
       { to: '/configuracion/temas', icono: Palette, texto: 'Temas' },
+    ],
+  },
+  {
+    titulo: 'Acerca de',
+    items: [
+      { to: '/about', icono: Info, texto: 'Acerca de' },
     ],
   },
 ];

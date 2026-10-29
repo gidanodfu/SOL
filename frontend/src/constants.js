@@ -11,6 +11,16 @@ export const ROLES = {
   POSTULANTE: 'postulante',
 };
 
+/**
+ * Versión del sistema Empleo MDJLO.
+ *
+ * No existe una versión oficial publicada: el repositorio no tiene tags y
+ * `frontend/package.json` usa `0.0.0` como marcador de Vite, no como versión
+ * del producto. Esta constante es la única fuente de verdad para la UI y debe
+ * actualizarse aquí cuando el proyecto defina una versión.
+ */
+export const VERSION_SISTEMA = 'No disponible';
+
 /** Destino público por defecto cuando no hay sesión o el rol no es reconocido. */
 export const RUTA_INICIO_PUBLICA = '/postulante/buscar';
 
