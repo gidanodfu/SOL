@@ -83,7 +83,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-institucional">
+    <div className="login-institucional login-institucional--footer-rounded">
       <main className="login-main">
         {/* Bloque de marca */}
         <div className="login-marca">
@@ -199,7 +199,7 @@ export default function Login() {
         </div>
       </main>
 
-      <AuthFooter />
+      <AuthFooter rounded />
     </div>
   );
 }
