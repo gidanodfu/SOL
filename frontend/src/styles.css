@@ -1974,11 +1974,14 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   border-radius: var(--sidebar-radius);
   box-shadow: var(--sombra-tarjeta);
   transition: width 0.18s ease;
-  /* Pieza vertical independiente e integrada al shell (extremos superior e
-     inferior redondeados). El contenido se ajusta solo al contraerla. */
+  /* Pieza vertical independiente e integrada al shell. Crece con su contenido:
+     si no cabe en el viewport, la página completa se desplaza y la navegación
+     nunca crea una segunda zona de scroll. */
   position: sticky;
   top: var(--sidebar-gap);
-  height: calc(100vh - 2 * var(--sidebar-gap));
+  align-self: flex-start;
+  height: auto;
+  min-height: calc(100vh - 2 * var(--sidebar-gap));
   margin: var(--sidebar-gap);
 }
 
@@ -2057,11 +2060,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .side-cerrar-movil { display: none; }
 
 .side-nav {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   padding: 18px 12px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: visible;
 }
 .side-group { margin-bottom: 18px; }
 /* Separador entre grupos: visible sobre todo cuando los títulos se ocultan */
@@ -2386,6 +2387,10 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
     transform: translateX(-105%);
     transition: transform 0.22s ease;
     z-index: 130;
+    /* En el drawer móvil la altura es el viewport: si el contenido no cabe,
+       se desplaza el panel completo (sin un scroll anidado en la navegación). */
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .sidebar.abierto { transform: translateX(0); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
 
@@ -2458,6 +2463,20 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   .sidebar.colapsado .side-link { padding: 9px 0; }
   .sidebar.colapsado .side-foot { padding: 8px; }
   .sidebar.colapsado .side-user { padding: 2px 0; }
+}
+
+/* En móvil el drawer se muestra siempre expandido aunque conserve la clase
+   `colapsado`. Igualar el aire vertical de la variante expandida evita que el
+   panel genere scroll cuando el contenido todavía cabe en el viewport. */
+@media (max-width: 860px) and (max-height: 900px) {
+  .sidebar.colapsado .side-cabecera { padding: 12px; }
+  .sidebar.colapsado .side-nav { padding: 12px 12px; }
+  .sidebar.colapsado .side-foot { padding: 12px; }
+}
+@media (max-width: 860px) and (max-height: 720px) {
+  .sidebar.colapsado .side-cabecera { padding: 10px 12px; }
+  .sidebar.colapsado .side-nav { padding: 12px 12px; }
+  .sidebar.colapsado .side-foot { padding: 10px; }
 }
 
 .side-backdrop {
@@ -3606,7 +3625,7 @@ html[data-motion="reduced"] *::after {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.2rem;
-  align-items: stretch;
+  align-items: start;
 }
 .about-card {
   display: flex;
@@ -3755,5 +3774,5 @@ html[data-motion="reduced"] *::after {
     gap: 0.2rem;
   }
   .about-dato dd { text-align: left; }
-  .about-link { align-self: stretch; }
+  .about-page .about-link { align-self: stretch; }
 }
