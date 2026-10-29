@@ -21,7 +21,7 @@ ni modifica datos de producción.
   frontend    npm test + lint + build dentro del contenedor frontend
   http        smoke HTTP no destructivo contra el stack de desarrollo activo
   smoke       suite de humo aislada en un MySQL temporal con esquema por suite
-  validation  validación de variables y health interno sin DNS público
+  validation  validación de variables, health interno, WebP y ACME
 
 Opciones:
   --no-build  reutiliza las imágenes existentes en lugar de reconstruirlas.
@@ -48,6 +48,7 @@ fi
 if [ "$TARGET" = "validation" ]; then
     "$ROOT/tests/deploy/test_validation.sh"
     "$ROOT/tests/deploy/test_internal_health.sh"
+    "$ROOT/tests/deploy/test_webp_nginx.sh"
     "$ROOT/tests/infra/test_traefik_acme.sh"
     exit 0
 fi

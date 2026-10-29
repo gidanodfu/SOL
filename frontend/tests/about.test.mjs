@@ -59,7 +59,7 @@ test('la tarjeta de desarrollo enlaza al perfil principal, a los colaboradores y
   assert.match(pagina, /Ver repositorio en GitHub/);
   assert.match(pagina, /etiqueta="Perfil de GitHub de Josue David"/);
   assert.match(pagina, /etiqueta="Perfil de GitHub de jhonalo9, colaborador"/);
-  assert.match(pagina, /nombre="JesusAndreBS"/);
+  assert.match(pagina, /usuario="JesusAndreBS"/);
   assert.match(pagina, /etiqueta="Perfil de GitHub de JesusAndreBS, colaborador"/);
   assert.match(pagina, /aria-label=\{etiqueta\}/);
   assert.equal((pagina.match(/<PerfilDesarrollo\b/g) || []).length, 3);
@@ -69,7 +69,7 @@ test('la tarjeta de desarrollo enlaza al perfil principal, a los colaboradores y
   // Orden visual: desarrollador principal → colaboradores → repositorio.
   const principal = pagina.indexOf('nombre="Josue David"');
   const colaborador = pagina.indexOf('usuario="jhonalo9"');
-  const segundoColaborador = pagina.indexOf('nombre="JesusAndreBS"');
+  const segundoColaborador = pagina.indexOf('usuario="JesusAndreBS"');
   const repositorio = pagina.indexOf('<h3>Repositorio del proyecto</h3>');
   assert.ok(
     principal >= 0

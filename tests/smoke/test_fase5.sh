@@ -27,6 +27,24 @@ curl -s -o /dev/null -w "cancelado->en_curso http:%{http_code} (409)\n" -X PUT "
 curl -s -o /dev/null -w "cancelado->programado http:%{http_code} (200)\n" -X PUT "$B/api/admin/actividades/$ACT/estado" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"estado":"programado"}'
 curl -s -o /dev/null -w "update actividad http:%{http_code} (200)\n" -X PUT "$B/api/admin/actividades/$ACT" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"tipo":"feria_empleo","nombre":"Feria de Empleo JLO 2026","fecha_inicio":"2026-10-15 09:00:00","modalidad":"mixta","lugar":"Plaza Central"}'
 
+# WebP: subida, almacenamiento local y entrega con MIME correcto.
+php -r '$im=imagecreatetruecolor(16,16); imagefill($im,0,0,imagecolorallocate($im,20,100,170)); imagewebp($im,"/tmp/sol-fase5.webp",85); imagejpeg($im,"/tmp/sol-fase5.jpg",85); imagedestroy($im);'
+check_code 'subir imagen WebP de actividad' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/actividades/$ACT/imagen" -H "Authorization: Bearer $TA" -F 'imagen=@/tmp/sol-fase5.webp;type=image/webp;filename=actividad.webp')"
+curl -s -D /tmp/sol-fase5-webp.headers -o /tmp/sol-fase5-webp.body "$B/api/actividades/$ACT/imagen"
+grep -qi '^Content-Type: image/webp' /tmp/sol-fase5-webp.headers \
+    && printf 'OK   entrega de imagen WebP con image/webp\n' \
+    || { printf 'FAIL entrega de imagen WebP sin image/webp\n'; fallos=$((fallos + 1)); }
+cmp -s /tmp/sol-fase5-webp.body /tmp/sol-fase5.webp \
+    && printf 'OK   cuerpo WebP almacenado y recuperado íntegro\n' \
+    || { printf 'FAIL cuerpo WebP alterado\n'; fallos=$((fallos + 1)); }
+printf 'RIFF\020\000\000\000WEBPcontenido-invalido' > /tmp/sol-fase5-invalid.webp
+check_code 'rechazar WebP inválido' 422 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/actividades/$ACT/imagen" -H "Authorization: Bearer $TA" -F 'imagen=@/tmp/sol-fase5-invalid.webp;type=image/webp;filename=invalida.webp')"
+check_code 'subir JPEG de actividad' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/actividades/$ACT/imagen" -H "Authorization: Bearer $TA" -F 'imagen=@/tmp/sol-fase5.jpg;type=image/jpeg;filename=actividad.jpg')"
+curl -s -D /tmp/sol-fase5-jpg.headers -o /tmp/sol-fase5-jpg.body "$B/api/actividades/$ACT/imagen"
+grep -qi '^Content-Type: image/jpeg' /tmp/sol-fase5-jpg.headers \
+    && printf 'OK   entrega JPEG conservada\n' \
+    || { printf 'FAIL entrega JPEG alterada\n'; fallos=$((fallos + 1)); }
+
 # Actividad independiente con fecha de fin pasada para comprobar que una
 # actividad vencida no se publica aunque su estado persistido sea programado.
 ACT_VENCIDA=$(curl -s -X POST "$B/api/admin/actividades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"tipo":"feria_empleo","nombre":"Feria vencida","fecha_inicio":"2026-10-15 09:00:00","fecha_fin":"2026-10-15 17:00:00"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')

@@ -257,6 +257,19 @@ class ActividadService
         if (! $this->esImagenReal($inicio)) {
             throw ApiException::validacion('El archivo no es una imagen válida.', ['El archivo no es una imagen válida.']);
         }
+
+        // Los bytes mágicos no bastan: con GD se comprueba que el contenido
+        // completo sea decodificable y corresponda a un formato raster admitido.
+        $contenido = (string) file_get_contents($archivo->getTempName());
+        $info = @getimagesizefromstring($contenido);
+        if ($info === false || ! in_array($info[2] ?? null, [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+            throw ApiException::validacion('El archivo no es una imagen válida.', ['El archivo no es una imagen válida.']);
+        }
+        $imagen = @imagecreatefromstring($contenido);
+        if ($imagen === false) {
+            throw ApiException::validacion('El archivo no es una imagen válida.', ['El archivo no es una imagen válida.']);
+        }
+        imagedestroy($imagen);
     }
 
     private function esImagenReal(string $bytes): bool
