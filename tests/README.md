@@ -10,7 +10,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit en el contenedor backend
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo
-./deploy/scripts/test.sh validation # validación preventiva, health interno y ACME
+./deploy/scripts/test.sh validation # validación preventiva, health interno, WebP y ACME
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 
@@ -19,6 +19,8 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 - `tests/deploy/test_validation.sh`: Turnstile, Google OAuth, dominios, URLs,
   CORS, VITE, secretos y configuración de subdominios, sin leer el `.env` real.
 - `tests/deploy/test_internal_health.sh`: health de Nginx sin resolución DNS.
+- `tests/deploy/test_webp_nginx.sh`: MIME `image/webp` y entrega íntegra de WebP,
+  PNG y JPEG con la configuración Nginx del frontend.
 - `tests/infra/test_traefik_acme.sh`: inicialización real del resolver
   `letsencrypt` y uso por un router temporal, sin contactar Let's Encrypt ni
   publicar puertos.
@@ -112,6 +114,7 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 ### Backend
 
 `tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
+`ImageWebpTest`,
 `SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
 `OfertaCatalogoTest`, `ActividadVencimientoTest`, `ReporteExcelServiceTest`,
 `ReportePdfServiceTest`, `AutorizacionMunicipalServiceTest`,

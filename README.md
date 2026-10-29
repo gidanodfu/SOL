@@ -475,6 +475,25 @@ Si falta una extensión, corrija `backend/Dockerfile` y reconstruya con
 `./deploy/scripts/dev.sh build`. No instale paquetes PHP en el host para
 “arreglar” la imagen.
 
+### Soporte WebP
+
+La etapa `php-base` de `backend/Dockerfile` compila GD con `--with-webp` e
+instala `libwebp-dev`; la biblioteca de ejecución `libwebp` queda disponible en
+las imágenes de desarrollo y producción. No se usa Imagick.
+
+Para comprobar la capacidad real dentro del contenedor:
+
+```bash
+./deploy/scripts/dev.sh exec backend php -r 'var_export(["webp" => gd_info()["WebP Support"], "encode" => function_exists("imagewebp"), "decode" => function_exists("imagecreatefromwebp")]);'
+```
+
+El servidor estático del frontend usa `nginx:1.27.5-alpine`, cuya configuración
+MIME incluye `image/webp`. La prueba `tests/deploy/test_webp_nginx.sh`,
+integrada en `test.sh validation`, sirve WebP, PNG y JPEG y verifica el
+`Content-Type`. La prueba backend `ImageWebpTest` comprueba lectura y escritura
+con GD; `test_fase5.sh` sube una imagen WebP de actividad, la recupera con
+`image/webp` y rechaza un archivo WebP con contenido inválido.
+
 ## 18. Pruebas
 
 Todas las pruebas oficiales se ejecutan mediante Docker. No se requiere PHP,
@@ -485,7 +504,7 @@ Node.js, Composer, npm ni MySQL instalados en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo (stack activo)
-./deploy/scripts/test.sh validation # validación preventiva + health interno + ACME
+./deploy/scripts/test.sh validation # validación preventiva + health interno + WebP + ACME
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 

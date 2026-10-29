@@ -11,8 +11,8 @@ RUN composer install --no-scripts --no-interaction --prefer-dist --ignore-platfo
 FROM php:8.4.27-fpm-alpine3.23 AS php-base
 RUN apk add --no-cache \
         libzip-dev oniguruma-dev icu-dev libpng-dev libjpeg-turbo-dev freetype-dev \
-        libxml2-dev curl-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+        libwebp-dev libxml2-dev curl-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" mysqli pdo_mysql mbstring intl gd zip opcache curl
 WORKDIR /var/www/sol/backend
 RUN mkdir -p writable/cache writable/logs writable/session writable/uploads writable/debugbar \
