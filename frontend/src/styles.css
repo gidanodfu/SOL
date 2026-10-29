@@ -1857,12 +1857,16 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   }
 }
 
-/* Variante rounded del footer legal: solo Login. Comparte con la tarjeta de
-   login la misma fuente de ancho y el mismo margen lateral responsive. */
+/* Variante rounded del footer legal: Login, Registro y RegistroEmpresa.
+   Comparte con la tarjeta de cada formulario la misma fuente de ancho y el
+   mismo margen lateral responsive. */
 .login-institucional--footer-rounded {
   --login-panel-width: 440px;
   --login-panel-gutter: 1.25rem;
   padding-bottom: 1.35rem;
+}
+.login-institucional--footer-rounded.login-institucional--registro {
+  --login-panel-width: 500px;
 }
 .login-institucional--footer-rounded .login-formulario {
   max-width: var(--login-panel-width);

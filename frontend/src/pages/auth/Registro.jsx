@@ -114,7 +114,7 @@ export default function Registro() {
   };
 
   return (
-    <div className="login-institucional">
+    <div className="login-institucional login-institucional--registro login-institucional--footer-rounded">
       {/* Contenido central */}
       <main className="login-main">
         <div className="login-marca">
@@ -347,7 +347,7 @@ export default function Registro() {
         </div>
       </main>
 
-      <AuthFooter />
+      <AuthFooter rounded />
     </div>
   );
 }

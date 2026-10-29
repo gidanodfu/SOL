@@ -107,7 +107,7 @@ export default function RegistroEmpresa() {
   };
 
   return (
-    <div className="login-institucional">
+    <div className="login-institucional login-institucional--registro login-institucional--footer-rounded">
       <main className="login-main">
         <div className="login-marca">
           <LogoMunicipal className="login-logo" />
@@ -247,7 +247,7 @@ export default function RegistroEmpresa() {
         <p>Si la solicitud ya fue enviada, no necesitas registrarte nuevamente.</p>
       </Modal>
 
-      <AuthFooter />
+      <AuthFooter rounded />
     </div>
   );
 }
