@@ -49,6 +49,12 @@ export function descargarBlob(blob, nombreArchivo) {
 export const soloDigitos = (v) => String(v ?? '').replace(/\D/g, '');
 export const esTelefonoValido = (v) => v == null || v === '' || /^(?:\d{9}|\d{11})$/.test(String(v));
 
+/** Validación inmediata del formulario; el backend conserva la autoridad final. */
+export const esEmailValido = (v) => {
+  const email = String(v ?? '').trim();
+  return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 /**
  * Enlaces de usuario: solo http(s). Evita que una URL manipulada (javascript:,
  * data:) se convierta en un href ejecutable (el backend también lo valida).

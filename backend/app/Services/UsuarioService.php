@@ -83,14 +83,16 @@ class UsuarioService
             'username'  => ['required', 'max:60', 'regex:/^[a-zA-Z0-9._-]+$/'],
             'nombres'   => ['required', 'max:100'],
             'apellidos' => ['required', 'max:100'],
-            'email'     => ['email', 'max:150'],
+            'email'     => ['required', 'email', 'max:150'],
             'telefono'  => ['telefono'],
             'password'  => ['required', 'password'],
             'perfil_municipal' => ['required', 'enum:admin,moderador,solo_lectura'],
         ]);
 
         if ($this->users->buscarPorUsername($datos['username']) !== null) {
-            throw ApiException::conflicto('El nombre de usuario ya está en uso.');
+            throw ApiException::conflicto('El nombre de usuario ya está en uso.', [
+                'username' => 'El nombre de usuario ya está en uso.',
+            ]);
         }
 
         $this->identidad->exigirLibre('email', $datos['email']);

@@ -53,7 +53,7 @@ docker_available
 if [ "$#" -gt 0 ]; then
     TESTS="$*"
 else
-    TESTS="test_api.sh test_ofertas.sh test_aprobacion_ofertas.sh test_ofertas_campos.sh test_reglas_ofertas.sh test_retiro_postulacion.sh test_concurrencia.sh test_fase3.sh test_fase4.sh test_fase5.sh test_fase6.sh test_seguridad.sh test_rte.sh test_identidad.sh test_reporte_empresa.sh test_reporte_ofertas.sh test_reporte_pdf.sh test_perfiles_municipales.sh test_cv.sh"
+    TESTS="test_api.sh test_ofertas.sh test_aprobacion_ofertas.sh test_ofertas_campos.sh test_reglas_ofertas.sh test_retiro_postulacion.sh test_concurrencia.sh test_fase3.sh test_fase4.sh test_fase5.sh test_fase6.sh test_seguridad.sh test_rte.sh test_identidad.sh test_reporte_empresa.sh test_reporte_ofertas.sh test_reporte_pdf.sh test_perfiles_municipales.sh test_unicidad_municipal.sh test_cv.sh"
 fi
 
 for test in $TESTS; do

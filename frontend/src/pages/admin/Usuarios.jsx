@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cambiarEstadoUsuario, cambiarPerfilUsuario, crearUsuario, listarUsuarios, resetPasswordUsuario,
@@ -12,7 +12,7 @@ import { Eye, KeyRound, Power, UserCog } from 'lucide-react';
 import {
   ETIQUETA_PERFIL_MUNICIPAL, ETIQUETA_ROL, ORDEN_PERFILES_MUNICIPALES, PERFILES_MUNICIPALES,
 } from '../../constants';
-import { errorApi, fechaHora, soloDigitos } from '../../utils';
+import { errorApi, esEmailValido, esTelefonoValido, fechaHora, soloDigitos } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 import { useAuth } from '../../context/AuthContext';
 import PasswordRequirements from '../../components/PasswordRequirements';
@@ -289,24 +289,84 @@ function NuevoUsuario({ alCrear }) {
   });
   const [error, setError] = useState(null);
   const [perfilError, setPerfilError] = useState(null);
+  const [erroresCampo, setErroresCampo] = useState({});
   const [intentoPassword, setIntentoPassword] = useState(false);
+  const enCurso = useRef(false);
   const { ejecutar, enviando } = useAccion(() => crearUsuario(form));
 
+  const cambiarCampo = (campo, valor) => {
+    setForm((actual) => ({ ...actual, [campo]: valor }));
+    setErroresCampo((actual) => ({ ...actual, [campo]: undefined }));
+    setError(null);
+  };
+
+  const validarFormulario = () => {
+    const errores = {};
+
+    if (form.username.trim() === '') {
+      errores.username = 'El usuario es obligatorio.';
+    } else if (!/^[a-zA-Z0-9._-]+$/.test(form.username)) {
+      errores.username = 'Use solo letras, números, punto, guion o guion bajo.';
+    }
+
+    if (form.password === '') {
+      errores.password = 'La contraseña inicial es obligatoria.';
+    } else if (!passwordCumple(form.password)) {
+      errores.password = 'La contraseña no cumple los requisitos de seguridad.';
+    }
+
+    if (form.nombres.trim() === '') errores.nombres = 'Los nombres son obligatorios.';
+    if (form.apellidos.trim() === '') errores.apellidos = 'Los apellidos son obligatorios.';
+
+    if (form.email.trim() === '') {
+      errores.email = 'El correo electrónico es obligatorio.';
+    } else if (!esEmailValido(form.email)) {
+      errores.email = 'Ingrese un correo electrónico válido.';
+    }
+
+    if (form.telefono !== '' && !esTelefonoValido(form.telefono)) {
+      errores.telefono = 'El teléfono debe tener 9 u 11 dígitos.';
+    }
+
+    return errores;
+  };
+
   const enviar = async () => {
+    if (enCurso.current) return;
+
     setIntentoPassword(true);
+    setError(null);
+
+    const errores = validarFormulario();
     const faltaPerfil = !PERFILES_MUNICIPALES[form.perfil_municipal];
     setPerfilError(faltaPerfil ? 'Seleccione un perfil municipal.' : null);
-    if (faltaPerfil) return;
-    if (!passwordCumple(form.password)) {
-      setError('La contraseña no cumple los requisitos de seguridad.');
-      return;
-    }
+    setErroresCampo(errores);
+    if (faltaPerfil || Object.keys(errores).length > 0) return;
+
+    enCurso.current = true;
     try {
       await ejecutar();
       alCrear();
     } catch (e) {
-      const det = e?.response?.data?.errors;
+      const data = e?.response?.data;
+      const campos = data?.campos;
+      if (campos && typeof campos === 'object') {
+        const delBackend = {};
+        for (const campo of ['username', 'email', 'telefono', 'nombres', 'apellidos', 'password']) {
+          if (typeof campos[campo] === 'string' && campos[campo] !== '') {
+            delBackend[campo] = campos[campo];
+          }
+        }
+        if (Object.keys(delBackend).length > 0) {
+          setErroresCampo((actual) => ({ ...actual, ...delBackend }));
+          return;
+        }
+      }
+
+      const det = data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
+    } finally {
+      enCurso.current = false;
     }
   };
 
@@ -331,14 +391,14 @@ function NuevoUsuario({ alCrear }) {
       />
 
       <div className="form-malla form-malla-usuario">
-        <Campo etiqueta="Usuario" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-        <Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setError(null); }} />
-        <Campo etiqueta="Nombres" value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} />
-        <Campo etiqueta="Apellidos" value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
-        <Campo etiqueta="Correo" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <Campo etiqueta="Usuario" value={form.username} onChange={(e) => cambiarCampo('username', e.target.value)} error={erroresCampo.username} />
+        <Campo etiqueta="Contraseña inicial" type="password" value={form.password} onChange={(e) => cambiarCampo('password', e.target.value)} error={erroresCampo.password} />
+        <Campo etiqueta="Nombres" value={form.nombres} onChange={(e) => cambiarCampo('nombres', e.target.value)} error={erroresCampo.nombres} />
+        <Campo etiqueta="Apellidos" value={form.apellidos} onChange={(e) => cambiarCampo('apellidos', e.target.value)} error={erroresCampo.apellidos} />
+        <Campo etiqueta="Correo" type="email" value={form.email} onChange={(e) => cambiarCampo('email', e.target.value)} error={erroresCampo.email} />
         <div className="form-usuario-inferior">
           <div className="form-usuario-telefono">
-            <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
+            <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => cambiarCampo('telefono', soloDigitos(e.target.value))} inputMode="numeric" maxLength={11} error={erroresCampo.telefono} />
           </div>
           <div className="form-usuario-requisitos">
             <PasswordRequirements password={form.password} intento={intentoPassword} />

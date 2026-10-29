@@ -594,7 +594,10 @@ paths:
         '403':
           $ref: '#/components/responses/Prohibido'
         '409':
-          description: El nombre de usuario ya está en uso.
+          description: |
+            El nombre de usuario, el correo o el teléfono ya están en uso. En los
+            conflictos de identidad la respuesta incluye `campos.email` o
+            `campos.telefono` cuando el servicio puede determinar el campo.
           content:
             application/json:
               schema:
@@ -3887,6 +3890,15 @@ components:
           items:
             type: string
           example: ['El campo Dni es obligatorio.']
+        campos:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Mapa opcional campo → mensaje para que el cliente muestre el error
+            junto al control correspondiente. No siempre está presente.
+          example:
+            email: El campo Email es obligatorio.
 
     RespuestaDataNull:
       type: object
@@ -4133,7 +4145,7 @@ components:
 
     UsuarioCrearBody:
       type: object
-      required: [username, nombres, apellidos, password, perfil_municipal]
+      required: [username, nombres, apellidos, email, password, perfil_municipal]
       properties:
         username:
           type: string
@@ -4149,11 +4161,12 @@ components:
           type: string
           format: email
           maxLength: 150
+          description: Obligatorio en el alta municipal; se normaliza a minúsculas y sin espacios externos.
         telefono:
           type: string
           maxLength: 30
           pattern: '^(?:\d{9}|\d{11})$'
-          description: Teléfono (9 u 11 dígitos).
+          description: Teléfono opcional (9 u 11 dígitos). Se normaliza a 9 dígitos nacionales.
         password:
           type: string
           format: password

@@ -19,7 +19,18 @@ use Throwable;
  */
 class IdentidadService
 {
-    private const SQL_TELEFONO = "CASE WHEN CHAR_LENGTH(REGEXP_REPLACE(telefono, '[^0-9]', '')) = 11 AND LEFT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 2) = '51' THEN RIGHT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 9) ELSE REGEXP_REPLACE(telefono, '[^0-9]', '') END";
+    private const SQL_TELEFONO = "CASE
+        WHEN CHAR_LENGTH(REGEXP_REPLACE(telefono, '[^0-9]', '')) = 13
+             AND LEFT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 4) = '0051'
+            THEN RIGHT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 9)
+        WHEN CHAR_LENGTH(REGEXP_REPLACE(telefono, '[^0-9]', '')) = 11
+             AND LEFT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 2) = '00'
+            THEN RIGHT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 9)
+        WHEN CHAR_LENGTH(REGEXP_REPLACE(telefono, '[^0-9]', '')) = 11
+             AND LEFT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 2) = '51'
+            THEN RIGHT(REGEXP_REPLACE(telefono, '[^0-9]', ''), 9)
+        ELSE REGEXP_REPLACE(telefono, '[^0-9]', '')
+    END";
 
     private BaseConnection $db;
 
@@ -160,6 +171,40 @@ class IdentidadService
     }
 
     /**
+     * Crea las reservas que falten para una cuenta existente sin modificar sus
+     * datos ni reasignar identidades ajenas. Es una reconciliación idempotente
+     * para fixtures y datos históricos; no sustituye la validación de alta.
+     */
+    public function reconciliarUsuario(int $userId): void
+    {
+        $usuario = $this->db->table('users')
+            ->select('email, telefono')
+            ->where('id', $userId)
+            ->get()
+            ->getRowArray();
+
+        if ($usuario === null) {
+            return;
+        }
+
+        foreach (['email', 'telefono'] as $tipo) {
+            $valor = self::valor($tipo, $usuario[$tipo] ?? null);
+            if ($valor === null) {
+                continue;
+            }
+
+            try {
+                // Si ya pertenece a esta cuenta, reservar() es un no-op. Si
+                // pertenece a otra, se conserva la situación y se informa en el
+                // diagnóstico; nunca se reasigna automáticamente.
+                $this->reservar($tipo, $valor, $userId);
+            } catch (ApiException) {
+                continue;
+            }
+        }
+    }
+
+    /**
      * Reserva el DNI de un postulante (incluye cuentas Google que lo completan).
      */
     public function actualizarDocumento(int $userId, ?string $dni): void
@@ -223,10 +268,16 @@ class IdentidadService
             $this->reservar($tipo, $nuevo, $userId);
         }
 
-        $this->db->table('identidades_reservadas')
-            ->where('tipo', $tipo)
-            ->where('user_id', $userId)
-            ->delete();
+        // Liberar únicamente el valor anterior. Borrar por user_id eliminaría
+        // también la reserva nueva que se acaba de insertar y abriría una
+        // ventana de concurrencia para duplicados.
+        if ($actual !== null) {
+            $this->db->table('identidades_reservadas')
+                ->where('tipo', $tipo)
+                ->where('user_id', $userId)
+                ->where('valor', $actual)
+                ->delete();
+        }
     }
 
     /**
@@ -359,11 +410,15 @@ class IdentidadService
     private function conflicto(string $tipo, ?array $reserva = null): ApiException
     {
         if (($reserva['estado'] ?? '') === 'solicitud') {
-            return match ($tipo) {
-                'email' => new ApiException('Este correo electrónico ya está asociado a una solicitud de afiliación de empresa pendiente. No es necesario registrar otra solicitud.', 409),
-                'ruc'   => new ApiException('Ya existe una solicitud de afiliación para este RUC que está pendiente de revisión.', 409),
-                default => $this->mensajeBase($tipo),
+            $mensaje = match ($tipo) {
+                'email' => 'Este correo electrónico ya está asociado a una solicitud de afiliación de empresa pendiente. No es necesario registrar otra solicitud.',
+                'ruc'   => 'Ya existe una solicitud de afiliación para este RUC que está pendiente de revisión.',
+                default => null,
             };
+
+            if ($mensaje !== null) {
+                return ApiException::conflicto($mensaje, [$tipo => $mensaje]);
+            }
         }
 
         return $this->mensajeBase($tipo);
@@ -371,12 +426,17 @@ class IdentidadService
 
     private function mensajeBase(string $tipo): ApiException
     {
-        return new ApiException(match ($tipo) {
+        $mensaje = match ($tipo) {
             'email' => 'Este correo electrónico ya está asociado a una cuenta. Inicia sesión o utiliza la opción de recuperación correspondiente.',
             'telefono' => 'Este número de teléfono ya está asociado a otra cuenta y no puede utilizarse para este registro.',
             'ruc' => 'Este RUC ya está asociado a una empresa registrada. Verifica los datos o utiliza el acceso de la empresa existente.',
             'dni' => 'Este DNI ya está asociado a una cuenta. Verifica tus datos o utiliza el acceso de la cuenta existente.',
             default => 'Ya existe una cuenta o solicitud asociada a estos datos. Utiliza el procedimiento de acceso o activación correspondiente.',
-        }, 409);
+        };
+
+        return ApiException::conflicto(
+            $mensaje,
+            in_array($tipo, ['email', 'telefono', 'ruc', 'dni'], true) ? [$tipo => $mensaje] : [],
+        );
     }
 }

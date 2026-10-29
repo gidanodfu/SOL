@@ -54,11 +54,16 @@ class ApiExceptionHandler implements ExceptionHandlerInterface
         if ($api->getRetryAfter() > 0) {
             $response->setHeader('Retry-After', (string) $api->getRetryAfter());
         }
-        $response->setBody(json_encode([
+        $cuerpo = [
             'success' => false,
             'message' => $api->getMessage(),
             'errors'  => $api->getErrores(),
-        ], JSON_UNESCAPED_UNICODE));
+        ];
+        if ($api->getCampos() !== []) {
+            $cuerpo['campos'] = $api->getCampos();
+        }
+
+        $response->setBody(json_encode($cuerpo, JSON_UNESCAPED_UNICODE));
         $response->send();
 
         if (ENVIRONMENT !== 'testing') {

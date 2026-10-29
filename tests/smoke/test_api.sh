@@ -87,7 +87,7 @@ RT=$(echo "$R" | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get
 curl -s -X POST "$B/api/auth/refresh" -H 'Content-Type: application/json' -d "{\"refresh_token\":\"$RT\"}" | safe_session
 
 paso "13. crear usuario municipal y desactivar"
-curl -s -o /dev/null -w "crear admin http:%{http_code}\n" -X POST "$B/api/admin/usuarios" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"username":"municipal1","nombres":"Rosa","apellidos":"Flores","password":"Segura123!","perfil_municipal":"admin"}'
+curl -s -o /dev/null -w "crear admin http:%{http_code}\n" -X POST "$B/api/admin/usuarios" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"username":"municipal1","nombres":"Rosa","apellidos":"Flores","email":"municipal1@example.test","password":"Segura123!","perfil_municipal":"admin"}'
 curl -s -o /dev/null -w "login municipal http:%{http_code}\n" -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"municipal1","password":"Segura123!"}'
 ID=$(curl -s "$B/api/admin/usuarios?q=municipal1" -H "Authorization: Bearer $AT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["data"][0]["id"])')
 curl -s -o /dev/null -w "desactivar http:%{http_code}\n" -X PUT "$B/api/admin/usuarios/$ID/estado" -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"estado":"inactivo"}'

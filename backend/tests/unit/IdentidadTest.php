@@ -22,7 +22,17 @@ final class IdentidadTest extends TestCase
         $this->assertSame('987654321', Identidad::telefono('+51 987-654-321'));
         $this->assertSame('987654321', Identidad::telefono('51987654321'));
         $this->assertSame('987654321', Identidad::telefono('0051 987654321'));
+        $this->assertSame('957418741', Identidad::telefono('00957418741'));
+        $this->assertSame('957418741', Identidad::telefono('0051 957 418 741'));
+        $this->assertSame('957418741', Identidad::telefono('(957) 418-741'));
         $this->assertNull(Identidad::telefono(''));
+    }
+
+    public function testNoEliminaCeroCeroDeNumerosDeOtraLongitud(): void
+    {
+        // Solo se retira 00 cuando el resto son exactamente 9 dígitos.
+        $this->assertSame('0033123456789', Identidad::telefono('0033123456789'));
+        $this->assertSame('005195741874', Identidad::telefono('0051 957 418 74'));
     }
 
     public function testNormalizaRucYDniSoloConSeparadoresPermitidos(): void

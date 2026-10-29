@@ -4,6 +4,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Services\IdentidadService;
 use CodeIgniter\Database\Seeder;
 
 /**
@@ -74,11 +75,21 @@ class DatosPruebaSeeder extends Seeder
                 'nombres'       => 'Constructora',
                 'apellidos'     => 'Los Jardines SAC',
                 'email'         => 'contacto@losjardines.pe',
+                'telefono'      => '074612345',
                 'estado'        => 'activo',
                 'created_at'    => $now,
                 'updated_at'    => $now,
             ]);
             $empresaUserId = (int) $this->db->insertID();
+        } else {
+            // La cuenta y el perfil de empresa comparten los datos de contacto.
+            $this->db->table('users')
+                ->where('id', $empresaUserId)
+                ->where('telefono', null)
+                ->update([
+                    'telefono'   => '074612345',
+                    'updated_at' => $now,
+                ]);
         }
 
         $empresaId = $this->db->table('empresas')->where('ruc', '20601234567')->get()->getRowArray()['id'] ?? null;
@@ -195,6 +206,17 @@ class DatosPruebaSeeder extends Seeder
                 'usuario_id'      => $postulanteUserId,
                 'created_at'      => $now,
             ]);
+        }
+
+        // Reconciliación idempotente: estos fixtures insertan directamente en
+        // users, por lo que deben dejar también sus reservas centrales para que
+        // la barrera de concurrencia quede completa desde el primer uso.
+        $identidad = new IdentidadService($this->db);
+        foreach (['admin', 'moderador', 'lectura', '20601234567', '12345678'] as $username) {
+            $id = $this->usuarioId($username);
+            if ($id !== null) {
+                $identidad->reconciliarUsuario($id);
+            }
         }
 
         echo "DatosPruebaSeeder: fixtures de prueba listos (admin, moderador, solo lectura, empresa, postulante, oferta).\n";
