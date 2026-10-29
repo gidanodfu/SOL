@@ -8,8 +8,8 @@ import LogoMunicipal from './LogoMunicipal';
  * Sustituye el antiguo mensaje de conexión segura en Login, Registro,
  * RegistroEmpresa y ActivarCuenta.
  *
- * `rounded` aplica la variante de superficie redondeada solo a la pantalla de
- * login. `legal` aplica la superficie de las páginas legales, alineada con su
+ * `rounded` aplica la variante de superficie redondeada de acceso y registro.
+ * `legal` aplica la superficie de las páginas legales, alineada con su
  * encabezado y su tarjeta documental. En ambas variantes el escudo ya está en
  * la cabecera, por lo que se omite en el pie para evitar duplicarlo.
  */

@@ -27,19 +27,30 @@ test('las pantallas de autenticación usan el footer compartido y ya no el mensa
   }
 });
 
-test('solo el login usa la variante rounded del footer compartido', () => {
-  const login = leer('../src/pages/auth/Login.jsx');
+test('las pantallas de acceso y registro usan la variante rounded del footer', () => {
   const footer = leer('../src/components/AuthFooter.jsx');
   const estilos = leer('../src/styles.css');
 
-  assert.match(login, /<AuthFooter rounded \/>/);
-  for (const archivo of ['Registro.jsx', 'RegistroEmpresa.jsx', 'ActivarCuenta.jsx']) {
-    assert.match(leer(`../src/pages/auth/${archivo}`), /<AuthFooter \/>/);
+  for (const archivo of ['Login.jsx', 'Registro.jsx', 'RegistroEmpresa.jsx']) {
+    assert.match(leer(`../src/pages/auth/${archivo}`), /<AuthFooter rounded \/>/);
   }
+  assert.match(leer('../src/pages/auth/ActivarCuenta.jsx'), /<AuthFooter \/>/);
+
+  for (const archivo of ['Registro.jsx', 'RegistroEmpresa.jsx']) {
+    assert.match(
+      leer(`../src/pages/auth/${archivo}`),
+      /className="login-institucional login-institucional--registro login-institucional--footer-rounded"/,
+    );
+  }
+
   assert.match(footer, /rounded = false/);
   assert.match(footer, /!superficie && <LogoMunicipal/);
   assert.match(footer, /login-footer--rounded/);
   assert.match(estilos, /--login-panel-width:\s*440px/);
+  assert.match(
+    estilos,
+    /\.login-institucional--footer-rounded\.login-institucional--registro\s*\{[^}]*--login-panel-width:\s*500px/s,
+  );
   assert.match(
     estilos,
     /\.login-institucional--footer-rounded \.login-formulario\s*\{[^}]*max-width:\s*var\(--login-panel-width\)/s,
