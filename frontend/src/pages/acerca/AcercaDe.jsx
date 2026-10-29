@@ -6,6 +6,7 @@ import { ROLES, VERSION_SISTEMA } from '../../constants';
 
 const PERFIL_GITHUB = 'https://github.com/gidanodfu';
 const PERFIL_COLABORADOR_GITHUB = 'https://github.com/jhonalo9';
+const PERFIL_JESUS_GITHUB = 'https://github.com/JesusAndreBS';
 const REPOSITORIO_GITHUB = 'https://github.com/gidanodfu/SOL';
 
 const INTRO = 'Conoce el sistema Empleo MDJLO y el desarrollo de la plataforma.';
@@ -60,6 +61,16 @@ export default function AcercaDe() {
             rol="Colaborador"
             url={PERFIL_COLABORADOR_GITHUB}
             etiqueta="Perfil de GitHub de jhonalo9, colaborador"
+          />
+
+          <div className="about-separador" role="presentation" />
+
+          <PerfilDesarrollo
+            nombre="Jesus Andre"
+            usuario="JesusAndreBS"
+            rol="Colaborador"
+            url={PERFIL_JESUS_GITHUB}
+            etiqueta="Perfil de GitHub de JesusAndreBS, colaborador"
           />
 
           <div className="about-separador" role="presentation" />
