@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { useRef, useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, IdCard, Palette, UserCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, IdCard, Info, Palette, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
 import ProfileImage from '../components/ProfileImage';
@@ -63,6 +63,16 @@ export function LayoutPostulante() {
                 {item.texto}
               </Link>
             ))}
+            <div className="divider" />
+            <NavLink
+              to="/about"
+              role="menuitem"
+              onClick={() => setMenuAbierto(false)}
+              className={({ isActive }) => (isActive ? 'active' : '')}
+            >
+              <Info size={17} aria-hidden="true" />
+              Acerca de
+            </NavLink>
             <div className="divider" />
             <BotonSalir className="logout-item" />
           </div>

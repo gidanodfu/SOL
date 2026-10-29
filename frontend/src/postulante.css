@@ -250,6 +250,11 @@
   transition: background 0.12s;
 }
 .app-postulante .user-dropdown a:hover, .app-postulante .user-dropdown button:hover { background: var(--sky); }
+.app-postulante .user-dropdown a.active {
+  background: var(--sky);
+  color: var(--enlace);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
 .app-postulante .user-dropdown i { font-size: 17px; color: var(--text-2); width: 20px; text-align: center; }
 .app-postulante .user-dropdown svg { color: var(--text-2); width: 20px; flex-shrink: 0; }
 .app-postulante .user-dropdown .divider { height: 1px; background: var(--line); margin: 4px 12px; }
