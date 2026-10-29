@@ -112,7 +112,10 @@ class AuthController extends BaseApiController
                 ], JSON_UNESCAPED_UNICODE));
         }
 
-        return $this->ok((new DniService())->consultar($dni), 'DNI verificado.');
+        $datos = (new DniService())->consultar($dni);
+        $datos['dni_token'] = service('jwtService')->crearTokenVerificacionDni($dni);
+
+        return $this->ok($datos, 'DNI verificado.');
     }
 
     public function logout()

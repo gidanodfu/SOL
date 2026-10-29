@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
+  esDniVerificadoPara,
   validarRegistroPostulante,
   validarSolicitudEmpresa,
 } from '../src/utils/validacionAuth.js';
@@ -60,6 +61,16 @@ test('el registro de postulante acepta nombres compuestos, tildes y ñ', () => {
   assert.deepEqual(validarRegistroPostulante(postulanteValido), {});
 });
 
+test('la verificación del DNI solo es válida para el documento exacto verificado', () => {
+  const verificacion = { dni: '12345678', token: 'token-firmado' };
+  assert.equal(esDniVerificadoPara(verificacion, '12345678'), true);
+  assert.equal(esDniVerificadoPara(verificacion, '87654321'), false);
+  assert.equal(esDniVerificadoPara(verificacion, '12345678 '), true);
+  assert.equal(esDniVerificadoPara(verificacion, '1234567'), false);
+  assert.equal(esDniVerificadoPara(null, '12345678'), false);
+  assert.equal(esDniVerificadoPara({ dni: '12345678' }, '12345678'), false);
+});
+
 test('la solicitud de empresa exige RUC, correo, teléfono, representante y términos', () => {
   const errores = validarSolicitudEmpresa({});
   for (const campo of ['ruc', 'email', 'telefono', 'representante', 'terms_accepted']) {
@@ -90,6 +101,12 @@ test('los formularios conectan la validación por campo y conservan Google', () 
   const estilos = leer('../src/styles.css');
 
   assert.match(registro, /validarRegistroPostulante/);
+  assert.match(registro, /esDniVerificadoPara/);
+  assert.match(registro, /setDniVerificacion\(null\)/);
+  assert.match(registro, /dniActualRef\.current !== dniConsultado/);
+  assert.match(registro, /if \(!dniVerificado\)/);
+  assert.match(registro, /nombres: '', apellidos: ''/);
+  assert.match(registro, /dni_token: dniVerificacion\.token/);
   assert.match(registro, /<form onSubmit=\{enviar\} noValidate>/);
   assert.match(registro, /<ErrorCampo id="email-error">/);
   assert.match(registro, /<ErrorCampo id="telefono-error">/);

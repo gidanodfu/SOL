@@ -284,6 +284,20 @@ class AuthService
         ]);
 
         $dni = $datos['dni'];
+        $dniToken = $datos['dni_token'] ?? null;
+        $verificacion = is_string($dniToken) && $dniToken !== ''
+            ? $this->jwt->verificar($dniToken)
+            : null;
+        if ($verificacion === null
+            || ($verificacion['tipo'] ?? '') !== 'verificacion_dni'
+            || ($verificacion['dni'] ?? '') !== $dni) {
+            throw ApiException::validacion(
+                'Debe verificar el DNI antes de crear la cuenta.',
+                ['Debe verificar el DNI antes de crear la cuenta.'],
+                ['dni_token' => 'Debe verificar el DNI antes de crear la cuenta.'],
+            );
+        }
+
         if ($this->users->buscarPorUsername($dni) !== null) {
             throw ApiException::conflicto('Este DNI ya está asociado a una cuenta. Verifica tus datos o utiliza el acceso de la cuenta existente.');
         }

@@ -18,6 +18,10 @@ tok() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success
 safe_session() { python3 -c 'import sys,json;d=json.load(sys.stdin);u=(d.get("data") or {}).get("usuario") or {};assert d.get("success") is True and isinstance(d.get("data"),dict) and d["data"].get("access_token") and u.get("username"), "FAIL sesión sin access_token/usuario";print("success:",d.get("success"),"usuario:",u.get("username"),"rol:",u.get("rol"))' ; }
 safe_error() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is False and d.get("message"), "FAIL respuesta de error inesperada";print("error esperado:", d.get("message"))' ; }
 
+token_dni() {
+    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1"
+}
+
 paso "0. health check público"
 curl -s -o /dev/null -w "GET /health http:%{http_code} (200)\n" "$B/health"
 curl -s "$B/health" | python3 -c 'import sys,json;d=json.load(sys.stdin);print("health status:",d["data"]["status"])'
@@ -65,7 +69,8 @@ curl -s "$B/api/postulante/perfil" -H "Authorization: Bearer $AT_P" | python3 -c
 curl -s "$B/api/postulante/dashboard" -H "Authorization: Bearer $AT_P" | js | head -c 300; echo
 
 paso "10. registro nuevo postulante DNI 87654321"
-curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d '{"dni":"87654321","nombres":"Luis","apellidos":"Perez Diaz","email":"luis@mail.com","telefono":"999888776","password":"Clave12345!","password2":"Clave12345!","terms_accepted":true}' | safe_session
+TOKEN_DNI=$(token_dni 87654321)
+curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d "{\"dni\":\"87654321\",\"nombres\":\"Luis\",\"apellidos\":\"Perez Diaz\",\"email\":\"luis@mail.com\",\"telefono\":\"999888776\",\"password\":\"Clave12345!\",\"password2\":\"Clave12345!\",\"terms_accepted\":true,\"dni_token\":\"$TOKEN_DNI\"}" | safe_session
 
 paso "10b. login nuevo postulante"
 curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"87654321","password":"Clave12345!"}' | safe_session

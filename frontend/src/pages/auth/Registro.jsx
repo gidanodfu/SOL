@@ -13,7 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTema } from '../../context/ThemeContext';
 import { verificarDni as apiVerificarDni } from '../../services/solicitudes';
 import { errorApi, soloDigitos } from '../../utils';
-import { validarRegistroPostulante } from '../../utils/validacionAuth';
+import { esDniVerificadoPara, validarRegistroPostulante } from '../../utils/validacionAuth';
 
 export default function Registro() {
   const { loginGoogle, registrarPostulante } = useAuth();
@@ -27,11 +27,14 @@ export default function Registro() {
   const [turnstileToken, setTurnstileToken] = useState(null);
   const [verificandoDni, setVerificandoDni] = useState(false);
   const [intento, setIntento] = useState(false);
-  const [dniVerificado, setDniVerificado] = useState(false);
+  const [dniVerificacion, setDniVerificacion] = useState(null);
+  const [dniConDatos, setDniConDatos] = useState(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [erroresCampo, setErroresCampo] = useState({});
   const turnstileRef = useRef(null);
+  const dniActualRef = useRef(form.dni);
   const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
+  const dniVerificado = esDniVerificadoPara(dniVerificacion, form.dni);
   const errores = {
     ...(intento ? validarRegistroPostulante({ ...form, termsAccepted: aceptaTerminos }) : {}),
     ...erroresCampo,
@@ -53,6 +56,32 @@ export default function Registro() {
     limpiarErrorCampo(name);
   };
 
+  /**
+   * El DNI es el documento que acredita la verificación. Al modificarlo se
+   * invalida el token anterior y se limpian los datos autocompletados que
+   * pertenecían al documento verificado.
+   */
+  const cambiarDni = (valor) => {
+    const dni = soloDigitos(valor);
+    if (dni === form.dni) return;
+
+    const limpiarDatos = Boolean(dniConDatos && dniConDatos !== dni);
+    setDniVerificacion(null);
+    dniActualRef.current = dni;
+    setForm((previo) => ({
+      ...previo,
+      dni,
+      ...(limpiarDatos ? { nombres: '', apellidos: '' } : {}),
+    }));
+    setError(null);
+    limpiarErrorCampo('dni');
+    if (limpiarDatos) {
+      setDniConDatos(null);
+      limpiarErrorCampo('nombres');
+      limpiarErrorCampo('apellidos');
+    }
+  };
+
   // Consulta RENIEC vía backend para autocompletar nombres/apellidos. El token
   // del proveedor vive solo en el backend; aquí no se maneja ninguna credencial.
   const consultarDni = async () => {
@@ -63,12 +92,23 @@ export default function Registro() {
     setVerificandoDni(true);
     setError(null);
     limpiarErrorCampo('dni');
+    const dniConsultado = form.dni;
     try {
-      const datos = await apiVerificarDni(form.dni);
+      const datos = await apiVerificarDni(dniConsultado);
+      if (!datos?.dni_token || datos?.dni !== dniConsultado) {
+        setDniVerificacion(null);
+        setError('No se pudo acreditar la verificación del DNI. Inténtalo nuevamente.');
+        return;
+      }
+      if (dniActualRef.current !== dniConsultado) {
+        setDniVerificacion(null);
+        return;
+      }
       setForm((f) => ({ ...f, nombres: datos.nombres || f.nombres, apellidos: datos.apellidos || f.apellidos }));
-      setDniVerificado(true);
+      setDniConDatos(datos.dni);
+      setDniVerificacion({ dni: datos.dni, token: datos.dni_token });
     } catch (err) {
-      setDniVerificado(false);
+      setDniVerificacion(null);
       setError(errorApi(err));
     } finally {
       setVerificandoDni(false);
@@ -105,6 +145,10 @@ export default function Registro() {
       setError(null);
       return;
     }
+    if (!dniVerificado) {
+      setErroresCampo({ dni: 'Verifica el DNI antes de crear tu cuenta.' });
+      return;
+    }
     if (turnstileRequerido && !turnstileToken) {
       setError('Completa la verificación de seguridad e inténtalo de nuevo.');
       return;
@@ -113,12 +157,21 @@ export default function Registro() {
     setError(null);
     setOk(null);
     try {
-      await registrarPostulante({ ...form, terms_accepted: true, turnstile_token: turnstileToken });
+      await registrarPostulante({
+        ...form,
+        terms_accepted: true,
+        turnstile_token: turnstileToken,
+        dni_token: dniVerificacion.token,
+      });
       setOk('Cuenta creada correctamente. ¡Bienvenido!');
       navigate('/postulante/buscar', { replace: true });
     } catch (err) {
       const data = err?.response?.data;
-      const campos = data?.campos && typeof data.campos === 'object' ? data.campos : {};
+      const campos = data?.campos && typeof data.campos === 'object' ? { ...data.campos } : {};
+      if (campos.dni_token) {
+        if (!campos.dni) campos.dni = campos.dni_token;
+        setDniVerificacion(null);
+      }
       setErroresCampo(campos);
       const detalles = data?.errors;
       setError(Array.isArray(detalles) && detalles.length ? detalles.join('. ') : errorApi(err));
@@ -168,7 +221,7 @@ export default function Registro() {
                   placeholder="Ingrese su DNI"
                   maxLength={8}
                   value={form.dni}
-                  onChange={(e) => { setDniVerificado(false); cambiar({ target: { name: 'dni', value: soloDigitos(e.target.value) } }); }}
+                  onChange={(e) => cambiarDni(e.target.value)}
                   inputMode="numeric"
                   required
                   aria-invalid={errores.dni ? true : undefined}
