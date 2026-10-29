@@ -42,7 +42,7 @@ test('la versión mostrada usa una única fuente y no inventa un número', () =>
   assert.doesNotMatch(pagina, /package\.json/);
 });
 
-test('la tarjeta de desarrollo enlaza al perfil principal, al colaborador y al repositorio', () => {
+test('la tarjeta de desarrollo enlaza al perfil principal, a los colaboradores y al repositorio', () => {
   const pagina = leer('../src/pages/acerca/AcercaDe.jsx');
 
   assert.match(pagina, /Josue David/);
@@ -52,22 +52,32 @@ test('la tarjeta de desarrollo enlaza al perfil principal, al colaborador y al r
   assert.match(pagina, /Colaborador/);
   assert.match(pagina, /const PERFIL_GITHUB = 'https:\/\/github\.com\/gidanodfu'/);
   assert.match(pagina, /const PERFIL_COLABORADOR_GITHUB = 'https:\/\/github\.com\/jhonalo9'/);
+  assert.match(pagina, /const PERFIL_JESUS_GITHUB = 'https:\/\/github\.com\/JesusAndreBS'/);
   assert.match(pagina, /const REPOSITORIO_GITHUB = 'https:\/\/github\.com\/gidanodfu\/SOL'/);
   assert.match(pagina, /Perfil de GitHub/);
   assert.match(pagina, /Repositorio del proyecto/);
   assert.match(pagina, /Ver repositorio en GitHub/);
   assert.match(pagina, /etiqueta="Perfil de GitHub de Josue David"/);
   assert.match(pagina, /etiqueta="Perfil de GitHub de jhonalo9, colaborador"/);
+  assert.match(pagina, /nombre="JesusAndreBS"/);
+  assert.match(pagina, /etiqueta="Perfil de GitHub de JesusAndreBS, colaborador"/);
   assert.match(pagina, /aria-label=\{etiqueta\}/);
-  assert.equal((pagina.match(/<PerfilDesarrollo\b/g) || []).length, 2);
+  assert.equal((pagina.match(/<PerfilDesarrollo\b/g) || []).length, 3);
   assert.equal((pagina.match(/target="_blank"/g) || []).length, 2);
   assert.equal((pagina.match(/rel="noopener noreferrer"/g) || []).length, 2);
 
-  // Orden visual: desarrollador principal → colaborador → repositorio.
+  // Orden visual: desarrollador principal → colaboradores → repositorio.
   const principal = pagina.indexOf('nombre="Josue David"');
   const colaborador = pagina.indexOf('usuario="jhonalo9"');
+  const segundoColaborador = pagina.indexOf('nombre="JesusAndreBS"');
   const repositorio = pagina.indexOf('<h3>Repositorio del proyecto</h3>');
-  assert.ok(principal >= 0 && colaborador > principal && repositorio > colaborador, 'orden de los bloques');
+  assert.ok(
+    principal >= 0
+      && colaborador > principal
+      && segundoColaborador > colaborador
+      && repositorio > segundoColaborador,
+    'orden de los bloques',
+  );
 });
 
 test('las sidebars no crean scroll interno en escritorio', () => {
