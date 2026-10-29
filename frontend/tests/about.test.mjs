@@ -42,18 +42,49 @@ test('la versión mostrada usa una única fuente y no inventa un número', () =>
   assert.doesNotMatch(pagina, /package\.json/);
 });
 
-test('la tarjeta de desarrollo enlaza al perfil y al repositorio oficiales', () => {
+test('la tarjeta de desarrollo enlaza al perfil principal, al colaborador y al repositorio', () => {
   const pagina = leer('../src/pages/acerca/AcercaDe.jsx');
 
   assert.match(pagina, /Josue David/);
-  assert.match(pagina, /Desarrollador del sistema/);
+  assert.match(pagina, /Desarrollador principal/);
+  assert.match(pagina, /usuario="jhonalo9"/);
+  assert.match(pagina, /rol="Colaborador"/);
+  assert.match(pagina, /Colaborador/);
   assert.match(pagina, /const PERFIL_GITHUB = 'https:\/\/github\.com\/gidanodfu'/);
+  assert.match(pagina, /const PERFIL_COLABORADOR_GITHUB = 'https:\/\/github\.com\/jhonalo9'/);
   assert.match(pagina, /const REPOSITORIO_GITHUB = 'https:\/\/github\.com\/gidanodfu\/SOL'/);
   assert.match(pagina, /Perfil de GitHub/);
   assert.match(pagina, /Repositorio del proyecto/);
   assert.match(pagina, /Ver repositorio en GitHub/);
+  assert.match(pagina, /etiqueta="Perfil de GitHub de Josue David"/);
+  assert.match(pagina, /etiqueta="Perfil de GitHub de jhonalo9, colaborador"/);
+  assert.match(pagina, /aria-label=\{etiqueta\}/);
+  assert.equal((pagina.match(/<PerfilDesarrollo\b/g) || []).length, 2);
   assert.equal((pagina.match(/target="_blank"/g) || []).length, 2);
   assert.equal((pagina.match(/rel="noopener noreferrer"/g) || []).length, 2);
+
+  // Orden visual: desarrollador principal → colaborador → repositorio.
+  const principal = pagina.indexOf('nombre="Josue David"');
+  const colaborador = pagina.indexOf('usuario="jhonalo9"');
+  const repositorio = pagina.indexOf('<h3>Repositorio del proyecto</h3>');
+  assert.ok(principal >= 0 && colaborador > principal && repositorio > colaborador, 'orden de los bloques');
+});
+
+test('las sidebars no crean scroll interno en escritorio', () => {
+  const estilos = leer('../src/styles.css');
+  const sidebar = leer('../src/components/Sidebar.jsx');
+
+  assert.match(sidebar, /<nav className="side-nav">/);
+  assert.match(estilos, /\.sidebar\s*\{[^}]*height:\s*auto/s);
+  assert.match(estilos, /\.sidebar\s*\{[^}]*min-height:\s*calc\(100vh - 2 \* var\(--sidebar-gap\)\)/s);
+  assert.match(estilos, /\.sidebar\s*\{[^}]*align-self:\s*flex-start/s);
+  assert.match(estilos, /\.side-nav\s*\{[^}]*flex:\s*0 0 auto/s);
+  assert.match(estilos, /\.side-nav\s*\{[^}]*overflow:\s*visible/s);
+  assert.doesNotMatch(estilos, /\.side-nav\s*\{[^}]*overflow-y:\s*(auto|scroll)/s);
+  assert.match(
+    estilos,
+    /@media \(max-width: 860px\)[\s\S]*?\.sidebar,[\s\S]*?overflow-y:\s*auto/,
+  );
 });
 
 test('Administración y Empresa añaden ACERCA DE después de Configuración', () => {
@@ -97,5 +128,4 @@ test('la página se registra en los metadatos y los estilos usan tokens del sist
   assert.match(estilos, /\.about-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.about-grid \{ grid-template-columns: 1fr; \}/);
   assert.match(estilos, /\.about-link:focus-visible\s*\{[^}]*outline:/s);
-  assert.match(estilos, /\.side-nav\s*\{[^}]*overflow-y:\s*auto/s);
 });

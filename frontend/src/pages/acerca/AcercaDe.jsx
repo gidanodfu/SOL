@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ROLES, VERSION_SISTEMA } from '../../constants';
 
 const PERFIL_GITHUB = 'https://github.com/gidanodfu';
+const PERFIL_COLABORADOR_GITHUB = 'https://github.com/jhonalo9';
 const REPOSITORIO_GITHUB = 'https://github.com/gidanodfu/SOL';
 
 const INTRO = 'Conoce el sistema Empleo MDJLO y el desarrollo de la plataforma.';
@@ -43,26 +44,23 @@ export default function AcercaDe() {
         </TarjetaInfo>
 
         <TarjetaInfo id="about-desarrollo" Icono={Code2} titulo="Desarrollo del sistema">
-          <div className="about-dev">
-            <span className="about-dev-avatar" aria-hidden="true">
-              <UserRound size={20} />
-            </span>
-            <span className="about-dev-info">
-              <strong>Josue David</strong>
-              <small>Desarrollador del sistema</small>
-            </span>
-          </div>
+          <PerfilDesarrollo
+            nombre="Josue David"
+            rol="Desarrollador principal"
+             usuario="gidanodfu"
+            url={PERFIL_GITHUB}
+            etiqueta="Perfil de GitHub de Josue David"
+          />
 
-          <a
-            className="about-link"
-            href={PERFIL_GITHUB}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <UserRound size={17} aria-hidden="true" />
-            <span>Perfil de GitHub</span>
-            <ExternalLink className="about-link-ext" size={14} aria-hidden="true" />
-          </a>
+          <div className="about-separador" role="presentation" />
+
+          <PerfilDesarrollo
+            nombre="Jhonatan Lopez"
+            usuario="jhonalo9"
+            rol="Colaborador"
+            url={PERFIL_COLABORADOR_GITHUB}
+            etiqueta="Perfil de GitHub de jhonalo9, colaborador"
+          />
 
           <div className="about-separador" role="presentation" />
 
@@ -72,6 +70,7 @@ export default function AcercaDe() {
             href={REPOSITORIO_GITHUB}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Ver repositorio del proyecto SOL en GitHub"
           >
             <GitBranch size={17} aria-hidden="true" />
             <span>Ver repositorio en GitHub</span>
@@ -79,6 +78,37 @@ export default function AcercaDe() {
           </a>
         </TarjetaInfo>
       </div>
+    </div>
+  );
+}
+
+function PerfilDesarrollo({ nombre, usuario, rol, url, etiqueta }) {
+  return (
+    <div className="about-perfil">
+      <div className="about-dev">
+        <span className="about-dev-avatar" aria-hidden="true">
+          <UserRound size={20} />
+        </span>
+        <span className="about-dev-info">
+          <strong>{nombre}</strong>
+          <small>
+            {rol}
+            {usuario ? ` · ${usuario}` : ''}
+          </small>
+        </span>
+      </div>
+
+      <a
+        className="about-link"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={etiqueta}
+      >
+        <UserRound size={17} aria-hidden="true" />
+        <span>Perfil de GitHub</span>
+        <ExternalLink className="about-link-ext" size={14} aria-hidden="true" />
+      </a>
     </div>
   );
 }
