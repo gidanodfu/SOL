@@ -37,7 +37,7 @@ test('solo el login usa la variante rounded del footer compartido', () => {
     assert.match(leer(`../src/pages/auth/${archivo}`), /<AuthFooter \/>/);
   }
   assert.match(footer, /rounded = false/);
-  assert.match(footer, /!rounded && <LogoMunicipal/);
+  assert.match(footer, /!superficie && <LogoMunicipal/);
   assert.match(footer, /login-footer--rounded/);
   assert.match(estilos, /--login-panel-width:\s*440px/);
   assert.match(
@@ -86,4 +86,40 @@ test('cada documento legal reutiliza el layout común', () => {
   for (const archivo of ['PoliticaPrivacidad.jsx', 'TerminosCondiciones.jsx', 'AvisoLegal.jsx', 'PoliticaTecnologiasWeb.jsx']) {
     assert.match(leer(`../src/pages/legal/${archivo}`), /LegalPage/);
   }
+});
+
+test('las páginas legales comparten ancho y superficies redondeadas', () => {
+  const layout = leer('../src/pages/legal/LegalPage.jsx');
+  const footer = leer('../src/components/AuthFooter.jsx');
+  const estilos = leer('../src/styles.css');
+
+  // Las tres superficies viven dentro del mismo shell legal.
+  assert.match(layout, /className="legal-shell"/);
+  assert.match(layout, /className="legal-topbar"/);
+  assert.match(layout, /className="legal-main"/);
+  assert.match(layout, /<AuthFooter legal \/>/);
+  assert.match(footer, /legal = false/);
+  assert.match(footer, /login-footer--legal/);
+
+  // Una sola fuente de ancho para encabezado, documento y footer.
+  assert.match(estilos, /\.legal-shell\s*\{[^}]*max-width:\s*900px/s);
+  assert.match(estilos, /\.legal-topbar\s*\{[^}]*width:\s*100%/s);
+  assert.match(estilos, /\.legal-topbar\s*\{[^}]*border-radius:\s*var\(--radius-2xl\)/s);
+  assert.match(estilos, /\.legal-doc\s*\{[^}]*width:\s*100%[^}]*max-width:\s*none/s);
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--legal\s*\{[^}]*width:\s*100%/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--legal\s*\{[^}]*border-radius:\s*var\(--radius-2xl\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--legal\s*\{[^}]*background:\s*var\(--panel-bg\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--legal\s*\{[^}]*border:\s*1px solid var\(--line\)/s,
+  );
 });
