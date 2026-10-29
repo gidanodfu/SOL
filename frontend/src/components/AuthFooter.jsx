@@ -9,14 +9,20 @@ import LogoMunicipal from './LogoMunicipal';
  * RegistroEmpresa y ActivarCuenta.
  *
  * `rounded` aplica la variante de superficie redondeada solo a la pantalla de
- * login; el resto de pantallas conserva el pie de página actual.
+ * login. `legal` aplica la superficie de las páginas legales, alineada con su
+ * encabezado y su tarjeta documental. En ambas variantes el escudo ya está en
+ * la cabecera, por lo que se omite en el pie para evitar duplicarlo.
  */
-export default function AuthFooter({ rounded = false }) {
+export default function AuthFooter({ rounded = false, legal = false }) {
+  const superficie = rounded || legal;
+  const clases = ['login-footer'];
+  if (rounded) clases.push('login-footer--rounded');
+  if (legal) clases.push('login-footer--legal');
+
   return (
-    <footer className={`login-footer${rounded ? ' login-footer--rounded' : ''}`}>
+    <footer className={clases.join(' ')}>
       <div className="login-footer-inner">
-        {/* En login el escudo ya está en la cabecera; evitar duplicarlo. */}
-        {!rounded && <LogoMunicipal className="login-footer-logo" />}
+        {!superficie && <LogoMunicipal className="login-footer-logo" />}
         <nav className="login-footer-links" aria-label="Documentos legales">
           {LEGAL_LINKS.map((enlace) => (
             <Link key={enlace.to} to={enlace.to}>
