@@ -27,6 +27,41 @@ test('las pantallas de autenticación usan el footer compartido y ya no el mensa
   }
 });
 
+test('solo el login usa la variante rounded del footer compartido', () => {
+  const login = leer('../src/pages/auth/Login.jsx');
+  const footer = leer('../src/components/AuthFooter.jsx');
+  const estilos = leer('../src/styles.css');
+
+  assert.match(login, /<AuthFooter rounded \/>/);
+  for (const archivo of ['Registro.jsx', 'RegistroEmpresa.jsx', 'ActivarCuenta.jsx']) {
+    assert.match(leer(`../src/pages/auth/${archivo}`), /<AuthFooter \/>/);
+  }
+  assert.match(footer, /rounded = false/);
+  assert.match(footer, /!rounded && <LogoMunicipal/);
+  assert.match(footer, /login-footer--rounded/);
+  assert.match(estilos, /--login-panel-width:\s*440px/);
+  assert.match(
+    estilos,
+    /\.login-institucional--footer-rounded \.login-formulario\s*\{[^}]*max-width:\s*var\(--login-panel-width\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--rounded\s*\{[^}]*width:\s*calc\(100% - var\(--login-panel-gutter\) - var\(--login-panel-gutter\)\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--rounded\s*\{[^}]*max-width:\s*var\(--login-panel-width\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--rounded\s*\{[^}]*border-radius:\s*var\(--radius-xl\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--rounded\s*\{[^}]*background:\s*var\(--panel-bg\)/s,
+  );
+});
+
 test('las cuatro rutas legales están declaradas como públicas', () => {
   const rutas = leer('../src/routes/index.jsx');
   for (const ruta of ['/politica-privacidad', '/terminos-condiciones', '/aviso-legal', '/politica-cookies']) {
