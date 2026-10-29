@@ -77,8 +77,10 @@ test('el servicio de cambio de perfil usa el endpoint explícito', () => {
 test('el alta municipal exige correo y muestra errores por campo', () => {
   const usuarios = leer('src/pages/admin/Usuarios.jsx');
   const utils = leer('src/utils.js');
+  const campos = leer('src/utils/validacionCampos.js');
 
-  assert.match(utils, /export const esEmailValido/);
+  assert.match(utils, /validacionCampos/);
+  assert.match(campos, /export const esEmailValido/);
   assert.match(usuarios, /El correo electrónico es obligatorio/);
   assert.match(usuarios, /El usuario es obligatorio/);
   assert.match(usuarios, /error=\{erroresCampo\.email\}/);

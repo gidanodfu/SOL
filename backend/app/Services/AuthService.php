@@ -266,13 +266,18 @@ class AuthService
         $datos['dni']      = Identidad::dni($datos['dni'] ?? '');
         $datos['email']    = Identidad::email($datos['email'] ?? null);
         $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+        foreach (['nombres', 'apellidos'] as $campo) {
+            if (isset($datos[$campo]) && is_string($datos[$campo])) {
+                $datos[$campo] = trim($datos[$campo]);
+            }
+        }
 
         Validador::validar($datos, [
             'dni'            => ['required', 'dni'],
             'nombres'        => ['required', 'max:100'],
             'apellidos'      => ['required', 'max:100'],
-            'email'          => ['email'],
-            'telefono'       => ['telefono'],
+            'email'          => ['required', 'email', 'max:150'],
+            'telefono'       => ['required', 'telefono'],
             'password'       => ['required', 'password'],
             'password2'      => ['required', 'igual:password'],
             'terms_accepted' => ['required', 'aceptacion'],

@@ -45,15 +45,9 @@ export function descargarBlob(blob, nombreArchivo) {
   URL.revokeObjectURL(url);
 }
 
-/** El backend valida 9 u 11 dígitos; el frontend usa el mismo criterio. */
-export const soloDigitos = (v) => String(v ?? '').replace(/\D/g, '');
-export const esTelefonoValido = (v) => v == null || v === '' || /^(?:\d{9}|\d{11})$/.test(String(v));
-
-/** Validación inmediata del formulario; el backend conserva la autoridad final. */
-export const esEmailValido = (v) => {
-  const email = String(v ?? '').trim();
-  return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-};
+/** Reglas de formato compartidas; viven en un módulo sin dependencias para
+ * poder probarse de forma aislada. */
+export { soloDigitos, esTelefonoValido, esEmailValido } from './utils/validacionCampos.js';
 
 /**
  * Enlaces de usuario: solo http(s). Evita que una URL manipulada (javascript:,

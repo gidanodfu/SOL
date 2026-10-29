@@ -13,6 +13,7 @@ export default function TermsCheckbox({
   checked,
   onChange,
   error,
+  required = false,
   children,
 }) {
   const errorId = `${id}-error`;
@@ -26,6 +27,8 @@ export default function TermsCheckbox({
           type="checkbox"
           checked={checked}
           onChange={onChange}
+          required={required}
+          aria-required={required || undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
         />
