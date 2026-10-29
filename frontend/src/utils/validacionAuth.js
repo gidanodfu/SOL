@@ -5,6 +5,18 @@ import { passwordCumple } from './password.js';
 const texto = (valor) => String(valor ?? '').trim();
 
 /**
+ * La verificación del DNI está vinculada al documento exacto y a la credencial
+ * emitida por el backend. Cambiar el documento invalida automáticamente el
+ * resultado anterior.
+ */
+export const esDniVerificadoPara = (verificacion, dni) => Boolean(
+  verificacion
+  && verificacion.token
+  && texto(verificacion.dni) !== ''
+  && texto(verificacion.dni) === texto(dni),
+);
+
+/**
  * Validación inmediata de los formularios públicos de registro. El backend
  * conserva la autoridad final; estas reglas replican los mismos límites para
  * mostrar errores por campo antes de enviar la petición.

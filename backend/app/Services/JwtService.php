@@ -49,6 +49,27 @@ class JwtService
     }
 
     /**
+     * Credencial breve que acredita que un DNI fue consultado correctamente.
+     * Está firmada y vinculada al documento exacto; el registro la exige para
+     * no confiar en un booleano enviado por el navegador.
+     */
+    public function crearTokenVerificacionDni(string $dni, int $minutos = 10): string
+    {
+        $ahora = time();
+
+        return JWT::encode(
+            [
+                'tipo' => 'verificacion_dni',
+                'dni'  => $dni,
+                'iat'  => $ahora,
+                'exp'  => $ahora + max(1, $minutos) * 60,
+            ],
+            $this->secreto,
+            'HS256',
+        );
+    }
+
+    /**
      * @return array<string, mixed>|null payload si el token es válido
      */
     public function verificar(string $token): ?array
