@@ -6,13 +6,14 @@ import GoogleButton from '../../components/GoogleButton';
 import Turnstile from '../../components/Turnstile';
 import PasswordRequirements from '../../components/PasswordRequirements';
 import TermsCheckbox from '../../components/TermsCheckbox';
+import ErrorCampo from '../../components/ErrorCampo';
 import AuthFooter from '../../components/AuthFooter';
 import LogoMunicipal from '../../components/LogoMunicipal';
-import { passwordCumple } from '../../utils/password';
 import { useAuth } from '../../context/AuthContext';
 import { useTema } from '../../context/ThemeContext';
 import { verificarDni as apiVerificarDni } from '../../services/solicitudes';
-import { errorApi, esTelefonoValido, soloDigitos } from '../../utils';
+import { errorApi, soloDigitos } from '../../utils';
+import { validarRegistroPostulante } from '../../utils/validacionAuth';
 
 export default function Registro() {
   const { loginGoogle, registrarPostulante } = useAuth();
@@ -25,24 +26,43 @@ export default function Registro() {
   const [verPass, setVerPass] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);
   const [verificandoDni, setVerificandoDni] = useState(false);
-  const [intentoPassword, setIntentoPassword] = useState(false);
+  const [intento, setIntento] = useState(false);
   const [dniVerificado, setDniVerificado] = useState(false);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
-  const [errorTerminos, setErrorTerminos] = useState(null);
+  const [erroresCampo, setErroresCampo] = useState({});
   const turnstileRef = useRef(null);
   const turnstileRequerido = Boolean((import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim());
+  const errores = {
+    ...(intento ? validarRegistroPostulante({ ...form, termsAccepted: aceptaTerminos }) : {}),
+    ...erroresCampo,
+  };
 
-  const cambiar = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); setError(null); };
+  const limpiarErrorCampo = (campo) => {
+    setErroresCampo((previos) => {
+      if (!previos[campo]) return previos;
+      const siguientes = { ...previos };
+      delete siguientes[campo];
+      return siguientes;
+    });
+  };
+
+  const cambiar = (e) => {
+    const { name, value } = e.target;
+    setForm((previo) => ({ ...previo, [name]: value }));
+    setError(null);
+    limpiarErrorCampo(name);
+  };
 
   // Consulta RENIEC vía backend para autocompletar nombres/apellidos. El token
   // del proveedor vive solo en el backend; aquí no se maneja ninguna credencial.
   const consultarDni = async () => {
     if (!/^\d{8}$/.test(form.dni)) {
-      setError('Ingrese un DNI válido (8 dígitos).');
+      setErroresCampo((previos) => ({ ...previos, dni: 'Ingrese un DNI válido (8 dígitos).' }));
       return;
     }
     setVerificandoDni(true);
     setError(null);
+    limpiarErrorCampo('dni');
     try {
       const datos = await apiVerificarDni(form.dni);
       setForm((f) => ({ ...f, nombres: datos.nombres || f.nombres, apellidos: datos.apellidos || f.apellidos }));
@@ -78,24 +98,17 @@ export default function Registro() {
   // automático), por lo que se redirige a la bolsa de empleo.
   const enviar = async (e) => {
     e.preventDefault();
-    setIntentoPassword(true);
-    if (!passwordCumple(form.password) || form.password !== form.password2 || !form.password2) {
-      setError('La contraseña debe cumplir todos los requisitos y ambas contraseñas deben coincidir.');
+    setIntento(true);
+    setErroresCampo({});
+    const erroresValidacion = validarRegistroPostulante({ ...form, termsAccepted: aceptaTerminos });
+    if (Object.keys(erroresValidacion).length > 0) {
+      setError(null);
       return;
     }
     if (turnstileRequerido && !turnstileToken) {
       setError('Completa la verificación de seguridad e inténtalo de nuevo.');
       return;
     }
-    if (!esTelefonoValido(form.telefono)) {
-      setError('El teléfono debe tener 9 u 11 dígitos.');
-      return;
-    }
-    if (!aceptaTerminos) {
-      setErrorTerminos('Debes aceptar los Términos y Condiciones para crear tu cuenta.');
-      return;
-    }
-    setErrorTerminos(null);
     setEnviando(true);
     setError(null);
     setOk(null);
@@ -104,7 +117,10 @@ export default function Registro() {
       setOk('Cuenta creada correctamente. ¡Bienvenido!');
       navigate('/postulante/buscar', { replace: true });
     } catch (err) {
-      const detalles = err?.response?.data?.errors;
+      const data = err?.response?.data;
+      const campos = data?.campos && typeof data.campos === 'object' ? data.campos : {};
+      setErroresCampo(campos);
+      const detalles = data?.errors;
       setError(Array.isArray(detalles) && detalles.length ? detalles.join('. ') : errorApi(err));
     } finally {
       setEnviando(false);
@@ -136,8 +152,8 @@ export default function Registro() {
           <Mensaje>{error}</Mensaje>
           <Mensaje tipo="exito">{ok}</Mensaje>
 
-          <form onSubmit={enviar}>
-            <div className="login-campo">
+          <form onSubmit={enviar} noValidate>
+            <div className={`login-campo${errores.dni ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="dni">DNI</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -155,14 +171,17 @@ export default function Registro() {
                   onChange={(e) => { setDniVerificado(false); cambiar({ target: { name: 'dni', value: soloDigitos(e.target.value) } }); }}
                   inputMode="numeric"
                   required
+                  aria-invalid={errores.dni ? true : undefined}
+                  aria-describedby={errores.dni ? 'dni-error' : undefined}
                 />
                 <button type="button" className="login-btn-verificar" onClick={consultarDni} disabled={verificandoDni || dniVerificado}>
                   {verificandoDni ? 'Verificando…' : dniVerificado ? 'Verificado' : 'Verificar'}
                 </button>
               </div>
+              <ErrorCampo id="dni-error">{errores.dni}</ErrorCampo>
             </div>
 
-            <div className="login-campo">
+            <div className={`login-campo${errores.nombres ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="nombres">NOMBRES</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -178,13 +197,15 @@ export default function Registro() {
                   value={form.nombres}
                   onChange={cambiar}
                   required
-
                   maxLength={50}
+                  aria-invalid={errores.nombres ? true : undefined}
+                  aria-describedby={errores.nombres ? 'nombres-error' : undefined}
                 />
               </div>
+              <ErrorCampo id="nombres-error">{errores.nombres}</ErrorCampo>
             </div>
 
-            <div className="login-campo">
+            <div className={`login-campo${errores.apellidos ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="apellidos">APELLIDOS</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -201,11 +222,14 @@ export default function Registro() {
                   onChange={cambiar}
                   required
                   maxLength={100}
+                  aria-invalid={errores.apellidos ? true : undefined}
+                  aria-describedby={errores.apellidos ? 'apellidos-error' : undefined}
                 />
               </div>
+              <ErrorCampo id="apellidos-error">{errores.apellidos}</ErrorCampo>
             </div>
 
-            <div className="login-campo">
+            <div className={`login-campo${errores.email ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="email">CORREO ELECTRÓNICO</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -221,11 +245,15 @@ export default function Registro() {
                   value={form.email}
                   onChange={cambiar}
                   maxLength={50}
+                  required
+                  aria-invalid={errores.email ? true : undefined}
+                  aria-describedby={errores.email ? 'email-error' : undefined}
                 />
               </div>
+              <ErrorCampo id="email-error">{errores.email}</ErrorCampo>
             </div>
 
-            <div className="login-campo">
+            <div className={`login-campo${errores.telefono ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="telefono">TELÉFONO</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -238,14 +266,18 @@ export default function Registro() {
                   name="telefono"
                   placeholder="Ingrese su teléfono"
                   value={form.telefono}
-                  onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })}
+                  onChange={(e) => cambiar({ target: { name: 'telefono', value: soloDigitos(e.target.value) } })}
                   inputMode="numeric"
                   maxLength={11}
+                  required
+                  aria-invalid={errores.telefono ? true : undefined}
+                  aria-describedby={errores.telefono ? 'telefono-error' : undefined}
                 />
               </div>
+              <ErrorCampo id="telefono-error">{errores.telefono}</ErrorCampo>
             </div>
 
-            <div className="login-campo">
+            <div className={`login-campo${errores.password ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="password">CONTRASEÑA</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -260,6 +292,9 @@ export default function Registro() {
                   placeholder="Mínimo 8 caracteres"
                   value={form.password}
                   onChange={cambiar}
+                  required
+                  aria-invalid={errores.password ? true : undefined}
+                  aria-describedby={errores.password ? 'password-error' : undefined}
                 />
                 <button
                   type="button"
@@ -282,10 +317,11 @@ export default function Registro() {
                   )}
                 </button>
               </div>
-              <PasswordRequirements password={form.password} confirmacion={form.password2} intento={intentoPassword} />
+              <ErrorCampo id="password-error">{errores.password}</ErrorCampo>
+              <PasswordRequirements password={form.password} confirmacion={form.password2} intento={intento} />
             </div>
 
-            <div className="login-campo">
+            <div className={`login-campo${errores.password2 ? ' login-campo-error' : ''}`}>
               <label className="login-campo-label" htmlFor="password2">CONFIRMAR CONTRASEÑA</label>
               <div className="login-campo-input-wrapper">
                 <svg className="login-campo-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -300,15 +336,20 @@ export default function Registro() {
                   placeholder="Repita su contraseña"
                   value={form.password2}
                   onChange={cambiar}
+                  required
+                  aria-invalid={errores.password2 ? true : undefined}
+                  aria-describedby={errores.password2 ? 'password2-error' : undefined}
                 />
               </div>
+              <ErrorCampo id="password2-error">{errores.password2}</ErrorCampo>
             </div>
 
             <TermsCheckbox
               id="acepta-terminos-postulante"
               checked={aceptaTerminos}
-              onChange={(e) => { setAceptaTerminos(e.target.checked); setErrorTerminos(null); }}
-              error={errorTerminos}
+              onChange={(e) => { setAceptaTerminos(e.target.checked); limpiarErrorCampo('terms_accepted'); }}
+              error={errores.terms_accepted}
+              required
             >
               Al registrarme, acepto los{' '}
               <a

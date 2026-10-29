@@ -1254,6 +1254,14 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   border-color: #0055a5;
   box-shadow: 0 0 0 3px rgba(0, 85, 165, 0.14);
 }
+.login-campo-error .login-campo-input { border-color: var(--red-tx); }
+.login-campo-mensaje {
+  margin: 0.35rem 0 0;
+  color: var(--red-tx);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
 .login-campo-ojo {
   position: absolute;
   right: 0.7rem;

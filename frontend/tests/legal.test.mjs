@@ -83,14 +83,15 @@ test('las cuatro rutas legales están declaradas como públicas', () => {
 test('ambos formularios incluyen la casilla y envían la aceptación explícita', () => {
   const registro = leer('../src/pages/auth/Registro.jsx');
   const empresa = leer('../src/pages/auth/RegistroEmpresa.jsx');
+  const validacion = leer('../src/utils/validacionAuth.js');
 
   assert.match(registro, /TermsCheckbox/);
   assert.match(registro, /terms_accepted: true/);
-  assert.match(registro, /Debes aceptar los Términos y Condiciones/);
+  assert.match(validacion, /Debes aceptar los Términos y Condiciones/);
 
   assert.match(empresa, /TermsCheckbox/);
   assert.match(empresa, /terms_accepted: true/);
-  assert.match(empresa, /Debes aceptar los Términos y Condiciones/);
+  assert.match(validacion, /Debes aceptar los Términos y Condiciones/);
 });
 
 test('cada documento legal reutiliza el layout común', () => {

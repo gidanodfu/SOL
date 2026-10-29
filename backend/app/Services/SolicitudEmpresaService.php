@@ -72,6 +72,9 @@ class SolicitudEmpresaService
         $datos['ruc']      = Identidad::ruc($datos['ruc'] ?? '');
         $datos['email']    = Identidad::email($datos['email'] ?? null);
         $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
+        if (isset($datos['representante']) && is_string($datos['representante'])) {
+            $datos['representante'] = trim($datos['representante']);
+        }
 
         Validador::validar($datos, [
             'ruc'            => ['required', 'ruc'],

@@ -39,12 +39,17 @@ esperar 'postulante: correo rechazado' 401 POST '/api/auth/login' '{"username":"
 
 esperar 'registro: sin aceptación de términos' 422 POST '/api/registro/postulante' '{"dni":"70000010","nombres":"Prueba","apellidos":"Sin terminos","email":"sin.terminos@example.pe","telefono":"999888771","password":"Clave123!","password2":"Clave123!"}'
 esperar 'registro: aceptación false' 422 POST '/api/registro/postulante' '{"dni":"70000011","nombres":"Prueba","apellidos":"Terminos falsos","email":"terminos.falsos@example.pe","telefono":"999888772","password":"Clave123!","password2":"Clave123!","terms_accepted":false}'
+esperar 'registro: nombres solo espacios' 422 POST '/api/registro/postulante' '{"dni":"70000021","nombres":"   ","apellidos":"Espacios","email":"nombresespacios@example.pe","telefono":"999888723","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
+esperar 'registro: sin correo' 422 POST '/api/registro/postulante' '{"dni":"70000023","nombres":"Prueba","apellidos":"Sin correo","telefono":"999888725","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
+esperar 'registro: sin teléfono' 422 POST '/api/registro/postulante' '{"dni":"70000025","nombres":"Prueba","apellidos":"Sin telefono","email":"sintelefono@example.pe","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
+esperar 'registro: contraseñas distintas' 422 POST '/api/registro/postulante' '{"dni":"70000030","nombres":"Prueba","apellidos":"Distintas","email":"distintas@example.pe","telefono":"999888730","password":"Clave123!","password2":"Otra123!","terms_accepted":true}'
 esperar 'registro: DNI duplicado' 409 POST '/api/registro/postulante' '{"dni":"12345678","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad@example.pe","telefono":"999888777","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
 esperar 'registro: correo duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000002","nombres":"Prueba","apellidos":"Duplicado","email":"admin@mdjlo.gob.pe","telefono":"999888771","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
 esperar 'registro: teléfono duplicado' 409 POST '/api/registro/postulante' '{"dni":"70000003","nombres":"Prueba","apellidos":"Duplicado","email":"nuevo.identidad2@example.pe","telefono":"987654321","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
 
 esperar 'solicitud: sin aceptación de términos' 422 POST '/api/solicitudes-empresa' '{"ruc":"20111111111","email":"empresa.sin.terminos@example.pe","telefono":"999888776","representante":"Prueba"}'
 esperar 'solicitud: aceptación false' 422 POST '/api/solicitudes-empresa' '{"ruc":"20111111112","email":"empresa.terminos.falsos@example.pe","telefono":"999888777","representante":"Prueba","terms_accepted":false}'
+esperar 'solicitud: representante solo espacios' 422 POST '/api/solicitudes-empresa' '{"ruc":"20111111118","email":"empresa.representante.espacios@example.pe","telefono":"999888745","representante":"   ","terms_accepted":true}'
 esperar 'solicitud: RUC existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20601234567","email":"nuevo.empresa@example.pe","telefono":"999888775","representante":"Prueba","terms_accepted":true}'
 esperar 'solicitud: correo existente' 409 POST '/api/solicitudes-empresa' '{"ruc":"20999999999","email":"admin@mdjlo.gob.pe","telefono":"999888774","representante":"Prueba","terms_accepted":true}'
 
