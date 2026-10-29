@@ -183,7 +183,7 @@ final class Validador
         }
 
         if ($errores !== []) {
-            throw ApiException::validacion('Hay errores en los datos enviados.', array_values($errores));
+            throw ApiException::validacion('Hay errores en los datos enviados.', array_values($errores), $errores);
         }
     }
 

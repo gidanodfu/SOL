@@ -55,3 +55,31 @@ ORDER BY tipo, valor;
 ```
 
 No ejecutar la migración en producción sin autorización ni sin revisar antes esta consulta.
+
+## Actualización 2026-10-28: alta municipal
+
+- El correo electrónico es obligatorio en `POST /api/admin/usuarios` para los tres
+  perfiles municipales (`admin`, `moderador`, `solo_lectura`). El teléfono sigue
+  siendo opcional.
+- `users.email` sigue siendo nullable: la tabla es compartida por empresas,
+  postulantes y cuentas históricas sin correo. La obligatoriedad se aplica en el
+  servicio de alta y en el formulario, no con un `NOT NULL` global.
+- La normalización telefónica canónica es la de `Identidad::telefono()`:
+  - 9 dígitos nacionales;
+  - `51` + 9 dígitos;
+  - `0051` + 9 dígitos;
+  - `00` + exactamente 9 dígitos;
+  - separadores, espacios, guiones y paréntesis se eliminan.
+- La regla histórica del `Validador` sigue admitiendo entradas de 9 u 11 dígitos.
+  Los 11 dígitos que no comienzan por `51` no se reinterpretan como números
+  nacionales; `0033123456789` no se reduce a 9 dígitos y se rechaza.
+- `SQL_TELEFONO` replica esos prefijos para comparar también valores históricos
+  almacenados como `00957418741` o `0051957418741`. No se reescriben las filas.
+- `IdentidadService::reemplazar()` conserva la reserva nueva y libera únicamente
+  el valor anterior; antes eliminaba también la reserva recién creada.
+- Los seeders de prueba reconcilian sus cuentas con `identidades_reservadas`
+  mediante `reconciliarUsuario()`. Esto no reasigna ni elimina identidades.
+- La API añade `campos` a las respuestas de error cuando puede identificar el
+  control afectado (`email`, `telefono`, `username`, etc.).
+- No se añadió una migración nueva: el índice único `(tipo, valor)` de
+  `identidades_reservadas` sigue siendo la barrera de concurrencia.

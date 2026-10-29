@@ -5,6 +5,7 @@
 namespace Tests\Unit;
 
 use App\Exceptions\ApiException;
+use App\Libraries\Identidad;
 use App\Validation\Validador;
 use PHPUnit\Framework\TestCase;
 
@@ -44,6 +45,20 @@ final class ValidadorTest extends TestCase
             } catch (ApiException $e) {
                 $this->assertSame(422, $e->getHttpCode());
             }
+        }
+    }
+
+    public function testNoSeAceptaUnCeroCeroInternacionalComoTelefonoNacional(): void
+    {
+        $normalizado = Identidad::telefono('0033123456789');
+
+        $this->assertSame('0033123456789', $normalizado);
+
+        try {
+            Validador::validar(['telefono' => $normalizado], ['telefono' => ['telefono']]);
+            $this->fail('El número internacional no debe aceptarse como teléfono nacional.');
+        } catch (ApiException $e) {
+            $this->assertSame(422, $e->getHttpCode());
         }
     }
 
@@ -150,5 +165,19 @@ final class ValidadorTest extends TestCase
             $valido = false;
         }
         $this->assertTrue($valido, 'Un campo opcional con solo espacios no debe evaluarse como formato.');
+    }
+
+    public function testErroresConservanElMapaDeCampos(): void
+    {
+        try {
+            Validador::validar(['email' => 'no-es-correo'], ['email' => ['email']]);
+            $this->fail('Debió lanzar ApiException.');
+        } catch (ApiException $e) {
+            $this->assertSame(
+                ['email' => 'El campo Email debe ser un correo válido.'],
+                $e->getCampos(),
+            );
+            $this->assertSame(['El campo Email debe ser un correo válido.'], $e->getErrores());
+        }
     }
 }

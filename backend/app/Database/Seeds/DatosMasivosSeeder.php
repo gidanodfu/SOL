@@ -4,6 +4,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Services\IdentidadService;
 use CodeIgniter\Database\Seeder;
 
 /**
@@ -453,6 +454,13 @@ class DatosMasivosSeeder extends Seeder
         }
         $archivo = WRITEPATH . 'masivos_manifest.json';
         file_put_contents($archivo, json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+        // Los fixtures masivos también insertan directamente en users. Se
+        // reconcilian sus reservas sin modificar los datos generados.
+        $identidad = new IdentidadService($this->db);
+        foreach ($this->db->table('users')->select('id')->get()->getResultArray() as $usuario) {
+            $identidad->reconciliarUsuario((int) $usuario['id']);
+        }
 
         echo "DatosMasivosSeeder completado: 20 admins, 20 empresas, 100 postulantes (88 completos, 12 incompletos), 60 ofertas, " . count($postulacionIds) . " postulaciones, " . count($historial) . " eventos de historial y " . count($contratos) . " contrataciones.\n";
         echo "Manifiesto CV: {$archivo}\n";

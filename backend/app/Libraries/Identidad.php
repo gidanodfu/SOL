@@ -25,14 +25,30 @@ final class Identidad
     {
         $digitos = (string) preg_replace('/\D+/', '', (string) $valor);
 
-        if (str_starts_with($digitos, '00')) {
-            $digitos = substr($digitos, 2);
-        }
-        if (strlen($digitos) === 11 && str_starts_with($digitos, '51')) {
-            $digitos = substr($digitos, 2);
+        if ($digitos === '') {
+            return null;
         }
 
-        return $digitos === '' ? null : $digitos;
+        // Prefijo internacional peruano completo: 0051 + 9 dígitos.
+        if (str_starts_with($digitos, '0051')) {
+            $resto = substr($digitos, 4);
+
+            return strlen($resto) === 9 ? $resto : $digitos;
+        }
+
+        // El formato 00 + exactamente 9 dígitos nacionales se admite
+        // explícitamente; no se retira 00 de números de otra longitud.
+        if (str_starts_with($digitos, '00')) {
+            $resto = substr($digitos, 2);
+
+            return strlen($resto) === 9 ? $resto : $digitos;
+        }
+
+        if (strlen($digitos) === 11 && str_starts_with($digitos, '51')) {
+            return substr($digitos, 2);
+        }
+
+        return $digitos;
     }
 
     /** RUC sin espacios, puntos ni guiones; la validación de 11 dígitos es aparte. */
