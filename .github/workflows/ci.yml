@@ -15,11 +15,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        # actions/checkout v7.0.1, fijado por SHA oficial del repositorio.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - name: Preparar entorno sintético de CI
         shell: bash
         run: |
+          # Credenciales exclusivas de CI. No se reutilizan en producción ni se
+          # publican como artefactos: .env está excluido de Docker y de Git.
           set -euo pipefail
           cp .env.example .env
           sed -i 's|^CI_ENVIRONMENT=.*|CI_ENVIRONMENT=development|' .env
