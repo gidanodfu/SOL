@@ -41,6 +41,8 @@ export default function EditorTextoEnriquecido({
   valor,
   onChange,
   error,
+  errorId,
+  contenedorRef,
   placeholder = 'Escribe aquí…',
   max = TEXTO_MAX,
   aviso = TEXTO_AVISO,
@@ -139,6 +141,20 @@ export default function EditorTextoEnriquecido({
   const [enlaceAbierto, setEnlaceAbierto] = useState(false);
   const [urlEnlace, setUrlEnlace] = useState('');
 
+  // Estado accesible del contenido editable (aria-invalid/describedby) sin
+  // recrear el editor ni perder el foco.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const dom = editor.view.dom;
+    if (error) {
+      dom.setAttribute('aria-invalid', 'true');
+      if (errorId) dom.setAttribute('aria-describedby', errorId);
+    } else {
+      dom.removeAttribute('aria-invalid');
+      dom.removeAttribute('aria-describedby');
+    }
+  }, [editor, error, errorId]);
+
   if (!editor || editor.isDestroyed) return <p className="vacio">Cargando editor…</p>;
 
   // Estado de UI con respaldo neutro mientras useEditorState no emite aún.
@@ -196,7 +212,7 @@ export default function EditorTextoEnriquecido({
   const cercaDelLimite = !superaLimite && vista.caracteres >= aviso;
 
   return (
-    <div className={`rte${error ? ' rte-error' : ''}`}>
+    <div ref={contenedorRef} className={`rte${error ? ' rte-error' : ''}`}>
       {etiqueta && <span className="rte-etiqueta">{etiqueta}</span>}
 
       <div className="rte-caja">
@@ -249,7 +265,7 @@ export default function EditorTextoEnriquecido({
       {superaLimite && (
         <span className="rte-mensaje excedido">Superaste el límite de {max} caracteres de texto; reduce el contenido para guardar.</span>
       )}
-      {error && <span className="rte-mensaje excedido" role="alert">{error}</span>}
+      {error && <span id={errorId} className="rte-mensaje excedido" role="alert">{error}</span>}
     </div>
   );
 }

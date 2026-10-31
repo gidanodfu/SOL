@@ -26,14 +26,14 @@ class ActividadesController extends BaseApiController
     public function store()
     {
         $servicio = new ActividadService();
-        $id = $servicio->crear($this->cuerpo());
+        $id = $servicio->crear($this->datosActividad(), $this->request->getFile('imagen'));
 
         return $this->creado(['id' => $id], 'Actividad registrada.');
     }
 
     public function update($id)
     {
-        (new ActividadService())->actualizar((int) $id, $this->cuerpo());
+        (new ActividadService())->actualizar((int) $id, $this->datosActividad());
 
         return $this->sinContenido('Actividad actualizada.');
     }
@@ -50,7 +50,9 @@ class ActividadesController extends BaseApiController
     {
         $archivo = $this->request->getFile('imagen');
         if ($archivo === null) {
-            throw ApiException::validacion('Debe adjuntar una imagen.', ['Debe adjuntar una imagen.']);
+            $mensaje = 'Debes subir una imagen para la actividad.';
+
+            throw ApiException::validacion($mensaje, [$mensaje], ['imagen' => $mensaje]);
         }
 
         (new ActividadService())->subirImagen((int) $id, $archivo);
@@ -63,5 +65,26 @@ class ActividadesController extends BaseApiController
         (new ActividadService())->eliminarImagen((int) $id);
 
         return $this->sinContenido('Imagen de la actividad eliminada.');
+    }
+
+    /**
+     * Datos de la actividad aceptados por el contrato. El formulario envía
+     * multipart (con la imagen) y los clientes de edición pueden enviar JSON.
+     *
+     * @return array<string, mixed>
+     */
+    private function datosActividad(): array
+    {
+        $tipoContenido = strtolower($this->request->getHeaderLine('Content-Type'));
+        if (str_contains($tipoContenido, 'application/json')) {
+            $datos = $this->cuerpo();
+        } else {
+            $datos = (array) $this->request->getPost();
+        }
+
+        return $this->solo($datos, [
+            'tipo', 'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin',
+            'lugar', 'modalidad', 'organizador', 'enlace',
+        ]);
     }
 }
