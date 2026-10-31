@@ -198,6 +198,11 @@ Si una comprobación crítica falla, el proceso se detiene con código distinto 
 cero. No use `down -v` para "arreglar" el problema: conserve el estado y el
 respaldo para recuperación. `deploy.sh` no restaura automáticamente.
 
+La versión visible del sistema se toma del archivo raíz `VERSION` y se incorpora
+al bundle al construir el frontend. Después de modificarlo, `deploy.sh` debe
+reconstruir la imagen frontend; no basta con reiniciar el contenedor. El formato
+y el procedimiento de etiquetado están documentados en el README.
+
 ## 6. Base de datos y persistencia
 
 - Volumen MySQL: `sol_<proyecto>_mysql_data`.
