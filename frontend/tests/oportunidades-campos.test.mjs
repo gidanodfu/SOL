@@ -59,3 +59,10 @@ test('los controles existentes muestran el error debajo del campo', () => {
   assert.match(ui, /aria-describedby=\{error \? errorId : props\['aria-describedby'\]\}/);
   assert.match(ui, /className="campo-mensaje" role="alert"/);
 });
+
+test('DetalleOportunidad importa el hook useAccion que utiliza', () => {
+  const pagina = leer('../src/pages/admin/Oportunidades.jsx');
+
+  assert.match(pagina, /import \{ useAccion \} from '\.\.\/\.\.\/hooks\/useAccion'/);
+  assert.match(pagina, /const \{ ejecutar, enviando \} = useAccion\(/);
+});
