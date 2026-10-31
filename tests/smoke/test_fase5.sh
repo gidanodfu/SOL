@@ -62,9 +62,9 @@ grep -qi '^Content-Type: image/jpeg' /tmp/sol-fase5-jpg.headers \
 ACT_VENCIDA=$(crear_actividad "feria_empleo" "Feria vencida" "2026-10-15 09:00:00" "2026-10-15 17:00:00" "Plaza Central" "presencial" "MDJLO" "<p>Feria vencida</p>" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 
 echo "== OPORTUNIDADES =="
-curl -s -o /dev/null -w "enlace inválido http:%{http_code} (422)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"empleos_peru","titulo":"Vacantes","enlace":"no-es-url"}'
-OP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"empleos_peru","titulo":"Operarios para Lima","enlace":"https://empleosperu.gob.pe/oferta/1","descripcion":"Convocatoria externa"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
-curl -s -o /dev/null -w "mype local http:%{http_code} (201)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"mype_local","titulo":"Se busca ayudante de cocina"}'
+curl -s -o /dev/null -w "enlace inválido http:%{http_code} (422)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"empleos_peru","titulo":"Vacantes","descripcion":"Convocatoria","enlace":"no-es-url","fecha_publicacion":"2026-09-01"}'
+OP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"empleos_peru","titulo":"Operarios para Lima","enlace":"https://empleosperu.gob.pe/oferta/1","descripcion":"Convocatoria externa","fecha_publicacion":"2026-09-01"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+curl -s -o /dev/null -w "mype local http:%{http_code} (201)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"mype_local","titulo":"Se busca ayudante de cocina","descripcion":"Convocatoria MYPE","enlace":"https://example.com/mype","fecha_publicacion":"2026-09-01"}'
 curl -s -o /dev/null -w "ocultar oportunidad http:%{http_code} (200)\n" -X PUT "$B/api/admin/oportunidades/$OP/activacion" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"activo":false}'
 
 echo "== DIFUSIÓN (postulante) =="
