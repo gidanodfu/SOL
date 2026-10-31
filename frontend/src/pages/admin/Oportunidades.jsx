@@ -10,6 +10,7 @@ import { useToast } from '../../components/Feedbacks';
 import { ExternalLink, EyeOff, Megaphone, Pencil, Upload } from 'lucide-react';
 import { ETIQUETA_FUENTE_OPORTUNIDAD, FUENTES_OPORTUNIDAD } from '../../constants';
 import { errorApi, esEnlaceSeguro, esFechaCalendario, fechaCalendario, textoEnriquecidoVacio } from '../../utils';
+import { useAccion } from '../../hooks/useAccion';
 import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 const VACIO = { fuente: '', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '' };
