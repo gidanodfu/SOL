@@ -15,7 +15,7 @@ import {
   ESTADOS_ACTIVIDAD, ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD, TIPOS_ACTIVIDAD,
 } from '../../constants';
-import { TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto, fechaHora, urlArchivo } from '../../utils';
+import { TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto, fechaHora, textoEnriquecidoVacio, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
@@ -23,7 +23,11 @@ import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
 
 const aLocal = (v) => (v ? String(v).slice(0, 16).replace(' ', 'T') : '');
-const VACIO = { tipo: 'taller', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: 'presencial', organizador: '', enlace: '' };
+const VACIO = { tipo: '', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: '', organizador: '', enlace: '' };
+
+const normalizarTexto = (valor) => String(valor ?? '').replace(/\s+/g, ' ').trim();
+
+const ORDEN_CAMPOS = ['tipo', 'nombre', 'fecha_inicio', 'fecha_fin', 'modalidad', 'lugar', 'organizador', 'imagen', 'descripcion'];
 
 export default function Actividades() {
   const { puede } = usePermisosMunicipales();
@@ -221,19 +225,17 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
   const [form, setForm] = useState(() =>
     inicial
       ? {
-          tipo: inicial.tipo, nombre: inicial.nombre, descripcion: inicial.descripcion || '',
+          tipo: inicial.tipo || '', nombre: inicial.nombre || '', descripcion: inicial.descripcion || '',
           fecha_inicio: aLocal(inicial.fecha_inicio), fecha_fin: aLocal(inicial.fecha_fin),
-          lugar: inicial.lugar || '', modalidad: inicial.modalidad || 'presencial', organizador: inicial.organizador || '',
+          lugar: inicial.lugar || '', modalidad: inicial.modalidad || '', organizador: inicial.organizador || '',
           enlace: inicial.enlace || '',
         }
       : VACIO,
   );
-  // idActividad arranca con el de la edición; en creación se fija al guardar,
-  // sin re-montar el formulario (así no se pierde lo escrito ni la imagen elegida).
   const [idActividad, setIdActividad] = useState(inicial?.id ?? null);
   const [error, setError] = useState(null);
+  const [errores, setErrores] = useState({});
   const [enviando, setEnviando] = useState(false);
-  const [subiendoImagen, setSubiendoImagen] = useState(false);
   const [archivoImagen, setArchivoImagen] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [imagenUrl, setImagenUrl] = useState(() => (inicial?.imagen_url ? urlArchivo(inicial.imagen_url) : null));
@@ -243,51 +245,39 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-
   const limpiarPreview = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
   };
 
-  const subirImagen = async (id, archivo, trasCrear) => {
-    setSubiendoImagen(true);
-    try {
-      await subirImagenActividad(id, archivo);
-      limpiarPreview();
-      setArchivoImagen(null);
-      setImagenUrl(`${urlArchivo(`/api/actividades/${id}/imagen`)}?v=${Date.now()}`);
-      toast.success('Imagen cargada correctamente.');
-      return true;
-    } catch (e) {
-      toast.error(trasCrear
-        ? 'Actividad creada, pero la imagen no pudo cargarse. Puedes intentarlo de nuevo.'
-        : `Error al cargar la imagen. ${errorApi(e)}`);
-      return false;
-    } finally {
-      setSubiendoImagen(false);
-    }
+  const limpiarError = (campo) => {
+    setErrores((prev) => (prev[campo] ? { ...prev, [campo]: undefined } : prev));
+    setError(null);
   };
 
-  const manejarSubir = async (archivo) => {
-    if (idActividad) {
-      await subirImagen(idActividad, archivo, false);
-      return;
-    }
-    // Creación sin ID todavía: solo preview local (no se sube nada huérfano).
+  const set = (k) => (e) => {
+    const valor = e.target.value;
+    setForm((prev) => ({ ...prev, [k]: valor }));
+    limpiarError(k);
+  };
+
+  const manejarSubir = (archivo) => {
+    // No se sube nada hasta guardar: así cancelar no deja archivos huérfanos.
     limpiarPreview();
-    setError(null);
     setArchivoImagen(archivo);
     setPreviewUrl(URL.createObjectURL(archivo));
+    limpiarError('imagen');
   };
 
   const manejarEliminar = async () => {
-    // Limpia siempre la selección local (preview/pendiente), exista o no la actividad.
     limpiarPreview();
     setArchivoImagen(null);
-    if (!idActividad) return;
+    if (!idActividad) {
+      setImagenUrl(null);
+      return;
+    }
 
-    setSubiendoImagen(true);
+    setEnviando(true);
     try {
       await eliminarImagenActividad(idActividad);
       setImagenUrl(null);
@@ -296,41 +286,124 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
     } catch (e) {
       toast.error(errorApi(e));
     } finally {
-      setSubiendoImagen(false);
+      setEnviando(false);
     }
   };
 
-  const guardar = async () => {
-    // Mismo límite que el backend: 10.000 caracteres de TEXTO visible.
-    if (excedeLimiteTexto(form.descripcion)) {
-      setError(`La descripción supera el límite de ${TEXTO_MAX} caracteres.`);
+  const validar = () => {
+    const encontrados = {};
+
+    const tipo = normalizarTexto(form.tipo);
+    if (!tipo) encontrados.tipo = 'Selecciona el tipo de actividad.';
+    else if (!TIPOS_ACTIVIDAD.includes(tipo)) encontrados.tipo = 'Selecciona un tipo de actividad válido.';
+
+    const nombre = normalizarTexto(form.nombre);
+    if (!nombre) encontrados.nombre = 'El nombre de la actividad es obligatorio.';
+    else if (nombre.length > 200) encontrados.nombre = 'El nombre de la actividad no debe superar 200 caracteres.';
+
+    const inicio = form.fecha_inicio;
+    const fin = form.fecha_fin;
+    const inicioValido = Boolean(inicio) && !Number.isNaN(Date.parse(inicio));
+    const finValido = Boolean(fin) && !Number.isNaN(Date.parse(fin));
+
+    if (!inicio) encontrados.fecha_inicio = 'Indica la fecha y hora de inicio.';
+    else if (!inicioValido) encontrados.fecha_inicio = 'Indica una fecha y hora de inicio válidas.';
+
+    if (!fin) encontrados.fecha_fin = 'Indica la fecha y hora de finalización.';
+    else if (!finValido) encontrados.fecha_fin = 'Indica una fecha y hora de finalización válidas.';
+    else if (inicioValido && Date.parse(fin) < Date.parse(inicio)) {
+      encontrados.fecha_fin = 'La fecha de finalización no puede ser anterior a la fecha de inicio.';
+    }
+
+    const modalidad = normalizarTexto(form.modalidad);
+    if (!modalidad) encontrados.modalidad = 'Selecciona una modalidad.';
+    else if (!MODALIDADES_ACTIVIDAD.some((m) => m.v === modalidad)) encontrados.modalidad = 'Selecciona una modalidad válida.';
+
+    const lugar = normalizarTexto(form.lugar);
+    if (!lugar) encontrados.lugar = 'El lugar de realización es obligatorio.';
+    else if (lugar.length > 150) encontrados.lugar = 'El lugar de realización no debe superar 150 caracteres.';
+
+    const organizador = normalizarTexto(form.organizador);
+    if (!organizador) encontrados.organizador = 'Indica quién organiza la actividad.';
+    else if (organizador.length > 150) encontrados.organizador = 'El organizador no debe superar 150 caracteres.';
+
+    // La imagen es obligatoria al crear y también si la actividad editada no
+    // tiene una imagen válida. Si ya existe, no se obliga a volver a subirla.
+    if (!archivoImagen && !imagenUrl) encontrados.imagen = 'Debes subir una imagen para la actividad.';
+
+    if (textoEnriquecidoVacio(form.descripcion)) {
+      encontrados.descripcion = 'La descripción de la actividad es obligatoria.';
+    } else if (excedeLimiteTexto(form.descripcion)) {
+      encontrados.descripcion = `La descripción supera el límite de ${TEXTO_MAX} caracteres.`;
+    }
+
+    return encontrados;
+  };
+
+  const enfocarCampo = (campo) => {
+    const elemento = document.getElementById(`actividad-${campo}`);
+    if (!elemento) return;
+    if (campo === 'descripcion') {
+      elemento.querySelector('[contenteditable="true"]')?.focus();
       return;
     }
+    elemento.focus();
+  };
+
+  const guardar = async () => {
+    const encontrados = validar();
+    setErrores(encontrados);
+
+    if (Object.keys(encontrados).length > 0) {
+      setError(null);
+      const primero = ORDEN_CAMPOS.find((campo) => encontrados[campo]);
+      if (primero) enfocarCampo(primero);
+      return;
+    }
+
     setEnviando(true);
     setError(null);
+
     try {
-      // Edición de una actividad existente: conserva el comportamiento actual.
+      const datos = convertir(form);
+
+      // Edición: si hay una imagen nueva, se sube primero por el endpoint
+      // dedicado (que la valida) y luego se actualizan los campos. Si no, solo
+      // se actualizan los datos y la imagen existente se conserva.
       if (idActividad) {
-        await actualizarActividad(idActividad, convertir(form));
+        if (archivoImagen) {
+          await subirImagenActividad(idActividad, archivoImagen);
+          limpiarPreview();
+          setArchivoImagen(null);
+          setImagenUrl(`${urlArchivo(`/api/actividades/${idActividad}/imagen`)}?v=${Date.now()}`);
+        }
+
+        await actualizarActividad(idActividad, datos);
         toast.success('Cambios guardados.');
         alGuardar({ cerrar: !esNueva });
         return;
       }
 
-      // Creación: primero la actividad, luego (si había imagen elegida) la imagen.
-      const creada = await crearActividad(convertir(form));
+      // Creación: la actividad y la imagen viajan en una sola solicitud. El
+      // backend no guarda nada si falta la imagen o algún campo.
+      const creada = await crearActividad(datos, archivoImagen);
       const nuevoId = creada?.id;
       if (!nuevoId) throw new Error('No se recibió el identificador de la actividad creada.');
 
       setIdActividad(nuevoId);
+      limpiarPreview();
+      setArchivoImagen(null);
+      setImagenUrl(`${urlArchivo(`/api/actividades/${nuevoId}/imagen`)}?v=${Date.now()}`);
+      toast.success('Actividad creada correctamente.');
       alGuardar({ cerrar: false });
-
-      if (archivoImagen) {
-        await subirImagen(nuevoId, archivoImagen, true);
-      } else {
-        toast.success('Actividad creada correctamente.');
-      }
     } catch (e) {
+      const campos = e?.response?.data?.campos;
+      if (campos && typeof campos === 'object' && !Array.isArray(campos)) {
+        setErrores(campos);
+        const primero = ORDEN_CAMPOS.find((campo) => campos[campo]);
+        if (primero) enfocarCampo(primero);
+      }
+
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
     } finally {
@@ -350,10 +423,11 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
       <div className="form-seccion">
         <span className="form-seccion-titulo">Información básica</span>
         <div className="form-actividad-basica">
-          <Selecto etiqueta="Tipo *" value={form.tipo} onChange={set('tipo')}>
+          <Selecto etiqueta="Tipo *" id="actividad-tipo" value={form.tipo} onChange={set('tipo')} error={errores.tipo} required>
+            <option value="">Seleccionar tipo</option>
             {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}
           </Selecto>
-          <Campo etiqueta="Nombre *" value={form.nombre} onChange={set('nombre')} />
+          <Campo etiqueta="Nombre *" id="actividad-nombre" value={form.nombre} onChange={set('nombre')} error={errores.nombre} maxLength={200} required />
         </div>
       </div>
 
@@ -361,31 +435,43 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
         <span className="form-seccion-titulo">Programación y ubicación</span>
         <div className="form-actividad-programacion">
           <div className="form-actividad-fila form-actividad-fila-3">
-            <Campo etiqueta="Inicio *" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} />
-            <Campo etiqueta="Fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} />
-            <Selecto etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')}>
+            <Campo etiqueta="Inicio *" id="actividad-fecha_inicio" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} error={errores.fecha_inicio} required />
+            <Campo etiqueta="Fin *" id="actividad-fecha_fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} error={errores.fecha_fin} required />
+            <Selecto etiqueta="Modalidad *" id="actividad-modalidad" value={form.modalidad} onChange={set('modalidad')} error={errores.modalidad} required>
+              <option value="">Seleccionar modalidad</option>
               {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
             </Selecto>
           </div>
           <div className="form-actividad-fila form-actividad-fila-2">
-            <Campo etiqueta="Lugar" value={form.lugar} onChange={set('lugar')} />
-            <Campo etiqueta="Organizador" value={form.organizador} onChange={set('organizador')} />
+            <Campo etiqueta="Lugar *" id="actividad-lugar" value={form.lugar} onChange={set('lugar')} error={errores.lugar} maxLength={150} required />
+            <Campo etiqueta="Organizador *" id="actividad-organizador" value={form.organizador} onChange={set('organizador')} error={errores.organizador} maxLength={150} required />
           </div>
         </div>
       </div>
 
-      <ImagenUploader
-        container="plano"
-        titulo="Imagen de la actividad"
-        descripcion="Opcional · JPG, PNG o WEBP · máximo 2 MB · resolución recomendada 1280 × 720 px (16:9), máxima 1920 × 1080 px. Se muestra en el portal público."
-        url={previewUrl || imagenUrl}
-        onSubir={manejarSubir}
-        onEliminar={manejarEliminar}
-        cargando={subiendoImagen}
-      />
+      <div
+        id="actividad-imagen"
+        tabIndex={-1}
+        aria-invalid={errores.imagen ? true : undefined}
+        aria-describedby={errores.imagen ? 'actividad-imagen-error' : undefined}
+      >
+        <ImagenUploader
+          container="plano"
+          titulo="Imagen de la actividad *"
+          descripcion="Obligatoria · JPG, PNG o WEBP · máximo 2 MB · resolución recomendada 1280 × 720 px (16:9), máxima 1920 × 1080 px. Se muestra en el portal público."
+          url={previewUrl || imagenUrl}
+          onSubir={manejarSubir}
+          onEliminar={manejarEliminar}
+          cargando={enviando}
+          error={errores.imagen}
+          errorId="actividad-imagen-error"
+          anchoMaximo={1920}
+          altoMaximo={1080}
+        />
+      </div>
 
-      <div className="form-seccion">
-        <span className="form-seccion-titulo">Descripción</span>
+      <div id="actividad-descripcion" className="form-seccion" tabIndex={-1}>
+        <span className="form-seccion-titulo">Descripción *</span>
         <p className="form-seccion-nota">
           Enlace de convocatoria: si incluyes una URL en la descripción, el sistema la
           detectará automáticamente y la utilizará como enlace de la actividad.
@@ -394,14 +480,19 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
           <EditorTextoEnriquecido
             etiqueta=""
             valor={form.descripcion}
-            onChange={(html) => setForm((previo) => ({ ...previo, descripcion: html }))}
+            onChange={(html) => {
+              setForm((previo) => ({ ...previo, descripcion: html }));
+              limpiarError('descripcion');
+            }}
+            error={errores.descripcion}
+            errorId="actividad-descripcion-error"
             placeholder="Detalla la actividad: agenda, público objetivo, requisitos…"
           />
         </Suspense>
       </div>
 
       <div className="form-acciones">
-        <Boton variante="primario" cargando={enviando || subiendoImagen} onClick={guardar}>
+        <Boton variante="primario" cargando={enviando} onClick={guardar}>
           {esNueva && idActividad ? 'Guardar cambios' : 'Guardar'}
         </Boton>
         {esNueva && idActividad && (
@@ -415,6 +506,12 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
 function convertir(form) {
   return {
     ...form,
+    tipo: normalizarTexto(form.tipo),
+    nombre: normalizarTexto(form.nombre),
+    lugar: normalizarTexto(form.lugar),
+    organizador: normalizarTexto(form.organizador),
+    modalidad: normalizarTexto(form.modalidad),
+    enlace: normalizarTexto(form.enlace),
     fecha_inicio: form.fecha_inicio.replace('T', ' '),
     fecha_fin: form.fecha_fin ? form.fecha_fin.replace('T', ' ') : null,
   };

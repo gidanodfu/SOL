@@ -1,20 +1,40 @@
 // SPDX-License-Identifier: MIT
-export function Campo({ etiqueta, error, ...props }) {
+import { useId } from 'react';
+
+export function Campo({ etiqueta, error, id, ...props }) {
+  const generado = useId();
+  const inputId = id || `${generado}-campo`;
+  const errorId = `${inputId}-error`;
+
   return (
-    <label className={`campo${error ? ' campo-error' : ''}`}>
+    <label className={`campo${error ? ' campo-error' : ''}`} htmlFor={inputId}>
       <span>{etiqueta}</span>
-      <input {...props} aria-invalid={error ? true : undefined} />
-      {error && <span className="campo-mensaje" role="alert">{error}</span>}
+      <input
+        id={inputId}
+        {...props}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : props['aria-describedby']}
+      />
+      {error && <span id={errorId} className="campo-mensaje" role="alert">{error}</span>}
     </label>
   );
 }
 
-export function Selecto({ etiqueta, error, children, ...props }) {
+export function Selecto({ etiqueta, error, id, children, ...props }) {
+  const generado = useId();
+  const selectId = id || `${generado}-select`;
+  const errorId = `${selectId}-error`;
+
   return (
-    <label className={`campo${error ? ' campo-error' : ''}`}>
+    <label className={`campo${error ? ' campo-error' : ''}`} htmlFor={selectId}>
       <span>{etiqueta}</span>
-      <select {...props} aria-invalid={error ? true : undefined}>{children}</select>
-      {error && <span className="campo-mensaje" role="alert">{error}</span>}
+      <select
+        id={selectId}
+        {...props}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : props['aria-describedby']}
+      >{children}</select>
+      {error && <span id={errorId} className="campo-mensaje" role="alert">{error}</span>}
     </label>
   );
 }

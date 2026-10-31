@@ -3128,6 +3128,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   gap: 16px;
   align-items: start;
 }
+.imagen-campo-error .imagen-vacia,
+.imagen-campo-error .imagen-preview { border-color: var(--red-tx); }
+.imagen-campo-error:focus-visible { outline: 2px solid var(--red-tx); outline-offset: 2px; }
 .imagen-preview {
   width: 100%;
   aspect-ratio: 16 / 10;

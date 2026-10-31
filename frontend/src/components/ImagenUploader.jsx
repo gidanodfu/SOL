@@ -1,11 +1,25 @@
 // SPDX-License-Identifier: MIT
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { ImagePlus, Trash2 } from 'lucide-react';
-import { Mensaje, Tarjeta } from './UI';
+import { Tarjeta } from './UI';
 import ProfileImage from './ProfileImage';
 
 const FORMATOS = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_MB = 2;
+
+const dimensiones = (archivo) => new Promise((resolver) => {
+  const url = URL.createObjectURL(archivo);
+  const imagen = new Image();
+  imagen.onload = () => {
+    URL.revokeObjectURL(url);
+    resolver({ ancho: imagen.naturalWidth, alto: imagen.naturalHeight });
+  };
+  imagen.onerror = () => {
+    URL.revokeObjectURL(url);
+    resolver(null);
+  };
+  imagen.src = url;
+});
 
 /**
  * Cargador de imágenes reutilizable (patrón visual del Design System). No acopla
@@ -24,6 +38,10 @@ export default function ImagenUploader({
   onSubir,
   onEliminar,
   cargando = false,
+  error = null,
+  errorId = null,
+  anchoMaximo = null,
+  altoMaximo = null,
   container = 'tarjeta',
   variante = 'completa',
   variant = 'person',
@@ -31,21 +49,37 @@ export default function ImagenUploader({
   alt,
 }) {
   const inputRef = useRef(null);
-  const [error, setError] = useState(null);
+  const generado = useId();
+  const mensajeId = errorId || `${generado}-imagen-error`;
+  const [errorLocal, setErrorLocal] = useState(null);
+  const errorMostrado = errorLocal || error;
 
-  const elegir = (e) => {
+  const elegir = async (e) => {
     const archivo = e.target.files?.[0];
     if (inputRef.current) inputRef.current.value = '';
     if (!archivo) return;
     if (!FORMATOS.includes(archivo.type)) {
-      setError('Formato no permitido. Usa JPG, PNG o WEBP.');
+      setErrorLocal('Formato no permitido. Usa JPG, PNG o WEBP.');
       return;
     }
     if (archivo.size > MAX_MB * 1024 * 1024) {
-      setError(`La imagen supera el tamaño máximo de ${MAX_MB} MB.`);
+      setErrorLocal(`La imagen supera el tamaño máximo de ${MAX_MB} MB.`);
       return;
     }
-    setError(null);
+
+    const medidas = anchoMaximo && altoMaximo ? await dimensiones(archivo) : null;
+    if (anchoMaximo && altoMaximo) {
+      if (!medidas) {
+        setErrorLocal('No se pudo leer la imagen. Selecciona otro archivo.');
+        return;
+      }
+      if (medidas.ancho > anchoMaximo || medidas.alto > altoMaximo) {
+        setErrorLocal(`La imagen supera la resolución máxima de ${anchoMaximo} × ${altoMaximo} px.`);
+        return;
+      }
+    }
+
+    setErrorLocal(null);
     onSubir(archivo);
   };
 
@@ -65,6 +99,8 @@ export default function ImagenUploader({
           accept={FORMATOS.join(',')}
           onChange={elegir}
           disabled={cargando}
+          aria-invalid={errorMostrado ? true : undefined}
+          aria-describedby={errorMostrado ? mensajeId : undefined}
           hidden
         />
       </label>
@@ -79,7 +115,7 @@ export default function ImagenUploader({
 
   if (variante === 'compacta') {
     return (
-      <div className="imagen-compacta">
+      <div className={`imagen-compacta${errorMostrado ? ' imagen-campo-error' : ''}`}>
         <ProfileImage
           className="imagen-compacta-media"
           src={url}
@@ -88,7 +124,7 @@ export default function ImagenUploader({
           alt={alt || (nombre ? `Imagen de ${nombre}` : 'Imagen')}
           size={120}
         />
-        <Mensaje>{error}</Mensaje>
+        {errorMostrado && <span id={mensajeId} className="campo-mensaje" role="alert">{errorMostrado}</span>}
         <div className="imagen-compacta-acciones">{acciones}</div>
       </div>
     );
@@ -97,7 +133,7 @@ export default function ImagenUploader({
   const cuerpo = (
     <>
       {descripcion && <p className="tarjeta-sub">{descripcion}</p>}
-      <Mensaje>{error}</Mensaje>
+      {errorMostrado && <span id={mensajeId} className="campo-mensaje" role="alert">{errorMostrado}</span>}
 
       <div className="imagen-cargador">
         {url ? (
@@ -117,7 +153,7 @@ export default function ImagenUploader({
   // "plano" integra el uploader dentro de otro formulario/tarjeta (sin Tarjeta propia).
   if (container === 'plano') {
     return (
-      <div className="form-seccion">
+      <div className={`form-seccion${errorMostrado ? ' imagen-campo-error' : ''}`}>
         {titulo && <span className="form-seccion-titulo">{titulo}</span>}
         {cuerpo}
       </div>

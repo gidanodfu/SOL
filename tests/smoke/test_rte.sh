@@ -120,16 +120,14 @@ PY
 done
 
 paso "5. actividad con HTML malicioso se sanea (público)"
-python3 - > /tmp/opencode/rte_actividad.json <<'PY'
-import json
-print(json.dumps({
-  "tipo": "taller",
-  "nombre": "Taller RTE",
-  "fecha_inicio": "2026-12-01 09:00",
-  "descripcion": '<p>Agenda <strong>del taller</strong></p><script>alert(1)</script><p onclick="x()">Punto dos</p>',
-}))
-PY
-AID=$(curl -s -X POST "$B/api/admin/actividades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d @/tmp/opencode/rte_actividad.json | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+php -r '$im=imagecreatetruecolor(640,360); imagefill($im,0,0,imagecolorallocate($im,20,100,170)); imagejpeg($im,"/tmp/opencode/rte_actividad.jpg",85); imagedestroy($im);'
+AID=$(curl -s -X POST "$B/api/admin/actividades" -H "Authorization: Bearer $TA" \
+  -F 'tipo=taller' -F 'nombre=Taller RTE' \
+  -F 'fecha_inicio=2026-12-01 09:00:00' -F 'fecha_fin=2026-12-01 11:00:00' \
+  -F 'lugar=Local municipal' -F 'modalidad=presencial' -F 'organizador=MDJLO' \
+  --form-string 'descripcion=<p>Agenda <strong>del taller</strong></p><script>alert(1)</script><p onclick="x()">Punto dos</p>' \
+  -F 'imagen=@/tmp/opencode/rte_actividad.jpg;type=image/jpeg;filename=actividad.jpg' \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s "$B/api/actividades" > /tmp/opencode/rte_actividades.json
 python3 - <<PY
 import json
