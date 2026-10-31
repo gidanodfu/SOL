@@ -75,6 +75,24 @@ else
   echo "sin postulación activa para probar"
 fi
 
+paso "9. rutas internas, archivos ocultos y errores sin rutas del servidor"
+for RUTA in /app/Config/Paths.php /vendor/autoload.php /.env /composer.json /writable/logs /tests/unit/StorageServiceTest.php /backend/.env; do
+  CODE=$(curl -s -o /tmp/opencode/seg_internal.json -w "%{http_code}" "$B$RUTA")
+  check_code "no publicar $RUTA" 404 "$CODE"
+  grep -Eq '/var/www|WRITEPATH|APPPATH|SQLSTATE' /tmp/opencode/seg_internal.json && { echo "FAIL $RUTA filtra rutas internas"; fallos=$((fallos + 1)); }
+done
+
+CODE=$(curl -s -o /tmp/opencode/seg_404.json -w "%{http_code}" "$B/api/ruta-inexistente")
+check_code "ruta API inexistente" 404 "$CODE"
+grep -Eq '/var/www|WRITEPATH|APPPATH|SQLSTATE|Stack trace' /tmp/opencode/seg_404.json && { echo 'FAIL el 404 filtra detalles internos'; fallos=$((fallos + 1)); }
+
+CODE=$(curl -s -o /tmp/opencode/seg_401.json -w "%{http_code}" "$B/api/postulante/cv")
+check_code "recurso protegido sin token" 401 "$CODE"
+
+CODE=$(curl -s -o /tmp/opencode/seg_method.json -w "%{http_code}" -X POST "$B/api/categorias")
+case "$CODE" in 404|405) printf 'OK   %-52s %s\n' "método no permitido controlado" "$CODE" ;; *) printf 'FAIL %-52s %s\n' "método no permitido controlado" "$CODE"; fallos=$((fallos + 1)) ;; esac
+grep -Eq '/var/www|WRITEPATH|APPPATH|SQLSTATE' /tmp/opencode/seg_method.json && { echo 'FAIL el método no permitido filtra rutas'; fallos=$((fallos + 1)); }
+
 echo
 echo "FIN test_seguridad"
 [ "$fallos" -eq 0 ] || exit 1

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Entities\Cv;
 use App\Exceptions\ApiException;
+use App\Libraries\Descarga;
 use App\Models\CvModel;
 use CodeIgniter\HTTP\Files\UploadedFile;
 
@@ -17,15 +18,7 @@ use CodeIgniter\HTTP\Files\UploadedFile;
  */
 class CvService
 {
-    private const MIME_PERMITIDOS = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-
-    private const EXTENSIONES_PERMITIDAS = ['pdf', 'doc', 'docx'];
-
-    private const TAMANO_MAXIMO = 5 * 1024 * 1024;
+    private const TAMANO_MAXIMO = DocumentoService::TAMANO_MAXIMO;
 
     /** Máximo de CV que un postulante puede subir por mes calendario. */
     public const LIMITE_MENSUAL = 4;
@@ -34,10 +27,16 @@ class CvService
 
     private StorageService $storage;
 
-    public function __construct(?CvModel $cvs = null, ?StorageService $storage = null)
-    {
-        $this->cvs     = $cvs ?? model(CvModel::class);
-        $this->storage = $storage ?? new StorageService();
+    private DocumentoService $documentos;
+
+    public function __construct(
+        ?CvModel $cvs = null,
+        ?StorageService $storage = null,
+        ?DocumentoService $documentos = null,
+    ) {
+        $this->cvs        = $cvs ?? model(CvModel::class);
+        $this->storage    = $storage ?? new StorageService();
+        $this->documentos = $documentos ?? new DocumentoService();
     }
 
     /**
@@ -76,7 +75,7 @@ class CvService
 
     public function subir(int $postulanteId, UploadedFile $archivo): Cv
     {
-        $this->validarArchivo($archivo);
+        $formato = $this->validarArchivo($archivo);
 
         // El backend es la autoridad: el límite mensual no se puede evadir desde
         // el frontend (se cuenta en MySQL sobre created_at).
@@ -86,12 +85,12 @@ class CvService
             );
         }
 
-        $extension = strtolower((string) $archivo->getClientExtension());
-        // El objeto se guarda dentro del bucket; la key no repite el nombre del bucket.
-        $objectKey = 'postulante-' . $postulanteId . '/' . bin2hex(random_bytes(8)) . '.' . $extension;
+        // Nombre de objeto generado por el servidor. La extensión proviene del
+        // formato detectado por contenido, nunca del nombre del cliente.
+        $objectKey = 'postulante-' . $postulanteId . '/' . bin2hex(random_bytes(8)) . '.' . $formato['extension'];
 
         // Almacena primero el archivo (RT-CV-03); luego actualiza metadatos en MySQL.
-        $this->storage->almacenar($objectKey, $archivo);
+        $this->storage->almacenar($objectKey, $archivo, $formato['mime']);
 
         $version = $this->cvs->siguienteVersion($postulanteId);
 
@@ -100,8 +99,10 @@ class CvService
         $this->cvs->insert([
             'postulante_id'   => $postulanteId,
             'object_key'      => $objectKey,
-            'nombre_original' => $archivo->getClientName(),
-            'mime'            => (string) $archivo->getClientMimeType(),
+            // Nombre visible saneado (sin rutas ni controles); conserva tildes
+            // y apóstrofes. No se usa nunca como ruta física.
+            'nombre_original' => Descarga::nombreSeguro($archivo->getClientName(), 'cv.' . $formato['extension']),
+            'mime'            => $formato['mime'],
             'tamano'          => (int) $archivo->getSize(),
             'version'         => $version,
             'activo'          => 1,
@@ -134,8 +135,8 @@ class CvService
      */
     public function archivoLocalDelDuenno(int $postulanteId, string $claveCodificada): ?array
     {
-        $objectKey = base64_decode(strtr($claveCodificada, '-_', '+/'), true);
-        if ($objectKey === false) {
+        $objectKey = self::decodificarClave($claveCodificada);
+        if ($objectKey === null) {
             return null;
         }
 
@@ -146,52 +147,65 @@ class CvService
 
         $ruta = $this->storage->rutaLocal($objectKey);
 
-        return $ruta === null ? null : ['ruta' => $ruta, 'nombre' => $cv->nombre_original, 'mime' => $cv->mime];
+        return $ruta === null ? null : [
+            'ruta'   => $ruta,
+            'nombre' => $cv->nombre_original,
+            'mime'   => self::mimeDeDocumento($objectKey),
+        ];
     }
 
-    private function validarArchivo(UploadedFile $archivo): void
+    /**
+     * Decodifica una clave URL-safe (Base64 sin padding). Devuelve null si el
+     * formato no es el generado por el servidor o si la clave no es segura.
+     */
+    public static function decodificarClave(string $claveCodificada): ?string
+    {
+        if ($claveCodificada === '' || strlen($claveCodificada) > 512) {
+            return null;
+        }
+        if (preg_match('/^[A-Za-z0-9_-]+$/', $claveCodificada) !== 1) {
+            return null;
+        }
+
+        $objectKey = base64_decode(strtr($claveCodificada, '-_', '+/'), true);
+        if ($objectKey === false || ! StorageService::claveValida($objectKey)) {
+            return null;
+        }
+
+        return $objectKey;
+    }
+
+    /**
+     * MIME canónico derivado de la extensión del objeto almacenado.
+     */
+    public static function mimeDeDocumento(string $objectKey): string
+    {
+        return match (strtolower(pathinfo($objectKey, PATHINFO_EXTENSION))) {
+            'pdf'   => 'application/pdf',
+            'doc'   => 'application/msword',
+            'docx'  => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            default => 'application/octet-stream',
+        };
+    }
+
+    /**
+     * @return array{extension: string, mime: string}
+     */
+    private function validarArchivo(UploadedFile $archivo): array
     {
         if (! $archivo->isValid()) {
             throw ApiException::badRequest('El archivo no se recibió correctamente.');
         }
 
-        $extension = strtolower((string) $archivo->getClientExtension());
-        $mime      = (string) $archivo->getClientMimeType();
-        $tamano    = (int) $archivo->getSize();
-
-        if (! in_array($extension, self::EXTENSIONES_PERMITIDAS, true)) {
-            throw ApiException::validacion('Solo se permiten archivos PDF, DOC o DOCX.', ['Solo se permiten archivos PDF, DOC o DOCX.']);
-        }
+        $tamano = (int) $archivo->getSize();
         if ($tamano <= 0) {
             throw ApiException::validacion('El archivo está vacío.', ['El archivo está vacío.']);
         }
         if ($tamano > self::TAMANO_MAXIMO) {
             throw ApiException::validacion('El CV supera el tamaño máximo de 5 MB.', ['El CV supera el tamaño máximo de 5 MB.']);
         }
-        // El MIME lo envía el navegador: se usa solo como filtro previo.
-        if (! in_array($mime, self::MIME_PERMITIDOS, true)) {
-            throw ApiException::validacion('El tipo del archivo no es válido.', ['El tipo del archivo no es válido.']);
-        }
-        // Autoridad real: bytes mágicos del documento (no se confía en el nombre
-        // ni en el content-type enviados por el cliente).
-        $inicio = (string) @file_get_contents($archivo->getTempName(), false, null, 0, 8);
-        if (! $this->esDocumentoReal($inicio, $extension)) {
-            throw ApiException::validacion('El archivo no es un documento PDF, DOC o DOCX válido.', ['El archivo no es un documento PDF, DOC o DOCX válido.']);
-        }
-    }
 
-    /**
-     * Verifica la firma binaria según la extensión declarada: PDF (%PDF), DOC
-     * (cabecera OLE) o DOCX (contenedor ZIP, "PK").
-     */
-    private function esDocumentoReal(string $bytes, string $extension): bool
-    {
-        return match ($extension) {
-            'pdf'   => str_starts_with($bytes, '%PDF'),
-            'doc'   => str_starts_with($bytes, "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"),
-            'docx'  => str_starts_with($bytes, 'PK'),
-            default => false,
-        };
+        return $this->documentos->inspeccionar($archivo->getTempName(), $archivo->getClientName());
     }
 
     /**

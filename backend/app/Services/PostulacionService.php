@@ -394,8 +394,8 @@ class PostulacionService
     {
         $postulacion = $this->exigirEmpresa($empresaId, $id);
 
-        $objectKey = base64_decode(strtr($claveCodificada, '-_', '+/'), true);
-        if ($objectKey === false) {
+        $objectKey = CvService::decodificarClave($claveCodificada);
+        if ($objectKey === null) {
             return null;
         }
 
@@ -408,7 +408,11 @@ class PostulacionService
 
         $ruta = $this->storage->rutaLocal($objectKey);
 
-        return $ruta === null ? null : ['ruta' => $ruta, 'nombre' => $cv->nombre_original, 'mime' => $cv->mime];
+        return $ruta === null ? null : [
+            'ruta'   => $ruta,
+            'nombre' => $cv->nombre_original,
+            'mime'   => CvService::mimeDeDocumento($objectKey),
+        ];
     }
 
     /**

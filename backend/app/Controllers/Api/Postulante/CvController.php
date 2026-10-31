@@ -6,6 +6,7 @@ namespace App\Controllers\Api\Postulante;
 
 use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
+use App\Libraries\Descarga;
 use App\Models\PostulanteModel;
 use App\Services\CvService;
 
@@ -88,16 +89,17 @@ class CvController extends BaseApiController
             throw ApiException::noEncontrado('El archivo no existe.');
         }
 
-        // El nombre proviene del cliente: se sanea para evitar inyección de
-        // cabeceras (CRLF) o rutas en Content-Disposition.
-        $nombre = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename((string) $archivo['nombre']));
-        if ($nombre === '' || $nombre === null) {
-            $nombre = 'cv';
+        $contenido = @file_get_contents($archivo['ruta']);
+        if ($contenido === false) {
+            throw ApiException::noEncontrado('El archivo no existe.');
         }
 
+        // El nombre proviene del cliente: se sanea para evitar inyección de
+        // cabeceras (CRLF), rutas y nombres ambiguos en Content-Disposition.
         return $this->response
             ->setContentType($archivo['mime'], 'UTF-8')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
-            ->setBody(file_get_contents($archivo['ruta']));
+            ->setHeader('Content-Disposition', Descarga::contentDisposition((string) $archivo['nombre'], 'cv'))
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setBody($contenido);
     }
 }

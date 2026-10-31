@@ -185,13 +185,11 @@ class ActividadService
     public function subirImagen(int $id, UploadedFile $archivo): string
     {
         $actividad = $this->exigir($id);
-        $this->validarImagen($archivo);
+        $imagen    = $this->validarImagen($archivo);
 
-        $extension = strtolower((string) $archivo->getClientExtension());
-        $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $extension;
+        $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $imagen['extension'];
 
-        $contenido = (string) file_get_contents($archivo->getTempName());
-        $this->storage->almacenarContenido($objectKey, $contenido, (string) $archivo->getMimeType());
+        $this->storage->almacenarContenido($objectKey, $imagen['contenido'], $imagen['mime']);
 
         $anterior = $actividad['imagen_key'] ?? null;
         $this->actividades->update($id, ['imagen_key' => $objectKey]);
@@ -235,7 +233,10 @@ class ActividadService
         return ['mime' => $this->mimeDeImagen($key), 'contenido' => $contenido];
     }
 
-    private function validarImagen(UploadedFile $archivo): void
+    /**
+     * @return array{extension: string, mime: string, contenido: string}
+     */
+    private function validarImagen(UploadedFile $archivo): array
     {
         if (! $archivo->isValid()) {
             throw ApiException::badRequest('La imagen no se recibió correctamente.');
@@ -244,6 +245,8 @@ class ActividadService
             throw ApiException::validacion('La imagen supera el tamaño máximo de 2 MB.', ['La imagen supera el tamaño máximo de 2 MB.']);
         }
 
+        // La extensión declarada solo filtra la intención del usuario; la
+        // autoridad es el contenido real (finfo, bytes mágicos y GD).
         $extension = strtolower((string) $archivo->getClientExtension());
         if (! in_array($extension, self::IMAGEN_EXTENSIONES, true)) {
             throw ApiException::validacion('Solo se permiten imágenes JPG, PNG o WEBP.', ['Solo se permiten imágenes JPG, PNG o WEBP.']);
@@ -270,6 +273,15 @@ class ActividadService
             throw ApiException::validacion('El archivo no es una imagen válida.', ['El archivo no es una imagen válida.']);
         }
         imagedestroy($imagen);
+
+        // Extensión y MIME canónicos derivados del tipo real, no del nombre.
+        [$extensionCanonica, $mime] = match ($info[2]) {
+            IMAGETYPE_JPEG => ['jpg', 'image/jpeg'],
+            IMAGETYPE_PNG  => ['png', 'image/png'],
+            IMAGETYPE_WEBP => ['webp', 'image/webp'],
+        };
+
+        return ['extension' => $extensionCanonica, 'mime' => $mime, 'contenido' => $contenido];
     }
 
     private function esImagenReal(string $bytes): bool

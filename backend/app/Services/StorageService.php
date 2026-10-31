@@ -20,6 +20,13 @@ use CodeIgniter\HTTP\Files\UploadedFile;
  */
 class StorageService
 {
+    /**
+     * Patrón de claves generadas por el servidor. Cada recurso tiene su
+     * prefijo y un nombre de archivo sin rutas, sin puntos iniciales y sin
+     * punto final. Las claves nunca se construyen con datos del cliente.
+     */
+    private const PATRON_CLAVE = '#^(?:postulante-[1-9]\d*|postulantes/foto/[1-9]\d*|empresas/logo/[1-9]\d*|actividades/[1-9]\d*)/[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9_-]$#';
+
     private string $driver;
 
     private string $bucket;
@@ -34,9 +41,24 @@ class StorageService
 
     public function __construct()
     {
-        $this->driver    = (string) (env('storage.driver') ?: 'local');
-        $this->bucket    = (string) (env('storage.bucket') ?: 'cvs');
-        $this->endpoint  = rtrim((string) env('s3.endpoint'), '/');
+        $this->driver = (string) (env('storage.driver') ?: 'local');
+
+        // El bucket y el endpoint son configuración del backend: se validan
+        // para que una clave de objeto nunca pueda alterarlos.
+        $bucket = (string) (env('storage.bucket') ?: 'cvs');
+        if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/', $bucket) !== 1) {
+            log_message('error', 'storage.bucket inválido; se usa "cvs".');
+            $bucket = 'cvs';
+        }
+        $this->bucket = $bucket;
+
+        $endpoint = rtrim((string) env('s3.endpoint'), '/');
+        if ($endpoint !== '' && ! $this->endpointValido($endpoint)) {
+            log_message('error', 's3.endpoint inválido; se desactiva el driver externo.');
+            $endpoint = '';
+        }
+        $this->endpoint = $endpoint;
+
         $this->accessKey = (string) env('s3.accessKey');
         $this->secretKey = (string) env('s3.secretKey');
         $this->region    = (string) (env('s3.region') ?: 'us-west-2');
@@ -44,6 +66,35 @@ class StorageService
         if ($this->driver === 'supabase' && ($this->endpoint === '' || $this->accessKey === '' || $this->secretKey === '')) {
             $this->driver = 'local';
         }
+    }
+
+    /**
+     * Valida una clave de objeto antes de cualquier operación de almacenamiento.
+     * Rechaza rutas absolutas, traversal, separadores de Windows, controles,
+     * segmentos vacíos, puntos iniciales/finales y prefijos desconocidos.
+     */
+    public static function claveValida(string $objectKey): bool
+    {
+        if ($objectKey === '' || strlen($objectKey) > 255) {
+            return false;
+        }
+        if (preg_match('/[^A-Za-z0-9._\/-]/', $objectKey) === 1) {
+            return false;
+        }
+        if (str_starts_with($objectKey, '/') || str_contains($objectKey, '\\') || str_contains($objectKey, '//')) {
+            return false;
+        }
+
+        foreach (explode('/', $objectKey) as $segmento) {
+            if ($segmento === '' || $segmento === '.' || $segmento === '..') {
+                return false;
+            }
+            if (str_starts_with($segmento, '.')) {
+                return false;
+            }
+        }
+
+        return preg_match(self::PATRON_CLAVE, $objectKey) === 1;
     }
 
     public function esSupabase(): bool
@@ -54,17 +105,21 @@ class StorageService
     /**
      * @throws ApiException si no se puede almacenar
      */
-    public function almacenar(string $objectKey, UploadedFile $archivo): void
+    public function almacenar(string $objectKey, UploadedFile $archivo, ?string $mime = null): void
     {
+        $objectKey = $this->exigirClave($objectKey);
+
         if (! $this->esSupabase()) {
             $this->almacenarLocal($objectKey, $archivo);
 
             return;
         }
 
-        $ruta  = $this->rutaObjeto($objectKey);
+        $ruta   = $this->rutaObjeto($objectKey);
         $cuerpo = file_get_contents($archivo->getTempName());
-        $resultado = $this->solicitudFirmada('PUT', $ruta, $cuerpo, $archivo->getClientMimeType());
+        // MIME detectado por el servidor cuando el llamador no fija uno canónico.
+        $mime ??= $archivo->getMimeType();
+        $resultado = $this->solicitudFirmada('PUT', $ruta, $cuerpo, $mime);
 
         if ($resultado === null) {
             throw ApiException::badRequest('No se pudo almacenar el CV en el almacenamiento externo.');
@@ -77,10 +132,12 @@ class StorageService
      */
     public function almacenarContenido(string $objectKey, string $cuerpo, string $mime): void
     {
+        $objectKey = $this->exigirClave($objectKey);
+
         if (! $this->esSupabase()) {
-            $ruta = WRITEPATH . 'uploads/' . $objectKey;
-            if (! is_dir(dirname($ruta))) {
-                mkdir(dirname($ruta), 0775, true);
+            $ruta = $this->rutaLocalDestino($objectKey, true);
+            if ($ruta === null) {
+                throw ApiException::badRequest('No se pudo guardar el archivo.');
             }
             if (file_put_contents($ruta, $cuerpo) === false) {
                 throw ApiException::badRequest('No se pudo guardar el archivo.');
@@ -100,9 +157,11 @@ class StorageService
      */
     public function eliminar(string $objectKey): void
     {
+        $objectKey = $this->exigirClave($objectKey);
+
         if (! $this->esSupabase()) {
-            $ruta = WRITEPATH . 'uploads/' . $objectKey;
-            if (is_file($ruta)) {
+            $ruta = $this->rutaLocalDestino($objectKey);
+            if ($ruta !== null && is_file($ruta)) {
                 @unlink($ruta);
             }
 
@@ -115,10 +174,14 @@ class StorageService
 
     /**
      * Devuelve el contenido binario del objeto (para el proxy público de
-     * imágenes). Null si no existe o no se puede leer.
+     * imágenes). Null si no existe, la clave no es válida o no se puede leer.
      */
     public function obtenerContenido(string $objectKey): ?string
     {
+        if (! self::claveValida($objectKey)) {
+            return null;
+        }
+
         if (! $this->esSupabase()) {
             $ruta = $this->rutaLocal($objectKey);
 
@@ -138,6 +201,10 @@ class StorageService
      */
     public function urlTemporal(string $objectKey, int $segundos = 1800): string
     {
+        if (! self::claveValida($objectKey)) {
+            throw ApiException::noEncontrado('El archivo no existe.');
+        }
+
         if ($this->esSupabase()) {
             return $this->urlPresignada('GET', $this->rutaObjeto($objectKey), $segundos);
         }
@@ -148,27 +215,121 @@ class StorageService
     }
 
     /**
-     * Ruta absoluta del archivo cuando el driver es local (null si es Supabase).
+     * Ruta absoluta del archivo cuando el driver es local (null si es Supabase
+     * o si la clave no apunta a un archivo autorizado dentro de uploads).
      */
     public function rutaLocal(string $objectKey): ?string
     {
-        if ($this->esSupabase()) {
+        if ($this->esSupabase() || ! self::claveValida($objectKey)) {
             return null;
         }
-        $ruta = WRITEPATH . 'uploads/' . $objectKey;
 
-        return is_file($ruta) ? $ruta : null;
+        $ruta = $this->rutaLocalDestino($objectKey);
+
+        return $ruta !== null && is_file($ruta) ? $ruta : null;
     }
 
     private function almacenarLocal(string $objectKey, UploadedFile $archivo): void
     {
-        $ruta = WRITEPATH . 'uploads/' . $objectKey;
-        if (! is_dir(dirname($ruta))) {
-            mkdir(dirname($ruta), 0775, true);
+        $ruta = $this->rutaLocalDestino($objectKey, true);
+        if ($ruta === null) {
+            throw ApiException::badRequest('No se pudo guardar el archivo.');
         }
         if (! move_uploaded_file($archivo->getTempName(), $ruta)) {
             throw ApiException::badRequest('No se pudo guardar el archivo.');
         }
+    }
+
+    /**
+     * Directorio raíz del almacenamiento local (aislado para pruebas).
+     */
+    protected function raizLocal(): string
+    {
+        return WRITEPATH . 'uploads';
+    }
+
+    /**
+     * Resuelve la ruta local canónica de una clave ya validada, comprobando
+     * que el archivo y su directorio permanecen dentro de uploads. Rechaza
+     * enlaces simbólicos que escapen del directorio autorizado.
+     */
+    private function rutaLocalDestino(string $objectKey, bool $crearDirectorio = false): ?string
+    {
+        if (! self::claveValida($objectKey)) {
+            return null;
+        }
+
+        $raiz = realpath($this->raizLocal());
+        if ($raiz === false) {
+            if (! $crearDirectorio) {
+                return null;
+            }
+            if (! @mkdir($this->raizLocal(), 0775, true) && ! is_dir($this->raizLocal())) {
+                return null;
+            }
+            $raiz = realpath($this->raizLocal());
+            if ($raiz === false) {
+                return null;
+            }
+        }
+
+        $destino = $raiz . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $objectKey);
+        if (is_link($destino)) {
+            return null;
+        }
+
+        $directorio = dirname($destino);
+        if (! is_dir($directorio)) {
+            if (! $crearDirectorio) {
+                return null;
+            }
+            if (! @mkdir($directorio, 0775, true) && ! is_dir($directorio)) {
+                return null;
+            }
+        }
+
+        $directorioReal = realpath($directorio);
+        if ($directorioReal === false || ! $this->dentroDe($directorioReal, $raiz)) {
+            return null;
+        }
+
+        if (is_file($destino)) {
+            $destinoReal = realpath($destino);
+            if ($destinoReal === false || ! $this->dentroDe($destinoReal, $raiz)) {
+                return null;
+            }
+
+            return $destinoReal;
+        }
+
+        return $directorioReal . DIRECTORY_SEPARATOR . basename($destino);
+    }
+
+    private function dentroDe(string $ruta, string $raiz): bool
+    {
+        $raiz = rtrim($raiz, DIRECTORY_SEPARATOR);
+
+        return $ruta === $raiz || str_starts_with($ruta, $raiz . DIRECTORY_SEPARATOR);
+    }
+
+    private function exigirClave(string $objectKey): string
+    {
+        if (! self::claveValida($objectKey)) {
+            log_message('error', 'StorageService: clave de objeto rechazada.');
+
+            throw ApiException::badRequest('La referencia del archivo no es válida.');
+        }
+
+        return $objectKey;
+    }
+
+    private function endpointValido(string $endpoint): bool
+    {
+        if (filter_var($endpoint, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        return in_array(strtolower((string) parse_url($endpoint, PHP_URL_SCHEME)), ['http', 'https'], true);
     }
 
     /* ------------------------- Firma SigV4 (S3) ------------------------- */
@@ -194,11 +355,17 @@ class StorageService
         return $path !== '' ? $path : '/storage/v1/s3';
     }
 
-    private function rutaObjeto(string $objectKey): string
+    /**
+     * Ruta del objeto dentro del endpoint S3. La clave se valida y cada
+     * segmento se codifica una sola vez; el bucket y la base del endpoint
+     * provienen exclusivamente de la configuración del backend.
+     */
+    protected function rutaObjeto(string $objectKey): string
     {
+        $objectKey = $this->exigirClave($objectKey);
         $segmentos = array_map(static fn ($s) => rawurlencode($s), explode('/', $objectKey));
 
-        return $this->rutaBase() . '/' . $this->bucket . '/' . implode('/', $segmentos);
+        return $this->rutaBase() . '/' . rawurlencode($this->bucket) . '/' . implode('/', $segmentos);
     }
 
     private function rfc3986(string $valor): string
