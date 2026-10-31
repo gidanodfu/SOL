@@ -9,11 +9,12 @@ import FichaDatos from '../../components/FichaDatos';
 import { useToast } from '../../components/Feedbacks';
 import { ExternalLink, EyeOff, Megaphone, Pencil, Upload } from 'lucide-react';
 import { ETIQUETA_FUENTE_OPORTUNIDAD, FUENTES_OPORTUNIDAD } from '../../constants';
-import { errorApi, esEnlaceSeguro, fechaCalendario } from '../../utils';
-import { useAccion } from '../../hooks/useAccion';
+import { errorApi, esEnlaceSeguro, esFechaCalendario, fechaCalendario, textoEnriquecidoVacio } from '../../utils';
 import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
-const VACIO = { fuente: 'empleos_peru', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '' };
+const VACIO = { fuente: '', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '' };
+
+const ORDEN_CAMPOS = ['fuente', 'titulo', 'enlace', 'fecha_publicacion', 'descripcion'];
 
 // Estado de publicación derivado del backend (oculta / programada / visible).
 function BadgePublicacion({ estado }) {
@@ -176,23 +177,97 @@ function DetalleOportunidad({ oportunidad, puedeGestionar, alCerrar, alCambio, a
 }
 
 function EditorOportunidad({ inicial, alGuardar }) {
+  const esNueva = !inicial;
   const [form, setForm] = useState(() =>
     inicial
       ? { fuente: inicial.fuente, titulo: inicial.titulo, descripcion: inicial.descripcion || '', enlace: inicial.enlace || '', fecha_publicacion: inicial.fecha_publicacion || '' }
       : VACIO,
   );
+  const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
-  const { ejecutar, enviando } = useAccion(() => (inicial ? actualizarOportunidad(inicial.id, form) : crearOportunidad(form)));
+  const [enviando, setEnviando] = useState(false);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const set = (k) => (e) => {
+    setForm({ ...form, [k]: e.target.value });
+    setErrores((prev) => {
+      if (!prev[k]) return prev;
+      const siguiente = { ...prev };
+      delete siguiente[k];
+      return siguiente;
+    });
+    setError(null);
+  };
+
+  const enfocarCampo = (campo) => {
+    document.getElementById(`oportunidad-${campo}`)?.focus();
+  };
+
+  const validar = () => {
+    const encontrados = {};
+
+    if (!FUENTES_OPORTUNIDAD.includes(String(form.fuente || '').trim())) {
+      encontrados.fuente = 'Selecciona una fuente válida.';
+    }
+
+    if (String(form.titulo || '').trim() === '') {
+      encontrados.titulo = 'El título de la oportunidad es obligatorio.';
+    }
+
+    const enlace = String(form.enlace || '').trim();
+    if (enlace === '' || !esEnlaceSeguro(enlace)) {
+      encontrados.enlace = 'Introduce una URL válida.';
+    }
+
+    const fecha = String(form.fecha_publicacion || '').trim();
+    if (fecha === '') {
+      encontrados.fecha_publicacion = 'La fecha de publicación es obligatoria.';
+    } else if (!esFechaCalendario(fecha)) {
+      encontrados.fecha_publicacion = 'La fecha de publicación no es válida.';
+    }
+
+    if (textoEnriquecidoVacio(form.descripcion)) {
+      encontrados.descripcion = 'La descripción de la oportunidad es obligatoria.';
+    }
+
+    return encontrados;
+  };
 
   const guardar = async () => {
+    // La validación local de obligatoriedad aplica solo a la creación. La
+    // edición conserva el comportamiento existente.
+    const encontrados = esNueva ? validar() : {};
+    setErrores(encontrados);
+
+    if (Object.keys(encontrados).length > 0) {
+      setError(null);
+      const primero = ORDEN_CAMPOS.find((campo) => encontrados[campo]);
+      if (primero) enfocarCampo(primero);
+      return;
+    }
+
+    setEnviando(true);
+    setError(null);
+
     try {
-      await ejecutar();
+      if (inicial) {
+        await actualizarOportunidad(inicial.id, form);
+      } else {
+        await crearOportunidad(form);
+      }
       alGuardar();
     } catch (e) {
-      const det = e?.response?.data?.errors;
-      setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
+      const campos = e?.response?.data?.campos;
+      if (campos && typeof campos === 'object' && !Array.isArray(campos)) {
+        setErrores(campos);
+        setError(null);
+        const primero = ORDEN_CAMPOS.find((campo) => campos[campo]);
+        if (primero) enfocarCampo(primero);
+      } else {
+        const det = e?.response?.data?.errors;
+        setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
+      }
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -200,14 +275,61 @@ function EditorOportunidad({ inicial, alGuardar }) {
     <Tarjeta titulo={inicial ? 'Editar oportunidad' : 'Nueva oportunidad'}>
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
-        <Selecto etiqueta="Fuente *" value={form.fuente} onChange={set('fuente')}>
+        <Selecto
+          etiqueta="Fuente *"
+          id="oportunidad-fuente"
+          value={form.fuente}
+          onChange={set('fuente')}
+          error={errores.fuente}
+          required
+        >
+          <option value="">Seleccionar fuente</option>
           {FUENTES_OPORTUNIDAD.map((f) => <option key={f} value={f}>{ETIQUETA_FUENTE_OPORTUNIDAD[f]}</option>)}
         </Selecto>
-        <Campo etiqueta="Título *" value={form.titulo} onChange={set('titulo')} />
-        <Campo etiqueta="Enlace (URL de la convocatoria)" value={form.enlace} onChange={set('enlace')} />
-        <Campo etiqueta="Fecha de publicación" type="date" value={form.fecha_publicacion} onChange={set('fecha_publicacion')} />
+        <Campo
+          etiqueta="Título *"
+          id="oportunidad-titulo"
+          value={form.titulo}
+          onChange={set('titulo')}
+          error={errores.titulo}
+          maxLength={200}
+          required
+        />
+        <Campo
+          etiqueta="Enlace (URL de la convocatoria) *"
+          id="oportunidad-enlace"
+          type="url"
+          value={form.enlace}
+          onChange={set('enlace')}
+          error={errores.enlace}
+          placeholder="https://…"
+          required
+        />
+        <Campo
+          etiqueta="Fecha de publicación *"
+          id="oportunidad-fecha_publicacion"
+          type="date"
+          value={form.fecha_publicacion}
+          onChange={set('fecha_publicacion')}
+          error={errores.fecha_publicacion}
+          required
+        />
       </div>
-      <label className="campo"><span>Descripción</span><textarea rows="3" value={form.descripcion} onChange={set('descripcion')} /></label>
+      <label className={`campo${errores.descripcion ? ' campo-error' : ''}`} htmlFor="oportunidad-descripcion">
+        <span>Descripción *</span>
+        <textarea
+          id="oportunidad-descripcion"
+          rows="3"
+          value={form.descripcion}
+          onChange={set('descripcion')}
+          aria-invalid={errores.descripcion ? true : undefined}
+          aria-describedby={errores.descripcion ? 'oportunidad-descripcion-error' : undefined}
+          required
+        />
+        {errores.descripcion && (
+          <span id="oportunidad-descripcion-error" className="campo-mensaje" role="alert">{errores.descripcion}</span>
+        )}
+      </label>
       <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar</Boton>
     </Tarjeta>
   );

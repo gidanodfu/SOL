@@ -28,7 +28,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 21 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 22 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -69,6 +69,11 @@ imagen y descripción) son obligatorios, con error asociado a cada campo; valida
 fechas, HTML vacío, tipo/modalidad inválidos, tamaño, contenido y resolución de
 la imagen, y confirma que los rechazos no crean registros. También cubre la
 edición conservando la imagen existente y el reemplazo por el endpoint dedicado.
+
+`tests/smoke/test_oportunidades_campos.sh` cubre la obligatoriedad exclusiva de
+la creación de oportunidades: fuente, título, enlace, fecha y descripción, con
+mensajes por campo, rechazo de URL/protocolo inválidos, HTML vacío, creación
+válida y conservación del contrato de edición existente.
 
 El límite de texto enriquecido es inclusivo: se cuentan caracteres visibles
 después de sanear/decodificar, sin etiquetas HTML; 9.999 y 10.000 se aceptan y

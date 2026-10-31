@@ -706,7 +706,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .campo span { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
 /* Validación por campo: borde y mensaje (mismo tono que los errores de la API). */
 .campo-error input,
-.campo-error select { border-color: var(--red-tx); }
+.campo-error select,
+.campo-error textarea { border-color: var(--red-tx); }
 .campo-mensaje { font-size: 12px; font-weight: 500; color: var(--red-tx); }
 
 /* Selector de perfil municipal: accesible, con descripción y foco visible. */

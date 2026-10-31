@@ -93,7 +93,7 @@ class OportunidadService
      */
     public function crear(array $datos): int
     {
-        $datos = $this->validar($datos);
+        $datos = $this->validar($datos, true);
         // Una oportunidad nueva nace activa; la activación se gestiona aparte.
         $datos['activo'] = 1;
         $this->oportunidades->insert($datos);
@@ -119,18 +119,31 @@ class OportunidadService
     }
 
     /**
+     * @param array<string, mixed> $datos
+     *
      * @return array<string, mixed>
      */
-    private function validar(array $datos): array
+    protected function validar(array $datos, bool $esCreacion = false): array
     {
-        Validador::validar($datos, [
-            'fuente'     => ['required', 'enum:' . implode(',', self::FUENTES)],
-            'titulo'     => ['required', 'max:200'],
-            'descripcion' => ['max:10000'],
-            'enlace'     => ['max:300'],
-            'fecha_publicacion' => ['fecha'],
-            'empresa_id' => ['regex:/^\d+$/'],
-        ]);
+        if ($esCreacion) {
+            $this->validarCreacion($datos);
+
+            // Normaliza solo la creación; la edición conserva su contrato.
+            $datos['fuente']            = trim((string) $datos['fuente']);
+            $datos['titulo']            = trim((string) $datos['titulo']);
+            $datos['enlace']            = trim((string) $datos['enlace']);
+            $datos['fecha_publicacion'] = trim((string) $datos['fecha_publicacion']);
+            $datos['descripcion']       = trim((string) $datos['descripcion']);
+        } else {
+            Validador::validar($datos, [
+                'fuente'     => ['required', 'enum:' . implode(',', self::FUENTES)],
+                'titulo'     => ['required', 'max:200'],
+                'descripcion' => ['max:10000'],
+                'enlace'     => ['max:300'],
+                'fecha_publicacion' => ['fecha'],
+                'empresa_id' => ['regex:/^\d+$/'],
+            ]);
+        }
 
         // El enlace se renderiza como href en el portal público: solo http(s).
         // FILTER_VALIDATE_URL por sí solo acepta esquemas peligrosos (javascript:).
@@ -138,7 +151,11 @@ class OportunidadService
         if ($enlace !== null && $enlace !== '') {
             $esquema = strtolower((string) parse_url((string) $enlace, PHP_URL_SCHEME));
             if (! in_array($esquema, ['http', 'https'], true) || ! filter_var($enlace, FILTER_VALIDATE_URL)) {
-                throw ApiException::validacion('El enlace debe ser una URL http(s) válida.', ['El enlace debe ser una URL http(s) válida.']);
+                throw ApiException::validacion(
+                    'El enlace debe ser una URL http(s) válida.',
+                    ['El enlace debe ser una URL http(s) válida.'],
+                    ['enlace' => 'Introduce una URL válida.'],
+                );
             }
         }
 
@@ -159,6 +176,61 @@ class OportunidadService
             // La fecha vacía no debe guardarse: usa la fecha de hoy.
             'fecha_publicacion' => ($datos['fecha_publicacion'] ?? '') !== '' ? $datos['fecha_publicacion'] : date('Y-m-d'),
         ];
+    }
+
+    /**
+     * Reglas de obligatoriedad exclusivas de la creación de oportunidades.
+     * Los mensajes se devuelven en `campos` para que el formulario los muestre
+     * bajo cada control.
+     *
+     * @param array<string, mixed> $datos
+     */
+    protected function validarCreacion(array $datos): void
+    {
+        $errores = [];
+
+        $fuente = is_scalar($datos['fuente'] ?? null) ? trim((string) $datos['fuente']) : '';
+        if (! in_array($fuente, self::FUENTES, true)) {
+            $errores['fuente'] = 'Selecciona una fuente válida.';
+        }
+
+        $titulo = is_scalar($datos['titulo'] ?? null) ? trim((string) $datos['titulo']) : '';
+        if ($titulo === '') {
+            $errores['titulo'] = 'El título de la oportunidad es obligatorio.';
+        } elseif (mb_strlen($titulo) > 200) {
+            $errores['titulo'] = 'El título no debe superar 200 caracteres.';
+        }
+
+        $enlace = is_scalar($datos['enlace'] ?? null) ? trim((string) $datos['enlace']) : '';
+        if ($enlace === '' || mb_strlen($enlace) > 300 || ! $this->esUrlSegura($enlace)) {
+            $errores['enlace'] = 'Introduce una URL válida.';
+        }
+
+        $fecha = is_scalar($datos['fecha_publicacion'] ?? null) ? trim((string) $datos['fecha_publicacion']) : '';
+        if ($fecha === '') {
+            $errores['fecha_publicacion'] = 'La fecha de publicación es obligatoria.';
+        } elseif (! Validador::esFecha($fecha)) {
+            $errores['fecha_publicacion'] = 'La fecha de publicación no es válida.';
+        }
+
+        $descripcion = is_scalar($datos['descripcion'] ?? null) ? trim((string) $datos['descripcion']) : '';
+        if (trim(Validador::textoVisible($descripcion)) === '') {
+            $errores['descripcion'] = 'La descripción de la oportunidad es obligatoria.';
+        } elseif (Validador::longitudTexto($descripcion) > 10000) {
+            $errores['descripcion'] = 'La descripción no debe superar 10.000 caracteres.';
+        }
+
+        if ($errores !== []) {
+            throw ApiException::validacion('Existen campos que requieren atención.', array_values($errores), $errores);
+        }
+    }
+
+    private function esUrlSegura(string $url): bool
+    {
+        $esquema = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+        return in_array($esquema, ['http', 'https'], true)
+            && filter_var($url, FILTER_VALIDATE_URL) !== false;
     }
 
     /**
