@@ -38,6 +38,7 @@ services:
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
       VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
     volumes:
+      - ../VERSION:/VERSION:ro
       - ../frontend/src:/app/src
       - ../frontend/public:/app/public
       - ../frontend/index.html:/app/index.html:ro

@@ -2,7 +2,8 @@
 import { Code2, ExternalLink, GitBranch, Info, UserRound } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../context/AuthContext';
-import { ROLES, VERSION_SISTEMA } from '../../constants';
+import { VERSION_SISTEMA } from '../../config/version';
+import { ROLES } from '../../constants';
 
 const PERFIL_GITHUB = 'https://github.com/gidanodfu';
 const PERFIL_COLABORADOR_GITHUB = 'https://github.com/jhonalo9';

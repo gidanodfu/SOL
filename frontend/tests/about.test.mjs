@@ -32,14 +32,26 @@ test('la página comparte una sola implementación y contiene dos tarjetas', () 
   assert.match(pagina, /usuario\?\.rol === ROLES\.ADMIN/);
 });
 
-test('la versión mostrada usa una única fuente y no inventa un número', () => {
+test('la versión mostrada proviene del archivo VERSION y de Vite', () => {
   const pagina = leer('../src/pages/acerca/AcercaDe.jsx');
   const constantes = leer('../src/constants.js');
+  const modulo = leer('../src/config/version.js');
+  const formato = leer('../src/config/versionFormat.js');
+  const vite = leer('../vite.config.js');
+  const docker = leer('../Dockerfile');
+  const version = leer('../../VERSION').trim();
 
-  assert.match(constantes, /export const VERSION_SISTEMA = 'No disponible'/);
-  assert.match(pagina, /VERSION_SISTEMA/);
+  assert.equal(version, '0.9.2-beta');
+  assert.doesNotMatch(constantes, /VERSION_SISTEMA/);
+  assert.match(pagina, /from '\.\.\/\.\.\/config\/version'/);
+  assert.match(pagina, /<dd>\{VERSION_SISTEMA\}<\/dd>/);
+  assert.match(modulo, /import\.meta\.env\.VITE_SOL_VERSION/);
+  assert.match(modulo, /formatSystemVersion/);
+  assert.match(formato, /alpha\|beta\|rc/);
+  assert.match(vite, /VITE_SOL_VERSION/);
+  assert.match(vite, /resolve\(frontendDir, '\.\.\/VERSION'\)/);
+  assert.match(docker, /COPY VERSION \/VERSION/);
   assert.doesNotMatch(pagina, /\b\d+\.\d+\.\d+\b/);
-  assert.doesNotMatch(pagina, /package\.json/);
 });
 
 test('la tarjeta de desarrollo enlaza al perfil principal, a los colaboradores y al repositorio', () => {

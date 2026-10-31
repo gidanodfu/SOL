@@ -12,6 +12,7 @@ La especificación funcional está en `docs/requerimientos.md` y la trazabilidad
 
 ```
 SOL/
+├── VERSION                Fuente oficial de la versión del sistema
 ├── backend/               CodeIgniter 4 (PHP 8.4.27 en Docker) — API REST, reglas, auth
 ├── frontend/              React + Vite (Node 22.23.4 en Docker) — SPA
 ├── tests/smoke/           Smoke HTTP y pruebas de integración en Docker
@@ -494,7 +495,61 @@ integrada en `test.sh validation`, sirve WebP, PNG y JPEG y verifica el
 con GD; `test_fase5.sh` sube una imagen WebP de actividad, la recupera con
 `image/webp` y rechaza un archivo WebP con contenido inválido.
 
-## 18. Pruebas
+## 18. Versionado
+
+La versión oficial del sistema vive en el archivo raíz `VERSION`. No se
+duplica en componentes React, `constants.js` ni `package.json`.
+
+Contenido actual:
+
+```text
+0.9.2-beta
+```
+
+Formato técnico:
+
+```text
+X.Y.Z
+X.Y.Z-alpha.N
+X.Y.Z-beta.N
+X.Y.Z-rc.N
+```
+
+Presentación visual:
+
+| `VERSION` | En `/about` |
+|---|---|
+| `0.9.2-beta` | `0.9.2 BETA` |
+| `0.9.2-beta.1` | `0.9.2 BETA 1` |
+| `0.9.2-alpha.1` | `0.9.2 ALPHA 1` |
+| `0.9.2-rc.1` | `0.9.2 RC 1` |
+| `0.9.2` | `0.9.2` |
+
+Vite lee y valida `VERSION` durante `npm run build`, incorpora el identificador
+en `import.meta.env.VITE_SOL_VERSION` y el módulo
+`frontend/src/config/version.js` lo transforma para la interfaz. Si el archivo
+falta o contiene un formato inválido, el build falla con un mensaje explícito.
+
+El archivo se copia a `/VERSION` en las etapas `dev` y `build` del Dockerfile
+frontend; en desarrollo también se monta desde Compose para que el valor local
+sea el usado. Después de cambiar `VERSION` es necesario reiniciar Vite en
+desarrollo y reconstruir la imagen frontend en producción:
+
+```bash
+./deploy/scripts/dev.sh build
+./deploy/scripts/dev.sh up --no-build
+```
+
+Procedimiento de publicación (no ejecutado automáticamente):
+
+```bash
+git add VERSION
+git commit -m "chore(release): SOL v0.9.2-beta"
+git tag -a v0.9.2-beta -m "SOL 0.9.2 BETA"
+git push origin main --tags
+```
+
+## 19. Pruebas
 
 Todas las pruebas oficiales se ejecutan mediante Docker. No se requiere PHP,
 Node.js, Composer, npm ni MySQL instalados en el host.
@@ -599,7 +654,7 @@ sha256sum frontend/public/sol-logo.png backend/public/sol-logo.png
   correcciones de los avisos de seguridad detectados durante la resolución de
   dependencias; la suite de Excel se mantiene como no regresión.
 
-## 19. Producción
+## 20. Producción
 
 - Configuración única en `.env` raíz, con secretos propios de producción.
 - `COMPOSE_PROJECT_NAME` debe ser distinto de `sol_dev` (por ejemplo `sol_prod`);
