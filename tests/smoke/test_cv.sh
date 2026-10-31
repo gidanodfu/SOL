@@ -57,7 +57,48 @@ curl -s -o /tmp/opencode/cv_docx_download.docx -w '%{http_code}' "$B/api/postula
 check_code "descargar DOCX" 200 "$(cat /tmp/opencode/cv_docx_download_code)"
 head -c 2 /tmp/opencode/cv_docx_download.docx | grep -q 'PK' && echo 'OK   descarga DOCX conserva contenedor ZIP' || { echo 'FAIL descarga DOCX sin firma ZIP'; fallos=$((fallos + 1)); }
 
-paso "3. casos negativos"
+paso "3. nombres manipulados y descarga segura"
+# Negativos: no deben crear registro ni consumir el límite mensual.
+curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv.pdf.php" > /tmp/opencode/cv_ext_php_code
+check_code "rechazar extensión PHP intermedia" 422 "$(cat /tmp/opencode/cv_ext_php_code)"
+curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv.pdf." > /tmp/opencode/cv_punto_final_code
+check_code "rechazar nombre terminado en punto" 422 "$(cat /tmp/opencode/cv_punto_final_code)"
+curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=../../evil.pdf" > /tmp/opencode/cv_traversal_code
+check_code "aceptar carga con nombre de ruta (se ignora)" 201 "$(cat /tmp/opencode/cv_traversal_code)"
+URL=$(curl -s "$B/api/postulante/cv/descargar" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and d.get("data",{}).get("url"), "FAIL descarga sin URL";print(d["data"]["url"])')
+KEY=${URL##*/}
+python3 - "$KEY" <<'PY'
+import base64, re, sys
+key = sys.argv[1]
+raw = base64.urlsafe_b64decode(key + '=' * (-len(key) % 4)).decode('utf-8')
+assert re.fullmatch(r'postulante-\d+/[0-9a-f]{16}\.pdf', raw), 'clave de objeto no canónica: ' + raw
+print('OK   clave generada por el servidor:', raw)
+PY
+curl -s -D /tmp/opencode/cv_traversal_headers.txt -o /dev/null "$B/api/postulante/cv/archivo/$KEY" -H "Authorization: Bearer $TP"
+grep -qi '^content-disposition: attachment; filename="evil.pdf"' /tmp/opencode/cv_traversal_headers.txt && echo 'OK   Content-Disposition reducido a evil.pdf' || { echo 'FAIL Content-Disposition con ruta'; fallos=$((fallos + 1)); }
+
+curl -s -o /tmp/opencode/cv_accents_response.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=José O'Connor.pdf" > /tmp/opencode/cv_accents_code
+check_code "aceptar nombre con tildes y apóstrofe" 201 "$(cat /tmp/opencode/cv_accents_code)"
+python3 - /tmp/opencode/cv_accents_response.json <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+nombre = d['data']['nombre_original']
+assert nombre == "José O'Connor.pdf", 'nombre alterado: ' + nombre
+print('OK   nombre original conservado:', nombre)
+PY
+URL=$(curl -s "$B/api/postulante/cv/descargar" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and d.get("data",{}).get("url"), "FAIL descarga sin URL";print(d["data"]["url"])')
+KEY=${URL##*/}
+curl -s -D /tmp/opencode/cv_accents_headers.txt -o /dev/null "$B/api/postulante/cv/archivo/$KEY" -H "Authorization: Bearer $TP"
+grep -qi "filename\*=UTF-8''Jos%C3%A9%20O%27Connor.pdf" /tmp/opencode/cv_accents_headers.txt && echo 'OK   Content-Disposition conserva el nombre UTF-8' || { echo 'FAIL Content-Disposition sin nombre UTF-8'; fallos=$((fallos + 1)); }
+
+paso "4. claves de descarga inválidas"
+for CLAVE in "$(printf '/etc/passwd' | base64 | tr '+/' '-_' | tr -d '=')" "$(printf 'postulante-1/../../etc/passwd' | base64 | tr '+/' '-_' | tr -d '=')" 'AAAA' 'bm8tZXMtYmFzZTY0'; do
+  CODE=$(curl -s -o /tmp/opencode/cv_bad_key.json -w '%{http_code}' "$B/api/postulante/cv/archivo/$CLAVE" -H "Authorization: Bearer $TP")
+  check_code "clave inválida no entrega archivo" 404 "$CODE"
+  grep -Eq '/var/www|WRITEPATH|APPPATH' /tmp/opencode/cv_bad_key.json && { echo 'FAIL respuesta de clave inválida filtra rutas internas'; fallos=$((fallos + 1)); }
+done
+
+paso "5. casos negativos"
 curl -s -o /tmp/opencode/cv_malformed.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv-malformado.pdf;type=application/pdf;filename=cv-malformado.pdf" > /tmp/opencode/cv_malformed_code
 check_code "rechazar PDF con firma falsa" 422 "$(cat /tmp/opencode/cv_malformed_code)"
 curl -s -o /tmp/opencode/cv_wrong_type.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=text/plain;filename=cv.txt" > /tmp/opencode/cv_wrong_type_code

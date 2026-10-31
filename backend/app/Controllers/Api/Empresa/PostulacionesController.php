@@ -6,6 +6,7 @@ namespace App\Controllers\Api\Empresa;
 
 use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
+use App\Libraries\Descarga;
 use App\Repositories\EmpresaRepository;
 use App\Services\PostulacionService;
 
@@ -96,9 +97,15 @@ class PostulacionesController extends BaseApiController
             throw ApiException::noEncontrado('El archivo no existe.');
         }
 
+        $contenido = @file_get_contents($archivo['ruta']);
+        if ($contenido === false) {
+            throw ApiException::noEncontrado('El archivo no existe.');
+        }
+
         return $this->response
             ->setContentType($archivo['mime'], 'UTF-8')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $archivo['nombre'] . '"')
-            ->setBody(file_get_contents($archivo['ruta']));
+            ->setHeader('Content-Disposition', Descarga::contentDisposition((string) $archivo['nombre'], 'cv'))
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setBody($contenido);
     }
 }

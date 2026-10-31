@@ -5,6 +5,7 @@
 namespace App\Controllers\Api;
 
 use App\Controllers\BaseController;
+use App\Libraries\Descarga;
 
 /**
  * Base de los controladores de la API REST. Toda respuesta usa la estructura
@@ -45,11 +46,9 @@ abstract class BaseApiController extends BaseController
      */
     protected function respuestaPdf(string $bytes, string $nombre)
     {
-        $nombre = preg_replace('/[^A-Za-z0-9._-]+/', '-', $nombre) ?: 'reporte.pdf';
-
         return $this->response
             ->setContentType('application/pdf')
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
+            ->setHeader('Content-Disposition', Descarga::contentDisposition($nombre, 'reporte.pdf'))
             ->removeHeader('Cache-Control')
             ->setHeader('Cache-Control', 'private, no-store, max-age=0')
             ->setHeader('Pragma', 'no-cache')
