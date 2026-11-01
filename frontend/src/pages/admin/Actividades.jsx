@@ -5,7 +5,6 @@ import { actualizarActividad, cambiarEstadoActividad, crearActividad, eliminarIm
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
-import FichaDatos from '../../components/FichaDatos';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import ImagenUploader from '../../components/ImagenUploader';
 import ActivityImage from '../../components/ActivityImage';
@@ -15,12 +14,14 @@ import {
   ESTADOS_ACTIVIDAD, ETIQUETA_ESTADO_ACTIVIDAD, ETIQUETA_TIPO_ACTIVIDAD,
   MODALIDADES_ACTIVIDAD, TIPOS_ACTIVIDAD,
 } from '../../constants';
-import { TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto, fechaHora, textoEnriquecidoVacio, urlArchivo } from '../../utils';
+import { TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto, fechaHora, fechaHoraLima, textoEnriquecidoVacio, urlArchivo } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
 
 // El editor (TiPTap) se carga solo cuando se abre el formulario de actividad.
 const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEnriquecido'));
+
+const ETIQUETA_MODALIDAD = Object.fromEntries(MODALIDADES_ACTIVIDAD.map((m) => [m.v, m.l]));
 
 const aLocal = (v) => (v ? String(v).slice(0, 16).replace(' ', 'T') : '');
 const VACIO = { tipo: '', nombre: '', descripcion: '', fecha_inicio: '', fecha_fin: '', lugar: '', modalidad: '', organizador: '', enlace: '' };
@@ -160,13 +161,28 @@ function DetalleActividad({ actividad, puedeGestionar, alCerrar, alCambio, alEdi
     ? transiciones.filter((estado) => estado !== 'en_curso')
     : transiciones;
 
+  const enlaceSeguro = actividad.enlace && esEnlaceSeguro(actividad.enlace) ? actividad.enlace : null;
+  const datos = [
+    { etiqueta: 'Tipo', valor: ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo] || actividad.tipo },
+    { etiqueta: 'Inicio', valor: actividad.fecha_inicio ? fechaHoraLima(actividad.fecha_inicio) : null },
+    { etiqueta: 'Fin', valor: actividad.fecha_fin ? fechaHoraLima(actividad.fecha_fin) : null },
+    { etiqueta: 'Lugar', valor: actividad.lugar, ancho: true },
+    {
+      etiqueta: 'Modalidad',
+      valor: actividad.modalidad
+        ? (ETIQUETA_MODALIDAD[actividad.modalidad] || actividad.modalidad)
+        : null,
+    },
+    { etiqueta: 'Organizador', valor: actividad.organizador || 'MDJLO', ancho: true },
+  ].filter((dato) => dato.valor !== null && dato.valor !== undefined && String(dato.valor).trim() !== '');
+
   return (
     <Modal
       abierto
       titulo={actividad.nombre}
       subtitulo={ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo]}
       alCerrar={alCerrar}
-      tamano="ancho"
+      tamano="detalle"
       acciones={puedeGestionar && !finalizada ? (
         <>
           <Boton variante="gris" onClick={() => alEditar(actividad)}>
@@ -185,46 +201,52 @@ function DetalleActividad({ actividad, puedeGestionar, alCerrar, alCambio, alEdi
         </>
       ) : null}
     >
-      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
+      <div className="actividad-detalle-estado">
         <Estado valor={estadoEfectivo} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />
         {finalizada && (
-          <span className="vacio">
+          <span className="actividad-detalle-motivo">
             {actividad.estado === 'finalizado' ? 'Finalizada manualmente.' : 'Finalizada por fecha de fin.'}
           </span>
         )}
       </div>
 
       {finalizada && (
-        <p className="vacio" role="status" style={{ marginBottom: '0.8rem' }}>
+        <p className="actividad-detalle-aviso" role="status">
           Esta actividad ha finalizado y ya no puede modificarse.
         </p>
       )}
 
       <Mensaje>{error}</Mensaje>
 
-      <ActivityImage src={urlArchivo(actividad.imagen_url)} alt={`Imagen de la actividad ${actividad.nombre}`} expandible />
+      <div className="actividad-datos" role="group" aria-label="Información general de la actividad">
+        {datos.map(({ etiqueta, valor, ancho }) => (
+          <div className={`actividad-dato${ancho ? ' actividad-dato--ancho' : ''}`} key={etiqueta}>
+            <span className="actividad-dato__etiqueta">{etiqueta}</span>
+            <span className="actividad-dato__valor">{valor}</span>
+          </div>
+        ))}
+      </div>
 
-      <FichaDatos
-        items={[
-          { etiqueta: 'Tipo', valor: ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo] },
-          { etiqueta: 'Inicio', valor: fechaHora(actividad.fecha_inicio) },
-          { etiqueta: 'Fin', valor: actividad.fecha_fin ? fechaHora(actividad.fecha_fin) : null },
-          { etiqueta: 'Lugar', valor: actividad.lugar },
-          { etiqueta: 'Modalidad', valor: actividad.modalidad },
-          { etiqueta: 'Organizador', valor: actividad.organizador || 'MDJLO' },
-          {
-            etiqueta: 'Enlace',
-            valor: actividad.enlace && esEnlaceSeguro(actividad.enlace) ? (
-              <a className="enlace" href={actividad.enlace} target="_blank" rel="noopener noreferrer">
-                Ver convocatoria <ExternalLink size={13} aria-hidden="true" />
-              </a>
-            ) : null,
-          },
-        ]}
-      />
+      <div className="actividad-detalle-media">
+        <ActivityImage
+          className="actividad-detalle-imagen"
+          src={urlArchivo(actividad.imagen_url)}
+          alt={`Imagen de la actividad ${actividad.nombre}`}
+          expandible
+        />
+      </div>
+
+      {enlaceSeguro && (
+        <div className="modal-seccion actividad-detalle-enlace">
+          <h3>Enlace</h3>
+          <a className="enlace" href={enlaceSeguro} target="_blank" rel="noopener noreferrer">
+            Ver convocatoria <ExternalLink size={13} aria-hidden="true" />
+          </a>
+        </div>
+      )}
 
       {actividad.descripcion && (
-        <div className="modal-seccion">
+        <div className="modal-seccion actividad-detalle-descripcion">
           <h3>Descripción</h3>
           <ContenidoEnriquecido>{actividad.descripcion}</ContenidoEnriquecido>
         </div>

@@ -34,7 +34,7 @@ test('la consulta del detalle y el cierre se conservan', () => {
   const pagina = leer('../src/pages/admin/Actividades.jsx');
 
   assert.match(pagina, /<Modal[\s\S]*?alCerrar=\{alCerrar\}/);
-  assert.match(pagina, /<FichaDatos/);
+  assert.match(pagina, /className="actividad-datos" role="group"/);
   assert.match(pagina, /<ActivityImage/);
   assert.match(pagina, /etiqueta: 'Inicio'/);
   assert.match(pagina, /etiqueta: 'Fin'/);

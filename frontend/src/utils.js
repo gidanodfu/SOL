@@ -121,6 +121,23 @@ export const fechaHora = (v) => (v ? new Date(v).toLocaleString('es-PE') : '—'
 export const fecha = (v) => (v ? new Date(v).toLocaleDateString('es-PE') : '—');
 
 /**
+ * Fecha y hora de una actividad interpretando el valor persistido como hora de
+ * America/Lima. Evita que un navegador en otra zona horaria desplace el valor
+ * mostrado en el detalle administrativo.
+ */
+export const fechaHoraLima = (v) => {
+  if (!v) return '—';
+
+  const texto = String(v).trim().replace(' ', 'T');
+  const conZona = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(texto) ? texto : `${texto}-05:00`;
+  const fechaValor = new Date(conZona);
+
+  return Number.isNaN(fechaValor.getTime())
+    ? '—'
+    : fechaValor.toLocaleString('es-PE', { timeZone: 'America/Lima' });
+};
+
+/**
  * URL absoluta de un recurso servido por la API a partir de la ruta relativa que
  * esta devuelve (p. ej. la imagen pública de una actividad).
  */
