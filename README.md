@@ -514,7 +514,7 @@ duplica en componentes React, `constants.js` ni `package.json`.
 Contenido actual:
 
 ```text
-1.0.1
+1.1.0
 ```
 
 Formato técnico:
@@ -530,6 +530,7 @@ Presentación visual:
 
 | `VERSION` | En `/about` |
 |---|---|
+| `1.1.0` | `1.1.0 ESTABLE` |
 | `1.0.1` | `1.0.1 ESTABLE` |
 | `0.9.2-beta` | `0.9.2 BETA` |
 | `0.9.2-beta.1` | `0.9.2 BETA 1` |
@@ -543,6 +544,9 @@ Historial de versiones:
 |---|---|
 | 0.9.2 | Beta inicial |
 | 1.0.1 | Estable |
+| 1.1.0 | Estable |
+
+El detalle de los cambios incorporados está en [`CHANGELOG.md`](CHANGELOG.md).
 
 Vite lee y valida `VERSION` durante `npm run build`, incorpora el identificador
 en `import.meta.env.VITE_SOL_VERSION` y el módulo
@@ -562,9 +566,9 @@ desarrollo y reconstruir la imagen frontend en producción:
 Procedimiento de publicación (no ejecutado automáticamente):
 
 ```bash
-git add VERSION
-git commit -m "chore(release): SOL v1.0.1"
-git tag -a v1.0.1 -m "SOL 1.0.1 - Primera versión estable"
+git add VERSION CHANGELOG.md README.md
+git commit -m "chore(release): SOL v1.1.0"
+git tag -a v1.1.0 -m "SOL 1.1.0 - Difusión de oportunidades"
 git push origin main --tags
 ```
 

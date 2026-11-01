@@ -41,7 +41,7 @@ test('la versión mostrada proviene del archivo VERSION y de Vite', () => {
   const docker = leer('../Dockerfile');
   const version = leer('../../VERSION').trim();
 
-  assert.equal(version, '1.0.1');
+  assert.equal(version, '1.1.0');
   assert.doesNotMatch(constantes, /VERSION_SISTEMA/);
   assert.match(pagina, /from '\.\.\/\.\.\/config\/version'/);
   assert.match(pagina, /<dd>\{VERSION_SISTEMA\}<\/dd>/);
