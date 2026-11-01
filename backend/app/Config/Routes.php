@@ -128,6 +128,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('oportunidades', 'OportunidadesController::index');
         $routes->post('oportunidades', 'OportunidadesController::store', ['filter' => 'permiso:oportunidades']);
         $routes->put('oportunidades/(:num)', 'OportunidadesController::update/$1', ['filter' => 'permiso:oportunidades']);
+        $routes->put('oportunidades/(:num)/estado', 'OportunidadesController::estado/$1', ['filter' => 'permiso:oportunidades']);
         $routes->put('oportunidades/(:num)/activacion', 'OportunidadesController::activacion/$1', ['filter' => 'permiso:oportunidades']);
 
         $routes->get('reportes', 'ReportesController::index');

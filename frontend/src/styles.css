@@ -3383,6 +3383,26 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   overflow-wrap: anywhere;
 }
 
+/* Varios badges en una misma tarjeta (fuente + ciclo de vida, etc.). */
+.badge-grupo {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Descripción enriquecida de una oportunidad: sin line-clamp para no ocultar
+   enlaces clicables. El HTML ya viene saneado por el backend y DOMPurify. */
+.content-card-rico {
+  margin: 12px 16px 0;
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .content-card-accion {
   margin-top: auto;
   padding: 14px 16px 0;
@@ -3397,7 +3417,8 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   .content-card-cab { padding: 12px 14px 0; }
   .content-card-badge { margin-left: 0; }
   .content-card-meta { padding: 0 14px; }
-  .content-card-desc { margin: 10px 14px 0; }
+  .content-card-desc,
+  .content-card-rico { margin: 10px 14px 0; }
   .content-card-accion { padding: 12px 14px 0; }
   .content-card-accion .btn { width: 100%; }
 }

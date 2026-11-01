@@ -46,10 +46,12 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18). Un postulante seleccionado no puede postular a otra oferta de la misma empresa |
 | RF-41/42/43 Atenciones con tipos y seguimiento | ✘ retirado (2026-09) | módulo de atenciones eliminado de la API y el frontend; la tabla `atenciones` queda sin uso |
 | RF-44/45/46/47 Ferias, eventos, talleres, capacitaciones | ✔ | `api/admin/actividades*` · Actividades (admin); listado público filtra por estado y `fecha_fin`, y distingue estado efectivo |
-| RF-48 Sección de difusión de oportunidades | ✔ | `GET /api/oportunidades` · "Ferias y oportunidades" (postulante) |
+| RF-48 Sección de difusión de oportunidades | ✔ | `GET /api/oportunidades` · "Ferias y oportunidades" (postulante); solo activas, liberadas y no finalizadas/canceladas |
 | RF-49 Empleos Perú | ✔ | fuente `empleos_peru` en `oportunidades` |
 | RF-50 MYPE locales | ✔ | fuente `mype_local` (y empresas afiliadas) |
 | RF-51 Fuente identificada | ✔ | columna `fuente` por oportunidad |
+| Programación y ciclo de vida de oportunidades | ✔ | `oportunidades.fecha_inicio/fecha_fin/modalidad/estado`; `estado_efectivo` por fecha en America/Lima; `PUT /api/admin/oportunidades/{id}/estado` |
+| Inmutabilidad de oportunidad finalizada | ✔ | `puede_modificarse=false`; edición, activación y transición responden `409` `OPPORTUNITY_ALREADY_FINALIZED`; permanece consultable en admin |
 | RF-52 Dashboard municipal | ✔ | `GET /api/admin/dashboard` · Dashboard (admin) |
 | RF-53 Empresas registradas/activas | ✔ | indicador en dashboard |
 | RF-54 Ofertas por estado | ✔ | ídem |

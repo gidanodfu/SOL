@@ -198,6 +198,17 @@ Si una comprobación crítica falla, el proceso se detiene con código distinto 
 cero. No use `down -v` para "arreglar" el problema: conserve el estado y el
 respaldo para recuperación. `deploy.sh` no restaura automáticamente.
 
+### Migración de programación de oportunidades
+
+La migración `2026-11-01-100000_AgregarProgramacionOportunidades` añade
+`fecha_inicio`, `fecha_fin`, `modalidad` y `estado` a `oportunidades`, además de
+un índice de publicación. Es compatible con registros históricos: las tres
+columnas de programación son `NULL` por defecto y `estado` nace en
+`programado`; no se inventan fechas ni se convierte `activo = 0` en
+`cancelado`. Se aplica con el procedimiento normal (`deploy.sh`). La reversión
+`down()` elimina solo esas columnas y el índice, pero **no** debe ejecutarse en
+producción sin respaldo verificado y autorización explícita.
+
 La versión visible del sistema se toma del archivo raíz `VERSION` y se incorpora
 al bundle al construir el frontend. Después de modificarlo, `deploy.sh` debe
 reconstruir la imagen frontend; no basta con reiniciar el contenedor. El formato

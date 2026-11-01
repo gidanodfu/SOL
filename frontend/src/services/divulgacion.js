@@ -36,6 +36,7 @@ export const eliminarImagenActividad = (id) => api.delete(`/admin/actividades/${
 export const listarOportunidadesAdmin = (params = {}) => api.get('/admin/oportunidades', { params }).then((r) => r.data.data);
 export const crearOportunidad = (datos) => api.post('/admin/oportunidades', datos).then((r) => r.data.data);
 export const actualizarOportunidad = (id, datos) => api.put(`/admin/oportunidades/${id}`, datos).then((r) => r.data.data);
+export const cambiarEstadoOportunidad = (id, estado) => api.put(`/admin/oportunidades/${id}/estado`, { estado }).then((r) => r.data.data);
 export const cambiarActivacionOportunidad = (id, activo) => api.put(`/admin/oportunidades/${id}/activacion`, { activo }).then((r) => r.data.data);
 
 /* Difusión visible para cualquier rol autenticado (RF-48) */

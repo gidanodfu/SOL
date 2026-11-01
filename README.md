@@ -97,12 +97,20 @@ MySQL es la fuente de verdad.
 - **Modo oscuro**: tema claro/oscuro global (admin, empresa, postulante y público) con una
   única fuente (`ThemeContext` + variables CSS) y preferencia persistida; botón con iconos
   Lucide en el sidebar y las cabeceras.
-- **Texto enriquecido (RTE)**: descripción/funciones/requisitos de oferta y descripción de
-  actividades aceptan formato básico (negrita, cursiva, subrayado, listas, enlaces) con
+- **Texto enriquecido (RTE)**: descripción/funciones/requisitos de oferta, descripción de
+  actividades y descripción de oportunidades aceptan formato básico (negrita, cursiva,
+  subrayado, listas, enlaces) con
   **sanitización en backend** (allow-list; solo enlaces `http(s)`), contador de palabras y
   de caracteres sobre el **texto visible** (máx. 10.000, aviso desde 9.000). El editor
   (TiPTap) se carga de forma diferida y el render usa DOMPurify; el texto plano heredado
   se sigue mostrando y editando sin cambios.
+- **Difusión de oportunidades**: cada oportunidad externa (Empleos Perú, MYPE u otra
+  fuente) registra inicio, fin y modalidad. El ciclo de vida (`programado`, `en_curso`,
+  `finalizado`, `cancelado`) se deriva por fecha en America/Lima sin cron
+  (`estado_efectivo`). `activo` y `fecha_publicacion` siguen siendo la ocultación
+  administrativa y la fecha editorial. Al finalizar —manualmente o al alcanzar
+  `fecha_fin`— la oportunidad sale del portal, permanece consultable en administración
+  y queda inmutable; la API responde `409` con `OPPORTUNITY_ALREADY_FINALIZED`.
 - **Bolsa de empleo pública**: `/postulante/buscar` y las ofertas se consultan sin sesión;
   postular requiere cuenta de postulante.
 - **Postulantes**: registro manual con auto-login (DNI) o ingreso con Google; perfil =

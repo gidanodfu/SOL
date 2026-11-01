@@ -156,6 +156,26 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-49** Promoción de Empleos Perú.
 - **RF-50** Oportunidades de MYPE locales.
 - **RF-51** Cada oportunidad identifica su fuente.
+- **Programación**: cada oportunidad nueva registra inicio, fin y modalidad
+  (`presencial`, `virtual`, `mixta`) con fecha y hora en America/Lima. El fin no
+  puede ser anterior al inicio; la igualdad se admite. Los registros históricos
+  sin programación conservan `NULL` y no reciben fechas inventadas.
+- **Ciclo de vida**: `programado → en_curso → finalizado` se deriva por fecha
+  (sin cron) y se expone como `estado_efectivo`; el estado manual
+  `finalizado` y el `cancelado` mandan sobre las fechas. Las transiciones
+  manuales son las mismas que en actividades: `programado → en_curso |
+  finalizado | cancelado`, `en_curso → finalizado | cancelado`, `cancelado →
+  programado` y `finalizado` no tiene salida.
+- **Publicación**: `activo` y `fecha_publicacion` siguen siendo la ocultación
+  administrativa y la fecha editorial, respectivamente, y no se confunden con
+  el ciclo de vida. El portal muestra solo oportunidades activas, con fecha de
+  publicación alcanzada y estado efectivo distinto de `finalizado` o
+  `cancelado`. Una oportunidad `programado` puede mostrarse como próxima
+  convocatoria; una `en_curso` se mantiene visible.
+- **Inmutabilidad**: al alcanzar `fecha_fin` —o al finalizarla manualmente— la
+  oportunidad queda de solo lectura, permanece consultable en administración y
+  el backend rechaza edición, activación y transiciones con `409` y código
+  `OPPORTUNITY_ALREADY_FINALIZED`.
 
 ### 5.10 Reportes y estadísticas
 - **RF-52** Dashboard municipal de indicadores.

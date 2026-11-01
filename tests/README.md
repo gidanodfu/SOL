@@ -28,7 +28,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 23 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 24 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -70,10 +70,22 @@ fechas, HTML vacío, tipo/modalidad inválidos, tamaño, contenido y resolución
 la imagen, y confirma que los rechazos no crean registros. También cubre la
 edición conservando la imagen existente y el reemplazo por el endpoint dedicado.
 
-`tests/smoke/test_oportunidades_campos.sh` cubre la obligatoriedad exclusiva de
-la creación de oportunidades: fuente, título, enlace, fecha y descripción, con
-mensajes por campo, rechazo de URL/protocolo inválidos, HTML vacío, creación
-válida y conservación del contrato de edición existente.
+`tests/smoke/test_oportunidades_campos.sh` cubre la obligatoriedad de la
+creación de oportunidades: fuente, título, enlace, fecha de publicación,
+descripción, inicio, fin y modalidad, con mensajes por campo, rechazo de
+URL/protocolo inválidos, HTML vacío, creación válida y conservación del
+contrato de edición parcial.
+
+`tests/smoke/test_oportunidades_ciclo.sh` cubre el ciclo de vida completo:
+una oportunidad futura liberada hoy se publica como programada; una en curso se
+publica como `en_curso`; la finalización manual permanece en administración y
+sale del portal; una fecha de fin pasada se deriva finalizada sin alterar el
+estado persistido; el límite de `fecha_fin` es inclusivo; editar, cambiar de
+estado o activar una finalizada responde `409` con
+`OPPORTUNITY_ALREADY_FINALIZED`; una oportunidad oculta por `activo = 0` no se
+confunde con cancelada/finalizada; y una fecha editorial futura mantiene oculta
+la oportunidad aunque su programación ya haya comenzado. Cada suite usa un
+esquema MySQL efímero propio y no toca datos de desarrollo ni de producción.
 
 `tests/smoke/test_actividades_finalizadas.sh` comprueba que una actividad
 finalizada manualmente o por fecha de fin (America/Lima) sea de solo lectura:

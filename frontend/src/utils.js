@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { API_URL } from './constants';
+import { esEnlaceSeguro } from './utils/enlacesTexto.js';
+
+export { esEnlaceSeguro, enlacesEnTexto } from './utils/enlacesTexto.js';
 
 export const errorApi = (e) => {
   const data = e?.response?.data;
@@ -49,18 +52,8 @@ export function descargarBlob(blob, nombreArchivo) {
  * poder probarse de forma aislada. */
 export { soloDigitos, esTelefonoValido, esEmailValido } from './utils/validacionCampos.js';
 
-/**
- * Enlaces de usuario: solo http(s). Evita que una URL manipulada (javascript:,
- * data:) se convierta en un href ejecutable (el backend también lo valida).
- */
-export const esEnlaceSeguro = (url) => {
-  try {
-    const { protocol } = new URL(String(url));
-    return protocol === 'http:' || protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
+/* `esEnlaceSeguro` y `enlacesEnTexto` viven en utils/enlacesTexto.js para poder
+ * probarse de forma pura en Node (sin import.meta.env ni DOM). */
 
 /**
  * El host de la URL debe ser uno de los dominios indicados o un subdominio

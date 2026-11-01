@@ -45,12 +45,14 @@ contar() { curl -s "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" |
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
 HOY=$(php -r 'echo date("Y-m-d");')
+INICIO=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+2 days"));')
+FIN=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+3 days"));')
 
-BASE='{"fuente":"empleos_peru","titulo":"Operarios para Lima","enlace":"https://empleosperu.gob.pe/oferta/1","fecha_publicacion":"'"$HOY"'","descripcion":"Convocatoria externa"}'
+BASE='{"fuente":"empleos_peru","titulo":"Operarios para Lima","enlace":"https://empleosperu.gob.pe/oferta/1","fecha_publicacion":"'"$HOY"'","descripcion":"Convocatoria externa","fecha_inicio":"'"$INICIO"'","fecha_fin":"'"$FIN"'","modalidad":"presencial"}'
 
 paso "1. cada campo obligatorio"
 ANTES=$(contar)
-for CAMPO in fuente titulo enlace fecha_publicacion descripcion; do
+for CAMPO in fuente titulo enlace fecha_publicacion descripcion fecha_inicio fecha_fin modalidad; do
     python3 - "$CAMPO" "$BASE" > /tmp/opencode/op_campos_payload.json <<'PY'
 import json, sys
 d = json.loads(sys.argv[2])
@@ -65,6 +67,9 @@ PY
         enlace) MENSAJE='Introduce una URL válida.' ;;
         fecha_publicacion) MENSAJE='La fecha de publicación es obligatoria.' ;;
         descripcion) MENSAJE='La descripción de la oportunidad es obligatoria.' ;;
+        fecha_inicio) MENSAJE='Indica la fecha y hora de inicio.' ;;
+        fecha_fin) MENSAJE='Indica la fecha y hora de finalización.' ;;
+        modalidad) MENSAJE='Selecciona una modalidad.' ;;
     esac
     check_campo /tmp/opencode/op_campos.json "$CAMPO" "$MENSAJE"
 done
@@ -109,6 +114,36 @@ PY
         MENSAJE='La fecha de publicación no es válida.'
     fi
     check_campo /tmp/opencode/op_campos.json fecha_publicacion "$MENSAJE"
+done
+
+for FECHA in '2026-12-05' '2026-13-05 09:00' '2026-02-31 09:00' '05/12/2026 09:00'; do
+    python3 - "$BASE" "$FECHA" > /tmp/opencode/op_campos_payload.json <<'PY'
+import json, sys
+d = json.loads(sys.argv[1]); d['fecha_inicio'] = sys.argv[2]
+print(json.dumps(d))
+PY
+    check_code "inicio inválido ($FECHA)" 422 "$(post @/tmp/opencode/op_campos_payload.json)"
+    check_campo /tmp/opencode/op_campos.json fecha_inicio 'Indica una fecha y hora de inicio válidas.'
+done
+
+python3 - "$BASE" "$INICIO" > /tmp/opencode/op_campos_payload.json <<'PY'
+import json, sys
+from datetime import datetime, timedelta
+d = json.loads(sys.argv[1])
+d['fecha_fin'] = (datetime.strptime(sys.argv[2], '%Y-%m-%d %H:%M:%S') - timedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S')
+print(json.dumps(d))
+PY
+check_code 'fin anterior al inicio' 422 "$(post @/tmp/opencode/op_campos_payload.json)"
+check_campo /tmp/opencode/op_campos.json fecha_fin 'La fecha de finalización no puede ser anterior a la fecha de inicio.'
+
+for MODALIDAD in semipresencial PRESENCIAL presencial_virtual; do
+    python3 - "$BASE" "$MODALIDAD" > /tmp/opencode/op_campos_payload.json <<'PY'
+import json, sys
+d = json.loads(sys.argv[1]); d['modalidad'] = sys.argv[2]
+print(json.dumps(d))
+PY
+    check_code "modalidad inválida ($MODALIDAD)" 422 "$(post @/tmp/opencode/op_campos_payload.json)"
+    check_campo /tmp/opencode/op_campos.json modalidad 'Selecciona una modalidad válida.'
 done
 
 for DESC in '' '   ' '<p></p>' '<p><br></p>'; do

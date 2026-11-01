@@ -23,15 +23,17 @@ token_dni() {
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
 TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"20601234567","password":"Empresa123!"}' | tok)
+OP_FI=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+10 days"));')
+OP_FF=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+20 days"));')
 
 paso "1. cabeceras de seguridad en respuestas"
 curl -s -D - -o /dev/null "$B/api/categorias" | grep -iE "x-content-type-options|x-frame-options|referrer-policy|x-permitted-cross-domain"
 
 paso "2. enlace javascript: rechazado (422); https aceptado"
-IDOP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"otro","titulo":"Prueba segura","descripcion":"Convocatoria segura","enlace":"https://example.com/convocatoria","fecha_publicacion":"2026-09-01"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"otro","titulo":"XSS","descripcion":"X","enlace":"javascript://x/%0aalert(1)","fecha_publicacion":"2026-09-01"}')
+IDOP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"Prueba segura\",\"descripcion\":\"Convocatoria segura\",\"enlace\":\"https://example.com/convocatoria\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"XSS\",\"descripcion\":\"X\",\"enlace\":\"javascript://x/%0aalert(1)\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}")
 check_code "enlace javascript rechazado" 422 "$CODE"
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"otro","titulo":"FTP","descripcion":"X","enlace":"ftp://example.com/x","fecha_publicacion":"2026-09-01"}')
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"FTP\",\"descripcion\":\"X\",\"enlace\":\"ftp://example.com/x\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}")
 check_code "enlace ftp rechazado" 422 "$CODE"
 
 paso "3. activación booleana estricta (\"false\" desactiva de verdad)"

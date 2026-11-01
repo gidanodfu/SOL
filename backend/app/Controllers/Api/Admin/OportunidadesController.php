@@ -16,6 +16,7 @@ class OportunidadesController extends BaseApiController
     {
         $filtros = array_filter([
             'fuente' => $this->request->getGet('fuente'),
+            'estado' => $this->request->getGet('estado'),
             'activo' => $this->request->getGet('activo'),
         ], static fn ($v) => $v !== null && $v !== '');
 
@@ -35,6 +36,14 @@ class OportunidadesController extends BaseApiController
         (new OportunidadService())->actualizar((int) $id, $this->cuerpo());
 
         return $this->sinContenido('Oportunidad actualizada.');
+    }
+
+    public function estado($id)
+    {
+        $cuerpo = $this->cuerpo();
+        (new OportunidadService())->cambiarEstado((int) $id, (string) ($cuerpo['estado'] ?? ''));
+
+        return $this->sinContenido('Estado de la oportunidad actualizado.');
     }
 
     public function activacion($id)
