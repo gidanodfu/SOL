@@ -7,6 +7,11 @@
 !.env.example
 **/.env
 **/.env.*
+
+# Respaldos locales de variables de entorno
+.env.save
+.env.save.*
+
 backend/vendor
 backend/writable/*
 backend/public/uploads/*

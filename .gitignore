@@ -7,6 +7,11 @@ vendor/
 .env.*
 !.env.example
 !**/.env.example
+
+# Respaldos locales de variables de entorno
+.env.save
+.env.save.*
+
 *.pem
 *.key
 *.crt
