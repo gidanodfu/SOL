@@ -71,21 +71,19 @@ la imagen, y confirma que los rechazos no crean registros. También cubre la
 edición conservando la imagen existente y el reemplazo por el endpoint dedicado.
 
 `tests/smoke/test_oportunidades_campos.sh` cubre la obligatoriedad de la
-creación de oportunidades: fuente, título, enlace, fecha de publicación,
-descripción, inicio, fin y modalidad, con mensajes por campo, rechazo de
-URL/protocolo inválidos, HTML vacío, creación válida y conservación del
-contrato de edición parcial.
+creación de oportunidades: fuente, título, enlace, descripción, inicio, fin y
+modalidad, con mensajes por campo, rechazo de URL/protocolo inválidos, HTML
+vacío, creación válida y conservación del contrato de edición parcial. La
+fecha editorial ya no forma parte del contrato.
 
-`tests/smoke/test_oportunidades_ciclo.sh` cubre el ciclo de vida completo:
-una oportunidad futura liberada hoy se publica como programada; una en curso se
-publica como `en_curso`; la finalización manual permanece en administración y
-sale del portal; una fecha de fin pasada se deriva finalizada sin alterar el
-estado persistido; el límite de `fecha_fin` es inclusivo; editar, cambiar de
-estado o activar una finalizada responde `409` con
-`OPPORTUNITY_ALREADY_FINALIZED`; una oportunidad oculta por `activo = 0` no se
-confunde con cancelada/finalizada; y una fecha editorial futura mantiene oculta
-la oportunidad aunque su programación ya haya comenzado. Cada suite usa un
-esquema MySQL efímero propio y no toca datos de desarrollo ni de producción.
+`tests/smoke/test_oportunidades_ciclo.sh` cubre la ventana pública
+`[fecha_inicio, fecha_fin)`: antes de inicio queda programada y fuera del
+portal; en el instante de inicio pasa a en_curso y puede publicarse; en el
+instante exacto de fin se finaliza y desaparece; activo = 0 la oculta sin
+cambiar su ciclo; cancelado nunca se publica. También comprueba la ausencia de
+`fecha_publicacion`, `empresa_id`, `razon_social` y `ruc` en las respuestas, y
+la inmutabilidad HTTP de finalizadas. Cada suite usa un esquema MySQL efímero
+propio y no toca datos de desarrollo ni de producción.
 
 `tests/smoke/test_actividades_finalizadas.sh` comprueba que una actividad
 finalizada manualmente o por fecha de fin (America/Lima) sea de solo lectura:

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useQuery } from '@tanstack/react-query';
-import { Building2, CalendarDays, ExternalLink, Link2, MapPin, Monitor, Tag } from 'lucide-react';
+import { CalendarDays, ExternalLink, Link2, MapPin, Monitor, Tag } from 'lucide-react';
 import { listarActividadesPublicas, listarOportunidadesPublicas } from '../../services/divulgacion';
 import { EstadoCarga, Mensaje } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
@@ -11,7 +11,7 @@ import {
   MODALIDADES_ACTIVIDAD,
 } from '../../constants';
 import {
-  errorApi, esEnlaceSeguro, fechaCalendario, fechaHora, fechaHoraLima, textoVisible, urlArchivo,
+  errorApi, esEnlaceSeguro, fechaHora, fechaHoraLima, textoVisible, urlArchivo,
 } from '../../utils';
 
 const CLASE_ESTADO_ACTIVIDAD = {
@@ -84,6 +84,7 @@ export default function Oportunidades() {
   // Defensa adicional: el backend ya excluye finalizadas y canceladas, pero un
   // cliente no debe pintarlas si llegaran por una respuesta antigua o directa.
   const oportunidadesVisibles = (oportunidades.data || [])
+    .filter((o) => o.es_visible_publicamente !== false)
     .filter((o) => !['finalizado', 'cancelado'].includes(o.estado_efectivo || o.estado));
 
   return (
@@ -155,13 +156,11 @@ export default function Oportunidades() {
                 )}
                 titulo={o.titulo}
                 meta={[
-                  o.razon_social ? { icono: Building2, texto: o.razon_social } : null,
                   o.fecha_inicio ? { icono: CalendarDays, texto: `Inicio: ${fechaHoraLima(o.fecha_inicio)}` } : null,
                   o.fecha_fin ? { icono: CalendarDays, texto: `Fin: ${fechaHoraLima(o.fecha_fin)}` } : null,
                   o.modalidad
                     ? { icono: Monitor, texto: `Modalidad: ${ETIQUETA_MODALIDAD[o.modalidad] || o.modalidad}` }
                     : null,
-                  { icono: CalendarDays, texto: `Difundida el ${fechaCalendario(o.fecha_publicacion)}` },
                 ]}
                 descripcionHtml={o.descripcion || null}
                 accion={o.enlace && esEnlaceSeguro(o.enlace) ? (

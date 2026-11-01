@@ -201,13 +201,25 @@ respaldo para recuperación. `deploy.sh` no restaura automáticamente.
 ### Migración de programación de oportunidades
 
 La migración `2026-11-01-100000_AgregarProgramacionOportunidades` añade
-`fecha_inicio`, `fecha_fin`, `modalidad` y `estado` a `oportunidades`, además de
-un índice de publicación. Es compatible con registros históricos: las tres
-columnas de programación son `NULL` por defecto y `estado` nace en
-`programado`; no se inventan fechas ni se convierte `activo = 0` en
-`cancelado`. Se aplica con el procedimiento normal (`deploy.sh`). La reversión
-`down()` elimina solo esas columnas y el índice, pero **no** debe ejecutarse en
-producción sin respaldo verificado y autorización explícita.
+`fecha_inicio`, `fecha_fin`, `modalidad` y `estado` a `oportunidades`. Es
+compatible con registros históricos: las tres columnas de programación son
+`NULL` por defecto y `estado` nace en `programado`; no se inventan fechas ni se
+convierte `activo = 0` en `cancelado`. Se aplica con el procedimiento normal
+(`deploy.sh`). La reversión `down()` elimina solo esas columnas, pero **no**
+debe ejecutarse en producción sin respaldo verificado y autorización
+explícita.
+
+La migración
+`2026-11-01-110000_RetirarEmpresaOportunidades` retira `empresa_id` solo si
+**no existe ningún valor no nulo**; si encuentra alguno, aborta sin destruir
+datos y exige revisar su procedencia y aprobar un plan de preservación. Se
+ejecuta antes de la migración de fecha para que un aborto no deje cambios
+parciales en la otra columna. Después,
+`2026-11-01-120000_ArchivarYRetirarFechaPublicacionOportunidades` archiva los
+valores de `fecha_publicacion` en
+`oportunidades_fecha_publicacion_legado` y retira la columna y su índice. Ambas
+se aplican con `deploy.sh` y sus `down()` son reversibles en una base de
+pruebas. No ejecutar `down()` en producción sin respaldo y autorización.
 
 La versión visible del sistema se toma del archivo raíz `VERSION` y se incorpora
 al bundle al construir el frontend. Después de modificarlo, `deploy.sh` debe

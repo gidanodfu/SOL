@@ -13,11 +13,14 @@ use App\Validation\Validador;
  * y otras fuentes. Cada oportunidad identifica su fuente.
  *
  * Tres conceptos independientes:
- * - `activo`: ocultación administrativa.
- * - `fecha_publicacion`: fecha editorial desde la que puede mostrarse.
- * - `estado` / `estado_efectivo`: ciclo de vida (programado, en_curso,
- *   finalizado, cancelado). El estado efectivo se deriva por fecha en
- *   America/Lima y nunca se persiste.
+ * - `activo`: decisión administrativa de publicar/ocultar.
+ * - `estado` / `estado_efectivo`: ciclo de vida de la convocatoria.
+ * - `estado_publicacion` / `es_visible_publicamente`: disponibilidad pública
+ *   derivada de la activación y de la ventana [fecha_inicio, fecha_fin).
+ *
+ * No existe fecha editorial independiente: fecha_inicio marca la apertura y
+ * fecha_fin el cierre exacto. Toda la lógica se calcula en America/Lima y no
+ * requiere cron.
  */
 class OportunidadService
 {
@@ -37,8 +40,7 @@ class OportunidadService
     ];
 
     private const CAMPOS_EDITABLES = [
-        'fuente', 'empresa_id', 'titulo', 'descripcion', 'enlace', 'fecha_publicacion',
-        'fecha_inicio', 'fecha_fin', 'modalidad',
+        'fuente', 'titulo', 'descripcion', 'enlace', 'fecha_inicio', 'fecha_fin', 'modalidad',
     ];
 
     private OportunidadModel $oportunidades;
@@ -58,9 +60,7 @@ class OportunidadService
      */
     public function listar(array $filtros): array
     {
-        $builder = $this->oportunidades->db->table('oportunidades o')
-            ->select('o.*, e.razon_social, e.ruc')
-            ->join('empresas e', 'e.id = o.empresa_id', 'LEFT');
+        $builder = $this->oportunidades->db->table('oportunidades o')->select('o.*');
 
         if (! empty($filtros['fuente'])) {
             $builder->where('o.fuente', $filtros['fuente']);
@@ -70,7 +70,11 @@ class OportunidadService
         }
 
         $filas = $builder->orderBy('o.created_at', 'DESC')->limit(300)->get()->getResultArray();
-        $filas = array_map([$this, 'presentar'], $filas);
+        $ahora = self::ahora();
+        $filas = array_map(
+            fn (array $fila): array => $this->presentar($fila, $ahora),
+            $filas,
+        );
 
         if (! empty($filtros['estado'])) {
             // El filtro administrativo usa el estado efectivo: una oportunidad
@@ -85,68 +89,59 @@ class OportunidadService
     }
 
     /**
-     * Oportunidades activas, ya liberadas editorialmente y no finalizadas ni
-     * canceladas. No hay cron: la visibilidad se calcula al leer.
+     * Oportunidades visibles en el portal: activas, con programación completa y
+     * dentro de la ventana [fecha_inicio, fecha_fin). No hay cron.
      *
      * @return list<array<string, mixed>>
      */
     public function publicas(): array
     {
+        $ahora = self::ahora();
+
         $filas = $this->oportunidades->db->table('oportunidades o')
-            ->select('o.*, e.razon_social')
-            ->join('empresas e', 'e.id = o.empresa_id', 'LEFT')
+            ->select('o.*')
             ->where('o.activo', 1)
-            ->where('o.fecha_publicacion <=', self::hoy())
-            ->whereNotIn('o.estado', ['finalizado', 'cancelado'])
+            ->where('o.fecha_inicio IS NOT NULL')
+            ->where('o.fecha_fin IS NOT NULL')
+            ->where('o.fecha_inicio <=', $ahora)
             // El límite es inclusivo: al alcanzar exactamente fecha_fin ya no
-            // se publica. Sin fecha de fin no se inventa un vencimiento.
-            ->groupStart()
-                ->where('o.fecha_fin IS NULL')
-                ->orWhere('o.fecha_fin >', self::ahora())
-            ->groupEnd()
+            // se publica.
+            ->where('o.fecha_fin >', $ahora)
+            ->whereNotIn('o.estado', ['finalizado', 'cancelado'])
             ->orderBy('o.created_at', 'DESC')
             ->limit(200)
             ->get()
             ->getResultArray();
 
-        return array_map([$this, 'presentar'], $filas);
+        $filas = array_map(
+            fn (array $fila): array => $this->presentar($fila, $ahora),
+            $filas,
+        );
+
+        // Defensa en profundidad: la misma regla central decide la respuesta
+        // pública, aunque la consulta SQL ya haya acotado los candidatos.
+        return array_values(array_filter(
+            $filas,
+            static fn (array $fila): bool => $fila['es_visible_publicamente'] === true,
+        ));
     }
 
     /**
      * Añade los campos derivados que consume el frontend. No altera el estado
-     * persistido ni mezcla publicación con ciclo de vida.
+     * persistido ni mezcla ciclo de vida con disponibilidad pública.
      *
      * @param array<string, mixed> $fila
      *
      * @return array<string, mixed>
      */
-    private function presentar(array $fila): array
+    private function presentar(array $fila, ?string $ahora = null): array
     {
-        $fila['estado_efectivo']  = self::estadoEfectivo($fila);
-        $fila['puede_modificarse'] = self::puedeModificarse($fila);
-        $fila['estado_publicacion'] = $this->estadoPublicacion($fila);
+        $fila['estado_efectivo']         = self::estadoEfectivo($fila, $ahora);
+        $fila['puede_modificarse']       = self::puedeModificarse($fila, $ahora);
+        $fila['estado_publicacion']      = self::estadoPublicacion($fila, $ahora);
+        $fila['es_visible_publicamente'] = self::esVisiblePublicamente($fila, $ahora);
 
         return $fila;
-    }
-
-    /**
-     * Estado editorial derivado (no se persiste): oculta si está desactivada;
-     * programada si su fecha aún no llega o si un registro heredado no tiene
-     * fecha editorial (la lectura pública también lo excluye); visible si ya
-     * puede mostrarse.
-     *
-     * @param array<string, mixed> $fila
-     */
-    private function estadoPublicacion(array $fila): string
-    {
-        $fecha = $fila['fecha_publicacion'] ?? null;
-        $texto = $fecha !== null ? substr((string) $fecha, 0, 10) : '';
-
-        if (((int) ($fila['activo'] ?? 0)) === 0) {
-            return 'oculta';
-        }
-
-        return $texto === '' || $texto > self::hoy() ? 'programada' : 'visible';
     }
 
     /**
@@ -244,7 +239,7 @@ class OportunidadService
             $oportunidad = $this->exigirBloqueada($id);
             $this->exigirModificable($oportunidad);
 
-            $actual    = (string) ($oportunidad['estado'] ?? 'programado');
+            $actual     = (string) ($oportunidad['estado'] ?? 'programado');
             $permitidos = self::TRANSICIONES[$actual] ?? [];
 
             if (! in_array($estado, $permitidos, true)) {
@@ -316,6 +311,67 @@ class OportunidadService
     }
 
     /**
+     * Disponibilidad pública. Es la única regla que decide qué se devuelve en
+     * GET /api/oportunidades y qué se pinta como visible en administración.
+     *
+     * @param array<string, mixed> $fila
+     */
+    public static function estadoPublicacion(array $fila, ?string $ahora = null): string
+    {
+        $estado = self::estadoEfectivo($fila, $ahora);
+
+        if (in_array($estado, ['finalizado', 'cancelado'], true)) {
+            return 'no_visible';
+        }
+
+        if (! self::programacionCompleta($fila)) {
+            return 'incompleta';
+        }
+
+        if ((int) ($fila['activo'] ?? 0) !== 1) {
+            return 'oculta';
+        }
+
+        if (! self::fechaAlcanzada($fila['fecha_inicio'] ?? null, $ahora)) {
+            return 'programada';
+        }
+
+        if (self::fechaAlcanzada($fila['fecha_fin'] ?? null, $ahora)) {
+            return 'no_visible';
+        }
+
+        return 'visible';
+    }
+
+    /**
+     * @param array<string, mixed> $fila
+     */
+    public static function esVisiblePublicamente(array $fila, ?string $ahora = null): bool
+    {
+        return self::estadoPublicacion($fila, $ahora) === 'visible';
+    }
+
+    /**
+     * @param array<string, mixed> $fila
+     */
+    public static function programacionCompleta(array $fila): bool
+    {
+        $inicio    = trim((string) ($fila['fecha_inicio'] ?? ''));
+        $fin       = trim((string) ($fila['fecha_fin'] ?? ''));
+        $modalidad = trim((string) ($fila['modalidad'] ?? ''));
+
+        if ($inicio === '' || $fin === '' || ! in_array($modalidad, self::MODALIDADES, true)) {
+            return false;
+        }
+
+        if (! self::esFechaHoraCompleta($inicio) || ! self::esFechaHoraCompleta($fin)) {
+            return false;
+        }
+
+        return strtotime($fin) >= strtotime($inicio);
+    }
+
+    /**
      * @param array<string, mixed> $oportunidad
      */
     public function exigirModificable(array $oportunidad): void
@@ -356,11 +412,6 @@ class OportunidadService
     private static function ahora(): string
     {
         return (new \DateTimeImmutable('now', self::zonaHoraria()))->format('Y-m-d H:i:s');
-    }
-
-    private static function hoy(): string
-    {
-        return (new \DateTimeImmutable('now', self::zonaHoraria()))->format('Y-m-d');
     }
 
     private static function zonaHoraria(): \DateTimeZone
@@ -431,20 +482,6 @@ class OportunidadService
             }
         }
 
-        if ($proporcionado('fecha_publicacion')) {
-            $fecha = is_scalar($datos['fecha_publicacion'] ?? null) ? trim((string) $datos['fecha_publicacion']) : '';
-            if ($fecha === '') {
-                if ($esCreacion) {
-                    $errores['fecha_publicacion'] = 'La fecha de publicación es obligatoria.';
-                }
-                // En edición, vacío significa "conservar la existente".
-            } elseif (! Validador::esFecha($fecha)) {
-                $errores['fecha_publicacion'] = 'La fecha de publicación no es válida.';
-            } else {
-                $limpio['fecha_publicacion'] = $fecha;
-            }
-        }
-
         if ($proporcionado('descripcion')) {
             $entradaDescripcion = $datos['descripcion'] ?? null;
             if (! is_string($entradaDescripcion)) {
@@ -494,7 +531,7 @@ class OportunidadService
 
         if ($exigeProgramacion) {
             $inicio       = is_scalar($datos['fecha_inicio'] ?? null) ? trim((string) $datos['fecha_inicio']) : '';
-            $inicioValido = $inicio !== '' && $this->esFechaHoraCompleta($inicio);
+            $inicioValido = $inicio !== '' && self::esFechaHoraCompleta($inicio);
 
             if ($inicio === '') {
                 $errores['fecha_inicio'] = 'Indica la fecha y hora de inicio.';
@@ -503,7 +540,7 @@ class OportunidadService
             }
 
             $fin       = is_scalar($datos['fecha_fin'] ?? null) ? trim((string) $datos['fecha_fin']) : '';
-            $finValido = $fin !== '' && $this->esFechaHoraCompleta($fin);
+            $finValido = $fin !== '' && self::esFechaHoraCompleta($fin);
 
             if ($fin === '') {
                 $errores['fecha_fin'] = 'Indica la fecha y hora de finalización.';
@@ -533,27 +570,6 @@ class OportunidadService
             }
         }
 
-        if ($esCreacion || ($entrada !== null && array_key_exists('empresa_id', $entrada))) {
-            $empresaId = $datos['empresa_id'] ?? null;
-            if ($empresaId !== null && $empresaId !== '') {
-                $empresaTexto = is_scalar($empresaId) ? trim((string) $empresaId) : '';
-                if ($empresaTexto === '' || preg_match('/^\d+$/', $empresaTexto) !== 1) {
-                    $errores['empresa_id'] = 'La empresa indicada no existe.';
-                } else {
-                    $existe = $this->oportunidades->db->table('empresas')
-                        ->where('id', (int) $empresaTexto)
-                        ->countAllResults();
-                    if (! $existe) {
-                        $errores['empresa_id'] = 'La empresa indicada no existe.';
-                    } else {
-                        $limpio['empresa_id'] = (int) $empresaTexto;
-                    }
-                }
-            } else {
-                $limpio['empresa_id'] = null;
-            }
-        }
-
         if ($errores !== []) {
             throw ApiException::validacion('Existen campos que requieren atención.', array_values($errores), $errores);
         }
@@ -561,7 +577,7 @@ class OportunidadService
         return $limpio;
     }
 
-    private function esFechaHoraCompleta(string $valor): bool
+    private static function esFechaHoraCompleta(string $valor): bool
     {
         $normalizada = str_replace('T', ' ', trim($valor));
 

@@ -110,6 +110,44 @@ final class OportunidadVencimientoTest extends TestCase
         ], '2026-11-01 12:00:00'));
     }
 
+    public function testEstadoPublicacionYVisibilidadCentral(): void
+    {
+        $base = [
+            'activo'       => 1,
+            'estado'       => 'programado',
+            'fecha_inicio' => '2026-11-01 10:00:00',
+            'fecha_fin'    => '2026-11-01 12:00:00',
+            'modalidad'    => 'presencial',
+        ];
+
+        self::assertSame('programada', OportunidadService::estadoPublicacion($base, '2026-11-01 09:59:59'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($base, '2026-11-01 09:59:59'));
+
+        self::assertSame('visible', OportunidadService::estadoPublicacion($base, '2026-11-01 10:00:00'));
+        self::assertTrue(OportunidadService::esVisiblePublicamente($base, '2026-11-01 10:00:00'));
+        self::assertSame('en_curso', OportunidadService::estadoEfectivo($base, '2026-11-01 10:00:00'));
+
+        self::assertTrue(OportunidadService::esVisiblePublicamente($base, '2026-11-01 11:59:59'));
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($base, '2026-11-01 12:00:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($base, '2026-11-01 12:00:00'));
+
+        $final = array_merge($base, ['estado' => 'finalizado']);
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($final, '2026-11-01 10:30:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($final, '2026-11-01 10:30:00'));
+
+        $cancelada = array_merge($base, ['estado' => 'cancelado']);
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($cancelada, '2026-11-01 10:30:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($cancelada, '2026-11-01 10:30:00'));
+
+        $oculta = array_merge($base, ['activo' => 0]);
+        self::assertSame('oculta', OportunidadService::estadoPublicacion($oculta, '2026-11-01 10:30:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($oculta, '2026-11-01 10:30:00'));
+
+        $incompleta = array_merge($base, ['fecha_fin' => null, 'modalidad' => null]);
+        self::assertSame('incompleta', OportunidadService::estadoPublicacion($incompleta, '2026-11-01 10:30:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($incompleta, '2026-11-01 10:30:00'));
+    }
+
     public function testExigirModificableDevuelveElCodigoEstable(): void
     {
         $servicio = new OportunidadService(

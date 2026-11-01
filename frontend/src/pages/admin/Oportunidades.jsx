@@ -17,8 +17,8 @@ import {
   FUENTES_OPORTUNIDAD, MODALIDADES_ACTIVIDAD,
 } from '../../constants';
 import {
-  TEXTO_MAX, errorApi, esEnlaceSeguro, esFechaCalendario, excedeLimiteTexto,
-  fechaCalendario, fechaHoraLima, textoEnriquecidoVacio,
+  TEXTO_MAX, errorApi, esEnlaceSeguro, excedeLimiteTexto,
+  fechaHoraLima, textoEnriquecidoVacio,
 } from '../../utils';
 import { useAccion } from '../../hooks/useAccion';
 import { usePermisosMunicipales } from '../../hooks/usePermisosMunicipales';
@@ -29,13 +29,12 @@ const EditorTextoEnriquecido = lazy(() => import('../../components/EditorTextoEn
 const ETIQUETA_MODALIDAD = Object.fromEntries(MODALIDADES_ACTIVIDAD.map((m) => [m.v, m.l]));
 
 const VACIO = {
-  fuente: '', titulo: '', descripcion: '', enlace: '', fecha_publicacion: '',
+  fuente: '', titulo: '', descripcion: '', enlace: '',
   fecha_inicio: '', fecha_fin: '', modalidad: '',
 };
 
 const ORDEN_CAMPOS = [
-  'fuente', 'titulo', 'enlace', 'fecha_publicacion',
-  'fecha_inicio', 'fecha_fin', 'modalidad', 'descripcion',
+  'fuente', 'titulo', 'enlace', 'fecha_inicio', 'fecha_fin', 'modalidad', 'descripcion',
 ];
 
 const TRANSICIONES = {
@@ -65,6 +64,8 @@ function BadgePublicacion({ estado }) {
     visible: ['badge-green', 'Visible'],
     programada: ['badge-amber', 'Programada'],
     oculta: ['badge-gray', 'Oculta'],
+    no_visible: ['badge-gray', 'No visible'],
+    incompleta: ['badge-amber', 'No publicable'],
   };
   const [clase, texto] = mapa[estado] || ['badge-gray', estado || '—'];
   return <span className={`badge ${clase}`}>{texto}</span>;
@@ -99,7 +100,12 @@ export default function Oportunidades() {
   // Precarga el chunk del editor al entrar a la página (no engorda el bundle inicial).
   useEffect(() => { if (puedeGestionar) import('../../components/EditorTextoEnriquecido'); }, [puedeGestionar]);
 
-  const refrescar = () => queryClient.invalidateQueries({ queryKey: ['oportunidades-admin'] });
+  const refrescar = () => {
+    queryClient.invalidateQueries({ queryKey: ['oportunidades-admin'] });
+    // La misma SPA puede tener abierta la vista pública: no conservar tarjetas
+    // de oportunidades que acaban de finalizarse, ocultarse o cancelarse.
+    queryClient.invalidateQueries({ queryKey: ['oportunidades-publicas'] });
+  };
 
   return (
     <div>
@@ -149,8 +155,6 @@ export default function Oportunidades() {
               meta={(
                 <>
                   <span>{ETIQUETA_FUENTE_OPORTUNIDAD[o.fuente]}</span>
-                  {o.razon_social && <span>{o.razon_social}</span>}
-                  <span>Publicación: {fechaCalendario(o.fecha_publicacion)}</span>
                   {o.fecha_inicio && <span>Inicio: {fechaHoraLima(o.fecha_inicio)}</span>}
                   {o.fecha_fin && <span>Fin: {fechaHoraLima(o.fecha_fin)}</span>}
                   {o.modalidad && <span>{ETIQUETA_MODALIDAD[o.modalidad] || o.modalidad}</span>}
@@ -269,13 +273,17 @@ function DetalleOportunidad({ oportunidad, puedeGestionar, alCerrar, alCambio, a
         </p>
       )}
 
+      {oportunidad.estado_publicacion === 'incompleta' && (
+        <p className="actividad-detalle-aviso" role="status">
+          La programación está incompleta; completa Inicio, Fin y Modalidad para poder publicarla.
+        </p>
+      )}
+
       <Mensaje>{error}</Mensaje>
 
       <FichaDatos
         items={[
           { etiqueta: 'Fuente', valor: ETIQUETA_FUENTE_OPORTUNIDAD[oportunidad.fuente] },
-          { etiqueta: 'Empresa', valor: oportunidad.razon_social },
-          { etiqueta: 'Fecha de publicación', valor: fechaCalendario(oportunidad.fecha_publicacion) },
           { etiqueta: 'Inicio', valor: fechaHoraLima(oportunidad.fecha_inicio) },
           { etiqueta: 'Fin', valor: fechaHoraLima(oportunidad.fecha_fin) },
           {
@@ -314,7 +322,6 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
           titulo: inicial.titulo || '',
           descripcion: inicial.descripcion || '',
           enlace: inicial.enlace || '',
-          fecha_publicacion: inicial.fecha_publicacion || '',
           fecha_inicio: aLocal(inicial.fecha_inicio),
           fecha_fin: aLocal(inicial.fecha_fin),
           modalidad: inicial.modalidad || '',
@@ -382,13 +389,6 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
     const enlace = normalizarTexto(form.enlace);
     if (enlace === '' || !esEnlaceSeguro(enlace)) {
       encontrados.enlace = 'Introduce una URL válida.';
-    }
-
-    const fecha = normalizarTexto(form.fecha_publicacion);
-    if (fecha === '') {
-      encontrados.fecha_publicacion = 'La fecha de publicación es obligatoria.';
-    } else if (!esFechaCalendario(fecha)) {
-      encontrados.fecha_publicacion = 'La fecha de publicación no es válida.';
     }
 
     // Los campos de programación son obligatorios al crear. En un registro
@@ -514,15 +514,6 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
             placeholder="https://…"
             required
           />
-          <Campo
-            etiqueta="Fecha de publicación *"
-            id="oportunidad-fecha_publicacion"
-            type="date"
-            value={form.fecha_publicacion}
-            onChange={set('fecha_publicacion')}
-            error={errores.fecha_publicacion}
-            required
-          />
         </div>
       </div>
 
@@ -603,7 +594,6 @@ function convertir(form) {
     fuente: normalizarTexto(form.fuente),
     titulo: normalizarTexto(form.titulo),
     enlace: normalizarTexto(form.enlace),
-    fecha_publicacion: normalizarTexto(form.fecha_publicacion),
     modalidad: normalizarTexto(form.modalidad),
     fecha_inicio: aServidor(form.fecha_inicio),
     fecha_fin: aServidor(form.fecha_fin),

@@ -166,16 +166,23 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
   manuales son las mismas que en actividades: `programado → en_curso |
   finalizado | cancelado`, `en_curso → finalizado | cancelado`, `cancelado →
   programado` y `finalizado` no tiene salida.
-- **Publicación**: `activo` y `fecha_publicacion` siguen siendo la ocultación
-  administrativa y la fecha editorial, respectivamente, y no se confunden con
-  el ciclo de vida. El portal muestra solo oportunidades activas, con fecha de
-  publicación alcanzada y estado efectivo distinto de `finalizado` o
-  `cancelado`. Una oportunidad `programado` puede mostrarse como próxima
-  convocatoria; una `en_curso` se mantiene visible.
+- **Disponibilidad pública**: `activo` es la decisión administrativa de
+  publicar/ocultar y no reemplaza las fechas. El portal muestra solo
+  oportunidades con `activo = 1`, programación completa y válida, estado
+  efectivo `en_curso`, y `fecha_inicio <= ahora < fecha_fin` en America/Lima.
+  Antes de `fecha_inicio` la oportunidad queda `programado` y no se publica;
+  desde `fecha_inicio` inclusive puede mostrarse; al alcanzar exactamente
+  `fecha_fin` se cierra y desaparece. `cancelado` nunca se publica. No existe
+  fecha editorial independiente: `fecha_publicacion` fue retirada del modelo
+  operativo y sus valores históricos quedaron archivados.
 - **Inmutabilidad**: al alcanzar `fecha_fin` —o al finalizarla manualmente— la
   oportunidad queda de solo lectura, permanece consultable en administración y
   el backend rechaza edición, activación y transiciones con `409` y código
   `OPPORTUNITY_ALREADY_FINALIZED`.
+- **Empresa**: una oportunidad de difusión externa no se vincula a una empresa
+  registrada; `empresa_id` fue retirado del modelo porque no existía flujo
+  municipal de asignación. La fuente (`empleos_peru`, `mype_local`, `otro`) es
+  el dato que identifica la procedencia.
 
 ### 5.10 Reportes y estadísticas
 - **RF-52** Dashboard municipal de indicadores.
@@ -253,7 +260,7 @@ Estados: **IMPLEMENTADO**, **PARCIAL**, **PENDIENTE**, **FUERA DE ALCANCE**, **R
 | Emprendimiento y autoempleo | PARCIAL | Difusión de oportunidades; sin módulo de emprendimiento |
 | Informes de efectividad | IMPLEMENTADO | Dashboard admin y reportes con export CSV/Excel |
 | Empleos Perú | IMPLEMENTADO | Fuente `empleos_peru` en oportunidades |
-| Oportunidades MYPE | IMPLEMENTADO | Fuente `mype_local` y empresas afiliadas |
+| Oportunidades MYPE | IMPLEMENTADO | Fuente `mype_local`; sin vínculo a empresas registradas |
 | Oficinas descentralizadas | FUERA DE ALCANCE | No hay integración con oficinas descentralizadas |
 
 ## 9. Resultado esperado (flujo vigente)

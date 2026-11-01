@@ -14,7 +14,7 @@ class OportunidadModel extends Model
     protected $useTimestamps = true;
 
     protected $allowedFields = [
-        'fuente', 'empresa_id', 'titulo', 'descripcion', 'enlace', 'fecha_publicacion',
-        'fecha_inicio', 'fecha_fin', 'modalidad', 'estado', 'activo',
+        'fuente', 'titulo', 'descripcion', 'enlace', 'fecha_inicio', 'fecha_fin',
+        'modalidad', 'estado', 'activo',
     ];
 }

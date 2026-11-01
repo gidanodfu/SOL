@@ -42,7 +42,6 @@ final class OportunidadCreacionValidacionTest extends TestCase
             'fuente'            => 'empleos_peru',
             'titulo'            => 'Operarios para Lima',
             'enlace'            => 'https://empleosperu.gob.pe/oferta/1',
-            'fecha_publicacion' => '2026-12-01',
             'descripcion'       => 'Convocatoria externa',
             'fecha_inicio'      => '2026-12-05 09:00',
             'fecha_fin'         => '2026-12-20 18:00',
@@ -59,7 +58,6 @@ final class OportunidadCreacionValidacionTest extends TestCase
             'fuente'            => ['fuente', 'Selecciona una fuente válida.'],
             'titulo'            => ['titulo', 'El título de la oportunidad es obligatorio.'],
             'enlace'            => ['enlace', 'Introduce una URL válida.'],
-            'fecha_publicacion' => ['fecha_publicacion', 'La fecha de publicación es obligatoria.'],
             'descripcion'       => ['descripcion', 'La descripción de la oportunidad es obligatoria.'],
             'fecha_inicio'      => ['fecha_inicio', 'Indica la fecha y hora de inicio.'],
             'fecha_fin'         => ['fecha_fin', 'Indica la fecha y hora de finalización.'],
@@ -121,24 +119,6 @@ final class OportunidadCreacionValidacionTest extends TestCase
                 self::fail('Se esperaba ApiException para ' . $url);
             } catch (ApiException $e) {
                 self::assertSame('Introduce una URL válida.', $e->getCampos()['enlace'] ?? null);
-            }
-        }
-    }
-
-    public function testFechaPublicacionVaciaEInvalida(): void
-    {
-        foreach (['', '2026-13-01', '2026-02-31', '01/12/2026'] as $fecha) {
-            $datos = $this->datosValidos();
-            $datos['fecha_publicacion'] = $fecha;
-
-            try {
-                $this->servicio()->validarCreacionPublica($datos);
-                self::fail('Se esperaba ApiException para ' . $fecha);
-            } catch (ApiException $e) {
-                $esperado = $fecha === ''
-                    ? 'La fecha de publicación es obligatoria.'
-                    : 'La fecha de publicación no es válida.';
-                self::assertSame($esperado, $e->getCampos()['fecha_publicacion'] ?? null);
             }
         }
     }
@@ -273,7 +253,6 @@ final class OportunidadCreacionValidacionTest extends TestCase
 
         self::assertSame('Operarios   para Lima', $limpio['titulo']);
         self::assertSame('https://example.com/convocatoria', $limpio['enlace']);
-        self::assertSame('2026-12-01', $limpio['fecha_publicacion']);
         self::assertSame('2026-12-05 09:30:00', $limpio['fecha_inicio']);
         self::assertSame('2026-12-20 18:00:45', $limpio['fecha_fin']);
         self::assertSame('presencial', $limpio['modalidad']);
@@ -288,7 +267,6 @@ final class OportunidadCreacionValidacionTest extends TestCase
             'titulo'      => 'Título anterior',
             'descripcion' => '<p>Descripción anterior</p>',
             'enlace'      => 'https://example.com/anterior',
-            'fecha_publicacion' => '2026-11-01',
             'fecha_inicio' => null,
             'fecha_fin'    => null,
             'modalidad'    => null,
@@ -306,7 +284,6 @@ final class OportunidadCreacionValidacionTest extends TestCase
         self::assertSame('Título editado', $limpio['titulo']);
         self::assertArrayNotHasKey('descripcion', $limpio);
         self::assertArrayNotHasKey('enlace', $limpio);
-        self::assertArrayNotHasKey('fecha_publicacion', $limpio);
         self::assertArrayNotHasKey('fecha_inicio', $limpio);
         self::assertArrayNotHasKey('fecha_fin', $limpio);
         self::assertArrayNotHasKey('modalidad', $limpio);

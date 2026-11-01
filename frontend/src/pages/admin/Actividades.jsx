@@ -47,7 +47,12 @@ export default function Actividades() {
   // Precarga el chunk del editor al entrar a la página (no engorda el bundle inicial).
   useEffect(() => { if (puedeGestionar) import('../../components/EditorTextoEnriquecido'); }, [puedeGestionar]);
 
-  const refrescar = () => queryClient.invalidateQueries({ queryKey: ['actividades-admin'] });
+  const refrescar = () => {
+    queryClient.invalidateQueries({ queryKey: ['actividades-admin'] });
+    // Evita que la vista pública conserve una tarjeta de una actividad que
+    // acaba de finalizarse, cancelarse o editarse en esta misma SPA.
+    queryClient.invalidateQueries({ queryKey: ['actividades-publicas'] });
+  };
 
   return (
     <div>

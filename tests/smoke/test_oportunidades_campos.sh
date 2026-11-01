@@ -44,15 +44,14 @@ id_actual() { python3 -c 'import json;print(json.load(open("/tmp/opencode/op_cam
 contar() { curl -s "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)["data"]))'; }
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
-HOY=$(php -r 'echo date("Y-m-d");')
 INICIO=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+2 days"));')
 FIN=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+3 days"));')
 
-BASE='{"fuente":"empleos_peru","titulo":"Operarios para Lima","enlace":"https://empleosperu.gob.pe/oferta/1","fecha_publicacion":"'"$HOY"'","descripcion":"Convocatoria externa","fecha_inicio":"'"$INICIO"'","fecha_fin":"'"$FIN"'","modalidad":"presencial"}'
+BASE='{"fuente":"empleos_peru","titulo":"Operarios para Lima","enlace":"https://empleosperu.gob.pe/oferta/1","descripcion":"Convocatoria externa","fecha_inicio":"'"$INICIO"'","fecha_fin":"'"$FIN"'","modalidad":"presencial"}'
 
 paso "1. cada campo obligatorio"
 ANTES=$(contar)
-for CAMPO in fuente titulo enlace fecha_publicacion descripcion fecha_inicio fecha_fin modalidad; do
+for CAMPO in fuente titulo enlace descripcion fecha_inicio fecha_fin modalidad; do
     python3 - "$CAMPO" "$BASE" > /tmp/opencode/op_campos_payload.json <<'PY'
 import json, sys
 d = json.loads(sys.argv[2])
@@ -65,7 +64,6 @@ PY
         fuente) MENSAJE='Selecciona una fuente válida.' ;;
         titulo) MENSAJE='El título de la oportunidad es obligatorio.' ;;
         enlace) MENSAJE='Introduce una URL válida.' ;;
-        fecha_publicacion) MENSAJE='La fecha de publicación es obligatoria.' ;;
         descripcion) MENSAJE='La descripción de la oportunidad es obligatoria.' ;;
         fecha_inicio) MENSAJE='Indica la fecha y hora de inicio.' ;;
         fecha_fin) MENSAJE='Indica la fecha y hora de finalización.' ;;
@@ -99,21 +97,6 @@ print(json.dumps(d))
 PY
     check_code "URL inválida (${URL:-vacía})" 422 "$(post @/tmp/opencode/op_campos_payload.json)"
     check_campo /tmp/opencode/op_campos.json enlace 'Introduce una URL válida.'
-done
-
-for FECHA in '' '2026-13-01' '2026-02-31' '01/12/2026'; do
-    python3 - "$BASE" "$FECHA" > /tmp/opencode/op_campos_payload.json <<'PY'
-import json, sys
-d = json.loads(sys.argv[1]); d['fecha_publicacion'] = sys.argv[2]
-print(json.dumps(d))
-PY
-    check_code "fecha inválida (${FECHA:-vacía})" 422 "$(post @/tmp/opencode/op_campos_payload.json)"
-    if [ -z "$FECHA" ]; then
-        MENSAJE='La fecha de publicación es obligatoria.'
-    else
-        MENSAJE='La fecha de publicación no es válida.'
-    fi
-    check_campo /tmp/opencode/op_campos.json fecha_publicacion "$MENSAJE"
 done
 
 for FECHA in '2026-12-05' '2026-13-05 09:00' '2026-02-31 09:00' '05/12/2026 09:00'; do

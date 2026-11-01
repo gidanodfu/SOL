@@ -30,10 +30,10 @@ paso "1. cabeceras de seguridad en respuestas"
 curl -s -D - -o /dev/null "$B/api/categorias" | grep -iE "x-content-type-options|x-frame-options|referrer-policy|x-permitted-cross-domain"
 
 paso "2. enlace javascript: rechazado (422); https aceptado"
-IDOP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"Prueba segura\",\"descripcion\":\"Convocatoria segura\",\"enlace\":\"https://example.com/convocatoria\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"XSS\",\"descripcion\":\"X\",\"enlace\":\"javascript://x/%0aalert(1)\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}")
+IDOP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"Prueba segura\",\"descripcion\":\"Convocatoria segura\",\"enlace\":\"https://example.com/convocatoria\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"XSS\",\"descripcion\":\"X\",\"enlace\":\"javascript://x/%0aalert(1)\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}")
 check_code "enlace javascript rechazado" 422 "$CODE"
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"FTP\",\"descripcion\":\"X\",\"enlace\":\"ftp://example.com/x\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}")
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"otro\",\"titulo\":\"FTP\",\"descripcion\":\"X\",\"enlace\":\"ftp://example.com/x\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}")
 check_code "enlace ftp rechazado" 422 "$CODE"
 
 paso "3. activación booleana estricta (\"false\" desactiva de verdad)"
@@ -43,7 +43,7 @@ check_code "activación string false" 200 "$CODE"
 curl -s "$B/api/admin/oportunidades?activo=0" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("desactivada:",any(o["id"]==int("'$IDOP'") for o in d))'
 
 paso "4. editar una oportunidad desactivada NO la republica"
-CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/api/admin/oportunidades/$IDOP" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"otro","titulo":"Prueba segura v2","enlace":"https://example.com/v2","fecha_publicacion":"2026-09-01"}')
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/api/admin/oportunidades/$IDOP" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"fuente":"otro","titulo":"Prueba segura v2","enlace":"https://example.com/v2"}')
 check_code "editar oportunidad desactivada" 200 "$CODE"
 curl -s "$B/api/admin/oportunidades?activo=0" -H "Authorization: Bearer $TA" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("sigue desactivada:",any(o["id"]==int("'$IDOP'") for o in d))'
 curl -s -o /dev/null -X PUT "$B/api/admin/oportunidades/$IDOP/activacion" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"activo":true}'

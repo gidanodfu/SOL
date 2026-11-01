@@ -126,6 +126,7 @@ assert x['puede_modificarse'] is False, x
 print('OK   vencida derivada como finalizada sin alterar estado persistido')
 PY
 [ $? -eq 0 ] || { echo 'FAIL derivación de vencida'; fallos=$((fallos + 1)); }
+publico_tiene "$VENCIDA" && { echo 'FAIL actividad vencida aparece en el portal público'; fallos=$((fallos + 1)); } || echo 'OK   actividad vencida fuera del portal público'
 CODE=$(actualizar "$VENCIDA" "{\"tipo\":\"feria_empleo\",\"nombre\":\"Intento vencida\",\"descripcion\":\"<p>X</p>\",\"fecha_inicio\":\"$PASADO_INI\",\"fecha_fin\":\"$PASADO_FIN\",\"lugar\":\"Plaza\",\"modalidad\":\"presencial\",\"organizador\":\"MDJLO\"}")
 check_code 'editar vencida por fecha' 409 "$CODE"
 check_codigo /tmp/opencode/act_fin_resp.json ACTIVITY_ALREADY_FINALIZED
@@ -143,8 +144,27 @@ AHORA_ID=$(id_resp)
 CODE=$(actualizar "$AHORA_ID" "{\"tipo\":\"feria_empleo\",\"nombre\":\"Intento ahora\",\"descripcion\":\"<p>X</p>\",\"fecha_inicio\":\"$PASADO_INI\",\"fecha_fin\":\"$AHORA_FIN\",\"lugar\":\"Plaza\",\"modalidad\":\"presencial\",\"organizador\":\"MDJLO\"}")
 check_code 'editar actividad terminada ahora' 409 "$CODE"
 check_codigo /tmp/opencode/act_fin_resp.json ACTIVITY_ALREADY_FINALIZED
+publico_tiene "$AHORA_ID" && { echo 'FAIL actividad terminada ahora aparece en el portal público'; fallos=$((fallos + 1)); } || echo 'OK   actividad terminada ahora fuera del portal público'
 
-paso "4. actividades no finalizadas conservan sus operaciones"
+paso "4. actividad con inicio pasado y fin futuro: en curso y pública"
+CURSO_INI=$(php -r 'echo date("Y-m-d H:i:s", strtotime("-1 day"));')
+CURSO_FIN=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+1 day"));')
+CODE=$(crear_actividad 'Actividad en curso' "$CURSO_INI" "$CURSO_FIN")
+check_code 'crear actividad en curso' 201 "$CODE"
+CURSO_ID=$(id_resp)
+ITEM=$(item_json "$CURSO_ID")
+python3 - "$ITEM" <<'PY'
+import json, sys
+x = json.loads(sys.argv[1])
+assert x['estado'] == 'programado', x
+assert x['estado_efectivo'] == 'en_curso', x
+assert x['puede_modificarse'] is True, x
+print('OK   actividad en curso derivada correctamente')
+PY
+[ $? -eq 0 ] || { echo 'FAIL derivación en curso'; fallos=$((fallos + 1)); }
+publico_tiene "$CURSO_ID" && echo 'OK   actividad en curso aparece en el portal público' || { echo 'FAIL actividad en curso fuera del portal público'; fallos=$((fallos + 1)); }
+
+paso "5. actividades no finalizadas conservan sus operaciones"
 CODE=$(crear_actividad 'Actividad vigente editable' "$FUTURO_INI" "$FUTURO_FIN")
 check_code 'crear actividad vigente' 201 "$CODE"
 VIGENTE=$(id_resp)

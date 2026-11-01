@@ -40,3 +40,8 @@ test('la consulta del detalle y el cierre se conservan', () => {
   assert.match(pagina, /etiqueta: 'Fin'/);
   assert.match(pagina, /etiqueta: 'Lugar'/);
 });
+
+test('el listado público se invalida al cambiar una actividad en administración', () => {
+  const pagina = leer('../src/pages/admin/Actividades.jsx');
+  assert.match(pagina, /queryKey: \['actividades-publicas'\]/);
+});

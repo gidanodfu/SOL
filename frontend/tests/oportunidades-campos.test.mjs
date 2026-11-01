@@ -19,8 +19,6 @@ test('la creación de oportunidades exige datos básicos y programación complet
     'Selecciona una fuente válida.',
     'El título de la oportunidad es obligatorio.',
     'Introduce una URL válida.',
-    'La fecha de publicación es obligatoria.',
-    'La fecha de publicación no es válida.',
     'Indica la fecha y hora de inicio.',
     'Indica una fecha y hora de inicio válidas.',
     'Indica la fecha y hora de finalización.',
@@ -35,7 +33,6 @@ test('la creación de oportunidades exige datos básicos y programación complet
   assert.match(pagina, /error=\{errores\.fuente\}/);
   assert.match(pagina, /error=\{errores\.titulo\}/);
   assert.match(pagina, /error=\{errores\.enlace\}/);
-  assert.match(pagina, /error=\{errores\.fecha_publicacion\}/);
   assert.match(pagina, /error=\{errores\.fecha_inicio\}/);
   assert.match(pagina, /error=\{errores\.fecha_fin\}/);
   assert.match(pagina, /error=\{errores\.modalidad\}/);
@@ -46,6 +43,7 @@ test('la creación de oportunidades exige datos básicos y programación complet
   assert.match(pagina, /id="oportunidad-descripcion"/);
   assert.match(pagina, /errorId="oportunidad-descripcion-error"/);
   assert.match(pagina, /<ContenidoEnriquecido>\{oportunidad\.descripcion\}<\/ContenidoEnriquecido>/);
+  assert.doesNotMatch(pagina, /fecha_publicacion|Fecha de publicación|Empresa/);
   assert.doesNotMatch(pagina, /<textarea/);
 });
 
@@ -88,6 +86,8 @@ test('la lista conserva finalizadas, filtra por estado y separa publicación de 
   assert.match(pagina, /<BadgesOportunidad oportunidad=\{o\}/);
   assert.match(pagina, /estado_efectivo \|\| oportunidad\.estado/);
   assert.match(pagina, /estado_publicacion/);
+  assert.match(pagina, /no_visible: \['badge-gray', 'No visible'\]/);
+  assert.match(pagina, /incompleta: \['badge-amber', 'No publicable'\]/);
   assert.match(pagina, /<ContenidoEnriquecido className="contenido-resumen">/);
 });
 
@@ -113,6 +113,7 @@ test('el detalle finalizado oculta acciones y muestra el motivo y el aviso', () 
 test('el portal público filtra finalizadas y usa estado, fechas y descripción enriquecida', () => {
   const pagina = leer('../src/pages/postulante/Oportunidades.jsx');
 
+  assert.match(pagina, /filter\(\(o\) => o\.es_visible_publicamente !== false\)/);
   assert.match(pagina, /filter\(\(o\) => !\['finalizado', 'cancelado'\]\.includes\(o\.estado_efectivo \|\| o\.estado\)\)/);
   assert.match(pagina, /ESTADO_ACTIVIDAD/);
   assert.match(pagina, /fechaHoraLima\(o\.fecha_inicio\)/);
@@ -120,6 +121,7 @@ test('el portal público filtra finalizadas y usa estado, fechas y descripción 
   assert.match(pagina, /Modalidad: \$\{ETIQUETA_MODALIDAD/);
   assert.match(pagina, /<ContenidoEnriquecido className="content-card-rico">\{descripcionHtml\}<\/ContenidoEnriquecido>/);
   assert.match(pagina, /target="_blank" rel="noopener noreferrer"/);
+  assert.doesNotMatch(pagina, /fecha_publicacion|razon_social|Difundida el/);
 });
 
 test('las URLs de texto se detectan sin protocolos peligrosos', () => {
@@ -150,4 +152,12 @@ test('el servicio expone el cambio de estado de oportunidad', () => {
   const servicio = leer('../src/services/divulgacion.js');
 
   assert.match(servicio, /cambiarEstadoOportunidad = \(id, estado\) => api\.put\(`\/admin\/oportunidades\/\$\{id\}\/estado`, \{ estado \}\)/);
+});
+
+test('las mutaciones administrativas invalidan la consulta pública', () => {
+  const oportunidades = leer('../src/pages/admin/Oportunidades.jsx');
+  const actividades = leer('../src/pages/admin/Actividades.jsx');
+
+  assert.match(oportunidades, /queryKey: \['oportunidades-publicas'\]/);
+  assert.match(actividades, /queryKey: \['actividades-publicas'\]/);
 });

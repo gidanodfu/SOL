@@ -18,6 +18,8 @@ TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d 
 TP=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"12345678","password":"Postu123!"}' | tok)
 OP_FI=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+10 days"));')
 OP_FF=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+20 days"));')
+OP_CI=$(php -r 'echo date("Y-m-d H:i:s", strtotime("-1 day"));')
+OP_CF=$(php -r 'echo date("Y-m-d H:i:s", strtotime("+1 day"));')
 
 # Imagen mínima válida para crear actividades completas (obligatoria).
 php -r '$im=imagecreatetruecolor(640,360); imagefill($im,0,0,imagecolorallocate($im,20,100,170)); imagejpeg($im,"/tmp/sol-fase5-actividad.jpg",85); imagedestroy($im);'
@@ -64,13 +66,15 @@ grep -qi '^Content-Type: image/jpeg' /tmp/sol-fase5-jpg.headers \
 ACT_VENCIDA=$(crear_actividad "feria_empleo" "Feria vencida" "2026-10-15 09:00:00" "2026-10-15 17:00:00" "Plaza Central" "presencial" "MDJLO" "<p>Feria vencida</p>" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 
 echo "== OPORTUNIDADES =="
-curl -s -o /dev/null -w "enlace inválido http:%{http_code} (422)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"empleos_peru\",\"titulo\":\"Vacantes\",\"descripcion\":\"Convocatoria\",\"enlace\":\"no-es-url\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}"
-OP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"empleos_peru\",\"titulo\":\"Operarios para Lima\",\"enlace\":\"https://empleosperu.gob.pe/oferta/1\",\"descripcion\":\"Convocatoria externa\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
-curl -s -o /dev/null -w "mype local http:%{http_code} (201)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"mype_local\",\"titulo\":\"Se busca ayudante de cocina\",\"descripcion\":\"Convocatoria MYPE\",\"enlace\":\"https://example.com/mype\",\"fecha_publicacion\":\"2026-09-01\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"virtual\"}"
+curl -s -o /dev/null -w "enlace inválido http:%{http_code} (422)\n" -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"empleos_peru\",\"titulo\":\"Vacantes\",\"descripcion\":\"Convocatoria\",\"enlace\":\"no-es-url\",\"fecha_inicio\":\"$OP_FI\",\"fecha_fin\":\"$OP_FF\",\"modalidad\":\"presencial\"}"
+OP=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"empleos_peru\",\"titulo\":\"Operarios para Lima\",\"enlace\":\"https://empleosperu.gob.pe/oferta/1\",\"descripcion\":\"Convocatoria externa\",\"fecha_inicio\":\"$OP_CI\",\"fecha_fin\":\"$OP_CF\",\"modalidad\":\"presencial\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
+MYPE=$(curl -s -X POST "$B/api/admin/oportunidades" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"fuente\":\"mype_local\",\"titulo\":\"Se busca ayudante de cocina\",\"descripcion\":\"Convocatoria MYPE\",\"enlace\":\"https://example.com/mype\",\"fecha_inicio\":\"$OP_CI\",\"fecha_fin\":\"$OP_CF\",\"modalidad\":\"virtual\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["id"])')
 curl -s -o /dev/null -w "ocultar oportunidad http:%{http_code} (200)\n" -X PUT "$B/api/admin/oportunidades/$OP/activacion" -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d '{"activo":false}'
 
 echo "== DIFUSIÓN (postulante) =="
-curl -s "$B/api/oportunidades" -H "Authorization: Bearer $TP" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print(len(d),"oportunidad(es) visibles (oculta no debe contar)")'
+curl -s "$B/api/oportunidades" | OP="$OP" MYPE="$MYPE" python3 -c 'import os,sys,json; d=json.load(sys.stdin)["data"]; ids={int(o["id"]) for o in d}; assert int(os.environ["OP"]) not in ids and int(os.environ["MYPE"]) in ids; print(len(d),"oportunidad(es) visibles; oculta excluida y vigente incluida")' >/dev/null \
+    && printf 'OK   oportunidad oculta fuera y vigente dentro del público\n' \
+    || { printf 'FAIL visibilidad pública de oportunidades\n'; fallos=$((fallos + 1)); }
 # La actividad ACT_VENCIDA tiene fecha de fin pasada y quedó programada: ya no
 # debe publicarse aunque su estado persistido siga siendo programado.
 curl -s "$B/api/actividades" -H "Authorization: Bearer $TP" | ACT="$ACT_VENCIDA" python3 -c 'import os,sys,json; d=json.load(sys.stdin)["data"]; assert all(a.get("id") != int(os.environ["ACT"]) for a in d)' >/dev/null \

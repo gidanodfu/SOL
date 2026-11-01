@@ -465,15 +465,15 @@ paths:
       operationId: divulgacionOportunidades
       summary: Oportunidades de empleo públicas
       description: |
-        Oportunidades públicas: `activo = 1`, `fecha_publicacion <= hoy` (fecha
-        editorial en America/Lima), estado persistido distinto de `finalizado` y
-        `cancelado`, y `fecha_fin` no alcanzada (el límite es inclusivo: al
-        llegar exactamente a `fecha_fin` desaparece). Ordenadas por
-        `created_at DESC`, tope fijo 200 (sin paginación). Cada fila incluye
-        `razon_social` (LEFT JOIN, puede ser `null`), `estado_efectivo`,
-        `puede_modificarse` y `estado_publicacion`. Una oportunidad `programado`
-        puede mostrarse como próxima convocatoria; una `en_curso` se mantiene
-        visible.
+        Oportunidades públicas: `activo = 1`, programación completa y válida,
+        ventana `fecha_inicio <= ahora < fecha_fin` en America/Lima, y estado
+        efectivo `en_curso` (excluye `finalizado` y `cancelado`). El límite de
+        inicio es inclusivo y el de fin también para el cierre: al alcanzar
+        exactamente `fecha_fin` desaparece. Ordenadas por `created_at DESC`,
+        tope fijo 200 (sin paginación). Cada fila incluye `estado_efectivo`,
+        `puede_modificarse`, `estado_publicacion` y `es_visible_publicamente`.
+        Una oportunidad antes de `fecha_inicio` queda `programada` y no se
+        publica hasta que comience la ventana.
       security:
         - bearerAuth: []
       responses:
@@ -1313,8 +1313,9 @@ paths:
         inválido devuelve lista vacía). El filtro `estado` se aplica en PHP sobre
         `estado_efectivo`, de modo que una oportunidad vencida aparece en
         `finalizado`. Orden `created_at DESC`, tope fijo 300. Cada fila incluye
-        `razon_social`, `ruc`, `estado_efectivo`, `puede_modificarse` y
-        `estado_publicacion`.
+        `estado_efectivo`, `puede_modificarse`, `estado_publicacion` y
+        `es_visible_publicamente`. La relación con `empresas` fue retirada del
+        modelo de oportunidades.
       security:
         - bearerAuth: []
       parameters:
@@ -1368,14 +1369,14 @@ paths:
       summary: Crear oportunidad (admin)
       description: |
         Crea una oportunidad de difusión. Son obligatorios `fuente`, `titulo`,
-        `enlace` (http/https), `fecha_publicacion`, `descripcion`, `fecha_inicio`,
-        `fecha_fin` y `modalidad`. Las fechas de programación exigen fecha y hora
-        locales de America/Lima; `fecha_fin` no puede ser anterior a
-        `fecha_inicio` (la igualdad se admite). La descripción se sanea y su
-        límite se mide sobre el texto visible. El campo `activo` NO se lee del
-        cuerpo y `estado` nace siempre `programado` (desactívela con
-        `/activacion` y transiciónala con `/estado`). `empresa_id` es opcional
-        pero si se envía debe existir.
+        `enlace` (http/https), `descripcion`, `fecha_inicio`, `fecha_fin` y
+        `modalidad`. Las fechas exigen fecha y hora locales de America/Lima;
+        `fecha_fin` no puede ser anterior a `fecha_inicio` (la igualdad se
+        admite). La descripción se sanea y su límite se mide sobre el texto
+        visible. El campo `activo` NO se lee del cuerpo y `estado` nace siempre
+        `programado` (desactívela con `/activacion` y transiciónala con
+        `/estado`). No existe fecha editorial independiente ni asociación con
+        `empresas`.
       security:
         - bearerAuth: []
       requestBody:
@@ -1423,9 +1424,9 @@ paths:
         Actualiza los campos enviados. `activo` y `estado` no se modifican por
         este endpoint. La programación se valida cuando ya existía o cuando se
         envía al menos un valor; un registro histórico sin programación conserva
-        sus `NULL` si no se completan. Una oportunidad finalizada (manual o por
-        `fecha_fin` alcanzada) responde `409` con código
-        `OPPORTUNITY_ALREADY_FINALIZED`.
+        sus `NULL` si no se completan y queda como no publicable. Una
+        oportunidad finalizada (manual o por `fecha_fin` alcanzada) responde
+        `409` con código `OPPORTUNITY_ALREADY_FINALIZED`.
       security:
         - bearerAuth: []
       parameters:
@@ -4846,20 +4847,16 @@ components:
     Oportunidad:
       type: object
       description: |
-        Fila de `oportunidades`; en listados incluye `razon_social` (y `ruc` en
-        el listado admin). `estado` es el valor persistido; `estado_efectivo`
-        deriva el ciclo de vida por fecha; `estado_publicacion` describe la
-        visibilidad editorial (oculta/programada/visible), independiente del
-        ciclo de vida.
+        Fila de `oportunidades`. `estado` es el valor persistido;
+        `estado_efectivo` deriva el ciclo de vida por fecha;
+        `estado_publicacion` y `es_visible_publicamente` describen la
+        disponibilidad pública derivada de activo y de la ventana de fechas.
       properties:
         id:
           type: integer
         fuente:
           type: string
           enum: [empleos_peru, mype_local, otro]
-        empresa_id:
-          type: integer
-          nullable: true
         titulo:
           type: string
         descripcion:
@@ -4869,11 +4866,6 @@ components:
         enlace:
           type: string
           nullable: true
-        fecha_publicacion:
-          type: string
-          nullable: true
-          format: date
-          description: Fecha editorial de liberación al portal.
         fecha_inicio:
           type: string
           nullable: true
@@ -4898,21 +4890,18 @@ components:
           description: Falso si está finalizada manualmente o se alcanzó `fecha_fin`.
         estado_publicacion:
           type: string
-          enum: [oculta, programada, visible]
+          enum: [oculta, programada, visible, no_visible, incompleta]
           description: |
-            Estado editorial derivado; no sustituye al ciclo de vida. Un
-            registro heredado sin `fecha_publicacion` queda como `programada`
-            (y la lectura pública no lo muestra).
+            Disponibilidad derivada. `no_visible` cubre finalizado/cancelado;
+            `incompleta` identifica un registro heredado sin programación
+            completa; `programada` significa que aún no llega `fecha_inicio`;
+            `visible` exige el predicado público completo.
+        es_visible_publicamente:
+          type: boolean
+          description: true solo si el registro cumple todas las condiciones de GET /api/oportunidades.
         activo:
           type: integer
           enum: [0, 1]
-        razon_social:
-          type: string
-          nullable: true
-        ruc:
-          type: string
-          nullable: true
-          description: Solo presente en el listado admin.
         created_at:
           type: string
           nullable: true
@@ -4922,7 +4911,7 @@ components:
 
     OportunidadCrearBody:
       type: object
-      required: [fuente, titulo, enlace, fecha_publicacion, descripcion, fecha_inicio, fecha_fin, modalidad]
+      required: [fuente, titulo, enlace, descripcion, fecha_inicio, fecha_fin, modalidad]
       properties:
         fuente:
           type: string
@@ -4939,23 +4928,17 @@ components:
           type: string
           maxLength: 300
           description: URL http(s) obligatoria; rechaza `javascript:`, `data:`, `file:` y otros esquemas.
-        fecha_publicacion:
-          type: string
-          format: date
         fecha_inicio:
           type: string
           example: '2026-07-15 09:00:00'
-          description: Fecha y hora local (America/Lima) obligatorias.
+          description: Fecha y hora local (America/Lima) obligatorias; abre la ventana pública.
         fecha_fin:
           type: string
           example: '2026-07-20 18:00:00'
-          description: No puede ser anterior a `fecha_inicio`; la igualdad se admite.
+          description: No puede ser anterior a `fecha_inicio`; la igualdad se admite. Cierra la ventana pública.
         modalidad:
           type: string
           enum: [presencial, virtual, mixta]
-        empresa_id:
-          type: integer
-          description: Debe existir en `empresas` si se envía. Opcional.
         # Nota: `activo` y `estado` NO se leen del cuerpo.
 
     OportunidadActualizarBody:
@@ -4977,10 +4960,6 @@ components:
           type: string
           maxLength: 300
           description: URL http(s) si no está vacía; una cadena vacía limpia el enlace.
-        fecha_publicacion:
-          type: string
-          format: date
-          description: Si se omite o está vacía, conserva la existente.
         fecha_inicio:
           type: string
           description: Fecha y hora local (America/Lima).
@@ -4990,9 +4969,6 @@ components:
         modalidad:
           type: string
           enum: [presencial, virtual, mixta]
-        empresa_id:
-          type: integer
-          nullable: true
 
     EstadoOportunidadBody:
       type: object
