@@ -59,6 +59,9 @@ class ApiExceptionHandler implements ExceptionHandlerInterface
             'message' => $api->getMessage(),
             'errors'  => $api->getErrores(),
         ];
+        if ($api->getCodigo() !== null) {
+            $cuerpo['code'] = $api->getCodigo();
+        }
         if ($api->getCampos() !== []) {
             $cuerpo['campos'] = $api->getCampos();
         }

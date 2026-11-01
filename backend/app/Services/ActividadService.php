@@ -76,6 +76,13 @@ class ActividadService
         $filas = $builder->orderBy('fecha_inicio', 'DESC')->limit(200)->get()->getResultArray();
         $filas = array_map([$this, 'conImagenPublica'], $filas);
 
+        if (! $soloPublicas) {
+            foreach ($filas as &$fila) {
+                $fila['puede_modificarse'] = self::puedeModificarse($fila);
+            }
+            unset($fila);
+        }
+
         if (! $soloPublicas && ! empty($filtros['estado'])) {
             // El filtro administrativo usa el estado efectivo. Así una
             // actividad en_curso vencida aparece en Finalizadas, no en En curso.
@@ -146,6 +153,39 @@ class ActividadService
         return 'programado';
     }
 
+    /**
+     * Una actividad finalizada —por acción administrativa o por fecha de fin
+     * alcanzada— es inmutable. La cancelación conserva su reapertura existente
+     * solo mientras no haya llegado la fecha de fin.
+     *
+     * @param array<string, mixed> $actividad
+     */
+    public static function puedeModificarse(array $actividad, ?string $ahora = null): bool
+    {
+        if ((string) ($actividad['estado'] ?? '') === 'finalizado') {
+            return false;
+        }
+
+        return ! self::vencida($actividad['fecha_fin'] ?? null, $ahora);
+    }
+
+    /**
+     * @param array<string, mixed> $actividad
+     */
+    public function exigirModificable(array $actividad): void
+    {
+        if (! self::puedeModificarse($actividad)) {
+            throw new ApiException(
+                'La actividad ya ha finalizado y no puede modificarse.',
+                409,
+                [],
+                0,
+                [],
+                'ACTIVITY_ALREADY_FINALIZED',
+            );
+        }
+    }
+
     private static function fechaAlcanzada(?string $fecha, ?string $ahora = null): bool
     {
         $fecha = $fecha !== null ? trim($fecha) : '';
@@ -185,19 +225,52 @@ class ActividadService
 
     /**
      * Sube (o reemplaza) la imagen de una actividad. Valida tipo real, extensión
-     * y tamaño; el nombre de objeto lo genera el servidor.
+     * y tamaño; el nombre de objeto lo genera el servidor. Una actividad
+     * finalizada no admite cambios de imagen.
      */
     public function subirImagen(int $id, UploadedFile $archivo): string
     {
-        $actividad = $this->exigir($id);
-        $imagen    = $this->validarImagen($archivo);
+        $db = $this->actividades->db;
+        $db->transBegin();
+        $objectKey = null;
+        $anterior  = null;
 
-        $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $imagen['extension'];
+        try {
+            $actividad = $this->exigirBloqueada($id);
+            $this->exigirModificable($actividad);
 
-        $this->storage->almacenarContenido($objectKey, $imagen['contenido'], $imagen['mime']);
+            $imagen = $this->validarImagen($archivo);
 
-        $anterior = $actividad['imagen_key'] ?? null;
-        $this->actividades->update($id, ['imagen_key' => $objectKey]);
+            // Revalida justo antes de persistir, por si la fecha de fin se
+            // alcanzó durante la validación del archivo.
+            $this->exigirModificable($actividad);
+
+            $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $imagen['extension'];
+            $this->storage->almacenarContenido($objectKey, $imagen['contenido'], $imagen['mime']);
+
+            $anterior = $actividad['imagen_key'] ?? null;
+            $this->actividades->update($id, ['imagen_key' => $objectKey]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar la imagen de la actividad.');
+            }
+
+            if (! $db->transCommit()) {
+                throw ApiException::conflicto('No se pudo actualizar la imagen de la actividad.');
+            }
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            if ($objectKey !== null) {
+                try {
+                    $this->storage->eliminar($objectKey);
+                } catch (\Throwable) {
+                    // La compensación es best-effort: el error original manda.
+                }
+            }
+
+            throw $e;
+        }
 
         if ($anterior && $anterior !== $objectKey) {
             $this->storage->eliminar($anterior);
@@ -208,12 +281,33 @@ class ActividadService
 
     public function eliminarImagen(int $id): void
     {
-        $actividad = $this->exigir($id);
-        $key = $actividad['imagen_key'] ?? null;
+        $db = $this->actividades->db;
+        $db->transBegin();
+        $key = null;
+
+        try {
+            $actividad = $this->exigirBloqueada($id);
+            $this->exigirModificable($actividad);
+            $key = $actividad['imagen_key'] ?? null;
+
+            $this->actividades->update($id, ['imagen_key' => null]);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo eliminar la imagen de la actividad.');
+            }
+
+            if (! $db->transCommit()) {
+                throw ApiException::conflicto('No se pudo eliminar la imagen de la actividad.');
+            }
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
+        }
+
         if ($key) {
             $this->storage->eliminar($key);
         }
-        $this->actividades->update($id, ['imagen_key' => null]);
     }
 
     /**
@@ -402,11 +496,32 @@ class ActividadService
      */
     public function actualizar(int $id, array $datos): void
     {
-        $this->exigir($id);
-        $limpio = $this->validar($datos, 'No se pudo actualizar la actividad.');
+        $db = $this->actividades->db;
+        $db->transBegin();
 
-        if (! $this->actividades->update($id, $limpio)) {
-            throw ApiException::conflicto('No se pudo actualizar la actividad.');
+        try {
+            $actividad = $this->exigirBloqueada($id);
+            $this->exigirModificable($actividad);
+
+            $limpio = $this->validar($datos, 'No se pudo actualizar la actividad.');
+
+            // Revalida justo antes de persistir: la fecha de fin pudo alcanzarse
+            // durante la validación.
+            $this->exigirModificable($actividad);
+
+            if (! $this->actividades->update($id, $limpio)) {
+                throw ApiException::conflicto('No se pudo actualizar la actividad.');
+            }
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar la actividad.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
         }
     }
 
@@ -420,6 +535,8 @@ class ActividadService
 
         try {
             $actividad = $this->exigirBloqueada($id);
+            $this->exigirModificable($actividad);
+
             $permitidos = self::TRANSICIONES[$actividad['estado']] ?? [];
             if (! in_array($estado, $permitidos, true)) {
                 throw ApiException::conflicto("No puede pasar de \"{$actividad['estado']}\" a \"{$estado}\".");

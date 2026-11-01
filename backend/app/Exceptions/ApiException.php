@@ -22,6 +22,8 @@ class ApiException extends RuntimeException
 
     private int $retryAfter = 0;
 
+    private ?string $codigo;
+
     /**
      * @param list<string> $errores
      * @param array<string, string> $campos
@@ -32,12 +34,14 @@ class ApiException extends RuntimeException
         array $errores = [],
         int $retryAfter = 0,
         array $campos = [],
+        ?string $codigo = null,
     ) {
         parent::__construct($mensaje);
         $this->httpCode   = $httpCode;
         $this->errores    = $errores;
         $this->retryAfter = $retryAfter;
         $this->campos     = $campos;
+        $this->codigo     = $codigo;
     }
 
     public static function badRequest(string $mensaje): self
@@ -109,5 +113,10 @@ class ApiException extends RuntimeException
     public function getCampos(): array
     {
         return $this->campos;
+    }
+
+    public function getCodigo(): ?string
+    {
+        return $this->codigo;
     }
 }

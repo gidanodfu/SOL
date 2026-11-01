@@ -116,7 +116,14 @@ export default function Actividades() {
         puedeGestionar={puedeGestionar}
         alCerrar={() => setSeleccionada(null)}
         alCambio={(mensaje) => { toast.success(mensaje); refrescar(); }}
-        alEditar={(actividad) => { setSeleccionada(null); setEditor({ id: actividad.id, fila: actividad }); }}
+        alEditar={(actividad) => {
+          if (actividad.puede_modificarse === false || (actividad.estado_efectivo || actividad.estado) === 'finalizado') {
+            toast.error('Esta actividad ha finalizado y ya no puede modificarse.');
+            return;
+          }
+          setSeleccionada(null);
+          setEditor({ id: actividad.id, fila: actividad });
+        }}
       />
     </div>
   );
@@ -129,6 +136,7 @@ function DetalleActividad({ actividad, puedeGestionar, alCerrar, alCambio, alEdi
   if (!actividad) return null;
 
   const estadoEfectivo = actividad.estado_efectivo || actividad.estado;
+  const finalizada = actividad.puede_modificarse === false || estadoEfectivo === 'finalizado';
   const cambiar = async (estado) => {
     try {
       await ejecutar(() => cambiarEstadoActividad(actividad.id, estado));
@@ -159,7 +167,7 @@ function DetalleActividad({ actividad, puedeGestionar, alCerrar, alCambio, alEdi
       subtitulo={ETIQUETA_TIPO_ACTIVIDAD[actividad.tipo]}
       alCerrar={alCerrar}
       tamano="ancho"
-      acciones={puedeGestionar ? (
+      acciones={puedeGestionar && !finalizada ? (
         <>
           <Boton variante="gris" onClick={() => alEditar(actividad)}>
             <Pencil size={16} aria-hidden="true" />Editar
@@ -179,12 +187,18 @@ function DetalleActividad({ actividad, puedeGestionar, alCerrar, alCambio, alEdi
     >
       <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
         <Estado valor={estadoEfectivo} diccionario={ETIQUETA_ESTADO_ACTIVIDAD} />
-        {estadoEfectivo !== actividad.estado && (
-          <span style={{ color: 'var(--amber-tx)', fontSize: '0.85rem' }}>
-            Finalizada por fecha de fin; se conserva el estado administrativo persistido.
+        {finalizada && (
+          <span className="vacio">
+            {actividad.estado === 'finalizado' ? 'Finalizada manualmente.' : 'Finalizada por fecha de fin.'}
           </span>
         )}
       </div>
+
+      {finalizada && (
+        <p className="vacio" role="status" style={{ marginBottom: '0.8rem' }}>
+          Esta actividad ha finalizado y ya no puede modificarse.
+        </p>
+      )}
 
       <Mensaje>{error}</Mensaje>
 
@@ -244,6 +258,22 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  const finalizada = Boolean(inicial)
+    && (inicial.puede_modificarse === false || (inicial.estado_efectivo || inicial.estado) === 'finalizado');
+
+  if (finalizada) {
+    return (
+      <Tarjeta titulo="Actividad finalizada">
+        <p className="vacio" role="status">
+          Esta actividad ha finalizado y ya no puede modificarse.
+        </p>
+        <div className="form-acciones">
+          <Boton variante="gris" onClick={alCerrar}>Cerrar</Boton>
+        </div>
+      </Tarjeta>
+    );
+  }
 
   const limpiarPreview = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);

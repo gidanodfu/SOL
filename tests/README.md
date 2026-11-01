@@ -28,7 +28,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 22 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 23 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -74,6 +74,12 @@ edición conservando la imagen existente y el reemplazo por el endpoint dedicado
 la creación de oportunidades: fuente, título, enlace, fecha y descripción, con
 mensajes por campo, rechazo de URL/protocolo inválidos, HTML vacío, creación
 válida y conservación del contrato de edición existente.
+
+`tests/smoke/test_actividades_finalizadas.sh` comprueba que una actividad
+finalizada manualmente o por fecha de fin (America/Lima) sea de solo lectura:
+rechaza edición, cambios de estado, finalización/cancelación repetida, carga y
+eliminación de imagen, incluso por HTTP directo, sin afectar a las actividades
+vigentes ni a la consulta pública.
 
 El límite de texto enriquecido es inclusivo: se cuentan caracteres visibles
 después de sanear/decodificar, sin etiquetas HTML; 9.999 y 10.000 se aceptan y
