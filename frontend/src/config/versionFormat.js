@@ -35,11 +35,11 @@ export function parseSystemVersion(valor) {
 
 /**
  * Convierte el identificador técnico en la etiqueta visible.
- * Ej.: 0.9.2-beta.1 → 0.9.2 BETA 1.
+ * Ej.: 0.9.2-beta.1 → 0.9.2 BETA 1; 1.0.1 → 1.0.1 ESTABLE.
  */
 export function formatSystemVersion(valor) {
   const { base, canal, numeroCanal } = parseSystemVersion(valor);
-  if (!canal) return base;
+  if (!canal) return `${base} ESTABLE`;
 
   return `${base} ${canal}${numeroCanal ? ` ${numeroCanal}` : ''}`;
 }

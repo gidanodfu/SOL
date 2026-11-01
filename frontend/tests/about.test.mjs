@@ -41,13 +41,14 @@ test('la versión mostrada proviene del archivo VERSION y de Vite', () => {
   const docker = leer('../Dockerfile');
   const version = leer('../../VERSION').trim();
 
-  assert.equal(version, '0.9.2-beta');
+  assert.equal(version, '1.0.1');
   assert.doesNotMatch(constantes, /VERSION_SISTEMA/);
   assert.match(pagina, /from '\.\.\/\.\.\/config\/version'/);
   assert.match(pagina, /<dd>\{VERSION_SISTEMA\}<\/dd>/);
   assert.match(modulo, /import\.meta\.env\.VITE_SOL_VERSION/);
   assert.match(modulo, /formatSystemVersion/);
   assert.match(formato, /alpha\|beta\|rc/);
+  assert.match(formato, /ESTABLE/);
   assert.match(vite, /VITE_SOL_VERSION/);
   assert.match(vite, /resolve\(frontendDir, '\.\.\/VERSION'\)/);
   assert.match(docker, /COPY VERSION \/VERSION/);

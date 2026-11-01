@@ -503,7 +503,7 @@ duplica en componentes React, `constants.js` ni `package.json`.
 Contenido actual:
 
 ```text
-0.9.2-beta
+1.0.1
 ```
 
 Formato técnico:
@@ -519,11 +519,19 @@ Presentación visual:
 
 | `VERSION` | En `/about` |
 |---|---|
+| `1.0.1` | `1.0.1 ESTABLE` |
 | `0.9.2-beta` | `0.9.2 BETA` |
 | `0.9.2-beta.1` | `0.9.2 BETA 1` |
 | `0.9.2-alpha.1` | `0.9.2 ALPHA 1` |
 | `0.9.2-rc.1` | `0.9.2 RC 1` |
-| `0.9.2` | `0.9.2` |
+| `0.9.2` | `0.9.2 ESTABLE` |
+
+Historial de versiones:
+
+| Versión | Canal |
+|---|---|
+| 0.9.2 | Beta inicial |
+| 1.0.1 | Estable |
 
 Vite lee y valida `VERSION` durante `npm run build`, incorpora el identificador
 en `import.meta.env.VITE_SOL_VERSION` y el módulo
@@ -544,8 +552,8 @@ Procedimiento de publicación (no ejecutado automáticamente):
 
 ```bash
 git add VERSION
-git commit -m "chore(release): SOL v0.9.2-beta"
-git tag -a v0.9.2-beta -m "SOL 0.9.2 BETA"
+git commit -m "chore(release): SOL v1.0.1"
+git tag -a v1.0.1 -m "SOL 1.0.1 - Primera versión estable"
 git push origin main --tags
 ```
 
