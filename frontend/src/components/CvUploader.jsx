@@ -36,8 +36,6 @@ export default function CvUploader() {
   const { data: cv, isLoading } = useQuery({ queryKey: ['cv'], queryFn: cvActual });
 
   const vigente = cv?.vigente;
-  const limite = cv?.limite_mensual;
-  const agotado = limite?.restantes === 0;
 
   const validar = (archivo) => {
     if (!archivo) return 'Selecciona un archivo.';
@@ -67,7 +65,13 @@ export default function CvUploader() {
       if (inputRef.current) inputRef.current.value = '';
     } catch (err) {
       const det = err?.response?.data?.errors;
-      setError(Array.isArray(det) && det.length ? det.join('. ') : (err?.response?.data?.message || 'No se pudo subir el CV. Intente nuevamente.'));
+      const espera = Number(err?.response?.headers?.['retry-after']);
+      const servidor = err?.response?.data?.message || 'No se pudo subir el CV. Intente nuevamente.';
+      setError(
+        Array.isArray(det) && det.length
+          ? det.join('. ')
+          : (Number.isFinite(espera) && espera > 0 ? `${servidor} (reintente en ${espera} s)` : servidor),
+      );
       setElegido(null);
     } finally {
       setEnviando(false);
@@ -89,23 +93,11 @@ export default function CvUploader() {
         El CV es obligatorio para postularte. Formatos permitidos: PDF, DOC, DOCX. Tamaño máximo: {MAX_MB} MB. Cada carga crea una nueva versión.
       </p>
 
-      {limite && (
-        <p className="tarjeta-sub" style={{ marginTop: '-0.6rem' }}>
-          {agotado
-            ? `Ha alcanzado el límite de ${limite.limite} CV este mes. Podrá actualizar su CV el próximo mes.`
-            : `Ha usado ${limite.usados} de ${limite.limite} CV este mes. Le quedan ${limite.restantes}.`}
-        </p>
-      )}
-
       <Mensaje tipo="exito">{mensaje}</Mensaje>
       <Mensaje>{error}</Mensaje>
 
       <div className="cv-zona">
-        <label
-          className="btn btn-gris"
-          style={agotado ? { opacity: 0.6, pointerEvents: 'none' } : undefined}
-          title={agotado ? 'Límite mensual de CV alcanzado' : undefined}
-        >
+        <label className="btn btn-gris">
           {enviando ? (
             <>
               <span className="spinner" aria-hidden="true" /> Subiendo CV…
@@ -120,7 +112,7 @@ export default function CvUploader() {
             type="file"
             accept={FORMATOS}
             onChange={alElegir}
-            disabled={enviando || agotado}
+            disabled={enviando}
             aria-label={vigente ? 'Actualizar CV' : 'Subir CV'}
           />
         </label>

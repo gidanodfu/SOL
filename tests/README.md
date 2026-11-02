@@ -37,7 +37,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 26 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 27 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -70,11 +70,21 @@ y requiere un RUC real y token externo autorizado.
 Los fixtures de CV están en `tests/fixtures/`: `cv.pdf` y `cv.docx` son
 documentos válidos; `cv-malformado.pdf` se usa como caso negativo.
 `tests/smoke/test_cv.sh` cubre carga, consulta, descarga autorizada, rechazos
-de MIME/firma/rol y el límite mensual persistido de cuatro CV.
+de MIME/firma/rol, más de cuatro cargas exitosas en el mismo mes, el `429` por
+rate limiting, la conservación del CV activo y la ausencia de registros
+parciales. También comprueba que la cuota histórica quedó en
+`cv_cuotas_mensuales_legado` y que existe `rate_limit_contadores`.
 
-`tests/smoke/test_cv_concurrencia.sh` envía seis cargas simultáneas del mismo
-postulante: exige cuatro aceptadas y dos rechazadas por cuota, y comprueba que
-la cuota quede en 4/4 y que exista una sola versión vigente.
+`tests/smoke/test_cv_concurrencia.sh` mantiene una carga en curso mediante
+`GET_LOCK`, comprueba el rechazo `429` con `Retry-After`, libera el bloqueo y
+verifica que la siguiente carga se acepte. Después envía seis cargas
+simultáneas: exige respuestas `201`/`429`, una sola versión vigente, historial
+sin duplicados y contadores por usuario/IP coherentes con las cargas exitosas.
+
+`tests/smoke/test_cv_rate_limit.sh` arranca el servidor con ventanas cortas
+configurables (`cvRateLimit.*`): dos cargas permitidas, tercera con `429` y
+`Retry-After`, reinicio de la ventana corta y nueva carga aceptada; además
+verifica que la ventana larga siga bloqueando y que no haya registros parciales.
 
 `tests/smoke/test_validaciones_estrictas.sh` cubre las reglas aprobadas de
 contacto (ausente conserva, null/vacío/array rechaza), fecha de nacimiento no
@@ -190,8 +200,9 @@ el build; no se hizo una refactorización masiva porque requeriría separar
 módulos y revisar los flujos de efectos/refs.
 
 El rate limiting de `/verificar-ruc`, el saneamiento de errores y varios
-controles de seguridad se cubren en `test_seguridad.sh`; el límite mensual de
-CV se validó manualmente y aún no tiene una prueba de agotamiento automatizada.
+controles de seguridad se cubren en `test_seguridad.sh`. El rate limiting de CV,
+el reinicio de ventanas, la concurrencia y la retirada de la cuota mensual están
+cubiertos por `test_cv.sh`, `test_cv_concurrencia.sh` y `test_cv_rate_limit.sh`.
 
 La trazabilidad funcional contra la especificación está en
 [`docs/matriz-cumplimiento.md`](../docs/matriz-cumplimiento.md).

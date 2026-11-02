@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# CV: fixtures válidos PDF/DOCX, descarga autorizada y casos negativos.
+# CV: fixtures válidos PDF/DOCX, descarga autorizada, casos negativos,
+# más de cuatro cargas exitosas y rate limiting configurable.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080
@@ -31,6 +32,17 @@ for key in sys.argv[2].split('.'):
     actual = actual[key]
 print(actual)
 PY
+}
+db_scalar() {
+    php -r '
+$pdo = new PDO(
+    "mysql:host=" . getenv("DB_HOST") . ";dbname=" . getenv("DB_DATABASE"),
+    getenv("DB_USER"),
+    getenv("DB_PASSWORD"),
+    [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+);
+echo $pdo->query($argv[1])->fetchColumn();
+' "$1"
 }
 
 TP=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"12345678","password":"Postu123!"}' | tok)
@@ -99,29 +111,85 @@ for CLAVE in "$(printf '/etc/passwd' | base64 | tr '+/' '-_' | tr -d '=')" "$(pr
 done
 
 paso "5. casos negativos"
+CVS_ANTES_NEG=$(db_scalar "SELECT COUNT(*) FROM cvs")
+ACTIVO_ANTES_NEG=$(db_scalar "SELECT cv_id FROM cv_activos WHERE postulante_id=(SELECT id FROM postulantes WHERE dni='12345678')")
 curl -s -o /tmp/opencode/cv_malformed.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv-malformado.pdf;type=application/pdf;filename=cv-malformado.pdf" > /tmp/opencode/cv_malformed_code
 check_code "rechazar PDF con firma falsa" 422 "$(cat /tmp/opencode/cv_malformed_code)"
 curl -s -o /tmp/opencode/cv_wrong_type.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=text/plain;filename=cv.txt" > /tmp/opencode/cv_wrong_type_code
 check_code "rechazar extensión/MIME no permitidos" 422 "$(cat /tmp/opencode/cv_wrong_type_code)"
 curl -s -o /dev/null -w '%{http_code}' "$B/api/postulante/cv" -H "Authorization: Bearer $TE" > /tmp/opencode/cv_unauth_code
 check_code "empresa no accede CV de postulante" 403 "$(cat /tmp/opencode/cv_unauth_code)"
+CVS_TRAS_NEG=$(db_scalar "SELECT COUNT(*) FROM cvs")
+ACTIVO_TRAS_NEG=$(db_scalar "SELECT cv_id FROM cv_activos WHERE postulante_id=(SELECT id FROM postulantes WHERE dni='12345678')")
+[ "$CVS_TRAS_NEG" = "$CVS_ANTES_NEG" ] && [ "$ACTIVO_TRAS_NEG" = "$ACTIVO_ANTES_NEG" ] \
+    && echo 'OK   los rechazos no crearon registros ni cambiaron el CV activo' \
+    || { echo 'FAIL los rechazos alteraron CV o historial'; fallos=$((fallos + 1)); }
 
-paso "6. límite mensual persistido y CV activo único"
-curl -s -o /tmp/opencode/cv_quota.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv-quinto.pdf" > /tmp/opencode/cv_quota_code
-check_code "quinto CV del mes rechazado" 409 "$(cat /tmp/opencode/cv_quota_code)"
-curl -s "$B/api/postulante/cv" -H "Authorization: Bearer $TP" > /tmp/opencode/cv_quota_state.json
-python3 - /tmp/opencode/cv_quota_state.json <<'PY'
+paso "6. más de cuatro CV exitosos, rate limiting y CV activo"
+# La cuota mensual ya no existe: la quinta carga del mes debe aceptarse.
+CVS_ANTES=$(db_scalar "SELECT COUNT(*) FROM cvs")
+curl -s -o /tmp/opencode/cv_quinto.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv-quinto.pdf" > /tmp/opencode/cv_quinto_code
+check_code "quinto CV del mes aceptado" 201 "$(cat /tmp/opencode/cv_quinto_code)"
+curl -s "$B/api/postulante/cv" -H "Authorization: Bearer $TP" > /tmp/opencode/cv_quinto_state.json
+python3 - /tmp/opencode/cv_quinto_state.json <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
 assert d.get('success') is True, d
 data = d['data']
-assert data['limite_mensual']['usados'] == 4, data['limite_mensual']
-assert data['limite_mensual']['restantes'] == 0, data['limite_mensual']
+assert 'limite_mensual' not in data, data.keys()
 assert data.get('vigente') is not None, data
-assert len(data.get('historial', [])) == 4, len(data.get('historial', []))
-print('OK   cuota mensual 4/4 y un solo CV vigente')
+assert len(data.get('historial', [])) == 5, len(data.get('historial', []))
+assert sum(1 for v in data['historial'] if v['activo']) == 1, data['historial']
+print('OK   quinto CV aceptado sin cuota mensual; historial de cinco versiones')
 PY
-[ $? -eq 0 ] || { echo 'FAIL estado de cuota/CV activo'; fallos=$((fallos + 1)); }
+[ $? -eq 0 ] || { echo 'FAIL estado tras el quinto CV'; fallos=$((fallos + 1)); }
+CVS_TRAS_QUINTO=$(db_scalar "SELECT COUNT(*) FROM cvs")
+[ "$CVS_TRAS_QUINTO" = "$((CVS_ANTES + 1))" ] \
+    && echo 'OK   la quinta carga insertó exactamente una versión' \
+    || { echo "FAIL versiones tras quinta carga: $CVS_ANTES -> $CVS_TRAS_QUINTO"; fallos=$((fallos + 1)); }
+
+# Sexta carga inmediata: supera 5/10 min por usuario.
+ACTIVO_QUINTO=$(db_scalar "SELECT cv_id FROM cv_activos WHERE postulante_id=(SELECT id FROM postulantes WHERE dni='12345678')")
+curl -s -D /tmp/opencode/cv_rate_headers.txt -o /tmp/opencode/cv_rate_body.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv-sexto.pdf" > /tmp/opencode/cv_rate_code
+check_code "sexta carga rechazada por rate limit" 429 "$(cat /tmp/opencode/cv_rate_code)"
+RETRY=$(awk 'tolower($1)=="retry-after:" {gsub("\r",""); print $2}' /tmp/opencode/cv_rate_headers.txt | tail -1)
+if [ -n "$RETRY" ] && [ "$RETRY" -ge 1 ] 2>/dev/null; then
+    echo "OK   Retry-After informado ($RETRY s)"
+else
+    echo 'FAIL respuesta 429 sin Retry-After válido'; fallos=$((fallos + 1))
+fi
+grep -qi 'demasiadas cargas de CV' /tmp/opencode/cv_rate_body.json \
+    && echo 'OK   mensaje de rate limiting de CV' \
+    || { echo 'FAIL mensaje de rate limiting ausente'; fallos=$((fallos + 1)); }
+
+curl -s "$B/api/postulante/cv" -H "Authorization: Bearer $TP" > /tmp/opencode/cv_rate_state.json
+python3 - /tmp/opencode/cv_rate_state.json "$ACTIVO_QUINTO" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+activo = int(sys.argv[2])
+data = d['data']
+assert data['vigente']['id'] == activo, (data['vigente'], activo)
+assert len(data['historial']) == 5, len(data['historial'])
+assert sum(1 for v in data['historial'] if v['activo']) == 1, data['historial']
+print('OK   el 429 conservó el CV vigente y sus cinco versiones')
+PY
+[ $? -eq 0 ] || { echo 'FAIL CV alterado tras el 429'; fallos=$((fallos + 1)); }
+CVS_TRAS_429=$(db_scalar "SELECT COUNT(*) FROM cvs")
+ACTIVOS_TRAS_429=$(db_scalar "SELECT COUNT(*) FROM cv_activos WHERE postulante_id=(SELECT id FROM postulantes WHERE dni='12345678')")
+[ "$CVS_TRAS_429" = "$CVS_TRAS_QUINTO" ] \
+    && echo 'OK   el 429 no creó registros parciales' \
+    || { echo "FAIL registros tras 429: $CVS_TRAS_QUINTO -> $CVS_TRAS_429"; fallos=$((fallos + 1)); }
+[ "$ACTIVOS_TRAS_429" = "1" ] \
+    && echo 'OK   un único CV activo en cv_activos' \
+    || { echo "FAIL filas de cv_activos: $ACTIVOS_TRAS_429"; fallos=$((fallos + 1)); }
+
+TABLA_LEGADO=$(db_scalar "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cv_cuotas_mensuales_legado'")
+TABLA_CUOTA=$(db_scalar "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cv_cuotas_mensuales'")
+TABLA_RATE=$(db_scalar "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='rate_limit_contadores'")
+[ "$TABLA_LEGADO" = "1" ] && [ "$TABLA_CUOTA" = "0" ] && [ "$TABLA_RATE" = "1" ] \
+    && echo 'OK   cuota retirada a legado y tabla de rate limiting presente' \
+    || { echo "FAIL migración de cuota/rate limit ($TABLA_LEGADO/$TABLA_CUOTA/$TABLA_RATE)"; fallos=$((fallos + 1)); }
+
 
 echo
 echo 'FIN test_cv'

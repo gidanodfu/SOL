@@ -12,7 +12,8 @@
   La especificación `public/swagger/openapi.yaml` está actualizada con esos cambios.
 - **Actualización 2026-09-10**: ver la sección *"Actualización post-correcciones"* más
   abajo. Se resolvieron E1, S1, S4, S12 y Q8 (fuga de `password_hash`, rate limiting,
-  saneamiento de errores) y se añadieron el límite de 4 CV/mes y la validación de teléfono.
+  saneamiento de errores) y se añadieron la validación de teléfono y una cuota de 4 CV/mes
+  que fue retirada el 2026-11-02 en favor de rate limiting configurable.
 - **Stack observado**: PHP 8.2+ (entorno local 8.5), CodeIgniter 4.7, MySQL (`sistema_empleo`, driver MySQLi), JWT HS256 (`firebase/php-jwt` 7.1), almacenamiento de CV Supabase S3 con driver local de respaldo.
 - **Artefactos generados**:
   - `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 de la API real.
@@ -40,11 +41,11 @@ histórico. No cambió el esquema de base de datos ni se añadieron variables `.
 - **Rate limiting** implementado con `app/Filters/ThrottleFilter.php` (Throttler nativo de
   CI4). Resuelve **S4**.
 
-**Rate limits (token bucket de CI4; respuesta `429` + cabecera `Retry-After`)**
+**Rate limits de autenticación (token bucket de CI4; respuesta `429` + cabecera `Retry-After`)**
 El Throttler nativo implementa un token bucket: permite una ráfaga inicial (= capacidad) y
-luego repone 1 token cada `segundos / capacidad`. **No es un bloqueo de ventana fija**, por
-lo que el `Retry-After` es el intervalo de recarga (≈ 60 s en login), no el total de la
-ventana.
+luego repone 1 token cada `segundos / capacidad`. Para autenticación **no es un bloqueo de
+ventana fija**, por lo que el `Retry-After` es el intervalo de recarga (≈ 60 s en login), no
+el total de la ventana. La carga de CV usa ventanas fijas persistidas (ver más abajo).
 
 | Endpoint | Ráfaga | Recarga | Identificación |
 |---|---|---|---|
@@ -52,11 +53,14 @@ ventana.
 | `POST /api/auth/refresh` | 10 | 1/30 s | IP + ruta |
 | `POST /api/auth/google` | 10 | 1/30 s | IP + ruta |
 | `POST /api/registro/postulante` | 10 | 1/30 s | IP + ruta |
-| `POST /api/postulante/cv` | 10 | 1/360 s (6 min) | IP + ruta |
+| `POST /api/postulante/cv` | 5/10 min y 20/h | ventana fija | usuario autenticado |
+| `POST /api/postulante/cv` | 10/10 min y 40/h | ventana fija | IP |
 
-**Límite de CV**: máximo 4 CV por mes calendario por postulante, contado en el backend
-sobre `cvs.created_at`; al superarlo responde `409`. `GET /api/postulante/cv` y la subida
-exponen `limite_mensual: {limite, usados, restantes}`.
+**Rate limiting de CV**: no existe cuota mensual. `CvRateLimiter` persiste ventanas
+fijas en `rate_limit_contadores` y consume dos contadores por usuario y dos por IP;
+`GET_LOCK('sol_cv_<postulante>', 0)` impide una segunda carga simultánea. Al superar
+un límite responde `429` con `Retry-After` sin modificar el CV. Los valores se
+configuran con `cvRateLimit.*`.
 
 **Validación de teléfono**: los campos `telefono` aceptan 9 u 11 dígitos
 (`Validador` regla `telefono`), tanto en backend como en frontend.

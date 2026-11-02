@@ -11,7 +11,7 @@ use App\Models\PostulanteModel;
 use App\Services\CvService;
 
 /**
- * Carga y consulta del CV (RF-21, RT-CV-01..RT-CV-08). El archivo se almacena en
+ * Carga y consulta del CV (RF-21, RT-CV-01..RT-CV-09). El archivo se almacena en
  * Supabase Storage; MySQL solo guarda metadatos. La descarga exige autorización
  * (aquí: el propio postulante; las empresas accederán vía su postulación).
  */
@@ -21,9 +21,13 @@ class CvController extends BaseApiController
 
     private int $postulanteId;
 
+    private int $usuarioId;
+
     public function __construct()
     {
-        $postulante = (new PostulanteModel())->porUserId(service('guard')->id());
+        $this->usuarioId = (int) service('guard')->id();
+
+        $postulante = (new PostulanteModel())->porUserId($this->usuarioId);
         if ($postulante === null) {
             throw ApiException::noEncontrado('No se encontró el perfil de postulante.');
         }
@@ -41,7 +45,6 @@ class CvController extends BaseApiController
                 'tamano' => $v->tamano, 'activo' => $v->activo,
                 'fecha' => $v->updated_at?->format('Y-m-d H:i:s'),
             ], $this->cv->historial($this->postulanteId)),
-            'limite_mensual' => $this->cv->consumoMensual($this->postulanteId),
         ], 'CV del postulante.');
     }
 
@@ -60,12 +63,16 @@ class CvController extends BaseApiController
         }
 
         $yaTenia = $this->cv->activo($this->postulanteId) !== null;
-        $cv = $this->cv->subir($this->postulanteId, $archivo);
+        $cv = $this->cv->subir(
+            $this->postulanteId,
+            $archivo,
+            $this->usuarioId,
+            $this->request->getIPAddress(),
+        );
 
         return $this->ok([
             'id' => $cv->id, 'version' => $cv->version, 'nombre_original' => $cv->nombre_original,
             'tamano' => $cv->tamano,
-            'limite_mensual' => $this->cv->consumoMensual($this->postulanteId),
         ], $yaTenia ? 'CV actualizado correctamente.' : 'CV cargado correctamente.', 201);
     }
 

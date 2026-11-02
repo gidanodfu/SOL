@@ -92,10 +92,12 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
   para postular es contacto completo y CV vigente; formación, experiencia, habilidades y
   cursos se retiraron del producto (§17).
 - **RF-20** Actualización del perfil.
-- **RF-21** Carga y consulta del CV, con **máximo 4 cargas por mes calendario** y versiones
-  anteriores conservadas. Solo puede existir un CV activo por postulante. En la
-  actualización de perfiles, email y teléfono se conservan si el campo se omite;
-  `null`, cadena vacía o tipo no textual se rechazan con 422.
+- **RF-21** Carga y consulta del CV, con versiones anteriores conservadas y un único CV
+  activo por postulante. No existe cuota mensual: la carga se protege con rate limiting
+  configurable por usuario e IP y con una sola carga simultánea por postulante; al
+  superar un límite responde `429` con `Retry-After`. En la actualización de perfiles,
+  email y teléfono se conservan si el campo se omite; `null`, cadena vacía o tipo no
+  textual se rechazan con 422.
 
 ### 5.4 Gestión de ofertas laborales
 - **RF-22** Registro de ofertas: puesto, descripción, funciones, requisitos, formación,
@@ -288,7 +290,10 @@ supervisa y reporta.
 - **RT-CV-06** Validar extensión, MIME y tamaño antes de almacenar.
 - **RT-CV-07** Nombres generados por el sistema.
 - **RT-CV-08** Historial/versiones del CV cuando sea necesario.
-- **RT-CV-09** Máximo 4 cargas exitosas por mes calendario (control en backend con contador persistido por postulante/periodo y actualización atómica).
+- **RT-CV-09** Sin cuota mensual. Rate limiting configurable por usuario (por defecto
+  5 cargas/10 min y 20/hora) y por IP (10/10 min y 40/hora), con ventanas fijas
+  persistidas en `rate_limit_contadores`; una carga simultánea por postulante mediante
+  bloqueo de aplicación. Al superar un límite responde `429` con `Retry-After`.
 
 Decisión: MySQL = datos y referencias; Supabase Storage = archivos; CI4 controla permisos;
 React solo interfaz. `frontend/public/` únicamente recursos públicos (logos, iconos).
@@ -347,8 +352,9 @@ backend/  app/{Config,Controllers,Models,Services,Repositories,Entities,Filters,
 - **RT-21** Endpoints privados/administrativos protegidos (p. ej. `/api/admin/empresas`,
   `/api/admin/usuarios`, `/api/empresa/postulaciones`).
 - **RT-22** Re-validar en CI4 todo lo recibido de React.
-- **RT-23** Rate limiting (token bucket de CI4) en login, refresh/Google/registro y subida
-  de CV; respuesta `429` con `Retry-After`.
+- **RT-23** Rate limiting: token bucket de CI4 en login, refresh/Google/registro;
+  ventanas fijas persistidas en la carga de CV (usuario + IP) y bloqueo por postulante.
+  Respuesta `429` con `Retry-After`.
 - **RT-24** Ninguna respuesta de usuario expone `password_hash`.
 
 ## 15. Regla arquitectónica principal
@@ -417,21 +423,24 @@ Ajustes al flujo original aprobados posteriormente:
 
 ## 18. Anexo — endurecimiento de seguridad y errores (2026-09-10)
 
-Cambios aplicados sin modificar el esquema de base de datos ni añadir variables `.env`:
+Cambios aplicados en 2026-09-10 sin modificar el esquema de base de datos ni añadir
+variables `.env`. La actualización del CV del 2026-11-02 sí añade la tabla
+`rate_limit_contadores` y las variables `cvRateLimit.*`:
 
 - **Validación de teléfono**: los campos `telefono` aceptan **9 u 11 dígitos**
   (`Validador` regla `telefono`, `^(?:\d{9}|\d{11})$`). El backend es la validación
   definitiva; el frontend filtra a solo dígitos y usa el mismo criterio.
-- **Límite de CV**: máximo **4 CV por mes calendario** por postulante, contado en el
-  backend sobre `cvs.created_at` (no evadible desde el frontend). Al superarlo responde
-  `409`; `GET /api/postulante/cv` y la subida exponen `limite_mensual`
-  (`{limite, usados, restantes}`). El botón de la interfaz pasa de "Subir CV" a
-  "Actualizar CV" cuando ya existe un CV vigente.
-- **Rate limiting** (Throttler nativo de CI4 = **token bucket**; respuesta `429` con
-  `Retry-After`): permite una ráfaga inicial y luego repone 1 token por intervalo (no es
-  bloqueo de ventana fija). Login: ráfaga 5 y 1/60 s por IP+identificador normalizado (solo fallos, se
-  reinicia en login correcto); refresh/Google/registro: ráfaga 10 y 1/30 s por IP; subida
-  de CV: ráfaga 10 y 1/360 s (6 min) por IP.
+- **Límite de CV (actualizado 2026-11-02)**: se retiró la cuota de 4 CV por mes
+  calendario. La carga se protege con rate limiting configurable por usuario e IP y una
+  sola carga simultánea por postulante; al superar un límite responde `429` con
+  `Retry-After` y no modifica el CV vigente. El botón de la interfaz pasa de "Subir CV"
+  a "Actualizar CV" cuando ya existe un CV vigente.
+- **Rate limiting** (respuesta `429` con `Retry-After`): autenticación con Throttler
+  nativo de CI4 (**token bucket**: ráfaga inicial y luego 1 token por intervalo). Login:
+  ráfaga 5 y 1/60 s por IP+identificador normalizado (solo fallos, se reinicia en login
+  correcto); refresh/Google/registro: ráfaga 10 y 1/30 s por IP. La subida de CV usa
+  ventanas fijas persistidas: por defecto 5/10 min y 20/hora por usuario, y 10/10 min y
+  40/hora por IP.
 - **`password_hash` fuera de las respuestas**: `GET /api/admin/usuarios` selecciona
   columnas explícitas sin el hash; el hash permanece únicamente en el backend (RT-20).
 - **Errores seguros**: toda excepción HTTP responde el sobre uniforme

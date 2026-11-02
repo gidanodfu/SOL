@@ -186,8 +186,9 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors']
         $routes->get('dashboard', 'PerfilController::dashboard');
 
         $routes->get('cv', 'CvController::index');
-        // Límite mensual (4) en el servicio + límite de ráfaga por IP (10/hora).
-        $routes->post('cv', 'CvController::upload', ['filter' => 'throttle:10,3600']);
+        // Rate limiting configurable (usuario + IP) y bloqueo por postulante
+        // dentro de CvService; no se usa el throttle genérico por IP.
+        $routes->post('cv', 'CvController::upload');
         $routes->get('cv/descargar', 'CvController::descargar');
         // Descarga con driver local; exige autorización del propietario (RT-CV-04).
         $routes->get('cv/archivo/(:segment)', 'CvController::archivo/$1');

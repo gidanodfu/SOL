@@ -117,14 +117,16 @@ MySQL es la fuente de verdad.
 - **Bolsa de empleo pública**: `/postulante/buscar` y las ofertas se consultan sin sesión;
   postular requiere cuenta de postulante.
 - **Postulantes**: registro manual con auto-login (DNI) o ingreso con Google; perfil =
-  datos personales/contacto + **CV** (obligatorio para postular). El CV se versiona y
-  admite hasta 4 cargas por mes calendario; la interfaz muestra el consumo y el botón
-  cambia de "Subir CV" a "Actualizar CV".
+  datos personales/contacto + **CV** (obligatorio para postular). El CV se versiona,
+  mantiene un único CV activo y no tiene cuota mensual; la carga está protegida por
+  rate limiting configurable y el botón cambia de "Subir CV" a "Actualizar CV".
 - **Validación de teléfono**: 9 u 11 dígitos (`^(?:\d{9}|\d{11})$`), validado en backend y
   en frontend.
-- **Rate limiting** (token bucket de CI4): login 5 fallos por IP+identificador y 1 intento/60 s
-  después; refresh/Google/registro 10 por IP y 1/30 s; subida de CV 10 por IP y 1/6 min.
-  Responde `429` con `Retry-After`.
+- **Rate limiting** (respuesta `429` con `Retry-After`): autenticación con token bucket de
+  CI4 (login 5 fallos por IP+identificador y 1 intento/60 s después; refresh/Google/registro
+  10 por IP y 1/30 s). La subida de CV usa ventanas fijas persistidas: por defecto
+  5/10 min y 20/hora por usuario, 10/10 min y 40/hora por IP, y una carga simultánea por
+  postulante.
 - **Errores seguros**: sobre uniforme `{success, message, data, errors}`; los `500`
   devuelven un mensaje genérico y el detalle solo queda en el log. El hash de contraseña
   nunca se expone en la API.
@@ -225,6 +227,7 @@ La fuente de configuración es un archivo privado por entorno, normalmente
 | Base de datos | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`, `DB_DRIVER` |
 | Seguridad | `encryption.key`, `jwt.secret`, duraciones JWT, `INITIAL_ADMIN_*` |
 | Almacenamiento | `storage.driver`, `storage.bucket`, `s3.*` |
+| Rate limiting de CV | `cvRateLimit.userShortLimit`, `cvRateLimit.userShortWindow`, `cvRateLimit.userLongLimit`, `cvRateLimit.userLongWindow`, `cvRateLimit.ipShortLimit`, `cvRateLimit.ipShortWindow`, `cvRateLimit.ipLongLimit`, `cvRateLimit.ipLongWindow` |
 | Servicios externos | `sunat.token`, `jsonpe.token` (alias legado `dni.token` aceptado por compatibilidad), `RESEND_*`, `email.*`, `google.clientId`, `turnstile.*` |
 | Frontend público | `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_TURNSTILE_SITE_KEY` |
 | Docker/Nginx | `COMPOSE_PROJECT_NAME`, `SOL_ENTRY_NETWORK`, `TRAEFIK_ENTRY_IP`, `DEV_*`, `APP_DOMAIN`, `API_DOMAIN`, `NGINX_MODE`, `TLS_*` |
@@ -269,7 +272,9 @@ producción durante una revisión.
 Tablas principales del esquema: `users`, `user_refresh_tokens`, `auditoria`, `empresas`,
 `postulantes`, `cvs`, `categorias`, `ofertas`, `ofertas_habilidades`, `postulaciones`,
 `postulacion_historial`, `solicitudes_empresa`, `activaciones`, `actividades`,
-`oportunidades`, `contrataciones`, entre otras. Las tablas de perfil retiradas
+`oportunidades`, `contrataciones`, `cv_activos`, `rate_limit_contadores`, entre otras.
+`cv_cuotas_mensuales_legado` conserva el histórico de la cuota mensual retirada. Las tablas
+de perfil retiradas
 (`formacion_academica`, `experiencia_laboral`, `habilidades`, `cursos_certificaciones`) y
 `atenciones` siguen creadas por las migraciones históricas pero ya no se usan; pueden
 eliminarse con una migración cuando se confirme que ningún entorno tiene datos reales.
@@ -643,8 +648,9 @@ queda excluido porque depende de SUNAT/RUC real; consulte
 distinto de cero ante aserciones, errores de Python/JSON o estados HTTP
 inesperados; no imprime JWT ni refresh tokens.
 
-> El rate limiting (login/auth/CV), el límite de 4 CV por mes y el saneamiento de errores
-> se validaron manualmente contra la API; aún no tienen pruebas automatizadas.
+> El rate limiting (login/auth y CV), la retirada de la cuota mensual de CV, la
+> concurrencia por postulante y el saneamiento de errores están cubiertos por pruebas
+> automatizadas en `tests/smoke/`.
 
 ### Reportes Excel y PDF
 
@@ -776,7 +782,7 @@ encabezado de los archivos de código propios.
 | 8 | Integración `desarrollo`: rediseño frontend (portal institucional, layouts por rol, admin) | `b60281c` |
 | 9 | Auto-registro y activación de empresas, publicación directa de ofertas, bolsa pública, Google Sign-In | `b60281c` |
 | 10 | Ajustes finales: retiro de secciones del perfil y del módulo de atenciones, "Demandante" → "Postulante" | `655b42c`, `6cfdd0f` |
-| 11 | Endurecimiento: rate limiting, límite de 4 CV/mes, validación de teléfono, `password_hash` fuera de respuestas, errores saneados | `647c1f8`, `eb4664a` |
+| 11 | Endurecimiento: rate limiting, cuota de 4 CV/mes (retirada después), validación de teléfono, `password_hash` fuera de respuestas, errores saneados | `647c1f8`, `eb4664a` |
 | 12 | Estabilización: logout único, admin inicial `MDJLO-SOL` vía `.env`, seeds idempotentes y separación de fixtures, README/MySQLi | `0a04284` |
 | 13 | Saneamiento integral: protección de autodesactivación del admin, retiro del filtro "Puesto o empresa", integridad (historial de postulación, contratación activa, total con `q`, transacciones), limpieza de dependencias y documentación sincronizada | — |
 | 14 | Revisión municipal de ofertas (aprobación/rechazo), modo oscuro global con persistencia, sidebar unificado con panel móvil y endurecimiento (booleanos, fechas, URLs, rate limit, cabeceras) | — |

@@ -54,7 +54,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | Disponibilidad pública de oportunidades | ✔ | regla central `estadoPublicacion`/`es_visible_publicamente`; antes de inicio no pública; fin exacto cierra; finalizado/cancelado nunca Visible |
 | Inmutabilidad de oportunidad finalizada | ✔ | `puede_modificarse=false`; edición, activación y transición responden `409` `OPPORTUNITY_ALREADY_FINALIZED`; permanece consultable en admin |
 | Retiro de fecha editorial y empresa_id | ✔ | migraciones posteriores con archivo de `fecha_publicacion` y aborto seguro si `empresa_id` tiene valores no nulos |
-| Validación estricta de escrituras | ✔ | `Validador` distingue tipos, IDs y booleanos; contacto opcional conserva si se omite; fechas de situación y motivo laboral; cuota CV persistida y CV activo único |
+| Validación estricta de escrituras | ✔ | `Validador` distingue tipos, IDs y booleanos; contacto opcional conserva si se omite; fechas de situación y motivo laboral; rate limiting de CV y CV activo único |
 | RF-52 Dashboard municipal | ✔ | `GET /api/admin/dashboard` · Dashboard (admin) |
 | RF-53 Empresas registradas/activas | ✔ | indicador en dashboard |
 | RF-54 Ofertas por estado | ✔ | ídem |
@@ -112,7 +112,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RT-CV-05 | ✔ | URL firmada generada por el backend (driver local = ruta interna autorizada) |
 | RT-CV-06/07 | ✔ | validación extensión/MIME/tamaño; `object_key` generada por el sistema |
 | RT-CV-08 | ✔ | historial de versiones conservado |
-| RT-CV (límite mensual) | ✔ | máximo 4 CV por mes calendario (`CvService::LIMITE_MENSUAL` sobre `cvs.created_at`); `409` al superar; `limite_mensual` en `GET/POST /api/postulante/cv` |
+| RT-CV-09 | ✔ | sin cuota mensual; rate limiting configurable por usuario/IP (`rate_limit_contadores`, `CvRateLimiter`) y una carga simultánea por postulante (`GET_LOCK`); `429` con `Retry-After` |
 
 ## Endurecimiento de seguridad y errores (2026-09)
 
@@ -120,7 +120,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 |---|---|---|
 | `password_hash` nunca en respuestas | ✔ | `UsuarioRepository::base()` con columnas explícitas; `GET /api/admin/usuarios` sin hash (RT-20) |
 | Rate limiting de autenticación | ✔ | token bucket CI4: login ráfaga 5 (1/60 s) por IP+identificador normalizado, solo fallos (reset en éxito); refresh/Google/registro ráfaga 10 (1/30 s) por IP (`ThrottleFilter`, `AuthService`) |
-| Rate limiting de subida de CV | ✔ | token bucket: ráfaga 10 (1/360 s) por IP (`throttle:10,3600`) |
+| Rate limiting de subida de CV | ✔ | ventanas fijas en MySQL: por defecto 5/10 min y 20/hora por usuario, 10/10 min y 40/hora por IP (`CvRateLimiter`, `cvRateLimit.*`); una carga simultánea por postulante (`GET_LOCK`); `429` con `Retry-After` |
 | Validación de teléfono 9 u 11 dígitos | ✔ | regla `telefono` en `Validador` (backend) + filtrado a dígitos y validación en el frontend |
 | Errores saneados | ✔ | `ApiExceptionHandler` responde JSON uniforme; `500` genérico con log interno; `429` con `Retry-After` |
 | Metadescripciones por ruta | ✔ | `frontend/src/components/SeoMeta.jsx` + `index.html` |

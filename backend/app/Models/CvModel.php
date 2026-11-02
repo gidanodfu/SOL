@@ -38,19 +38,4 @@ class CvModel extends Model
 
         return ($max->version ?? 0) + 1;
     }
-
-    /**
-     * CV subidos por el postulante en el mes calendario actual (límite mensual).
-     */
-    public function contarDelMes(int $postulanteId): int
-    {
-        $fila = $this->db->table('cv_cuotas_mensuales')
-            ->select('usos')
-            ->where('postulante_id', $postulanteId)
-            ->where('periodo', date('Y-m'))
-            ->get()
-            ->getRowArray();
-
-        return (int) ($fila['usos'] ?? 0);
-    }
 }

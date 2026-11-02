@@ -7,22 +7,23 @@ namespace App\Services;
 use App\Entities\Cv;
 use App\Exceptions\ApiException;
 use App\Libraries\Descarga;
-use App\Models\CvCuotaModel;
 use App\Models\CvModel;
 use CodeIgniter\HTTP\Files\UploadedFile;
 
 /**
- * Gestión del CV de un postulante (RF-21, RT-CV-01..RT-CV-08).
+ * Gestión del CV de un postulante (RF-21, RT-CV-01..RT-CV-09).
  * MySQL guarda metadatos; el archivo vive en Supabase Storage; los nombres de
  * objeto los genera el sistema; se validan extensión/MIME/tamaño y se conservan
  * versiones anteriores.
+ *
+ * No existe cuota mensual: cada carga se protege con rate limiting configurable
+ * y con un bloqueo de aplicación que impide dos cargas simultáneas del mismo
+ * postulante. La integridad sigue garantizada por la transacción y por las
+ * restricciones de MySQL (cv_activos).
  */
 class CvService
 {
     private const TAMANO_MAXIMO = DocumentoService::TAMANO_MAXIMO;
-
-    /** Máximo de CV que un postulante puede subir por mes calendario. */
-    public const LIMITE_MENSUAL = 4;
 
     private CvModel $cvs;
 
@@ -30,18 +31,18 @@ class CvService
 
     private DocumentoService $documentos;
 
-    private CvCuotaModel $cuotas;
+    private CvRateLimiter $limiter;
 
     public function __construct(
         ?CvModel $cvs = null,
         ?StorageService $storage = null,
         ?DocumentoService $documentos = null,
-        ?CvCuotaModel $cuotas = null,
+        ?CvRateLimiter $limiter = null,
     ) {
         $this->cvs        = $cvs ?? model(CvModel::class);
         $this->storage    = $storage ?? new StorageService();
         $this->documentos = $documentos ?? new DocumentoService();
-        $this->cuotas     = $cuotas ?? model(CvCuotaModel::class);
+        $this->limiter    = $limiter ?? new CvRateLimiter($this->cvs->db);
     }
 
     /**
@@ -63,110 +64,131 @@ class CvService
     }
 
     /**
-     * Consumo del límite mensual de CV (RT: máximo 4 por mes calendario).
+     * Sube una nueva versión del CV.
      *
-     * @return array{limite: int, usados: int, restantes: int}
+     * El bloqueo por postulante impide dos cargas simultáneas. Después de
+     * validar el archivo se consume el rate limiting (usuario + IP). Si algún
+     * límite está agotado se lanza 429 antes de abrir la transacción, por lo que
+     * el CV vigente y su historial permanecen intactos.
      */
-    public function consumoMensual(int $postulanteId): array
+    public function subir(int $postulanteId, UploadedFile $archivo, int $usuarioId, string $ip): Cv
     {
-        $usados = $this->cuotas->usos($postulanteId, date('Y-m'));
-
-        return [
-            'limite'    => self::LIMITE_MENSUAL,
-            'usados'    => $usados,
-            'restantes' => max(0, self::LIMITE_MENSUAL - $usados),
-        ];
-    }
-
-    public function subir(int $postulanteId, UploadedFile $archivo): Cv
-    {
-        $formato = $this->validarArchivo($archivo);
-        $periodo = date('Y-m');
-        $db      = $this->cvs->db;
-        $objectKey = null;
-
-        $db->transBegin();
+        $bloqueo = $this->adquirirBloqueo($postulanteId);
 
         try {
-            // La fila de cuota debe existir antes del FOR UPDATE. La clave
-            // única (postulante_id, periodo) hace que dos cargas simultáneas
-            // compitan por la misma fila.
-            $db->query(
-                'INSERT INTO cv_cuotas_mensuales (postulante_id, periodo, usos, created_at, updated_at) '
-                . 'VALUES (?, ?, 0, NOW(), NOW()) '
-                . 'ON DUPLICATE KEY UPDATE postulante_id = postulante_id',
-                [$postulanteId, $periodo],
-            );
+            $formato = $this->validarArchivo($archivo);
 
-            $cuota = $db->query(
-                'SELECT usos FROM cv_cuotas_mensuales WHERE postulante_id = ? AND periodo = ? FOR UPDATE',
-                [$postulanteId, $periodo],
-            )->getRowArray();
+            // Los archivos inválidos no consumen cupo. Las cargas válidas sí,
+            // incluso si luego falla el almacenamiento: el límite protege el
+            // recurso, no solo los registros creados.
+            $this->limiter->consumir($usuarioId, $ip);
 
-            if ($cuota === null || (int) $cuota['usos'] >= self::LIMITE_MENSUAL) {
-                throw ApiException::conflicto(
-                    'Ha alcanzado el límite de ' . self::LIMITE_MENSUAL . ' CV este mes. Podrá actualizar su CV el próximo mes.',
-                );
-            }
+            $db        = $this->cvs->db;
+            $objectKey = null;
 
-            // Serializa versiones y el cambio de CV activo del mismo postulante.
-            $db->query('SELECT id FROM postulantes WHERE id = ? FOR UPDATE', [$postulanteId]);
-
-            // Nombre de objeto generado por el servidor. La extensión proviene
-            // del formato detectado por contenido, nunca del nombre del cliente.
-            $objectKey = 'postulante-' . $postulanteId . '/' . bin2hex(random_bytes(8)) . '.' . $formato['extension'];
-            $this->storage->almacenar($objectKey, $archivo, $formato['mime']);
-
-            $version = $this->cvs->siguienteVersion($postulanteId);
-
-            $this->cvs->where('postulante_id', $postulanteId)->set('activo', 0)->update();
-            $this->cvs->insert([
-                'postulante_id'   => $postulanteId,
-                'object_key'      => $objectKey,
-                // Nombre visible saneado (sin rutas ni controles); conserva
-                // tildes y apóstrofes. No se usa nunca como ruta física.
-                'nombre_original' => Descarga::nombreSeguro($archivo->getClientName(), 'cv.' . $formato['extension']),
-                'mime'            => $formato['mime'],
-                'tamano'          => (int) $archivo->getSize(),
-                'version'         => $version,
-                'activo'          => 1,
-            ]);
-            $cvId = (int) $this->cvs->getInsertID();
-
-            // Restricción única de CV activo por postulante. La fila se
-            // actualiza al nuevo CV dentro de la misma transacción.
-            $db->query(
-                'INSERT INTO cv_activos (postulante_id, cv_id, created_at) '
-                . 'VALUES (?, ?, NOW()) '
-                . 'ON DUPLICATE KEY UPDATE cv_id = VALUES(cv_id), created_at = NOW()',
-                [$postulanteId, $cvId],
-            );
-
-            $db->query(
-                'UPDATE cv_cuotas_mensuales SET usos = usos + 1, updated_at = NOW() '
-                . 'WHERE postulante_id = ? AND periodo = ?',
-                [$postulanteId, $periodo],
-            );
-
-            if (! $db->transStatus()) {
+            if (! $db->transBegin()) {
                 throw ApiException::conflicto('No se pudo actualizar el CV. Intente nuevamente.');
             }
 
-            $db->transCommit();
+            $cvId = 0;
 
-            return $this->cvs->find($cvId);
-        } catch (\Throwable $e) {
-            $db->transRollback();
+            try {
+                // Serializa versiones y el cambio de CV activo del mismo
+                // postulante. El bloqueo de aplicación ya evita la carrera,
+                // pero el FOR UPDATE mantiene la garantía en la base.
+                $db->query('SELECT id FROM postulantes WHERE id = ? FOR UPDATE', [$postulanteId]);
 
-            if ($objectKey !== null) {
-                try {
-                    $this->storage->eliminar($objectKey);
-                } catch (\Throwable) {
-                    // Compensación best-effort: el error original manda.
+                // Nombre de objeto generado por el servidor. La extensión proviene
+                // del formato detectado por contenido, nunca del nombre del cliente.
+                $objectKey = 'postulante-' . $postulanteId . '/' . bin2hex(random_bytes(8)) . '.' . $formato['extension'];
+                $this->storage->almacenar($objectKey, $archivo, $formato['mime']);
+
+                $version = $this->cvs->siguienteVersion($postulanteId);
+
+                if ($this->cvs->where('postulante_id', $postulanteId)->set('activo', 0)->update() === false) {
+                    throw new \RuntimeException('No se pudo desactivar el CV anterior.');
                 }
+
+                $insertado = $this->cvs->insert([
+                    'postulante_id'   => $postulanteId,
+                    'object_key'      => $objectKey,
+                    // Nombre visible saneado (sin rutas ni controles); conserva
+                    // tildes y apóstrofes. No se usa nunca como ruta física.
+                    'nombre_original' => Descarga::nombreSeguro($archivo->getClientName(), 'cv.' . $formato['extension']),
+                    'mime'            => $formato['mime'],
+                    'tamano'          => (int) $archivo->getSize(),
+                    'version'         => $version,
+                    'activo'          => 1,
+                ]);
+
+                if ($insertado === false) {
+                    throw new \RuntimeException('No se pudo registrar la versión del CV.');
+                }
+
+                $cvId = (int) $this->cvs->getInsertID();
+
+                // Restricción única de CV activo por postulante. La fila se
+                // actualiza al nuevo CV dentro de la misma transacción.
+                $db->query(
+                    'INSERT INTO cv_activos (postulante_id, cv_id, created_at) '
+                    . 'VALUES (?, ?, NOW()) '
+                    . 'ON DUPLICATE KEY UPDATE cv_id = VALUES(cv_id), created_at = NOW()',
+                    [$postulanteId, $cvId],
+                );
+
+                if (! $db->transStatus()) {
+                    throw ApiException::conflicto('No se pudo actualizar el CV. Intente nuevamente.');
+                }
+
+                $db->transCommit();
+            } catch (\Throwable $e) {
+                $db->transRollback();
+
+                if ($objectKey !== null) {
+                    try {
+                        $this->storage->eliminar($objectKey);
+                    } catch (\Throwable) {
+                        // Compensación best-effort: el error original manda.
+                    }
+                }
+
+                throw $e;
             }
 
-            throw $e;
+            // La lectura se hace después del commit: si fallara, no se debe
+            // compensar un archivo cuya transacción ya quedó confirmada.
+            return $this->cvs->find($cvId);
+        } finally {
+            $this->liberarBloqueo($bloqueo);
+        }
+    }
+
+    /**
+     * Bloqueo de aplicación por postulante. GET_LOCK(name, 0) no espera: si
+     * otra carga está en curso se rechaza de inmediato con 429.
+     */
+    private function adquirirBloqueo(int $postulanteId): string
+    {
+        $clave = 'sol_cv_' . $postulanteId;
+        $fila  = $this->cvs->db->query('SELECT GET_LOCK(?, 0) AS adquirido', [$clave])->getRowArray();
+
+        if ((int) ($fila['adquirido'] ?? 0) !== 1) {
+            throw ApiException::demasiadasSolicitudes(
+                'Ya hay una carga de CV en curso para este postulante. Intente nuevamente en unos segundos.',
+                1,
+            );
+        }
+
+        return $clave;
+    }
+
+    private function liberarBloqueo(string $clave): void
+    {
+        try {
+            $this->cvs->db->query('SELECT RELEASE_LOCK(?)', [$clave]);
+        } catch (\Throwable) {
+            // La conexión libera sus bloqueos al cerrarse; se conserva el
+            // error original si algo falló antes.
         }
     }
 

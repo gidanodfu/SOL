@@ -9,8 +9,10 @@ info:
     (CodeIgniter 4.7, PHP 8.2+, MySQL) y de sus rutas en `app/Config/Routes.php`.
 
     Cambios 2026-09-10 (versión 1.1.0): rate limiting en autenticación y subida de CV,
-    límite de 4 CV por mes calendario, validación de teléfono (9 u 11 dígitos),
-    eliminación de `password_hash` de las respuestas y saneamiento de errores 500.
+    validación de teléfono (9 u 11 dígitos), eliminación de `password_hash` de las
+    respuestas y saneamiento de errores 500. La cuota mensual de 4 CV se retiró: la
+    carga se protege con límites configurables por usuario/IP y una carga simultánea
+    por postulante.
 
     Convenciones transversales (verificadas en `app/Controllers/Api/BaseApiController.php`,
     `app/Exceptions/ApiExceptionHandler.php`, `app/Filters/JwtAuthFilter.php` y
@@ -53,7 +55,9 @@ info:
       permite una ráfaga inicial (la capacidad) y luego repone 1 token a intervalos de
       `segundos / capacidad`. No es una ventana fija de bloqueo: al agotar la ráfaga
       responde `429` con `Retry-After` (≈ `segundos / capacidad`) y habilita un intento por
-      intervalo. Los valores concretos se detallan en cada operación.
+      intervalo. La carga de CV usa además `CvRateLimiter` con **ventanas fijas
+      persistidas en MySQL** (usuario + IP) y un bloqueo por postulante; sus valores se
+      detallan en `POST /api/postulante/cv`.
     * **Teléfono**: los campos `telefono` de los cuerpos validados aceptan 9 u 11 dígitos
       (`^(?:\d{9}|\d{11})$`); el backend es la validación definitiva.
     * **Errores internos**: los `500` devuelven siempre un mensaje genérico
@@ -2570,9 +2574,8 @@ paths:
         (`version DESC`). Nota: en `historial`, `activo` es booleano y la fecha se llama
         `fecha`; en `vigente` el campo se llama `actualizado` (mismo origen: `updated_at`).
 
-        `limite_mensual` informa el consumo del límite de **4 CV por mes calendario**:
-        `{ limite, usados, restantes }`. El conteo se hace en el backend sobre
-        `cvs.created_at`, por lo que no puede evadirse desde el frontend.
+        No existe cuota mensual. La carga (`POST`) está protegida por rate limiting
+        configurable por usuario y por IP; consultar e historial no consumen cupo.
       security:
         - bearerAuth: []
       responses:
@@ -2592,7 +2595,7 @@ paths:
                     example: CV del postulante.
                   data:
                     type: object
-                    required: [vigente, historial, limite_mensual]
+                    required: [vigente, historial]
                     properties:
                       vigente:
                         $ref: '#/components/schemas/CvVigente'
@@ -2600,8 +2603,6 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/CvHistorialItem'
-                      limite_mensual:
-                        $ref: '#/components/schemas/LimiteMensualCv'
         '401':
           $ref: '#/components/responses/NoAutorizado'
         '403':
@@ -2623,16 +2624,16 @@ paths:
         máximo 5 MB. El nombre del objeto lo genera el servidor. Primero almacena el
         archivo y luego desactiva los CV anteriores (transacción). Respuesta HTTP 201.
 
-        **Límite mensual**: máximo **4 CV por mes calendario** por postulante. El backend
-        cuenta las filas de `cvs` con `created_at` del mes en curso; al llegar a 4 responde
-        `409` con "Ha alcanzado el límite de 4 CV este mes. Podrá actualizar su CV el
-        próximo mes." y no se sube nada. La respuesta incluye `limite_mensual` con el
-        consumo actualizado.
+        **Rate limiting**: cada carga consume una unidad en contadores de ventana fija
+        por usuario y por IP. Valores por defecto (configurables con `cvRateLimit.*`):
+        5 cargas/10 min y 20/hora por usuario; 10/10 min y 40/hora por IP. Al superar
+        cualquier límite responde `429` con `Retry-After` en segundos y no modifica el
+        CV vigente ni el historial.
 
-        **Rate limit (token bucket)**: 10 tokens por IP con recarga de 1 token cada 360 s
-        (`throttle:10,3600`). Tras la ráfaga de 10 responde `429` con `Retry-After` y luego
-        habilita 1 solicitud cada 6 min. Este límite de ráfaga es independiente del tope
-        mensual de 4 CV.
+        **Una carga simultánea por postulante**: si ya hay una operación en curso para
+        el mismo postulante, responde `429` con `Retry-After: 1` sin consumir cupo.
+        El rate limiting no sustituye la transacción ni la restricción única de
+        `cv_activos`; la integridad se mantiene en MySQL.
 
         `message` de éxito: "CV cargado correctamente." en la primera carga y
         "CV actualizado correctamente." si ya existía un CV vigente.
@@ -2667,7 +2668,7 @@ paths:
                     example: CV cargado correctamente.
                   data:
                     type: object
-                    required: [id, version, nombre_original, tamano, limite_mensual]
+                    required: [id, version, nombre_original, tamano]
                     properties:
                       id:
                         type: integer
@@ -2677,8 +2678,6 @@ paths:
                         type: string
                       tamano:
                         type: integer
-                      limite_mensual:
-                        $ref: '#/components/schemas/LimiteMensualCv'
         '400':
           description: El archivo no se recibió correctamente o no se pudo almacenar.
           content:
@@ -2693,15 +2692,16 @@ paths:
           $ref: '#/components/responses/NoEncontrado'
         '409':
           description: |
-            Se alcanzó el límite mensual de CV. Mensaje real: "Ha alcanzado el límite de
-            4 CV este mes. Podrá actualizar su CV el próximo mes.".
+            No se pudo completar la actualización del CV por un conflicto de
+            integridad. Mensaje genérico: "No se pudo actualizar el CV. Intente
+            nuevamente.".
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/EnvelopeError'
               example:
                 success: false
-                message: Ha alcanzado el límite de 4 CV este mes. Podrá actualizar su CV el próximo mes.
+                message: No se pudo actualizar el CV. Intente nuevamente.
                 errors: []
         '422':
           $ref: '#/components/responses/Validacion'
@@ -5453,21 +5453,6 @@ components:
           nullable: true
           description: 'updated_at con formato YYYY-MM-DD HH:MM:SS.'
 
-    LimiteMensualCv:
-      type: object
-      description: Consumo del límite de CV del mes calendario en curso (máximo 4).
-      required: [limite, usados, restantes]
-      properties:
-        limite:
-          type: integer
-          example: 4
-        usados:
-          type: integer
-          example: 1
-        restantes:
-          type: integer
-          example: 3
-
     PostulantePerfilBody:
       type: object
       required: [nombres, apellidos]
@@ -5689,14 +5674,16 @@ components:
 
     DemasiadasSolicitudes:
       description: |
-        Se excedió el límite de solicitudes (429). El backend usa un **token bucket**
+        Se excedió un límite de solicitudes (429). La autenticación usa un **token bucket**
         (Throttler de CI4): ráfaga inicial = capacidad y luego 1 token cada
         `segundos / capacidad`. Aplica a:
         `POST /api/auth/login` (capacidad 5, 1 token/60 s por IP+usuario; solo fallos),
         `POST /api/auth/refresh`, `POST /api/auth/google` y `POST /api/registro/postulante`
-        (capacidad 10, 1 token/30 s por IP) y `POST /api/postulante/cv`
-        (capacidad 10, 1 token/360 s por IP). Incluye la cabecera `Retry-After` con los
-        segundos hasta el siguiente token disponible (≈ 60 s en login).
+        (capacidad 10, 1 token/30 s por IP).
+        La carga de CV usa ventanas fijas persistidas: por defecto 5/10 min y 20/hora
+        por usuario, y 10/10 min y 40/hora por IP, más una carga simultánea por
+        postulante. Incluye la cabecera `Retry-After` con los segundos hasta que se
+        reinicie la ventana o se libere el bloqueo.
       headers:
         Retry-After:
           description: Segundos hasta que se permita un nuevo intento.

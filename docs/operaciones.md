@@ -45,6 +45,10 @@ Variables principales:
 - Seguridad: `encryption.key`, `jwt.secret`, duraciones JWT,
   `INITIAL_ADMIN_USERNAME`, `INITIAL_ADMIN_PASSWORD`.
 - Almacenamiento: `storage.driver`, `storage.bucket`, `s3.*`.
+- Rate limiting de CV: `cvRateLimit.userShortLimit`, `cvRateLimit.userShortWindow`,
+  `cvRateLimit.userLongLimit`, `cvRateLimit.userLongWindow`,
+  `cvRateLimit.ipShortLimit`, `cvRateLimit.ipShortWindow`,
+  `cvRateLimit.ipLongLimit`, `cvRateLimit.ipLongWindow`.
 - Integraciones: `sunat.token`, `jsonpe.token` (alias legado `dni.token` aceptado por compatibilidad), `RESEND_*`,
   `email.*`, `google.clientId`, `turnstile.*`.
 - Frontend público: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`,
@@ -226,6 +230,28 @@ La migración `2026-11-02-100000_CuotasCvYActivoUnico` crea
 `cv_activos` (una fila por postulante con el CV vigente y unicidad sobre
 `cv_id`). El backfill cuenta los CV históricos por mes y conserva la versión
 activa más reciente; no elimina versiones anteriores.
+
+La migración `2026-11-02-120000_RateLimitCvYRetirarCuotas` retira la cuota
+mensual sin borrar su historial: renombra `cv_cuotas_mensuales` a
+`cv_cuotas_mensuales_legado` y crea `rate_limit_contadores`
+(`clave`, `ventana_inicio`, `usos`, clave primaria compuesta). El servicio de CV
+ya no consulta ni actualiza la tabla legado. `down()` elimina los contadores y
+restaura el nombre original de la tabla de cuotas; la migración histórica no se
+modifica. No ejecutar `down()` en producción sin respaldo.
+
+El rate limiting de CV se configura con variables `cvRateLimit.*` (ver
+`.env.example`): por defecto 5 cargas/10 min y 20/hora por usuario, y 10/10 min y
+40/hora por IP. Los contadores de ventanas antiguas pueden purgarse manualmente
+con `DELETE FROM rate_limit_contadores WHERE ventana_inicio < NOW() - INTERVAL 1 DAY;`
+cuando se requiera compactar la tabla.
+
+En la arquitectura actual, Nginx aplica `real_ip` confiando solo en
+`TRAEFIK_ENTRY_IP` y entrega a PHP-FPM el `REMOTE_ADDR` ya resuelto como IP del
+cliente. Por eso `Config\App::$proxyIPs` permanece vacío y no hace falta
+tocarlo. Si se cambia el gateway, se expone PHP-FPM detrás de otro proxy o se
+desactiva `real_ip`, configure `Config\App::$proxyIPs` con la IP/subred del
+proxy y el encabezado `X-Forwarded-For`; de lo contrario, el límite por IP se
+aplicará a la IP del proxy y el límite por usuario seguirá siendo el principal.
 
 ### Metadatos Git y artefactos
 
