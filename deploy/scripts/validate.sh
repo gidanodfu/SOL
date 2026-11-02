@@ -253,7 +253,7 @@ if [ -f "$ENV_FILE" ] && grep -Eq '^VITE_(JWT|DB_|RESEND|S3_|SMTP|EMAIL_|SUNAT|J
     die "El .env contiene variables VITE_ con nombres de secretos privados."
 fi
 
-for entry in '.env' 'backend/writable' 'backend/vendor' 'frontend/node_modules' 'frontend/dist' 'deploy/runtime'; do
+for entry in '.env' '.git' '.github' '**/.git' '**/.github' 'backend/writable' 'backend/vendor' 'frontend/node_modules' 'frontend/dist' 'deploy/runtime'; do
     grep -Fq "$entry" "$ROOT/.dockerignore" || die "Falta '$entry' en .dockerignore."
 done
 if git -C "$ROOT" ls-files | grep -Ev '(^|/)\.env\.example$' | \

@@ -1,12 +1,14 @@
 FROM composer:2.8.12 AS vendor-prod
 WORKDIR /app
 COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
+RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs \
+    && find vendor -type d \( -name .git -o -name .github \) -prune -exec rm -rf {} +
 
 FROM composer:2.8.12 AS vendor-dev
 WORKDIR /app
 COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-scripts --no-interaction --prefer-dist --ignore-platform-reqs
+RUN composer install --no-scripts --no-interaction --prefer-dist --ignore-platform-reqs \
+    && find vendor -type d \( -name .git -o -name .github \) -prune -exec rm -rf {} +
 
 FROM php:8.4.27-fpm-alpine3.23 AS php-base
 RUN apk add --no-cache \

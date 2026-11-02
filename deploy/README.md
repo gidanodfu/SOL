@@ -243,6 +243,33 @@ absoluta: el registro de imágenes, las dependencias de Composer/npm y los
 servicios externos siguen siendo fuentes externas. No se usan etiquetas
 `latest` en los builds oficiales.
 
+## Metadatos Git y artefactos de producción
+
+El VPS actualiza SOL desde un checkout Git y ejecuta `deploy.sh`; no hay
+`rsync`, `tar` ni un paquete independiente de la aplicación. El checkout
+conserva `.git` porque es necesario para `git pull` y para operar los scripts
+de despliegue. No se debe eliminar `.git` del host ni ejecutar `rm -rf .git`.
+
+El contexto de construcción Docker es la raíz del repositorio y está limitado
+por `.dockerignore`:
+
+- `.git`, `.GitHub`, `.github` y sus rutas anidadas no entran en el contexto.
+- `.github` permanece en Git porque contiene los workflows de CI/CD; no tiene
+  dependencias de runtime.
+- Las imágenes de producción no copian la raíz: el backend copia únicamente
+  código y artefactos PHP, y el frontend solo el `dist` generado por Vite.
+- Los Dockerfiles eliminan `.git`/`.github` de `vendor` y `node_modules`
+  instalados por Composer/npm; esos metadatos de terceros tampoco llegan a la
+  imagen final.
+- `.env`, secretos, `vendor`, `node_modules`, `dist`, logs, respaldos,
+  certificados locales y directorios de pruebas quedan fuera del contexto.
+
+Nginx devuelve `404` para dotfiles internos, incluidos `/.git/config`,
+`/.github/workflows/` y `/.env`, tanto en el servidor estático del frontend
+como en las plantillas del gateway. `tests/deploy/test_docker_context.sh` y
+`tests/deploy/test_nginx_private_paths.sh` verifican estas garantías dentro de
+`test.sh validation`.
+
 ## Nginx y TLS
 
 `deploy/nginx/render.sh` corre dentro del contenedor y renderiza la plantilla

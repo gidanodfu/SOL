@@ -49,6 +49,9 @@ if [ "$TARGET" = "validation" ]; then
     "$ROOT/tests/deploy/test_validation.sh"
     "$ROOT/tests/deploy/test_internal_health.sh"
     "$ROOT/tests/deploy/test_webp_nginx.sh"
+    "$ROOT/tests/deploy/test_docker_context.sh"
+    "$ROOT/tests/deploy/test_prod_images.sh"
+    "$ROOT/tests/deploy/test_nginx_private_paths.sh"
     "$ROOT/tests/infra/test_traefik_acme.sh"
     exit 0
 fi

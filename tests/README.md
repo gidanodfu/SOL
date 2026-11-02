@@ -10,7 +10,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit en el contenedor backend
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo
-./deploy/scripts/test.sh validation # validación preventiva, health interno, WebP y ACME
+./deploy/scripts/test.sh validation # validación preventiva, health interno, WebP, contexto Docker, rutas privadas y ACME
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 
@@ -21,6 +21,15 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 - `tests/deploy/test_internal_health.sh`: health de Nginx sin resolución DNS.
 - `tests/deploy/test_webp_nginx.sh`: MIME `image/webp` y entrega íntegra de WebP,
   PNG y JPEG con la configuración Nginx del frontend.
+- `tests/deploy/test_docker_context.sh`: construye un contexto Docker mínimo y
+  comprueba que no incluye `.git` ni `.github`, y que conserva `VERSION`,
+  backend, frontend, `nginx.conf` y Compose.
+- `tests/deploy/test_prod_images.sh`: construye las imágenes de producción y
+  verifica que no contengan `.git`/`.github` y que conserven `public/index.php`
+  y `dist`.
+- `tests/deploy/test_nginx_private_paths.sh`: comprueba que `/.git`,
+  `/.git/config`, `/.github`, `/.github/workflows/ci.yml` y `.env` responden
+  `404`, y que las plantillas del gateway contienen el bloqueo de dotfiles.
 - `tests/infra/test_traefik_acme.sh`: inicialización real del resolver
   `letsencrypt` y uso por un router temporal, sin contactar Let's Encrypt ni
   publicar puertos.

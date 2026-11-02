@@ -1,7 +1,8 @@
 FROM node:22.23.4-alpine AS deps
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN npm ci \
+    && find node_modules -type d \( -name .git -o -name .github \) -prune -exec rm -rf {} +
 
 FROM node:22.23.4-alpine AS dev
 WORKDIR /app

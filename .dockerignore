@@ -1,6 +1,10 @@
 .git
 .GitHub
 .github
+**/.git
+**/.git/**
+**/.github
+**/.github/**
 .gitignore
 .env
 .env.*

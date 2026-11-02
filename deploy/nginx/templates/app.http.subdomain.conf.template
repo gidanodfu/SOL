@@ -35,6 +35,12 @@ server {
     server_tokens off;
     client_max_body_size 12m;
 
+    # No exponer metadatos Git ni archivos internos de GitHub.
+    location ~ /\.(?!well-known(?:/|$)) {
+        access_log off;
+        return 404;
+    }
+
     if ($sol_edge_allowed = 0) {
         return 403;
     }
@@ -67,6 +73,12 @@ server {
     server_name ${API_DOMAIN};
     server_tokens off;
     client_max_body_size 12m;
+
+    # No exponer metadatos Git ni archivos internos de GitHub.
+    location ~ /\.(?!well-known(?:/|$)) {
+        access_log off;
+        return 404;
+    }
 
     if ($sol_edge_allowed = 0) {
         return 403;

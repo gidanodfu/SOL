@@ -221,6 +221,27 @@ valores de `fecha_publicacion` en
 se aplican con `deploy.sh` y sus `down()` son reversibles en una base de
 pruebas. No ejecutar `down()` en producción sin respaldo y autorización.
 
+### Metadatos Git y artefactos
+
+La actualización de producción usa el checkout Git del VPS y `deploy.sh`
+construye imágenes Docker desde ese checkout. No se genera un paquete
+independiente ni se sincroniza el repositorio por `rsync`/`tar`.
+
+- `.git` se conserva en el host porque es necesario para `git pull`; no se
+  elimina ni se mueve desde los scripts de despliegue.
+- `.dockerignore` excluye `.git`, `.github` y sus rutas anidadas del contexto
+  de construcción. Por tanto no llegan a las imágenes.
+- `.github` permanece versionado para CI/CD y no se usa en runtime.
+- Nginx devuelve `404` para dotfiles internos (`/.git/config`,
+  `/.github/workflows/`, `/.env`) en el frontend y en el gateway.
+- Las imágenes de producción copian solo código/artefactos necesarios; el
+  frontend de producción sirve únicamente `dist`. Los Dockerfiles limpian
+  `.git`/`.github` de `vendor` y `node_modules` instalados por Composer/npm.
+
+Las comprobaciones `tests/deploy/test_docker_context.sh` y
+`tests/deploy/test_nginx_private_paths.sh` forman parte de
+`test.sh validation`.
+
 La versión visible del sistema se toma del archivo raíz `VERSION` y se incorpora
 al bundle al construir el frontend. Después de modificarlo, `deploy.sh` debe
 reconstruir la imagen frontend; no basta con reiniciar el contenedor. El formato

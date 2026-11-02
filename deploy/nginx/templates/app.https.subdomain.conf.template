@@ -13,6 +13,12 @@ server {
     server_tokens off;
     client_max_body_size 12m;
 
+    # No exponer metadatos Git ni archivos internos de GitHub.
+    location ~ /\.(?!well-known(?:/|$)) {
+        access_log off;
+        return 404;
+    }
+
     ssl_certificate ${TLS_CERT_PATH};
     ssl_certificate_key ${TLS_KEY_PATH};
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -39,6 +45,12 @@ server {
     server_name ${API_DOMAIN};
     server_tokens off;
     client_max_body_size 12m;
+
+    # No exponer metadatos Git ni archivos internos de GitHub.
+    location ~ /\.(?!well-known(?:/|$)) {
+        access_log off;
+        return 404;
+    }
 
     ssl_certificate ${TLS_CERT_PATH};
     ssl_certificate_key ${TLS_KEY_PATH};
