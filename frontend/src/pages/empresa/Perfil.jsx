@@ -18,7 +18,7 @@ export default function Perfil() {
   const [presencia, setPresencia] = useState(null);
   const queryClient = useQueryClient();
   const toast = useToast();
-  const { ejecutar, enviando, error, setError } = useAccion(() => actualizarPerfilEmpresa(form));
+  const { ejecutar, enviando, error, setError, campos } = useAccion(() => actualizarPerfilEmpresa(form));
   const {
     ejecutar: guardarPresencia, enviando: guardandoPresencia, error: errorPresencia, setError: setErrorPresencia,
   } = useAccion(() => actualizarPresenciaEmpresa(presencia));
@@ -132,11 +132,11 @@ export default function Perfil() {
           </div>
           <Mensaje>{error}</Mensaje>
           <div className="form-malla">
-            <Campo etiqueta="Nombre comercial" value={form.nombre_comercial} onChange={set('nombre_comercial')} />
-            <Campo etiqueta="Representante" value={form.representante} onChange={set('representante')} />
-            <Campo etiqueta="Dirección" value={form.direccion} onChange={set('direccion')} />
-            <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
-            <Campo etiqueta="Correo electrónico" type="email" value={form.email} onChange={set('email')} />
+            <Campo etiqueta="Nombre comercial" value={form.nombre_comercial} onChange={set('nombre_comercial')} error={campos.nombre_comercial} />
+            <Campo etiqueta="Representante" value={form.representante} onChange={set('representante')} error={campos.representante} />
+            <Campo etiqueta="Dirección" value={form.direccion} onChange={set('direccion')} error={campos.direccion} />
+            <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} error={campos.telefono} />
+            <Campo etiqueta="Correo electrónico" type="email" value={form.email} onChange={set('email')} error={campos.email} />
           </div>
           <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar cambios</Boton>
         </div>

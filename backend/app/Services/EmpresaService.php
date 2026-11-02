@@ -125,8 +125,19 @@ class EmpresaService
         $this->identidad->exigirLibre('telefono', $datos['telefono']);
 
         // La evaluación presencial (RF-09/RN-02) debe constar antes de habilitar.
-        // Parseo estricto: el texto "false" no debe habilitar la empresa.
-        $evaluada = filter_var($datos['evaluacion_presencial'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        // Un valor omitido equivale a false; un valor presente pero inválido
+        // (por ejemplo "quizá" o un array) se rechaza, no se convierte a false.
+        $evaluacion = $datos['evaluacion_presencial'] ?? null;
+        if ($evaluacion === null) {
+            $evaluada = false;
+        } elseif (! Validador::esBooleano($evaluacion)) {
+            $mensaje = 'El campo evaluacion presencial debe ser un booleano válido.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['evaluacion_presencial' => $mensaje]);
+        } else {
+            $evaluada = is_bool($evaluacion)
+                ? $evaluacion
+                : in_array(strtolower(trim((string) $evaluacion)), ['1', 'true'], true);
+        }
 
         try {
             $this->users->db->transStart();
@@ -193,24 +204,33 @@ class EmpresaService
     public function actualizar(int $adminId, int $id, array $datos): void
     {
         $empresa = $this->exigirExistente($id);
-        $datos['email']    = Identidad::email($datos['email'] ?? null);
-        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
-
-        Validador::validar($datos, [
-            'razon_social'   => ['required', 'max:200'],
-            'nombre_comercial' => ['max:150'],
-            'direccion'      => ['max:255'],
-            'telefono'       => ['telefono'],
-            'email'          => ['email', 'max:150'],
-            'representante'  => ['max:150'],
-        ]);
-
         $usuario = $this->users->find((int) $empresa['user_id']);
         if ($usuario === null) {
             throw ApiException::noEncontrado('El usuario de la empresa no existe.');
         }
 
-        $this->exigirCambioContacto($usuario, $datos['email'], $datos['telefono']);
+        $proporcionaEmail    = array_key_exists('email', $datos);
+        $proporcionaTelefono = array_key_exists('telefono', $datos);
+        $email    = Identidad::email(Validador::textoActualizacion($datos, 'email', $usuario->email, 'correo electrónico'));
+        $telefono = Identidad::telefono(Validador::textoActualizacion($datos, 'telefono', $usuario->telefono, 'teléfono'));
+
+        $datos['email']    = $email;
+        $datos['telefono'] = $telefono;
+        $reglas = [
+            'razon_social'   => ['required', 'max:200'],
+            'nombre_comercial' => ['max:150'],
+            'direccion'      => ['max:255'],
+            'representante'  => ['max:150'],
+        ];
+        if ($proporcionaEmail) {
+            $reglas['email'] = ['email', 'max:150'];
+        }
+        if ($proporcionaTelefono) {
+            $reglas['telefono'] = ['telefono'];
+        }
+        Validador::validar($datos, $reglas);
+
+        $this->exigirCambioContacto($usuario, $email, $telefono, $proporcionaEmail, $proporcionaTelefono);
 
         try {
             $this->empresas->db->transStart();
@@ -429,23 +449,32 @@ class EmpresaService
             throw ApiException::noEncontrado('No se encontró la empresa asociada a su cuenta.');
         }
 
-        $datos['email']    = Identidad::email($datos['email'] ?? null);
-        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
-
-        Validador::validar($datos, [
-            'nombre_comercial' => ['max:150'],
-            'direccion'        => ['max:255'],
-            'telefono'         => ['telefono'],
-            'email'            => ['email', 'max:150'],
-            'representante'    => ['max:150'],
-        ]);
-
         $usuario = $this->users->find($userId);
         if ($usuario === null) {
             throw ApiException::noEncontrado('El usuario no existe.');
         }
 
-        $this->exigirCambioContacto($usuario, $datos['email'], $datos['telefono']);
+        $proporcionaEmail    = array_key_exists('email', $datos);
+        $proporcionaTelefono = array_key_exists('telefono', $datos);
+        $email    = Identidad::email(Validador::textoActualizacion($datos, 'email', $usuario->email, 'correo electrónico'));
+        $telefono = Identidad::telefono(Validador::textoActualizacion($datos, 'telefono', $usuario->telefono, 'teléfono'));
+
+        $datos['email']    = $email;
+        $datos['telefono'] = $telefono;
+        $reglas = [
+            'nombre_comercial' => ['max:150'],
+            'direccion'        => ['max:255'],
+            'representante'    => ['max:150'],
+        ];
+        if ($proporcionaEmail) {
+            $reglas['email'] = ['email', 'max:150'];
+        }
+        if ($proporcionaTelefono) {
+            $reglas['telefono'] = ['telefono'];
+        }
+        Validador::validar($datos, $reglas);
+
+        $this->exigirCambioContacto($usuario, $email, $telefono, $proporcionaEmail, $proporcionaTelefono);
 
         try {
             $this->empresas->db->transStart();
@@ -512,12 +541,17 @@ class EmpresaService
     /**
      * @return array<string, mixed>
      */
-    private function exigirCambioContacto(\App\Entities\Usuario $usuario, ?string $email, ?string $telefono): void
-    {
-        if (Identidad::email($usuario->email) !== $email) {
+    private function exigirCambioContacto(
+        \App\Entities\Usuario $usuario,
+        ?string $email,
+        ?string $telefono,
+        bool $proporcionaEmail,
+        bool $proporcionaTelefono,
+    ): void {
+        if ($proporcionaEmail && Identidad::email($usuario->email) !== $email) {
             $this->identidad->exigirLibre('email', $email, (int) $usuario->id);
         }
-        if (Identidad::telefono($usuario->telefono) !== $telefono) {
+        if ($proporcionaTelefono && Identidad::telefono($usuario->telefono) !== $telefono) {
             $this->identidad->exigirLibre('telefono', $telefono, (int) $usuario->id);
         }
     }

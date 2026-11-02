@@ -93,7 +93,9 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
   cursos se retiraron del producto (§17).
 - **RF-20** Actualización del perfil.
 - **RF-21** Carga y consulta del CV, con **máximo 4 cargas por mes calendario** y versiones
-  anteriores conservadas.
+  anteriores conservadas. Solo puede existir un CV activo por postulante. En la
+  actualización de perfiles, email y teléfono se conservan si el campo se omite;
+  `null`, cadena vacía o tipo no textual se rechazan con 422.
 
 ### 5.4 Gestión de ofertas laborales
 - **RF-22** Registro de ofertas: puesto, descripción, funciones, requisitos, formación,
@@ -191,7 +193,9 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-55** Cantidad y estado de postulaciones.
 - **RF-56** Personas atendidas — RETIRADO (eliminado del dashboard y reportes, §17).
 - **RF-57** Candidatos seleccionados y empresas con procesos.
-- **RF-58** Contrataciones registradas (empresa y supervisión admin).
+- **RF-58** Contrataciones registradas (empresa y supervisión admin). La fecha de
+  situación no puede ser anterior a la contratación ni futura; `despedido` y
+  `renuncio` exigen motivo, mientras que `finalizado` puede quedar sin motivo.
 - **RF-59** Tiempo postulación → contacto/selección.
 - **RF-60** Filtros por rango de fechas.
 
@@ -278,13 +282,13 @@ supervisa y reporta.
 - **RT-CV-01** CV en servicio externo S3-compatible (Supabase Storage), no en MySQL.
 - **RT-CV-02** MySQL guarda metadatos y referencia (postulante, nombre original, MIME,
   tamaño, ruta del objeto, fecha de actualización).
-- **RT-CV-03** Actualización gestionada por backend (sustitución/versión + referencia).
+- **RT-CV-03** Actualización gestionada por backend (sustitución/versión + referencia). Un postulante mantiene un único CV activo; las versiones anteriores se conservan inactivas.
 - **RT-CV-04** Acceso controlado por CI4: la empresa solo ve CV de postulaciones autorizadas.
 - **RT-CV-05** Sin URLs públicas permanentes; URL temporal/firmada generada por CI4.
 - **RT-CV-06** Validar extensión, MIME y tamaño antes de almacenar.
 - **RT-CV-07** Nombres generados por el sistema.
 - **RT-CV-08** Historial/versiones del CV cuando sea necesario.
-- **RT-CV-09** Máximo 4 cargas por mes calendario (control en backend).
+- **RT-CV-09** Máximo 4 cargas exitosas por mes calendario (control en backend con contador persistido por postulante/periodo y actualización atómica).
 
 Decisión: MySQL = datos y referencias; Supabase Storage = archivos; CI4 controla permisos;
 React solo interfaz. `frontend/public/` únicamente recursos públicos (logos, iconos).

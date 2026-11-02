@@ -4,6 +4,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Exceptions\ApiException;
 use App\Services\AuthService;
 use App\Services\DniService;
 use App\Services\JwtGuard;
@@ -28,18 +29,23 @@ class AuthController extends BaseApiController
     {
         $datos = $this->cuerpo();
 
-        if (empty($datos['username']) || empty($datos['password'])) {
-            return $this->response
-                ->setStatusCode(422)
-                ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode([
-                    'success' => false,
-                    'message' => 'Ingrese su usuario, RUC o DNI y su contraseña.',
-                    'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+        $username = $datos['username'] ?? null;
+        $password = $datos['password'] ?? null;
+        if (! is_string($username) || trim($username) === '' || ! is_string($password) || $password === '') {
+            throw ApiException::validacion(
+                'Ingrese su usuario, RUC o DNI y su contraseña.',
+                ['Ingrese su usuario, RUC o DNI y su contraseña.'],
+                [
+                    'username' => 'Ingrese su usuario, RUC o DNI.',
+                    'password' => 'Ingrese su contraseña.',
+                ],
+            );
         }
 
         $turnstileToken = $datos['turnstile_token'] ?? $datos['cf-turnstile-response'] ?? null;
+        if ($turnstileToken !== null && ! is_string($turnstileToken)) {
+            throw ApiException::validacion('La credencial anti-bot no es válida.', ['La credencial anti-bot no es válida.']);
+        }
 
         return $this->ok(
             $this->auth->login(
@@ -55,18 +61,12 @@ class AuthController extends BaseApiController
     {
         $datos = $this->cuerpo();
 
-        if (empty($datos['refresh_token'])) {
-            return $this->response
-                ->setStatusCode(401)
-                ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode([
-                    'success' => false,
-                    'message' => 'No se recibió el token de renovación.',
-                    'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+        $refresh = $datos['refresh_token'] ?? null;
+        if (! is_string($refresh) || trim($refresh) === '') {
+            throw ApiException::noAutorizado('No se recibió el token de renovación.');
         }
 
-        return $this->ok($this->auth->renovar((string) $datos['refresh_token']), 'Sesión renovada.');
+        return $this->ok($this->auth->renovar($refresh), 'Sesión renovada.');
     }
 
     /**
@@ -76,21 +76,12 @@ class AuthController extends BaseApiController
     {
         $datos = $this->cuerpo();
 
-        if (empty($datos['id_token'])) {
-            return $this->response
-                ->setStatusCode(422)
-                ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode([
-                    'success' => false,
-                    'message' => 'No se recibió la credencial de Google.',
-                    'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+        $idToken = $datos['id_token'] ?? null;
+        if (! is_string($idToken) || trim($idToken) === '') {
+            throw ApiException::validacion('No se recibió la credencial de Google.', ['No se recibió la credencial de Google.']);
         }
 
-        return $this->ok(
-            $this->auth->autenticarConGoogle((string) $datos['id_token']),
-            'Bienvenido.',
-        );
+        return $this->ok($this->auth->autenticarConGoogle($idToken), 'Bienvenido.');
     }
 
     /**
@@ -99,9 +90,9 @@ class AuthController extends BaseApiController
      */
     public function verificarDni()
     {
-        $dni = (string) ($this->cuerpo()['dni'] ?? '');
+        $dni = $this->cuerpo()['dni'] ?? null;
 
-        if (! preg_match('/^\d{8}$/', $dni)) {
+        if (! is_string($dni) || ! preg_match('/^\d{8}$/', $dni)) {
             return $this->response
                 ->setStatusCode(422)
                 ->setContentType('application/json', 'UTF-8')

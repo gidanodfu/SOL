@@ -4,6 +4,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Exceptions\ApiException;
 use App\Services\RucService;
 use App\Services\SolicitudEmpresaService;
 
@@ -18,17 +19,14 @@ class SolicitudesEmpresaController extends BaseApiController
      */
     public function verificarRuc()
     {
-        $ruc = (string) ($this->cuerpo()['ruc'] ?? '');
+        $ruc = $this->cuerpo()['ruc'] ?? null;
 
-        if (! preg_match('/^\d{11}$/', $ruc)) {
-            return $this->response
-                ->setStatusCode(422)
-                ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode([
-                    'success' => false,
-                    'message' => 'Ingrese un RUC válido (11 dígitos).',
-                    'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+        if (! is_string($ruc) || ! preg_match('/^\d{11}$/', $ruc)) {
+            throw ApiException::validacion(
+                'Ingrese un RUC válido (11 dígitos).',
+                ['Ingrese un RUC válido (11 dígitos).'],
+                ['ruc' => 'Ingrese un RUC válido (11 dígitos).'],
+            );
         }
 
         return $this->ok((new RucService())->consultar($ruc), 'RUC verificado.');

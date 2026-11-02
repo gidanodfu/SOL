@@ -106,6 +106,23 @@ check_code "rechazar extensión/MIME no permitidos" 422 "$(cat /tmp/opencode/cv_
 curl -s -o /dev/null -w '%{http_code}' "$B/api/postulante/cv" -H "Authorization: Bearer $TE" > /tmp/opencode/cv_unauth_code
 check_code "empresa no accede CV de postulante" 403 "$(cat /tmp/opencode/cv_unauth_code)"
 
+paso "6. límite mensual persistido y CV activo único"
+curl -s -o /tmp/opencode/cv_quota.json -w '%{http_code}' -X POST "$B/api/postulante/cv" -H "Authorization: Bearer $TP" -F "cv=@/var/www/sol/tests/fixtures/cv.pdf;type=application/pdf;filename=cv-quinto.pdf" > /tmp/opencode/cv_quota_code
+check_code "quinto CV del mes rechazado" 409 "$(cat /tmp/opencode/cv_quota_code)"
+curl -s "$B/api/postulante/cv" -H "Authorization: Bearer $TP" > /tmp/opencode/cv_quota_state.json
+python3 - /tmp/opencode/cv_quota_state.json <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert d.get('success') is True, d
+data = d['data']
+assert data['limite_mensual']['usados'] == 4, data['limite_mensual']
+assert data['limite_mensual']['restantes'] == 0, data['limite_mensual']
+assert data.get('vigente') is not None, data
+assert len(data.get('historial', [])) == 4, len(data.get('historial', []))
+print('OK   cuota mensual 4/4 y un solo CV vigente')
+PY
+[ $? -eq 0 ] || { echo 'FAIL estado de cuota/CV activo'; fallos=$((fallos + 1)); }
+
 echo
 echo 'FIN test_cv'
 [ "$fallos" -eq 0 ] || exit 1

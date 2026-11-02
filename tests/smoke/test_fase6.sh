@@ -32,7 +32,7 @@ CID=$(echo "$C" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]
 curl -s -o /dev/null -w "duplicado http:%{http_code} (409)\n" -X POST "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"postulacion_id":1,"fecha_contratacion":"2026-09-04","cargo":"Otro"}'
 
 echo "== 5. editar contrato => 200 =="
-curl -s -o /dev/null -w "update http:%{http_code} (200)\n" -X PUT "$B/api/empresa/contrataciones/$CID" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"fecha_contratacion":"2026-09-05","cargo":"Operario de construcción","remuneracion":"1200.00"}'
+curl -s -o /dev/null -w "update http:%{http_code} (200)\n" -X PUT "$B/api/empresa/contrataciones/$CID" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"fecha_contratacion":"2026-09-05","cargo":"Operario de construcción","remuneracion":"1200.00","fecha_situacion":"2026-09-05"}'
 
 echo "== 6. listar contratos de la empresa =="
 curl -s "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;[print(" -",c["id"],c["nombres"],c["puesto"],c["cargo"],c["remuneracion"]) for c in json.load(sys.stdin)["data"]]'

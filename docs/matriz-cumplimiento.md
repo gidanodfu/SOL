@@ -54,6 +54,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | Disponibilidad pública de oportunidades | ✔ | regla central `estadoPublicacion`/`es_visible_publicamente`; antes de inicio no pública; fin exacto cierra; finalizado/cancelado nunca Visible |
 | Inmutabilidad de oportunidad finalizada | ✔ | `puede_modificarse=false`; edición, activación y transición responden `409` `OPPORTUNITY_ALREADY_FINALIZED`; permanece consultable en admin |
 | Retiro de fecha editorial y empresa_id | ✔ | migraciones posteriores con archivo de `fecha_publicacion` y aborto seguro si `empresa_id` tiene valores no nulos |
+| Validación estricta de escrituras | ✔ | `Validador` distingue tipos, IDs y booleanos; contacto opcional conserva si se omite; fechas de situación y motivo laboral; cuota CV persistida y CV activo único |
 | RF-52 Dashboard municipal | ✔ | `GET /api/admin/dashboard` · Dashboard (admin) |
 | RF-53 Empresas registradas/activas | ✔ | indicador en dashboard |
 | RF-54 Ofertas por estado | ✔ | ídem |

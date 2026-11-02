@@ -146,16 +146,35 @@ class PostulanteService
             throw ApiException::noEncontrado('No se encontró el perfil de postulante.');
         }
 
-        $datos['email']            = Identidad::email($datos['email'] ?? null);
-        $datos['telefono']         = Identidad::telefono($datos['telefono'] ?? null);
-        $datos['tipo_documento']   = strtoupper(trim((string) ($datos['tipo_documento'] ?? '')));
-        $datos['numero_documento'] = trim((string) ($datos['numero_documento'] ?? $datos['dni'] ?? ''));
+        $usuario = $this->users->find($usuarioId);
+        if ($usuario === null) {
+            throw ApiException::noEncontrado('El usuario no existe.');
+        }
 
-        Validador::validar($datos, [
+        $proporcionaEmail    = array_key_exists('email', $datos);
+        $proporcionaTelefono = array_key_exists('telefono', $datos);
+        $email    = Identidad::email(Validador::textoActualizacion($datos, 'email', $usuario->email, 'correo electrónico'));
+        $telefono = Identidad::telefono(Validador::textoActualizacion($datos, 'telefono', $usuario->telefono, 'teléfono'));
+
+        $tipoDocumento = $datos['tipo_documento'] ?? '';
+        if (! is_string($tipoDocumento)) {
+            $mensaje = 'El tipo de documento no es válido.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['tipo_documento' => $mensaje]);
+        }
+        $numeroDocumento = $datos['numero_documento'] ?? $datos['dni'] ?? '';
+        if (! is_string($numeroDocumento)) {
+            $mensaje = 'El número de documento no es válido.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['numero_documento' => $mensaje]);
+        }
+
+        $datos['email']            = $email;
+        $datos['telefono']         = $telefono;
+        $datos['tipo_documento']   = strtoupper(trim($tipoDocumento));
+        $datos['numero_documento'] = trim($numeroDocumento);
+
+        $reglas = [
             'nombres'    => ['required', 'max:100'],
             'apellidos'  => ['required', 'max:100'],
-            'email'      => ['email', 'max:150'],
-            'telefono'   => ['telefono'],
             'direccion'  => ['max:255'],
             'distrito'   => ['max:100'],
             'fecha_nacimiento' => ['fecha'],
@@ -166,12 +185,21 @@ class PostulanteService
             'tipo_documento' => ['enum:DNI,CE'],
             'numero_documento' => ['max:20'],
             'dni'        => ['max:20'],
-        ]);
-
-        $usuario = $this->users->find($usuarioId);
-        if ($usuario === null) {
-            throw ApiException::noEncontrado('El usuario no existe.');
+        ];
+        if ($proporcionaEmail) {
+            $reglas['email'] = ['email', 'max:150'];
         }
+        if ($proporcionaTelefono) {
+            $reglas['telefono'] = ['telefono'];
+        }
+        Validador::validar($datos, $reglas);
+
+        $fechaNacimiento = trim((string) ($datos['fecha_nacimiento'] ?? ''));
+        if ($fechaNacimiento !== '' && ! Validador::esFechaNoFutura($fechaNacimiento)) {
+            $mensaje = 'La fecha de nacimiento no puede ser futura.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['fecha_nacimiento' => $mensaje]);
+        }
+
         $proveedor = $usuario->proveedor ?? 'local';
 
         // `dni` es la columna histórica que guarda el número; el tipo documental
@@ -207,11 +235,11 @@ class PostulanteService
             $documento = ['tipo_documento' => $tipo, 'dni' => $numero];
         }
 
-        if (Identidad::email($usuario->email) !== $datos['email']) {
-            $this->identidad->exigirLibre('email', $datos['email'], $usuarioId);
+        if ($proporcionaEmail && Identidad::email($usuario->email) !== $email) {
+            $this->identidad->exigirLibre('email', $email, $usuarioId);
         }
-        if (Identidad::telefono($usuario->telefono) !== $datos['telefono']) {
-            $this->identidad->exigirLibre('telefono', $datos['telefono'], $usuarioId);
+        if ($proporcionaTelefono && Identidad::telefono($usuario->telefono) !== $telefono) {
+            $this->identidad->exigirLibre('telefono', $telefono, $usuarioId);
         }
 
         // Perfil y cuenta se actualizan juntos: un fallo parcial dejaría datos

@@ -74,6 +74,64 @@ final class Validador
             && (! isset($m[4]) || (int) $m[4] <= 59);
     }
 
+    /** Identificador entero positivo: entero JSON o cadena de dígitos, nunca decimal. */
+    public static function esEnteroPositivo($valor): bool
+    {
+        if (is_int($valor)) {
+            return $valor > 0;
+        }
+
+        return is_string($valor)
+            && preg_match('/^[1-9]\d*$/', $valor) === 1;
+    }
+
+    /**
+     * Booleano estricto para cuerpos JSON: true/false, 0/1 y las cadenas
+     * canónicas "true"/"false"/"1"/"0". Cualquier otro valor es inválido.
+     *
+     * @param mixed $valor
+     */
+    public static function esBooleano($valor): bool
+    {
+        if (is_bool($valor) || (is_int($valor) && ($valor === 0 || $valor === 1))) {
+            return true;
+        }
+
+        return is_string($valor)
+            && in_array(strtolower(trim($valor)), ['true', 'false', '1', '0'], true);
+    }
+
+    /**
+     * Resuelve un campo de texto opcional en una actualización parcial:
+     * - ausente: conserva el valor actual;
+     * - null, cadena vacía o tipo no string: error 422;
+     * - presente: devuelve el texto recortado.
+     *
+     * @param array<string, mixed> $datos
+     *
+     * @throws ApiException
+     */
+    public static function textoActualizacion(array $datos, string $campo, ?string $actual, string $etiqueta): ?string
+    {
+        if (! array_key_exists($campo, $datos)) {
+            return $actual;
+        }
+
+        $valor = $datos[$campo];
+        if (! is_string($valor) || trim($valor) === '') {
+            $mensaje = "El campo {$etiqueta} no puede quedar vacío.";
+            throw ApiException::validacion($mensaje, [$mensaje], [$campo => $mensaje]);
+        }
+
+        return trim($valor);
+    }
+
+    /** Fecha calendárica que no supera el día actual en la zona de la aplicación. */
+    public static function esFechaNoFutura(string $valor, ?string $hoy = null): bool
+    {
+        return self::esFecha($valor) && $valor <= ($hoy ?? date('Y-m-d'));
+    }
+
     /**
      * @param array<string, mixed> $datos
      * @param array<string, list<string>> $reglas campo => reglas
@@ -88,6 +146,13 @@ final class Validador
             $valor = $datos[$campo] ?? null;
             $etiqueta = ucfirst(str_replace('_', ' ', $campo));
 
+            // Los campos validados por reglas planas son escalares. Un array u
+            // objeto no se convierte en "Array" ni llega a la base de datos.
+            if ($valor !== null && ! is_scalar($valor)) {
+                $errores[$campo] = "El campo {$etiqueta} no tiene un tipo válido.";
+                continue;
+            }
+
             foreach ($reglasCampo as $regla) {
                 if ($regla === 'required' && self::esVacio($valor)) {
                     $errores[$campo] = $campo === 'terms_accepted'
@@ -100,6 +165,10 @@ final class Validador
                 }
 
                 switch (true) {
+                    case $regla === 'id' && ! self::esEnteroPositivo($valor):
+                        $errores[$campo] = "El campo {$etiqueta} debe ser un identificador válido.";
+                        break 2;
+
                     case $regla === 'email' && filter_var($valor, FILTER_VALIDATE_EMAIL) === false:
                         $errores[$campo] = "El campo {$etiqueta} debe ser un correo válido.";
                         break 2;

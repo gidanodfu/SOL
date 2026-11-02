@@ -153,7 +153,7 @@ function FotoPerfil({ fotoUrl, inicial }) {
 function EdicionBasica({ perfil }) {
   const queryClient = useQueryClient();
   const { refrescarUsuario } = useAuth();
-  const { ejecutar, enviando, error, setError } = useAccion(actualizarPerfilPostulante);
+  const { ejecutar, enviando, error, setError, campos } = useAccion(actualizarPerfilPostulante);
   const [form, setForm] = useState(null);
 
   useEffect(() => {
@@ -214,8 +214,8 @@ function EdicionBasica({ perfil }) {
     <Tarjeta titulo="Editar datos personales">
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
-        <Campo etiqueta="Nombres" value={form.nombres} onChange={set('nombres')} />
-        <Campo etiqueta="Apellidos" value={form.apellidos} onChange={set('apellidos')} />
+        <Campo etiqueta="Nombres" value={form.nombres} onChange={set('nombres')} error={campos.nombres} />
+        <Campo etiqueta="Apellidos" value={form.apellidos} onChange={set('apellidos')} error={campos.apellidos} />
         <Selecto etiqueta="Tipo de documento" value={form.tipo_documento} onChange={cambiarDocumento} disabled={documentoBloqueado}>
           <option value="DNI">DNI</option>
           <option value="CE">Carnet de extranjería</option>
@@ -231,10 +231,10 @@ function EdicionBasica({ perfil }) {
           maxLength={form.tipo_documento === 'DNI' ? 8 : 12}
           disabled={documentoBloqueado}
         />
-        <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} />
+        <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} error={campos.telefono} />
         <Campo etiqueta="Dirección" value={form.direccion} onChange={set('direccion')} />
         <Campo etiqueta="Distrito" value={form.distrito} onChange={set('distrito')} />
-        <Campo etiqueta="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={set('fecha_nacimiento')} />
+        <Campo etiqueta="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={set('fecha_nacimiento')} error={campos.fecha_nacimiento} />
         <Campo etiqueta="Ocupación" value={form.ocupacion} onChange={set('ocupacion')} maxLength={150} />
         <Campo etiqueta="" style={{ display: 'none' }} type="email" value={form.email} onChange={set('email')} />
       </div>

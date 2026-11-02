@@ -5053,6 +5053,18 @@ components:
         observaciones:
           type: string
           maxLength: 10000
+        situacion_laboral:
+          type: string
+          enum: [contratado, finalizado, despedido, renuncio]
+          description: 'Despedido y renuncio exigen motivo_situacion; finalizado puede quedar sin motivo.'
+        motivo_situacion:
+          type: string
+          maxLength: 255
+          description: 'Obligatorio para despedido y renuncio.'
+        fecha_situacion:
+          type: string
+          format: date
+          description: 'No anterior a fecha_contratacion ni futura en America/Lima.'
 
     ContratacionActualizarBody:
       type: object
@@ -5074,6 +5086,18 @@ components:
         observaciones:
           type: string
           maxLength: 10000
+        situacion_laboral:
+          type: string
+          enum: [contratado, finalizado, despedido, renuncio]
+          description: 'Despedido y renuncio exigen motivo_situacion; finalizado puede quedar sin motivo.'
+        motivo_situacion:
+          type: string
+          maxLength: 255
+          description: 'Obligatorio para despedido y renuncio.'
+        fecha_situacion:
+          type: string
+          format: date
+          description: 'No anterior a fecha_contratacion ni futura en America/Lima.'
 
     OpcionContratacion:
       type: object

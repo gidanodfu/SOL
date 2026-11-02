@@ -221,6 +221,12 @@ valores de `fecha_publicacion` en
 se aplican con `deploy.sh` y sus `down()` son reversibles en una base de
 pruebas. No ejecutar `down()` en producción sin respaldo y autorización.
 
+La migración `2026-11-02-100000_CuotasCvYActivoUnico` crea
+`cv_cuotas_mensuales` (clave única por postulante/periodo, consumo mensual) y
+`cv_activos` (una fila por postulante con el CV vigente y unicidad sobre
+`cv_id`). El backfill cuenta los CV históricos por mes y conserva la versión
+activa más reciente; no elimina versiones anteriores.
+
 ### Metadatos Git y artefactos
 
 La actualización de producción usa el checkout Git del VPS y `deploy.sh`

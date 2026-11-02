@@ -8,6 +8,7 @@ use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
 use App\Models\PostulanteModel;
 use App\Services\PostulacionService;
+use App\Validation\Validador;
 
 /**
  * Postulaciones del ciudadano (RF-30..RF-32). La identidad se resuelve desde la
@@ -38,15 +39,12 @@ class PostulacionesController extends BaseApiController
     public function store()
     {
         $cuerpo = $this->cuerpo();
-        if (empty($cuerpo['oferta_id'])) {
-            return $this->response
-                ->setStatusCode(422)
-                ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode([
-                    'success' => false,
-                    'message' => 'Debe indicar la oferta a la que postula.',
-                    'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+        if (! Validador::esEnteroPositivo($cuerpo['oferta_id'] ?? null)) {
+            throw ApiException::validacion(
+                'Debe indicar una oferta válida a la que postula.',
+                ['Debe indicar una oferta válida a la que postula.'],
+                ['oferta_id' => 'Debe indicar una oferta válida a la que postula.'],
+            );
         }
 
         $id = $this->servicio->postular($this->postulanteId, (int) $cuerpo['oferta_id']);

@@ -37,7 +37,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales, DNS de producción, Cloudflare ni certificados.
 
-> `test.sh smoke` ejecuta 24 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 26 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
@@ -69,8 +69,17 @@ y requiere un RUC real y token externo autorizado.
 
 Los fixtures de CV están en `tests/fixtures/`: `cv.pdf` y `cv.docx` son
 documentos válidos; `cv-malformado.pdf` se usa como caso negativo.
-`tests/smoke/test_cv.sh` cubre carga, consulta, descarga autorizada y rechazos
-de MIME/firma/rol.
+`tests/smoke/test_cv.sh` cubre carga, consulta, descarga autorizada, rechazos
+de MIME/firma/rol y el límite mensual persistido de cuatro CV.
+
+`tests/smoke/test_cv_concurrencia.sh` envía seis cargas simultáneas del mismo
+postulante: exige cuatro aceptadas y dos rechazadas por cuota, y comprueba que
+la cuota quede en 4/4 y que exista una sola versión vigente.
+
+`tests/smoke/test_validaciones_estrictas.sh` cubre las reglas aprobadas de
+contacto (ausente conserva, null/vacío/array rechaza), fecha de nacimiento no
+futura, booleanos e identificadores estrictos, fechas y motivo de situación
+laboral, y verifica que los rechazos no creen registros.
 
 `tests/smoke/test_actividades_obligatorias.sh` cubre la creación de actividades:
 todos los campos (tipo, nombre, inicio, fin, modalidad, lugar, organizador,

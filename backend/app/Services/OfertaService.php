@@ -185,29 +185,44 @@ class OfertaService
     public function crear(int $empresaId, array $datos): int
     {
         $datos = $this->validar($datos, null);
+        $db    = $this->ofertas->db;
 
-        $this->ofertas->insert([
-            'empresa_id'            => $empresaId,
-            'categoria_id'          => $datos['categoria_id'] ?? null,
-            'puesto'                => $datos['puesto'],
-            'descripcion'           => $datos['descripcion'] ?? null,
-            'funciones'             => $datos['funciones'] ?? null,
-            'requisitos'            => $datos['requisitos'] ?? null,
-            'formacion_requerida'   => $datos['formacion_requerida'] ?? null,
-            'experiencia_requerida' => $datos['experiencia_requerida'] ?? null,
-            'tipo_empleo'           => $datos['tipo_empleo'] ?? null,
-            'ubicacion'             => $datos['ubicacion'] ?? null,
-            'remuneracion'          => $datos['remuneracion'] ?? null,
-            'vacantes'              => $datos['vacantes'],
-            'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
-            // Toda oferta nueva queda pendiente de revisión municipal; no es
-            // visible para los postulantes hasta que la Municipalidad la apruebe.
-            'estado'                => 'pendiente',
-        ]);
-        $id = $this->ofertas->getInsertID();
-        $this->habilidades->reemplazar($id, $datos['habilidades'] ?? []);
+        $db->transBegin();
 
-        return $id;
+        try {
+            $this->ofertas->insert([
+                'empresa_id'            => $empresaId,
+                'categoria_id'          => $datos['categoria_id'] ?? null,
+                'puesto'                => $datos['puesto'],
+                'descripcion'           => $datos['descripcion'] ?? null,
+                'funciones'             => $datos['funciones'] ?? null,
+                'requisitos'            => $datos['requisitos'] ?? null,
+                'formacion_requerida'   => $datos['formacion_requerida'] ?? null,
+                'experiencia_requerida' => $datos['experiencia_requerida'] ?? null,
+                'tipo_empleo'           => $datos['tipo_empleo'] ?? null,
+                'ubicacion'             => $datos['ubicacion'] ?? null,
+                'remuneracion'          => $datos['remuneracion'] ?? null,
+                'vacantes'              => $datos['vacantes'],
+                'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
+                // Toda oferta nueva queda pendiente de revisión municipal; no es
+                // visible para los postulantes hasta que la Municipalidad la apruebe.
+                'estado'                => 'pendiente',
+            ]);
+            $id = (int) $this->ofertas->getInsertID();
+            $this->habilidades->reemplazar($id, $datos['habilidades'] ?? []);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo registrar la oferta.');
+            }
+
+            $db->transCommit();
+
+            return $id;
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
+        }
     }
 
     /**
@@ -215,47 +230,62 @@ class OfertaService
      */
     public function actualizar(int $empresaId, int $id, array $datos): void
     {
-        $oferta = $this->exigirPropia($empresaId, $id);
+        $db = $this->ofertas->db;
+        $db->transBegin();
 
-        // `rechazada` (terminal) y `cerrada` no son editables por la empresa;
-        // tampoco por una petición directa a la API. Una oferta publicada que
-        // ya venció tampoco se reabre: el cierre temporal es definitivo.
-        if (! in_array($oferta['estado'], self::EDITABLE, true)) {
-            throw ApiException::conflicto('La oferta no se puede editar en su estado actual.');
+        try {
+            $oferta = $this->exigirPropiaBloqueada($empresaId, $id);
+
+            // `rechazada` (terminal) y `cerrada` no son editables por la empresa;
+            // tampoco por una petición directa a la API. Una oferta publicada que
+            // ya venció tampoco se reabre: el cierre temporal es definitivo.
+            if (! in_array($oferta['estado'], self::EDITABLE, true)) {
+                throw ApiException::conflicto('La oferta no se puede editar en su estado actual.');
+            }
+            if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta ya venció; no puede volver a publicación ni editarse.');
+            }
+
+            $datos = $this->validar($datos, $oferta);
+
+            // Control del flujo: editar una oferta publicada o corregir una oferta
+            // observada la devuelve a revisión municipal. Corregir una observación
+            // NO es aprobarla: solo la aprobación municipal la publica.
+            $vuelveARevision = in_array($oferta['estado'], ['publicada', 'observada'], true);
+
+            $this->ofertas->update($id, [
+                'categoria_id'          => $datos['categoria_id'] ?? null,
+                'puesto'                => $datos['puesto'],
+                'descripcion'           => $datos['descripcion'] ?? null,
+                'funciones'             => $datos['funciones'] ?? null,
+                'requisitos'            => $datos['requisitos'] ?? null,
+                'formacion_requerida'   => $datos['formacion_requerida'] ?? null,
+                'experiencia_requerida' => $datos['experiencia_requerida'] ?? null,
+                'tipo_empleo'           => $datos['tipo_empleo'] ?? null,
+                'ubicacion'             => $datos['ubicacion'] ?? null,
+                'remuneracion'          => $datos['remuneracion'] ?? null,
+                'vacantes'              => $datos['vacantes'],
+                'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
+                'estado'                => $vuelveARevision ? 'pendiente' : $oferta['estado'],
+                'fecha_publicacion'     => $vuelveARevision ? null : $oferta['fecha_publicacion'],
+                // La observación NO se borra al guardar el formulario: el admin la
+                // conserva al re-revisar. Solo se limpian las marcas de aprobación.
+                'motivo_rechazo'        => $vuelveARevision ? null : $oferta['motivo_rechazo'],
+                'validado_por'          => $vuelveARevision ? null : $oferta['validado_por'],
+                'fecha_validacion'      => $vuelveARevision ? null : $oferta['fecha_validacion'],
+            ]);
+            $this->habilidades->reemplazar($id, $datos['habilidades'] ?? []);
+
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo actualizar la oferta.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw $e;
         }
-        if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta ya venció; no puede volver a publicación ni editarse.');
-        }
-
-        $datos = $this->validar($datos, $oferta);
-
-        // Control del flujo: editar una oferta publicada o corregir una oferta
-        // observada la devuelve a revisión municipal. Corregir una observación
-        // NO es aprobarla: solo la aprobación municipal la publica.
-        $vuelveARevision = in_array($oferta['estado'], ['publicada', 'observada'], true);
-
-        $this->ofertas->update($id, [
-            'categoria_id'          => $datos['categoria_id'] ?? null,
-            'puesto'                => $datos['puesto'],
-            'descripcion'           => $datos['descripcion'] ?? null,
-            'funciones'             => $datos['funciones'] ?? null,
-            'requisitos'            => $datos['requisitos'] ?? null,
-            'formacion_requerida'   => $datos['formacion_requerida'] ?? null,
-            'experiencia_requerida' => $datos['experiencia_requerida'] ?? null,
-            'tipo_empleo'           => $datos['tipo_empleo'] ?? null,
-            'ubicacion'             => $datos['ubicacion'] ?? null,
-            'remuneracion'          => $datos['remuneracion'] ?? null,
-            'vacantes'              => $datos['vacantes'],
-            'fecha_cierre'          => $datos['fecha_cierre'] ?? null,
-            'estado'                => $vuelveARevision ? 'pendiente' : $oferta['estado'],
-            'fecha_publicacion'     => $vuelveARevision ? null : $oferta['fecha_publicacion'],
-            // La observación NO se borra al guardar el formulario: el admin la
-            // conserva al re-revisar. Solo se limpian las marcas de aprobación.
-            'motivo_rechazo'        => $vuelveARevision ? null : $oferta['motivo_rechazo'],
-            'validado_por'          => $vuelveARevision ? null : $oferta['validado_por'],
-            'fecha_validacion'      => $vuelveARevision ? null : $oferta['fecha_validacion'],
-        ]);
-        $this->habilidades->reemplazar($id, $datos['habilidades'] ?? []);
     }
 
     /**
@@ -288,16 +318,28 @@ class OfertaService
 
     public function cerrar(int $empresaId, int $id): void
     {
-        $oferta = $this->exigirPropia($empresaId, $id);
+        $db = $this->ofertas->db;
+        $db->transBegin();
 
-        if ($oferta['estado'] !== 'publicada') {
-            throw ApiException::conflicto('Solo puede cerrar una oferta publicada.');
-        }
-        if (self::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta ya venció; el cierre es automático y no se puede convertir en cierre manual.');
-        }
+        try {
+            $oferta = $this->exigirPropiaBloqueada($empresaId, $id);
 
-        $this->ofertas->update($id, ['estado' => 'cerrada']);
+            if ($oferta['estado'] !== 'publicada') {
+                throw ApiException::conflicto('Solo puede cerrar una oferta publicada.');
+            }
+            if (self::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta ya venció; el cierre es automático y no se puede convertir en cierre manual.');
+            }
+
+            $this->ofertas->update($id, ['estado' => 'cerrada']);
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo cerrar la oferta.');
+            }
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
+        }
     }
 
     /**
@@ -306,18 +348,28 @@ class OfertaService
      */
     public function cerrarComoAdmin(int $adminId, int $id): void
     {
-        $oferta = $this->repository->detalle($id);
-        if ($oferta === null) {
-            throw ApiException::noEncontrado('La oferta no existe.');
-        }
-        if ($oferta['estado'] !== 'publicada') {
-            throw ApiException::conflicto('Solo puede cerrar una oferta publicada.');
-        }
-        if (self::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta ya venció; el cierre es automático y no se puede convertir en cierre manual.');
+        $db = $this->ofertas->db;
+        $db->transBegin();
+
+        try {
+            $oferta = $this->exigirBloqueadaAdmin($id);
+            if ($oferta['estado'] !== 'publicada') {
+                throw ApiException::conflicto('Solo puede cerrar una oferta publicada.');
+            }
+            if (self::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta ya venció; el cierre es automático y no se puede convertir en cierre manual.');
+            }
+
+            $this->ofertas->update($id, ['estado' => 'cerrada']);
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo cerrar la oferta.');
+            }
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
 
-        $this->ofertas->update($id, ['estado' => 'cerrada']);
         $this->auditoria->registrar($adminId, 'cerrar_oferta_admin', 'oferta', $id, ['puesto' => $oferta['puesto']]);
     }
 
@@ -338,28 +390,38 @@ class OfertaService
      */
     public function aprobar(int $adminId, int $id): void
     {
-        $oferta = $this->repository->detalle($id);
-        if ($oferta === null) {
-            throw ApiException::noEncontrado('La oferta no existe.');
-        }
-        if ($oferta['estado'] !== 'pendiente') {
-            throw ApiException::conflicto('Solo puede aprobar ofertas pendientes de revisión.');
-        }
-        if (self::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta tiene fecha de cierre vencida; la empresa debe actualizarla antes de aprobarla.');
+        $db = $this->ofertas->db;
+        $db->transBegin();
+
+        try {
+            $oferta = $this->exigirBloqueadaAdmin($id);
+            if ($oferta['estado'] !== 'pendiente') {
+                throw ApiException::conflicto('Solo puede aprobar ofertas pendientes de revisión.');
+            }
+            if (self::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta tiene fecha de cierre vencida; la empresa debe actualizarla antes de aprobarla.');
+            }
+
+            $this->ofertas->update($id, [
+                'estado'            => 'publicada',
+                'fecha_publicacion' => date('Y-m-d'),
+                'motivo_rechazo'    => null,
+                'validado_por'      => $adminId,
+                'fecha_validacion'  => date('Y-m-d H:i:s'),
+                // La observación queda resuelta al aprobarse.
+                'observacion'       => null,
+                'observado_por'     => null,
+                'fecha_observacion' => null,
+            ]);
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo aprobar la oferta.');
+            }
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
 
-        $this->ofertas->update($id, [
-            'estado'            => 'publicada',
-            'fecha_publicacion' => date('Y-m-d'),
-            'motivo_rechazo'    => null,
-            'validado_por'      => $adminId,
-            'fecha_validacion'  => date('Y-m-d H:i:s'),
-            // La observación queda resuelta al aprobarse.
-            'observacion'       => null,
-            'observado_por'     => null,
-            'fecha_observacion' => null,
-        ]);
         $this->auditoria->registrar($adminId, 'aprobar_oferta', 'oferta', $id, ['puesto' => $oferta['puesto']]);
     }
 
@@ -376,24 +438,35 @@ class OfertaService
             'motivo' => ['required', 'max:255'],
         ]);
 
-        $oferta = $this->repository->detalle($id);
-        if ($oferta === null) {
-            throw ApiException::noEncontrado('La oferta no existe.');
-        }
-        if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
-            throw ApiException::conflicto('No se puede rechazar una oferta en su estado actual.');
-        }
-        if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta ya venció; su cierre temporal es definitivo.');
+        $db = $this->ofertas->db;
+        $db->transBegin();
+
+        try {
+            $oferta = $this->exigirBloqueadaAdmin($id);
+
+            if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
+                throw ApiException::conflicto('No se puede rechazar una oferta en su estado actual.');
+            }
+            if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta ya venció; su cierre temporal es definitivo.');
+            }
+
+            $this->ofertas->update($id, [
+                'estado'            => 'rechazada',
+                'motivo_rechazo'    => mb_substr((string) $datos['motivo'], 0, 255),
+                'fecha_publicacion' => null,
+                'validado_por'      => $adminId,
+                'fecha_validacion'  => date('Y-m-d H:i:s'),
+            ]);
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo rechazar la oferta.');
+            }
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
 
-        $this->ofertas->update($id, [
-            'estado'            => 'rechazada',
-            'motivo_rechazo'    => mb_substr((string) $datos['motivo'], 0, 255),
-            'fecha_publicacion' => null,
-            'validado_por'      => $adminId,
-            'fecha_validacion'  => date('Y-m-d H:i:s'),
-        ]);
         $this->auditoria->registrar($adminId, 'rechazar_oferta', 'oferta', $id, ['puesto' => $oferta['puesto']]);
     }
 
@@ -411,38 +484,41 @@ class OfertaService
             'observacion' => ['required', 'max:1000'],
         ]);
 
-        $oferta = $this->repository->detalle($id);
-        if ($oferta === null) {
-            throw ApiException::noEncontrado('La oferta no existe.');
-        }
-        if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
-            throw ApiException::conflicto('No se puede observar una oferta en su estado actual.');
-        }
-        if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
-            throw ApiException::conflicto('La oferta ya venció; su cierre temporal es definitivo.');
-        }
+        $db = $this->ofertas->db;
+        $db->transBegin();
 
-        // Estado + observación se guardan de forma consistente.
-        $this->ofertas->db->transStart();
-        $this->ofertas->update($id, [
-            'estado'            => 'observada',
-            'observacion'       => trim((string) $datos['observacion']),
-            'observado_por'     => $adminId,
-            'fecha_observacion' => date('Y-m-d H:i:s'),
-            // Deja de estar publicada y limpia marcas de aprobación/rechazo.
-            'fecha_publicacion' => null,
-            'motivo_rechazo'    => null,
-            'validado_por'      => null,
-            'fecha_validacion'  => null,
-        ]);
-        $this->auditoria->registrar($adminId, 'observar_oferta', 'oferta', $id, [
-            'puesto'      => $oferta['puesto'],
-            'observacion' => mb_substr(trim((string) $datos['observacion']), 0, 255),
-        ]);
-        $this->ofertas->db->transComplete();
+        try {
+            $oferta = $this->exigirBloqueadaAdmin($id);
 
-        if (! $this->ofertas->db->transStatus()) {
-            throw ApiException::conflicto('No se pudo registrar la observación.');
+            if (! in_array($oferta['estado'], ['pendiente', 'observada', 'publicada'], true)) {
+                throw ApiException::conflicto('No se puede observar una oferta en su estado actual.');
+            }
+            if ($oferta['estado'] === 'publicada' && self::vencida($oferta['fecha_cierre'] ?? null)) {
+                throw ApiException::conflicto('La oferta ya venció; su cierre temporal es definitivo.');
+            }
+
+            $this->ofertas->update($id, [
+                'estado'            => 'observada',
+                'observacion'       => trim((string) $datos['observacion']),
+                'observado_por'     => $adminId,
+                'fecha_observacion' => date('Y-m-d H:i:s'),
+                // Deja de estar publicada y limpia marcas de aprobación/rechazo.
+                'fecha_publicacion' => null,
+                'motivo_rechazo'    => null,
+                'validado_por'      => null,
+                'fecha_validacion'  => null,
+            ]);
+            $this->auditoria->registrar($adminId, 'observar_oferta', 'oferta', $id, [
+                'puesto'      => $oferta['puesto'],
+                'observacion' => mb_substr(trim((string) $datos['observacion']), 0, 255),
+            ]);
+            if (! $db->transStatus()) {
+                throw ApiException::conflicto('No se pudo registrar la observación.');
+            }
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            throw $e;
         }
     }
 
@@ -462,6 +538,24 @@ class OfertaService
     /* ----------------------------- Internos ----------------------------- */
 
     /**
+     * Bloquea una oferta para una transición municipal.
+     *
+     * @return array<string, mixed>
+     */
+    private function exigirBloqueadaAdmin(int $id): array
+    {
+        $fila = $this->ofertas->db
+            ->query('SELECT * FROM ofertas WHERE id = ? FOR UPDATE', [$id])
+            ->getRowArray();
+
+        if ($fila === null) {
+            throw ApiException::noEncontrado('La oferta no existe.');
+        }
+
+        return $fila;
+    }
+
+    /**
      * RT-05: la empresa solo accede a sus propias ofertas.
      *
      * @return array<string, mixed>
@@ -470,6 +564,24 @@ class OfertaService
     {
         $fila = $this->repository->detalle($id);
         if ($fila === null || (int) $fila['empresa_id'] !== $empresaId) {
+            throw ApiException::noEncontrado('La oferta no existe.');
+        }
+
+        return $fila;
+    }
+
+    /**
+     * Bloquea la oferta propia dentro de la transacción de edición.
+     *
+     * @return array<string, mixed>
+     */
+    private function exigirPropiaBloqueada(int $empresaId, int $id): array
+    {
+        $fila = $this->ofertas->db
+            ->query('SELECT * FROM ofertas WHERE id = ? AND empresa_id = ? FOR UPDATE', [$id, $empresaId])
+            ->getRowArray();
+
+        if ($fila === null) {
             throw ApiException::noEncontrado('La oferta no existe.');
         }
 
@@ -576,20 +688,53 @@ class OfertaService
      */
     private function validar(array $datos, ?array $existente = null): array
     {
+        // Rechaza arrays/objetos en campos escalares antes de cualquier cast o
+        // saneamiento. Un tipo inesperado no se convierte en "Array".
+        foreach (['puesto', 'formacion_requerida', 'experiencia_requerida', 'tipo_empleo', 'ubicacion', 'fecha_cierre', 'categoria_id', 'vacantes', 'remuneracion'] as $campo) {
+            $valor = $datos[$campo] ?? null;
+            if ($valor !== null && $valor !== '' && ! is_scalar($valor)) {
+                $mensaje = "El campo {$campo} no tiene un tipo válido.";
+                throw ApiException::validacion($mensaje, [$mensaje], [$campo => $mensaje]);
+            }
+        }
+
         // Campos con editor enriquecido: se sanea el HTML antes de validar y su
         // límite de 10.000 se aplica al TEXTO VISIBLE, no a las etiquetas.
-        $datos['descripcion'] = $this->html->limpiar($datos['descripcion'] ?? null);
-        $datos['funciones']   = $this->html->limpiar($datos['funciones'] ?? null);
-        $datos['requisitos']  = $this->html->limpiar($datos['requisitos'] ?? null);
+        foreach (['descripcion', 'funciones', 'requisitos'] as $campo) {
+            $valor = $datos[$campo] ?? null;
+            if ($valor !== null && ! is_string($valor)) {
+                $mensaje = "El campo {$campo} no tiene un tipo válido.";
+                throw ApiException::validacion($mensaje, [$mensaje], [$campo => $mensaje]);
+            }
+            $datos[$campo] = $this->html->limpiar($valor);
+        }
 
         $habilidades = $datos['habilidades'] ?? [];
         if (is_string($habilidades)) {
             $habilidades = explode(',', $habilidades);
         }
-        $datos['habilidades'] = array_values(array_filter(
-            array_map('trim', (array) $habilidades),
-            static fn ($habilidad) => $habilidad !== '',
-        ));
+        if (! is_array($habilidades)) {
+            $mensaje = 'El campo habilidades debe ser una lista.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['habilidades' => $mensaje]);
+        }
+
+        $normalizadas = [];
+        foreach ($habilidades as $habilidad) {
+            if (! is_string($habilidad) && ! is_int($habilidad)) {
+                $mensaje = 'Cada habilidad debe ser un texto válido.';
+                throw ApiException::validacion($mensaje, [$mensaje], ['habilidades' => $mensaje]);
+            }
+            $texto = trim((string) $habilidad);
+            if ($texto === '') {
+                continue;
+            }
+            if (mb_strlen($texto) > 100) {
+                $mensaje = 'Cada habilidad no debe superar 100 caracteres.';
+                throw ApiException::validacion($mensaje, [$mensaje], ['habilidades' => $mensaje]);
+            }
+            $normalizadas[$texto] = $texto;
+        }
+        $datos['habilidades'] = array_values($normalizadas);
 
         $this->exigirObligatorios($datos, $existente);
 

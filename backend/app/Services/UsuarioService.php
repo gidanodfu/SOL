@@ -147,21 +147,31 @@ class UsuarioService
     public function actualizar(int $adminId, int $id, array $datos): void
     {
         $usuario = $this->exigirExistente($id);
-        $datos['email']    = Identidad::email($datos['email'] ?? null);
-        $datos['telefono'] = Identidad::telefono($datos['telefono'] ?? null);
 
-        Validador::validar($datos, [
+        $proporcionaEmail    = array_key_exists('email', $datos);
+        $proporcionaTelefono = array_key_exists('telefono', $datos);
+        $email    = Identidad::email(Validador::textoActualizacion($datos, 'email', $usuario->email, 'correo electrónico'));
+        $telefono = Identidad::telefono(Validador::textoActualizacion($datos, 'telefono', $usuario->telefono, 'teléfono'));
+
+        $datos['email']    = $email;
+        $datos['telefono'] = $telefono;
+        $reglas = [
             'nombres'   => ['required', 'max:100'],
             'apellidos' => ['required', 'max:100'],
-            'email'     => ['email', 'max:150'],
-            'telefono'  => ['telefono'],
-        ]);
-
-        if (Identidad::email($usuario->email) !== $datos['email']) {
-            $this->identidad->exigirLibre('email', $datos['email'], $id);
+        ];
+        if ($proporcionaEmail) {
+            $reglas['email'] = ['email', 'max:150'];
         }
-        if (Identidad::telefono($usuario->telefono) !== $datos['telefono']) {
-            $this->identidad->exigirLibre('telefono', $datos['telefono'], $id);
+        if ($proporcionaTelefono) {
+            $reglas['telefono'] = ['telefono'];
+        }
+        Validador::validar($datos, $reglas);
+
+        if ($proporcionaEmail && Identidad::email($usuario->email) !== $email) {
+            $this->identidad->exigirLibre('email', $email, $id);
+        }
+        if ($proporcionaTelefono && Identidad::telefono($usuario->telefono) !== $telefono) {
+            $this->identidad->exigirLibre('telefono', $telefono, $id);
         }
 
         try {

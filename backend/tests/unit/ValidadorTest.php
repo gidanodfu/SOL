@@ -180,4 +180,50 @@ final class ValidadorTest extends TestCase
             $this->assertSame(['El campo Email debe ser un correo válido.'], $e->getErrores());
         }
     }
+
+    public function testIdentificadoresEnterosPositivos(): void
+    {
+        foreach ([1, 42, '1', '42'] as $valido) {
+            $this->assertTrue(Validador::esEnteroPositivo($valido), var_export($valido, true));
+        }
+
+        foreach ([0, -1, 1.5, '0', '01', '15abc', '1.0', null, true, [], ' 5 '] as $invalido) {
+            $this->assertFalse(Validador::esEnteroPositivo($invalido), var_export($invalido, true));
+        }
+    }
+
+    public function testBooleanosEstrictosRechazanValoresAmbiguos(): void
+    {
+        foreach ([true, false, 0, 1, '0', '1', 'true', 'false', ' TRUE '] as $valido) {
+            $this->assertTrue(Validador::esBooleano($valido), var_export($valido, true));
+        }
+
+        foreach ([null, '', 'sí', 'cualquier_valor', 2, -1, 1.0, [], new \stdClass()] as $invalido) {
+            $this->assertFalse(Validador::esBooleano($invalido), var_export($invalido, true));
+        }
+    }
+
+    public function testActualizacionDeContactoDistingueAusenteDeVacio(): void
+    {
+        $this->assertSame('actual@example.com', Validador::textoActualizacion([], 'email', 'actual@example.com', 'correo'));
+        $this->assertSame('nuevo@example.com', Validador::textoActualizacion(['email' => ' nuevo@example.com '], 'email', 'actual@example.com', 'correo'));
+
+        foreach ([null, '', '   ', ['x']] as $invalido) {
+            try {
+                Validador::textoActualizacion(['email' => $invalido], 'email', 'actual@example.com', 'correo');
+                $this->fail('Debió rechazar correo vacío o no textual.');
+            } catch (ApiException $e) {
+                $this->assertSame(422, $e->getHttpCode());
+                $this->assertArrayHasKey('email', $e->getCampos());
+            }
+        }
+    }
+
+    public function testFechaNoFutura(): void
+    {
+        $this->assertTrue(Validador::esFechaNoFutura('2026-11-02', '2026-11-02'));
+        $this->assertTrue(Validador::esFechaNoFutura('2026-11-01', '2026-11-02'));
+        $this->assertFalse(Validador::esFechaNoFutura('2026-11-03', '2026-11-02'));
+        $this->assertFalse(Validador::esFechaNoFutura('2026-02-31', '2026-11-02'));
+    }
 }

@@ -83,8 +83,9 @@ class ContratacionService
      */
     public function registrar(int $empresaId, array $datos): int
     {
-        if (empty($datos['postulacion_id'])) {
-            throw ApiException::validacion('Indique la postulación seleccionada.', ['Indique la postulación seleccionada.']);
+        if (! Validador::esEnteroPositivo($datos['postulacion_id'] ?? null)) {
+            $mensaje = 'Indique una postulación seleccionada válida.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['postulacion_id' => $mensaje]);
         }
 
         $postulacion = $this->postulacionDeEmpresa((int) $datos['postulacion_id'], $empresaId);
@@ -101,6 +102,10 @@ class ContratacionService
         }
 
         $datos = $this->validar($datos);
+        $fechaSituacion = $datos['fecha_situacion'] ?? $datos['fecha_contratacion'];
+        $situacion      = $datos['situacion_laboral'] ?? 'contratado';
+        $motivo         = $datos['motivo_situacion'] ?? null;
+        $this->validarSituacion($situacion, $motivo, $datos['fecha_contratacion'], $fechaSituacion);
 
         $this->contrataciones->insert([
             'postulacion_id'      => (int) $postulacion['id'],
@@ -115,7 +120,7 @@ class ContratacionService
             // Situación laboral inicial: recién contratado.
             'situacion_laboral'   => $datos['situacion_laboral'] ?? 'contratado',
             'motivo_situacion'    => $datos['motivo_situacion'] ?? null,
-            'fecha_situacion'     => $datos['fecha_situacion'] ?? $datos['fecha_contratacion'],
+            'fecha_situacion'     => $fechaSituacion,
         ]);
 
         return (int) $this->contrataciones->getInsertID();
@@ -140,6 +145,8 @@ class ContratacionService
         if ($situacion !== $contrato['situacion_laboral'] && empty($datos['fecha_situacion'])) {
             $fechaSituacion = date('Y-m-d');
         }
+        $motivo = $datos['motivo_situacion'] ?? $contrato['motivo_situacion'];
+        $this->validarSituacion($situacion, $motivo, $datos['fecha_contratacion'], $fechaSituacion);
 
         $this->contrataciones->update($id, [
             'fecha_contratacion' => $datos['fecha_contratacion'],
@@ -189,6 +196,42 @@ class ContratacionService
         ]);
 
         return $datos;
+    }
+
+    /**
+     * Valida coherencia temporal y motivo de la situación laboral.
+     *
+     * - fecha_situacion >= fecha_contratacion;
+     * - fecha_situacion no futura (America/Lima, `date()` usa la zona de la app);
+     * - motivo obligatorio para despedido/renuncio;
+     * - finalizado y contratado pueden quedar sin motivo.
+     */
+    private function validarSituacion(string $situacion, $motivo, string $fechaContratacion, ?string $fechaSituacion): void
+    {
+        if ($motivo !== null && ! is_string($motivo)) {
+            $mensaje = 'El motivo de la situación no es válido.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['motivo_situacion' => $mensaje]);
+        }
+
+        $motivo = trim((string) ($motivo ?? ''));
+        if (in_array($situacion, ['despedido', 'renuncio'], true) && $motivo === '') {
+            $mensaje = 'Indique el motivo de la situación laboral.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['motivo_situacion' => $mensaje]);
+        }
+
+        if ($fechaSituacion === null || trim($fechaSituacion) === '') {
+            return;
+        }
+
+        if ($fechaSituacion < $fechaContratacion) {
+            $mensaje = 'La fecha de situación no puede ser anterior a la fecha de contratación.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['fecha_situacion' => $mensaje]);
+        }
+
+        if (! Validador::esFechaNoFutura($fechaSituacion)) {
+            $mensaje = 'La fecha de situación no puede ser futura.';
+            throw ApiException::validacion($mensaje, [$mensaje], ['fecha_situacion' => $mensaje]);
+        }
     }
 
     private function base(): \CodeIgniter\Database\BaseBuilder

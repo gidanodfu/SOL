@@ -146,7 +146,7 @@ check_code 'token previo pierde exportación' 403 "$(curl -s -o /dev/null -w '%{
 BODY='{"perfil_municipal":"moderador"}'
 check_code 'restaurar perfil moderador' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/admin/usuarios/$ID_MOD/perfil" -H "Authorization: Bearer $TA_ADM" -H 'Content-Type: application/json' -d "$BODY")"
 check_code 'token previo recupera escritura al restaurar' 422 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/admin/actividades" -H "Authorization: Bearer $TA_MOD" -H 'Content-Type: application/json' -d '{}')"
-BODY=$(python3 -c 'import json,sys; print(json.dumps({"nombres":"QA","apellidos":"Lectura","email":sys.argv[1]+"@example.test","telefono":"","perfil_municipal":"admin"}))' "$U_LEC")
+BODY=$(python3 -c 'import json,sys; print(json.dumps({"nombres":"QA","apellidos":"Lectura","email":sys.argv[1]+"@example.test","perfil_municipal":"admin"}))' "$U_LEC")
 check_code 'actualizar datos ignora perfil enviado en el cuerpo' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/admin/usuarios/$ID_LEC" -H "Authorization: Bearer $TA_ADM" -H 'Content-Type: application/json' -d "$BODY")"
 PERFIL_LEC=$(curl -s "$B/api/admin/usuarios" -H "Authorization: Bearer $TA_ADM" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"]["data"];print(next((u["perfil_municipal"] for u in d if u["id"]==int(sys.argv[1])), "missing"))' "$ID_LEC")
 [ "$PERFIL_LEC" = "solo_lectura" ] && ok 'el campo perfil no se puede elevar desde el update general' || fail "perfil alterado desde update general: $PERFIL_LEC"

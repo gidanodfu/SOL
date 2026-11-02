@@ -117,15 +117,32 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
       : VACIO,
   );
   const [error, setError] = useState(null);
+  const [errores, setErrores] = useState({});
   const { ejecutar, enviando } = useAccion(() => (inicial ? actualizarContratacion(inicial.id, form) : registrarContratacion(form)));
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const set = (k) => (e) => {
+    setForm({ ...form, [k]: e.target.value });
+    setErrores((previo) => (previo[k] ? { ...previo, [k]: undefined } : previo));
+    setError(null);
+  };
 
   const guardar = async () => {
+    setErrores({});
+    setError(null);
     try {
       await ejecutar();
       alGuardar();
     } catch (e) {
+      const campos = e?.response?.data?.campos;
+      if (campos && typeof campos === 'object' && !Array.isArray(campos)) {
+        setErrores(campos);
+        setError(null);
+        const orden = ['postulacion_id', 'fecha_contratacion', 'cargo', 'modalidad', 'remuneracion', 'situacion_laboral', 'fecha_situacion', 'motivo_situacion', 'observaciones'];
+        const primero = orden.find((campo) => campos[campo]);
+        if (primero) document.getElementById(`contratacion-${primero}`)?.focus();
+        return;
+      }
+
       const det = e?.response?.data?.errors;
       setError(Array.isArray(det) && det.length ? det.join('. ') : errorApi(e));
     }
@@ -139,26 +156,30 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
         {!inicial && (
-          <Selecto etiqueta="Candidato seleccionado *" value={form.postulacion_id} onChange={set('postulacion_id')}>
+          <Selecto etiqueta="Candidato seleccionado *" id="contratacion-postulacion_id" value={form.postulacion_id} onChange={set('postulacion_id')} error={errores.postulacion_id}>
             <option value="">Seleccione…</option>
             {opciones.map((o) => (
               <option key={o.id} value={o.id}>{o.nombres} {o.apellidos} — {o.puesto}</option>
             ))}
           </Selecto>
         )}
-        <Campo etiqueta="Fecha de contratación *" type="date" value={form.fecha_contratacion} onChange={set('fecha_contratacion')} />
-        <Campo etiqueta="Cargo contratado *" value={form.cargo} onChange={set('cargo')} />
-        <Campo etiqueta="Modalidad" value={form.modalidad} onChange={set('modalidad')} />
-        <Campo etiqueta="Remuneración (S/)" value={form.remuneracion} onChange={set('remuneracion')} />
-        <Selecto etiqueta="Situación laboral" value={form.situacion_laboral} onChange={set('situacion_laboral')}>
+        <Campo etiqueta="Fecha de contratación *" id="contratacion-fecha_contratacion" type="date" value={form.fecha_contratacion} onChange={set('fecha_contratacion')} error={errores.fecha_contratacion} />
+        <Campo etiqueta="Cargo contratado *" id="contratacion-cargo" value={form.cargo} onChange={set('cargo')} error={errores.cargo} />
+        <Campo etiqueta="Modalidad" id="contratacion-modalidad" value={form.modalidad} onChange={set('modalidad')} error={errores.modalidad} />
+        <Campo etiqueta="Remuneración (S/)" id="contratacion-remuneracion" value={form.remuneracion} onChange={set('remuneracion')} error={errores.remuneracion} />
+        <Selecto etiqueta="Situación laboral" id="contratacion-situacion_laboral" value={form.situacion_laboral} onChange={set('situacion_laboral')} error={errores.situacion_laboral}>
           {SITUACIONES_CONTRATACION.map((s) => (
             <option key={s} value={s}>{ETIQUETA_SITUACION_CONTRATACION[s]}</option>
           ))}
         </Selecto>
-        <Campo etiqueta="Fecha de cambio de situación" type="date" value={form.fecha_situacion} onChange={set('fecha_situacion')} />
+        <Campo etiqueta="Fecha de cambio de situación" id="contratacion-fecha_situacion" type="date" value={form.fecha_situacion} onChange={set('fecha_situacion')} error={errores.fecha_situacion} />
       </div>
-      <label className="campo"><span>Motivo / razón del cambio (opcional)</span><textarea rows="2" value={form.motivo_situacion} onChange={set('motivo_situacion')} maxLength={255} /></label>
-      <label className="campo"><span>Observaciones</span><textarea rows="2" value={form.observaciones} onChange={set('observaciones')} /></label>
+      <label className={`campo${errores.motivo_situacion ? ' campo-error' : ''}`} htmlFor="contratacion-motivo_situacion">
+        <span>Motivo / razón del cambio (opcional)</span>
+        <textarea id="contratacion-motivo_situacion" rows="2" value={form.motivo_situacion} onChange={set('motivo_situacion')} maxLength={255} aria-invalid={errores.motivo_situacion ? true : undefined} aria-describedby={errores.motivo_situacion ? 'contratacion-motivo_situacion-error' : undefined} />
+        {errores.motivo_situacion && <span id="contratacion-motivo_situacion-error" className="campo-mensaje" role="alert">{errores.motivo_situacion}</span>}
+      </label>
+      <label className="campo"><span>Observaciones</span><textarea id="contratacion-observaciones" rows="2" value={form.observaciones} onChange={set('observaciones')} /></label>
       <Boton variante="primario" cargando={enviando} onClick={guardar}>Guardar contratación</Boton>
     </div>
   );

@@ -44,8 +44,13 @@ class CvModel extends Model
      */
     public function contarDelMes(int $postulanteId): int
     {
-        return $this->where('postulante_id', $postulanteId)
-            ->where('created_at >=', date('Y-m-01 00:00:00'))
-            ->countAllResults();
+        $fila = $this->db->table('cv_cuotas_mensuales')
+            ->select('usos')
+            ->where('postulante_id', $postulanteId)
+            ->where('periodo', date('Y-m'))
+            ->get()
+            ->getRowArray();
+
+        return (int) ($fila['usos'] ?? 0);
     }
 }

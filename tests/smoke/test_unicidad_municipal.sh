@@ -346,10 +346,14 @@ print(json.dumps({'nombres': 'QA', 'apellidos': 'Sin teléfono', 'email': sys.ar
 PY
 )
 CODE=$(put_to "$B1" "$TOKEN" "$ID_ADMIN" "$BODY" /tmp/opencode/uni_update_clear_tel.json)
-check_code "eliminar teléfono opcional" 200 "$CODE"
-[ "$(db_scalar "SELECT COUNT(*) FROM identidades_reservadas WHERE tipo='telefono' AND user_id=$ID_ADMIN")" = "0" ] \
-    && ok 'reserva de teléfono liberada' \
-    || fail 'reserva de teléfono no liberada'
+check_code "rechazar teléfono vacío en actualización" 422 "$CODE"
+assert_field /tmp/opencode/uni_update_clear_tel.json telefono "campo telefono vacío en actualización"
+[ "$(db_scalar "SELECT telefono FROM users WHERE id=$ID_ADMIN")" = "$NEW_TEL" ] \
+    && ok 'teléfono anterior conservado tras rechazo' \
+    || fail 'teléfono anterior modificado tras rechazo'
+[ "$(db_scalar "SELECT COUNT(*) FROM identidades_reservadas WHERE tipo='telefono' AND user_id=$ID_ADMIN")" = "1" ] \
+    && ok 'reserva de teléfono se mantiene tras rechazo' \
+    || fail 'reserva de teléfono liberada tras rechazo'
 
 printf '\n== 7. teléfonos históricos con formatos 00 y 0051 ==\n'
 RAW_USER_00="qa_raw00_$SUFIJO"

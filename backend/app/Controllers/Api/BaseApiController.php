@@ -5,7 +5,9 @@
 namespace App\Controllers\Api;
 
 use App\Controllers\BaseController;
+use App\Exceptions\ApiException;
 use App\Libraries\Descarga;
+use App\Validation\Validador;
 
 /**
  * Base de los controladores de la API REST. Toda respuesta usa la estructura
@@ -82,29 +84,22 @@ abstract class BaseApiController extends BaseController
 
     /**
      * Booleano estricto para acciones de activación. En PHP `(bool) "false"`
-     * es `true`; aquí "false" desactiva y cualquier valor ambiguo usa el
-     * defecto, nunca se interpreta como verdadero.
+     * es `true`; aquí solo se aceptan booleanos nativos, 0/1 y las cadenas
+     * canónicas. Un valor ambiguo, ausente o de otro tipo responde 422.
      *
      * @param mixed $valor
      */
-    protected function booleanoEstricto($valor, bool $defecto = false): bool
+    protected function booleanoEstricto($valor, string $campo = 'activo'): bool
     {
+        if (! Validador::esBooleano($valor)) {
+            $mensaje = 'El campo ' . $campo . ' debe ser un booleano válido.';
+            throw ApiException::validacion($mensaje, [$mensaje], [$campo => $mensaje]);
+        }
+
         if (is_bool($valor)) {
             return $valor;
         }
-        if (is_int($valor)) {
-            return $valor === 1;
-        }
-        if (is_string($valor)) {
-            $normalizado = strtolower(trim($valor));
-            if (in_array($normalizado, ['1', 'true'], true)) {
-                return true;
-            }
-            if (in_array($normalizado, ['0', 'false', ''], true)) {
-                return false;
-            }
-        }
 
-        return $defecto;
+        return in_array(strtolower(trim((string) $valor)), ['1', 'true'], true);
     }
 }
