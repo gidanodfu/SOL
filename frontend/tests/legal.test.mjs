@@ -27,16 +27,15 @@ test('las pantallas de autenticación usan el footer compartido y ya no el mensa
   }
 });
 
-test('las pantallas de acceso y registro usan la variante rounded del footer', () => {
+test('las pantallas de acceso, registro y activación usan la variante rounded del footer', () => {
   const footer = leer('../src/components/AuthFooter.jsx');
   const estilos = leer('../src/styles.css');
 
-  for (const archivo of ['Login.jsx', 'Registro.jsx', 'RegistroEmpresa.jsx']) {
+  for (const archivo of ['Login.jsx', 'Registro.jsx', 'RegistroEmpresa.jsx', 'ActivarCuenta.jsx']) {
     assert.match(leer(`../src/pages/auth/${archivo}`), /<AuthFooter rounded \/>/);
   }
-  assert.match(leer('../src/pages/auth/ActivarCuenta.jsx'), /<AuthFooter \/>/);
 
-  for (const archivo of ['Registro.jsx', 'RegistroEmpresa.jsx']) {
+  for (const archivo of ['Registro.jsx', 'RegistroEmpresa.jsx', 'ActivarCuenta.jsx']) {
     assert.match(
       leer(`../src/pages/auth/${archivo}`),
       /className="login-institucional login-institucional--registro login-institucional--footer-rounded"/,

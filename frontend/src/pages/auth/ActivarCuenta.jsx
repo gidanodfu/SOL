@@ -56,7 +56,7 @@ export default function ActivarCuenta() {
   };
 
   return (
-    <div className="login-institucional">
+    <div className="login-institucional login-institucional--registro login-institucional--footer-rounded">
       <main className="login-main">
         <div className="login-marca">
           <LogoMunicipal className="login-logo" />
@@ -71,7 +71,7 @@ export default function ActivarCuenta() {
             <>
               <h2 className="login-formulario-titulo">¡CUENTA ACTIVADA!</h2>
               <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.5 }}>
-                Su cuenta ha sido activada. Ahora puede iniciar sesión con su correo corporativo y la contraseña que acaba de definir.
+                Su cuenta ha sido activada. Ahora puede iniciar sesión con el RUC de su empresa y la contraseña que acaba de definir.
               </p>
               <Link to="/login" className="login-btn-submit" style={{ textDecoration: 'none', display: 'flex', marginTop: '1rem' }}>
                 IR A INICIAR SESIÓN
@@ -149,7 +149,7 @@ export default function ActivarCuenta() {
         </div>
       </main>
 
-      <AuthFooter />
+      <AuthFooter rounded />
     </div>
   );
 }
