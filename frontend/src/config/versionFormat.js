@@ -35,7 +35,7 @@ export function parseSystemVersion(valor) {
 
 /**
  * Convierte el identificador técnico en la etiqueta visible.
- * Ej.: 0.9.2-beta.1 → 0.9.2 BETA 1; 1.1.0 → 1.1.0 ESTABLE.
+ * Ej.: 0.9.2-beta.1 → 0.9.2 BETA 1; 1.4.8 → 1.4.8 ESTABLE.
  */
 export function formatSystemVersion(valor) {
   const { base, canal, numeroCanal } = parseSystemVersion(valor);

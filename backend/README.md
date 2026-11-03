@@ -78,8 +78,8 @@ Composer ni MySQL en el host. El bootstrap inicial está en
 
 ## Documentación de la API
 
-- `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 completa (81 operaciones,
-  versión 1.1.0). Incluye rate limits (`429`), límite mensual de CV, validación de
+- `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 completa (91 operaciones,
+  versión 1.4.8). Incluye rate limits (`429`), rate limiting configurable de CV, validación de
   teléfono y respuestas de error saneadas. Abrir `public/swagger/index.html` (Swagger UI
   por CDN).
 - `docs/auditoria-backend.md` — auditoría de seguridad/calidad con nota de vigencia y

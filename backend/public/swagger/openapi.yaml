@@ -3,16 +3,16 @@ openapi: 3.0.3
 
 info:
   title: API Sistema de Empleo — Municipalidad Distrital de José Leonardo Ortiz (SOL)
-  version: 1.1.0
+  version: 1.4.8
   description: |
     Especificación generada a partir de la revisión del código real del backend
     (CodeIgniter 4.7, PHP 8.2+, MySQL) y de sus rutas en `app/Config/Routes.php`.
 
-    Cambios 2026-09-10 (versión 1.1.0): rate limiting en autenticación y subida de CV,
-    validación de teléfono (9 u 11 dígitos), eliminación de `password_hash` de las
-    respuestas y saneamiento de errores 500. La cuota mensual de 4 CV se retiró: la
-    carga se protege con límites configurables por usuario/IP y una carga simultánea
-    por postulante.
+    Actualización 2026-11-02 (versión 1.4.8): rate limiting configurable de CV y
+    retiro de la cuota mensual, endurecimiento de validaciones de escritura,
+    publicación inmediata de oportunidades programadas, activación de
+    postulaciones solo para candidatos seleccionados y ajustes de la pantalla
+    de activación de empresas.
 
     Convenciones transversales (verificadas en `app/Controllers/Api/BaseApiController.php`,
     `app/Exceptions/ApiExceptionHandler.php`, `app/Filters/JwtAuthFilter.php` y

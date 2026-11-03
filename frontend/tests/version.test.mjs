@@ -13,7 +13,7 @@ test('formatea los canales oficiales de versión', () => {
     ['0.9.2-alpha.1', '0.9.2 ALPHA 1'],
     ['0.9.2-rc.1', '0.9.2 RC 1'],
     ['0.9.2', '0.9.2 ESTABLE'],
-    ['1.1.0', '1.1.0 ESTABLE'],
+    ['1.4.8', '1.4.8 ESTABLE'],
     ['1.0.0', '1.0.0 ESTABLE'],
   ];
 
@@ -35,8 +35,8 @@ test('rechaza versiones ausentes o con formato inválido', () => {
 
 test('el archivo VERSION es la fuente única de la versión oficial', () => {
   const version = leer('../../VERSION').trim();
-  assert.equal(version, '1.1.0');
-  assert.equal(formatSystemVersion(version), '1.1.0 ESTABLE');
+  assert.equal(version, '1.4.8');
+  assert.equal(formatSystemVersion(version), '1.4.8 ESTABLE');
 });
 
 test('Vite incorpora la versión al bundle y no queda en package.json', () => {
@@ -47,5 +47,5 @@ test('Vite incorpora la versión al bundle y no queda en package.json', () => {
   assert.match(vite, /resolve\(frontendDir, '\.\.\/VERSION'\)/);
   assert.match(vite, /JSON\.stringify\(VERSION_SOL\)/);
   assert.equal(paquete.version, '0.0.0');
-  assert.doesNotMatch(JSON.stringify(paquete), /1\.1\.0/);
+  assert.doesNotMatch(JSON.stringify(paquete), /1\.4\.8/);
 });

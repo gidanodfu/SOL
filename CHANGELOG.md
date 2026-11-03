@@ -4,32 +4,88 @@ Todos los cambios notables del Sistema de Empleo MDJLO se documentan en este
 archivo. El formato sigue la convención de *Keep a Changelog* y la versión
 oficial es la del archivo raíz `VERSION`.
 
-## [Unreleased]
+## [1.4.8] — 2026-11-02
+
+### Añadido
+
+- Rate limiting configurable para la carga de CV por usuario e IP, con ventanas
+  cortas y largas (5/10 min y 20/hora por usuario; 10/10 min y 40/hora por IP,
+  configurables con `cvRateLimit.*`).
+- Bloqueo de una carga simultánea por postulante mediante `GET_LOCK`.
+- Tabla `rate_limit_contadores` con clave primaria compuesta
+  `(clave, ventana_inicio)` y migración `2026-11-02-120000_RateLimitCvYRetirarCuotas`.
+- Validación estricta de escrituras: tipos escalares, IDs positivos, booleanos
+  estrictos, fechas calendáricas y no futuras, y actualización de contacto que
+  distingue campo ausente, `null`, cadena vacía y valor válido.
+- Pruebas de rate limiting, reinicio de ventana, concurrencia de CV, migración
+  de cuota a legado y conservación del CV activo.
+- Pruebas de publicación inmediata de oportunidades programadas y de activación
+  de postulaciones solo para candidatos seleccionados.
+- Ajustes de la pantalla `/activar-cuenta`: footer compartido con `/login`,
+  mismo ancho y alineación que la tarjeta, sin mini logo, y mensaje de
+  confirmación con RUC de la empresa.
+- Propagación de `cvRateLimit.*` al `backend.env` generado por los scripts de
+  despliegue.
 
 ### Cambiado
 
+- Se retiró la cuota mensual de cuatro CV. El CV se versiona sin cuota fija y
+  la carga se protege con rate limiting configurable y una operación simultánea
+  por postulante.
+- La versión del proyecto pasa de `1.1.0` a `1.4.8`.
+- Una oportunidad activa con inicio futuro aparece inmediatamente en el portal
+  como `programado` y `visible`; `fecha_inicio` solo determina el estado
+  efectivo.
 - La empresa solo puede activar o desactivar postulaciones en estado
   `seleccionado`. En `pendiente`, `en_revision` o `no_seleccionado` la API
   responde `409` y no modifica `activo`, `updated_at` ni el historial.
 - El retiro voluntario (`retirada_postulante = 1`) bloquea cualquier cambio de
   activación de la empresa, incluso cuando el valor solicitado coincide con el
-  actual. Ya no se muestra el botón deshabilitado de reactivación: no se ofrece
-  ningún control de activación para esos registros.
-- La bandeja de la empresa muestra la indicación "La activación estará
-  disponible cuando el candidato sea seleccionado" en estados no seleccionados.
+  actual.
+- La compilación Vite y la pantalla `/about` siguen leyendo la versión del
+  archivo raíz `VERSION`; no se duplica en `package.json` ni en constantes React.
+- OpenAPI, README, documentación de operaciones y matriz de cumplimiento se
+  actualizan a la versión `1.4.8`.
 
 ### Corregido
 
-- La publicación pública de oportunidades ya no depende de `fecha_inicio`: una
-  oportunidad activa, con programación completa y `fecha_fin` vigente aparece
-  inmediatamente en el portal aunque su inicio sea futuro.
+- La publicación pública de oportunidades ya no exige que `fecha_inicio` haya
+  llegado; al alcanzar `fecha_fin` deja de publicarse y la administración la
+  muestra finalizada.
 - La administración muestra simultáneamente `Programado` (estado efectivo) y
   `Visible` (disponibilidad pública) para oportunidades con inicio futuro.
-- Al alcanzar `fecha_inicio` la oportunidad sigue publicada y pasa a `en_curso`;
-  al alcanzar `fecha_fin` deja de publicarse y se muestra finalizada en
-  administración.
-- Se actualizaron las pruebas unitarias, frontend y smoke para cubrir inicio
-  futuro visible, reinicio por fecha, estados terminales y zona America/Lima.
+- La activación de postulaciones conserva el CV y el historial ante rechazos y
+  no permite eludir la regla mediante peticiones directas a la API.
+- Los rechazos de activación de postulaciones no modifican `activo`,
+  `updated_at` ni `postulacion_historial`.
+- El footer de `/activar-cuenta` deja de extenderse a todo el ancho y de mostrar
+  el mini logo municipal.
+- El mensaje de cuenta activada indica que se inicia sesión con el RUC de la
+  empresa, no con el correo corporativo.
+
+### Eliminado
+
+- `CvCuotaModel`, `LIMITE_MENSUAL`, `consumoMensual()`, `contarDelMes()` y el
+  campo `limite_mensual` de la API y del frontend.
+- La cuota histórica se conserva como `cv_cuotas_mensuales_legado`; no se
+  eliminan datos ni versiones de CV.
+
+### Migraciones
+
+- `2026-11-02-100000_CuotasCvYActivoUnico`: crea `cv_cuotas_mensuales` y
+  `cv_activos`, con backfill del CV activo.
+- `2026-11-02-120000_RateLimitCvYRetirarCuotas`: renombra la cuota a
+  `cv_cuotas_mensuales_legado`, crea `rate_limit_contadores` y permite revertir
+  el nombre mediante `down()`.
+
+### Pruebas
+
+- Backend: 220 tests, 1247 assertions.
+- Frontend: 79/79 tests, lint sin errores y build correcto.
+- Smoke: 27 suites, 0 fallos y 0 marcadores de aserción.
+- Validación de despliegue correcta; OpenAPI válido con 91 `operationId`.
+- Verificación visual con Chromium de `/activar-cuenta` y de los indicadores de
+  oportunidades/postulaciones.
 
 ## [1.1.0] — 2026-11-01
 
@@ -112,5 +168,6 @@ oficial es la del archivo raíz `VERSION`.
 
 - Primera versión estable del Sistema de Empleo MDJLO.
 
+[1.4.8]: #148--2026-11-02
 [1.1.0]: #110--2026-11-01
 [1.0.1]: #101--2026-10-31
