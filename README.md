@@ -204,6 +204,26 @@ El catálogo de tablas, relaciones y orden de migraciones está en
 La API responde en <http://localhost:8080>; `GET /health` permite comprobar
 disponibilidad.
 
+### Conexión a MySQL desde DBeaver
+
+| Campo | Valor |
+|---|---|
+| Host | `127.0.0.1` |
+| Puerto | `DEV_DB_PORT` (por defecto `3307`) |
+| Base de datos | `DB_DATABASE` |
+| Usuario | `DB_USER` |
+| Contraseña | `DB_PASSWORD` |
+
+Si DBeaver muestra un error de autenticación, agregue en **Driver properties**:
+
+```text
+allowPublicKeyRetrieval = true
+useSSL = false
+```
+
+Luego use **Test Connection**. También puede abrir el cliente dentro del
+contenedor con `./deploy/scripts/dev.sh db`.
+
 ## 11. Comandos útiles
 
 ```bash
