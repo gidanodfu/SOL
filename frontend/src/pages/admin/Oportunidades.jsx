@@ -58,11 +58,10 @@ const aServidor = (valor) => {
   return texto;
 };
 
-// Estado de publicación derivado del backend (oculta / programada / visible).
+// Estado de publicación derivado del backend (oculta / visible / no visible / incompleta).
 function BadgePublicacion({ estado }) {
   const mapa = {
     visible: ['badge-green', 'Visible'],
-    programada: ['badge-amber', 'Programada'],
     oculta: ['badge-gray', 'Oculta'],
     no_visible: ['badge-gray', 'No visible'],
     incompleta: ['badge-amber', 'No publicable'],

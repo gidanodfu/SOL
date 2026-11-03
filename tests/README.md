@@ -104,14 +104,15 @@ modalidad, con mensajes por campo, rechazo de URL/protocolo inválidos, HTML
 vacío, creación válida y conservación del contrato de edición parcial. La
 fecha editorial ya no forma parte del contrato.
 
-`tests/smoke/test_oportunidades_ciclo.sh` cubre la ventana pública
-`[fecha_inicio, fecha_fin)`: antes de inicio queda programada y fuera del
-portal; en el instante de inicio pasa a en_curso y puede publicarse; en el
-instante exacto de fin se finaliza y desaparece; activo = 0 la oculta sin
-cambiar su ciclo; cancelado nunca se publica. También comprueba la ausencia de
-`fecha_publicacion`, `empresa_id`, `razon_social` y `ruc` en las respuestas, y
-la inmutabilidad HTTP de finalizadas. Cada suite usa un esquema MySQL efímero
-propio y no toca datos de desarrollo ni de producción.
+`tests/smoke/test_oportunidades_ciclo.sh` cubre la publicación independiente
+del inicio: una oportunidad activa con fecha de inicio futura aparece
+inmediatamente como `programado` y visible; al alcanzar el inicio pasa a
+`en_curso` sin desaparecer; en el instante exacto de fin se finaliza y
+desaparece; activo = 0 la oculta sin cambiar su ciclo; cancelado nunca se
+publica. También comprueba la ausencia de `fecha_publicacion`, `empresa_id`,
+`razon_social` y `ruc` en las respuestas, y la inmutabilidad HTTP de
+finalizadas. Cada suite usa un esquema MySQL efímero propio y no toca datos de
+desarrollo ni de producción.
 
 `tests/smoke/test_actividades_finalizadas.sh` comprueba que una actividad
 finalizada manualmente o por fecha de fin (America/Lima) sea de solo lectura:

@@ -470,14 +470,14 @@ paths:
       summary: Oportunidades de empleo públicas
       description: |
         Oportunidades públicas: `activo = 1`, programación completa y válida,
-        ventana `fecha_inicio <= ahora < fecha_fin` en America/Lima, y estado
-        efectivo `en_curso` (excluye `finalizado` y `cancelado`). El límite de
-        inicio es inclusivo y el de fin también para el cierre: al alcanzar
-        exactamente `fecha_fin` desaparece. Ordenadas por `created_at DESC`,
-        tope fijo 200 (sin paginación). Cada fila incluye `estado_efectivo`,
-        `puede_modificarse`, `estado_publicacion` y `es_visible_publicamente`.
-        Una oportunidad antes de `fecha_inicio` queda `programada` y no se
-        publica hasta que comience la ventana.
+        `fecha_fin > ahora` en America/Lima, y estado efectivo distinto de
+        `finalizado` y `cancelado`. La `fecha_inicio` no condiciona la
+        publicación: una oportunidad activa con inicio futuro se devuelve
+        inmediatamente con `estado_efectivo = programado` y
+        `estado_publicacion = visible`. Al alcanzar exactamente `fecha_fin`
+        deja de publicarse. Ordenadas por `created_at DESC`, tope fijo 200 (sin
+        paginación). Cada fila incluye `estado_efectivo`, `puede_modificarse`,
+        `estado_publicacion` y `es_visible_publicamente`.
       security:
         - bearerAuth: []
       responses:
@@ -1318,8 +1318,10 @@ paths:
         `estado_efectivo`, de modo que una oportunidad vencida aparece en
         `finalizado`. Orden `created_at DESC`, tope fijo 300. Cada fila incluye
         `estado_efectivo`, `puede_modificarse`, `estado_publicacion` y
-        `es_visible_publicamente`. La relación con `empresas` fue retirada del
-        modelo de oportunidades.
+        `es_visible_publicamente`. `estado_publicacion = visible` puede coexistir
+        con `estado_efectivo = programado`: la fecha de inicio no bloquea la
+        publicación. La relación con `empresas` fue retirada del modelo de
+        oportunidades.
       security:
         - bearerAuth: []
       parameters:
@@ -4890,12 +4892,14 @@ components:
           description: Falso si está finalizada manualmente o se alcanzó `fecha_fin`.
         estado_publicacion:
           type: string
-          enum: [oculta, programada, visible, no_visible, incompleta]
+          enum: [oculta, visible, no_visible, incompleta]
           description: |
-            Disponibilidad derivada. `no_visible` cubre finalizado/cancelado;
-            `incompleta` identifica un registro heredado sin programación
-            completa; `programada` significa que aún no llega `fecha_inicio`;
-            `visible` exige el predicado público completo.
+            Disponibilidad derivada. `no_visible` cubre finalizado/cancelado o
+            fecha_fin alcanzada; `incompleta` identifica un registro heredado
+            sin programación completa; `oculta` indica activo = 0; `visible`
+            exige activo, programación completa y fecha_fin vigente. La
+            fecha_inicio no interviene: una oportunidad programada con inicio
+            futuro puede ser `visible`.
         es_visible_publicamente:
           type: boolean
           description: true solo si el registro cumple todas las condiciones de GET /api/oportunidades.

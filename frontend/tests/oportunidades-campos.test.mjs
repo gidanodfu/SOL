@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { enlacesEnTexto, esEnlaceSeguro } from '../src/utils/enlacesTexto.js';
+import { esOportunidadVisible } from '../src/utils/oportunidades.js';
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), 'utf8');
 
@@ -86,6 +87,7 @@ test('la lista conserva finalizadas, filtra por estado y separa publicación de 
   assert.match(pagina, /<BadgesOportunidad oportunidad=\{o\}/);
   assert.match(pagina, /estado_efectivo \|\| oportunidad\.estado/);
   assert.match(pagina, /estado_publicacion/);
+  assert.match(pagina, /visible: \['badge-green', 'Visible'\]/);
   assert.match(pagina, /no_visible: \['badge-gray', 'No visible'\]/);
   assert.match(pagina, /incompleta: \['badge-amber', 'No publicable'\]/);
   assert.match(pagina, /<ContenidoEnriquecido className="contenido-resumen">/);
@@ -110,11 +112,40 @@ test('el detalle finalizado oculta acciones y muestra el motivo y el aviso', () 
   assert.match(pagina, /etiqueta: 'Enlace'/);
 });
 
-test('el portal público filtra finalizadas y usa estado, fechas y descripción enriquecida', () => {
+test('el portal público no descarta oportunidades programadas visibles', () => {
+  assert.equal(esOportunidadVisible({
+    estado_efectivo: 'programado',
+    es_visible_publicamente: true,
+  }), true);
+  assert.equal(esOportunidadVisible({
+    estado: 'programado',
+    es_visible_publicamente: true,
+  }), true);
+  assert.equal(esOportunidadVisible({
+    estado_efectivo: 'en_curso',
+    es_visible_publicamente: true,
+  }), true);
+  assert.equal(esOportunidadVisible({
+    estado_efectivo: 'finalizado',
+    es_visible_publicamente: true,
+  }), false);
+  assert.equal(esOportunidadVisible({
+    estado_efectivo: 'cancelado',
+    es_visible_publicamente: true,
+  }), false);
+  assert.equal(esOportunidadVisible({
+    estado_efectivo: 'programado',
+    es_visible_publicamente: false,
+  }), false);
+
+  const pagina = leer('../src/pages/postulante/Oportunidades.jsx');
+  assert.match(pagina, /filter\(esOportunidadVisible\)/);
+  assert.doesNotMatch(pagina, /fecha_inicio.*(filter|includes)|(?:filter|includes).*fecha_inicio/);
+});
+
+test('el portal público usa estado, fechas y descripción enriquecida', () => {
   const pagina = leer('../src/pages/postulante/Oportunidades.jsx');
 
-  assert.match(pagina, /filter\(\(o\) => o\.es_visible_publicamente !== false\)/);
-  assert.match(pagina, /filter\(\(o\) => !\['finalizado', 'cancelado'\]\.includes\(o\.estado_efectivo \|\| o\.estado\)\)/);
   assert.match(pagina, /ESTADO_ACTIVIDAD/);
   assert.match(pagina, /fechaHoraLima\(o\.fecha_inicio\)/);
   assert.match(pagina, /fechaHoraLima\(o\.fecha_fin\)/);
@@ -159,5 +190,8 @@ test('las mutaciones administrativas invalidan la consulta pública', () => {
   const actividades = leer('../src/pages/admin/Actividades.jsx');
 
   assert.match(oportunidades, /queryKey: \['oportunidades-publicas'\]/);
+  assert.match(oportunidades, /const refrescar = \(\) => \{/);
+  assert.match(oportunidades, /alGuardar=\{\(\) => \{ setEditor\(null\); toast\.success\('Oportunidad guardada\.'\); refrescar\(\); \}\}/);
+  assert.match(oportunidades, /alCambio=\{\(mensaje\) => \{ toast\.success\(mensaje\); refrescar\(\); \}\}/);
   assert.match(actividades, /queryKey: \['actividades-publicas'\]/);
 });

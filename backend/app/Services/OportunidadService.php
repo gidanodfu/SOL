@@ -16,7 +16,10 @@ use App\Validation\Validador;
  * - `activo`: decisión administrativa de publicar/ocultar.
  * - `estado` / `estado_efectivo`: ciclo de vida de la convocatoria.
  * - `estado_publicacion` / `es_visible_publicamente`: disponibilidad pública
- *   derivada de la activación y de la ventana [fecha_inicio, fecha_fin).
+ *   derivada de la activación, la programación completa y el cierre por
+ *   `fecha_fin`. `fecha_inicio` solo determina el estado efectivo
+ *   (`programado` antes de iniciar, `en_curso` desde el inicio), no la
+ *   visibilidad: una oportunidad programada puede ser visible.
  *
  * No existe fecha editorial independiente: fecha_inicio marca la apertura y
  * fecha_fin el cierre exacto. Toda la lógica se calcula en America/Lima y no
@@ -89,8 +92,9 @@ class OportunidadService
     }
 
     /**
-     * Oportunidades visibles en el portal: activas, con programación completa y
-     * dentro de la ventana [fecha_inicio, fecha_fin). No hay cron.
+     * Oportunidades visibles en el portal: activas, con programación completa,
+     * antes de `fecha_fin` y sin estado terminal. La fecha de inicio no excluye:
+     * una oportunidad programada con inicio futuro ya es visible. No hay cron.
      *
      * @return list<array<string, mixed>>
      */
@@ -103,9 +107,8 @@ class OportunidadService
             ->where('o.activo', 1)
             ->where('o.fecha_inicio IS NOT NULL')
             ->where('o.fecha_fin IS NOT NULL')
-            ->where('o.fecha_inicio <=', $ahora)
             // El límite es inclusivo: al alcanzar exactamente fecha_fin ya no
-            // se publica.
+            // se publica. La fecha de inicio no se usa para ocultar.
             ->where('o.fecha_fin >', $ahora)
             ->whereNotIn('o.estado', ['finalizado', 'cancelado'])
             ->orderBy('o.created_at', 'DESC')
@@ -314,6 +317,10 @@ class OportunidadService
      * Disponibilidad pública. Es la única regla que decide qué se devuelve en
      * GET /api/oportunidades y qué se pinta como visible en administración.
      *
+     * `fecha_inicio` no participa: una oportunidad activa y programada con
+     * inicio futuro es visible. `fecha_fin` cierra la publicación a través del
+     * estado efectivo (finalizado) y de la comprobación explícita del límite.
+     *
      * @param array<string, mixed> $fila
      */
     public static function estadoPublicacion(array $fila, ?string $ahora = null): string
@@ -330,10 +337,6 @@ class OportunidadService
 
         if ((int) ($fila['activo'] ?? 0) !== 1) {
             return 'oculta';
-        }
-
-        if (! self::fechaAlcanzada($fila['fecha_inicio'] ?? null, $ahora)) {
-            return 'programada';
         }
 
         if (self::fechaAlcanzada($fila['fecha_fin'] ?? null, $ahora)) {

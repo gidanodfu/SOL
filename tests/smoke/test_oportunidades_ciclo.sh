@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Ciclo de vida de oportunidades: ventana [inicio, fin), visibilidad pública
-# central, ausencia de campos legados e inmutabilidad de finalizadas.
+# Ciclo de vida de oportunidades: visibilidad pública independiente del inicio,
+# cierre por fecha_fin, ausencia de campos legados e inmutabilidad de finalizadas.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080
@@ -108,19 +108,23 @@ activacion() {
         -H "Authorization: Bearer $TA" -H 'Content-Type: application/json' -d "{\"activo\":$2}"
 }
 
-paso "1. antes de inicio: programada, no pública y sin campos legados"
+paso "1. inicio futuro: programada, visible y publicada sin campos legados"
 CODE=$(crear 'Oportunidad futura' "$FUTURO_INI" "$FUTURO_FIN" 'presencial')
 check_code 'crear oportunidad futura' 201 "$CODE"
 FUTURA=$(id_resp)
 admin_lista
+check_item /tmp/opencode/op_ciclo_admin.json "$FUTURA" activo '1'
 check_item /tmp/opencode/op_ciclo_admin.json "$FUTURA" estado_efectivo '"programado"'
-check_item /tmp/opencode/op_ciclo_admin.json "$FUTURA" estado_publicacion '"programada"'
-check_item /tmp/opencode/op_ciclo_admin.json "$FUTURA" es_visible_publicamente 'false'
+check_item /tmp/opencode/op_ciclo_admin.json "$FUTURA" estado_publicacion '"visible"'
+check_item /tmp/opencode/op_ciclo_admin.json "$FUTURA" es_visible_publicamente 'true'
 check_ausente /tmp/opencode/op_ciclo_admin.json fecha_publicacion
 check_ausente /tmp/opencode/op_ciclo_admin.json empresa_id
 check_ausente /tmp/opencode/op_ciclo_admin.json razon_social
 publico_lista
-publico_tiene "$FUTURA" && { echo 'FAIL futura antes de inicio aparece en el portal'; fallos=$((fallos + 1)); } || echo 'OK   futura antes de inicio fuera del portal'
+publico_tiene "$FUTURA" && echo 'OK   oportunidad futura aparece inmediatamente en el portal' || { echo 'FAIL oportunidad futura fuera del portal'; fallos=$((fallos + 1)); }
+check_item /tmp/opencode/op_ciclo_publico.json "$FUTURA" estado_efectivo '"programado"'
+check_item /tmp/opencode/op_ciclo_publico.json "$FUTURA" estado_publicacion '"visible"'
+check_item /tmp/opencode/op_ciclo_publico.json "$FUTURA" es_visible_publicamente 'true'
 
 paso "2. dentro de la ventana: en curso y visible"
 CODE=$(crear 'Oportunidad en curso' "$CURSO_INI" "$CURSO_FIN" 'virtual')

@@ -173,12 +173,14 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **Disponibilidad pública**: `activo` es la decisión administrativa de
   publicar/ocultar y no reemplaza las fechas. El portal muestra solo
   oportunidades con `activo = 1`, programación completa y válida, estado
-  efectivo `en_curso`, y `fecha_inicio <= ahora < fecha_fin` en America/Lima.
-  Antes de `fecha_inicio` la oportunidad queda `programado` y no se publica;
-  desde `fecha_inicio` inclusive puede mostrarse; al alcanzar exactamente
-  `fecha_fin` se cierra y desaparece. `cancelado` nunca se publica. No existe
-  fecha editorial independiente: `fecha_publicacion` fue retirada del modelo
-  operativo y sus valores históricos quedaron archivados.
+  efectivo distinto de `finalizado` y `cancelado`, y `fecha_fin > ahora` en
+  America/Lima. La `fecha_inicio` no condiciona la publicación: una oportunidad
+  activa con inicio futuro aparece inmediatamente con `estado_efectivo =
+  programado` y `estado_publicacion = visible`; al alcanzar `fecha_inicio`
+  pasa a `en_curso` sin desaparecer; al alcanzar exactamente `fecha_fin` se
+  cierra y desaparece. `cancelado` nunca se publica. No existe fecha editorial
+  independiente: `fecha_publicacion` fue retirada del modelo operativo y sus
+  valores históricos quedaron archivados.
 - **Inmutabilidad**: al alcanzar `fecha_fin` —o al finalizarla manualmente— la
   oportunidad queda de solo lectura, permanece consultable en administración y
   el backend rechaza edición, activación y transiciones con `409` y código

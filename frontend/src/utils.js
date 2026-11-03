@@ -3,6 +3,7 @@ import { API_URL } from './constants';
 import { esEnlaceSeguro } from './utils/enlacesTexto.js';
 
 export { esEnlaceSeguro, enlacesEnTexto } from './utils/enlacesTexto.js';
+export { esOportunidadVisible } from './utils/oportunidades.js';
 
 export const errorApi = (e) => {
   const data = e?.response?.data;

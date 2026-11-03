@@ -110,42 +110,98 @@ final class OportunidadVencimientoTest extends TestCase
         ], '2026-11-01 12:00:00'));
     }
 
-    public function testEstadoPublicacionYVisibilidadCentral(): void
+    private static function oportunidadPublicable(): array
     {
-        $base = [
+        return [
             'activo'       => 1,
             'estado'       => 'programado',
             'fecha_inicio' => '2026-11-01 10:00:00',
             'fecha_fin'    => '2026-11-01 12:00:00',
             'modalidad'    => 'presencial',
         ];
+    }
 
-        self::assertSame('programada', OportunidadService::estadoPublicacion($base, '2026-11-01 09:59:59'));
-        self::assertFalse(OportunidadService::esVisiblePublicamente($base, '2026-11-01 09:59:59'));
+    public function testActivaConInicioFuturoEsVisibleYProgramada(): void
+    {
+        $fila = self::oportunidadPublicable();
 
-        self::assertSame('visible', OportunidadService::estadoPublicacion($base, '2026-11-01 10:00:00'));
-        self::assertTrue(OportunidadService::esVisiblePublicamente($base, '2026-11-01 10:00:00'));
-        self::assertSame('en_curso', OportunidadService::estadoEfectivo($base, '2026-11-01 10:00:00'));
+        self::assertSame('programado', OportunidadService::estadoEfectivo($fila, '2026-10-31 09:00:00'));
+        self::assertSame('visible', OportunidadService::estadoPublicacion($fila, '2026-10-31 09:00:00'));
+        self::assertTrue(OportunidadService::esVisiblePublicamente($fila, '2026-10-31 09:00:00'));
+    }
 
-        self::assertTrue(OportunidadService::esVisiblePublicamente($base, '2026-11-01 11:59:59'));
-        self::assertSame('no_visible', OportunidadService::estadoPublicacion($base, '2026-11-01 12:00:00'));
-        self::assertFalse(OportunidadService::esVisiblePublicamente($base, '2026-11-01 12:00:00'));
+    public function testAlAlcanzarElInicioSigueVisibleYPasaAEnCurso(): void
+    {
+        $fila = self::oportunidadPublicable();
 
-        $final = array_merge($base, ['estado' => 'finalizado']);
-        self::assertSame('no_visible', OportunidadService::estadoPublicacion($final, '2026-11-01 10:30:00'));
-        self::assertFalse(OportunidadService::esVisiblePublicamente($final, '2026-11-01 10:30:00'));
+        self::assertSame('en_curso', OportunidadService::estadoEfectivo($fila, '2026-11-01 10:00:00'));
+        self::assertSame('visible', OportunidadService::estadoPublicacion($fila, '2026-11-01 10:00:00'));
+        self::assertTrue(OportunidadService::esVisiblePublicamente($fila, '2026-11-01 10:00:00'));
+    }
 
-        $cancelada = array_merge($base, ['estado' => 'cancelado']);
-        self::assertSame('no_visible', OportunidadService::estadoPublicacion($cancelada, '2026-11-01 10:30:00'));
-        self::assertFalse(OportunidadService::esVisiblePublicamente($cancelada, '2026-11-01 10:30:00'));
+    public function testEnCursoSigueVisible(): void
+    {
+        $fila = array_merge(self::oportunidadPublicable(), ['estado' => 'en_curso']);
 
-        $oculta = array_merge($base, ['activo' => 0]);
-        self::assertSame('oculta', OportunidadService::estadoPublicacion($oculta, '2026-11-01 10:30:00'));
-        self::assertFalse(OportunidadService::esVisiblePublicamente($oculta, '2026-11-01 10:30:00'));
+        self::assertSame('en_curso', OportunidadService::estadoEfectivo($fila, '2026-11-01 11:59:59'));
+        self::assertSame('visible', OportunidadService::estadoPublicacion($fila, '2026-11-01 11:59:59'));
+        self::assertTrue(OportunidadService::esVisiblePublicamente($fila, '2026-11-01 11:59:59'));
+    }
 
-        $incompleta = array_merge($base, ['fecha_fin' => null, 'modalidad' => null]);
-        self::assertSame('incompleta', OportunidadService::estadoPublicacion($incompleta, '2026-11-01 10:30:00'));
-        self::assertFalse(OportunidadService::esVisiblePublicamente($incompleta, '2026-11-01 10:30:00'));
+    public function testAlAlcanzarElFinDejaDeSerVisible(): void
+    {
+        $fila = self::oportunidadPublicable();
+
+        self::assertSame('finalizado', OportunidadService::estadoEfectivo($fila, '2026-11-01 12:00:00'));
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($fila, '2026-11-01 12:00:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($fila, '2026-11-01 12:00:00'));
+    }
+
+    public function testDesactivadaNoEsVisible(): void
+    {
+        $fila = array_merge(self::oportunidadPublicable(), ['activo' => 0]);
+
+        self::assertSame('oculta', OportunidadService::estadoPublicacion($fila, '2026-10-31 09:00:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($fila, '2026-10-31 09:00:00'));
+    }
+
+    public function testCanceladaNoEsVisible(): void
+    {
+        $fila = array_merge(self::oportunidadPublicable(), ['estado' => 'cancelado']);
+
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($fila, '2026-10-31 09:00:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($fila, '2026-10-31 09:00:00'));
+    }
+
+    public function testFinalizadaManualmenteNoEsVisible(): void
+    {
+        $fila = array_merge(self::oportunidadPublicable(), ['estado' => 'finalizado']);
+
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($fila, '2026-10-31 09:00:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($fila, '2026-10-31 09:00:00'));
+    }
+
+    public function testProgramacionIncompletaNoEsPublicable(): void
+    {
+        $fila = array_merge(self::oportunidadPublicable(), ['fecha_fin' => null, 'modalidad' => null]);
+
+        self::assertSame('incompleta', OportunidadService::estadoPublicacion($fila, '2026-10-31 09:00:00'));
+        self::assertFalse(OportunidadService::esVisiblePublicamente($fila, '2026-10-31 09:00:00'));
+    }
+
+    public function testLosLimitesSeEvaluanEnAmericaLima(): void
+    {
+        $fila = self::oportunidadPublicable();
+
+        // 10:00 en America/Lima equivale a 15:00 UTC.
+        self::assertSame('programado', OportunidadService::estadoEfectivo($fila, '2026-11-01T14:59:59+00:00'));
+        self::assertSame('visible', OportunidadService::estadoPublicacion($fila, '2026-11-01T14:59:59+00:00'));
+        self::assertSame('en_curso', OportunidadService::estadoEfectivo($fila, '2026-11-01T15:00:00+00:00'));
+        self::assertSame('visible', OportunidadService::estadoPublicacion($fila, '2026-11-01T15:00:00+00:00'));
+
+        // 12:00 en America/Lima equivale a 17:00 UTC.
+        self::assertSame('finalizado', OportunidadService::estadoEfectivo($fila, '2026-11-01T17:00:00+00:00'));
+        self::assertSame('no_visible', OportunidadService::estadoPublicacion($fila, '2026-11-01T17:00:00+00:00'));
     }
 
     public function testExigirModificableDevuelveElCodigoEstable(): void

@@ -107,12 +107,14 @@ MySQL es la fuente de verdad.
 - **Difusión de oportunidades**: cada oportunidad externa (Empleos Perú, MYPE u otra
   fuente) registra inicio, fin y modalidad. El ciclo de vida (`programado`, `en_curso`,
   `finalizado`, `cancelado`) se deriva por fecha en America/Lima sin cron
-  (`estado_efectivo`). La ventana pública es `[fecha_inicio, fecha_fin)`: antes de
-  Inicio queda programada y fuera del portal; al alcanzar exactamente Fin se cierra.
-  `activo` conserva la ocultación administrativa y no reemplaza las fechas. Al
-  finalizar —manualmente o al alcanzar `fecha_fin`— la oportunidad sale del portal,
-  permanece consultable en administración y queda inmutable; la API responde `409` con
-  `OPPORTUNITY_ALREADY_FINALIZED`. No existe fecha editorial independiente ni vínculo
+  (`estado_efectivo`). La publicación depende de `activo`, la programación completa y
+  que `fecha_fin` no se haya alcanzado; la `fecha_inicio` no la bloquea: una
+  oportunidad con inicio futuro aparece inmediatamente como `Programado` + `Visible`.
+  Al alcanzar exactamente Fin se cierra. `activo` conserva la ocultación administrativa
+  y no reemplaza las fechas. Al finalizar —manualmente o al alcanzar `fecha_fin`— la
+  oportunidad sale del portal, permanece consultable en administración y queda
+  inmutable; la API responde `409` con `OPPORTUNITY_ALREADY_FINALIZED`. No existe fecha
+  editorial independiente ni vínculo
   con una empresa registrada.
 - **Bolsa de empleo pública**: `/postulante/buscar` y las ofertas se consultan sin sesión;
   postular requiere cuenta de postulante.

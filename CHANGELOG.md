@@ -4,6 +4,21 @@ Todos los cambios notables del Sistema de Empleo MDJLO se documentan en este
 archivo. El formato sigue la convención de *Keep a Changelog* y la versión
 oficial es la del archivo raíz `VERSION`.
 
+## [Unreleased]
+
+### Corregido
+
+- La publicación pública de oportunidades ya no depende de `fecha_inicio`: una
+  oportunidad activa, con programación completa y `fecha_fin` vigente aparece
+  inmediatamente en el portal aunque su inicio sea futuro.
+- La administración muestra simultáneamente `Programado` (estado efectivo) y
+  `Visible` (disponibilidad pública) para oportunidades con inicio futuro.
+- Al alcanzar `fecha_inicio` la oportunidad sigue publicada y pasa a `en_curso`;
+  al alcanzar `fecha_fin` deja de publicarse y se muestra finalizada en
+  administración.
+- Se actualizaron las pruebas unitarias, frontend y smoke para cubrir inicio
+  futuro visible, reinicio por fecha, estados terminales y zona America/Lima.
+
 ## [1.1.0] — 2026-11-01
 
 ### Añadido

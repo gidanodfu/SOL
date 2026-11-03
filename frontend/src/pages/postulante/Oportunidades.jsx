@@ -11,7 +11,7 @@ import {
   MODALIDADES_ACTIVIDAD,
 } from '../../constants';
 import {
-  errorApi, esEnlaceSeguro, fechaHora, fechaHoraLima, textoVisible, urlArchivo,
+  errorApi, esEnlaceSeguro, esOportunidadVisible, fechaHora, fechaHoraLima, textoVisible, urlArchivo,
 } from '../../utils';
 
 const CLASE_ESTADO_ACTIVIDAD = {
@@ -83,9 +83,8 @@ export default function Oportunidades() {
 
   // Defensa adicional: el backend ya excluye finalizadas y canceladas, pero un
   // cliente no debe pintarlas si llegaran por una respuesta antigua o directa.
-  const oportunidadesVisibles = (oportunidades.data || [])
-    .filter((o) => o.es_visible_publicamente !== false)
-    .filter((o) => !['finalizado', 'cancelado'].includes(o.estado_efectivo || o.estado));
+  // `programado` se conserva: una oportunidad con inicio futuro es visible.
+  const oportunidadesVisibles = (oportunidades.data || []).filter(esOportunidadVisible);
 
   return (
     <div>

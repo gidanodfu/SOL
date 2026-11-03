@@ -46,12 +46,12 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18). Un postulante seleccionado no puede postular a otra oferta de la misma empresa |
 | RF-41/42/43 Atenciones con tipos y seguimiento | ✘ retirado (2026-09) | módulo de atenciones eliminado de la API y el frontend; la tabla `atenciones` queda sin uso |
 | RF-44/45/46/47 Ferias, eventos, talleres, capacitaciones | ✔ | `api/admin/actividades*` · Actividades (admin); listado público filtra por estado y `fecha_fin`, y distingue estado efectivo |
-| RF-48 Sección de difusión de oportunidades | ✔ | `GET /api/oportunidades` · "Ferias y oportunidades" (postulante); solo activas, con programación completa y `fecha_inicio <= ahora < fecha_fin` |
+| RF-48 Sección de difusión de oportunidades | ✔ | `GET /api/oportunidades` · "Ferias y oportunidades" (postulante); solo activas, con programación completa, `fecha_fin > ahora` y estado efectivo no terminal; la fecha de inicio no impide publicar |
 | RF-49 Empleos Perú | ✔ | fuente `empleos_peru` en `oportunidades` |
 | RF-50 MYPE locales | ✔ | fuente `mype_local`; sin vínculo a empresas registradas |
 | RF-51 Fuente identificada | ✔ | columna `fuente` por oportunidad |
 | Programación y ciclo de vida de oportunidades | ✔ | `oportunidades.fecha_inicio/fecha_fin/modalidad/estado`; `estado_efectivo` por fecha en America/Lima; `PUT /api/admin/oportunidades/{id}/estado` |
-| Disponibilidad pública de oportunidades | ✔ | regla central `estadoPublicacion`/`es_visible_publicamente`; antes de inicio no pública; fin exacto cierra; finalizado/cancelado nunca Visible |
+| Disponibilidad pública de oportunidades | ✔ | regla central `estadoPublicacion`/`es_visible_publicamente`; inicio futuro visible como `programado`; fin exacto cierra; finalizado/cancelado nunca visibles |
 | Inmutabilidad de oportunidad finalizada | ✔ | `puede_modificarse=false`; edición, activación y transición responden `409` `OPPORTUNITY_ALREADY_FINALIZED`; permanece consultable en admin |
 | Retiro de fecha editorial y empresa_id | ✔ | migraciones posteriores con archivo de `fecha_publicacion` y aborto seguro si `empresa_id` tiene valores no nulos |
 | Validación estricta de escrituras | ✔ | `Validador` distingue tipos, IDs y booleanos; contacto opcional conserva si se omite; fechas de situación y motivo laboral; rate limiting de CV y CV activo único |
