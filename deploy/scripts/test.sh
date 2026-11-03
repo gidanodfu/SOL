@@ -13,15 +13,14 @@ for arg in "$@"; do
             cat <<'USAGE'
 Uso: deploy/scripts/test.sh [all|backend|frontend|http|smoke|validation] [--no-build]
 
-Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host
-ni modifica datos de producción.
+Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host.
 
   all         pruebas backend + frontend + build (por defecto)
   backend     PHPUnit dentro del contenedor backend
   frontend    npm test + lint + build dentro del contenedor frontend
   http        smoke HTTP no destructivo contra el stack de desarrollo activo
   smoke       suite de humo aislada en un MySQL temporal con esquema por suite
-  validation  validación de variables, health interno, WebP y ACME
+  validation  validación de variables y del contexto Docker
 
 Opciones:
   --no-build  reutiliza las imágenes existentes en lugar de reconstruirlas.
@@ -47,12 +46,7 @@ fi
 
 if [ "$TARGET" = "validation" ]; then
     "$ROOT/tests/deploy/test_validation.sh"
-    "$ROOT/tests/deploy/test_internal_health.sh"
-    "$ROOT/tests/deploy/test_webp_nginx.sh"
     "$ROOT/tests/deploy/test_docker_context.sh"
-    "$ROOT/tests/deploy/test_prod_images.sh"
-    "$ROOT/tests/deploy/test_nginx_private_paths.sh"
-    "$ROOT/tests/infra/test_traefik_acme.sh"
     exit 0
 fi
 

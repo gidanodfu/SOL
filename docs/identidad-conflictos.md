@@ -58,7 +58,7 @@ WHERE estado = 'conflicto'
 ORDER BY tipo, valor;
 ```
 
-No ejecutar la migración en producción sin autorización ni sin revisar antes esta consulta.
+No ejecutar la migración sobre datos reales sin respaldo, autorización y revisión previa de esta consulta.
 
 ## Actualización 2026-10-28: alta municipal
 

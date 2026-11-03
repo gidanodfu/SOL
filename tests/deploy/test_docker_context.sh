@@ -14,7 +14,7 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 cat > "$TMP/Dockerfile" <<'DOCKER'
-FROM nginx:1.27.5-alpine
+FROM alpine:3.21
 COPY . /ctx
 RUN test ! -e /ctx/.git \
     && test ! -e /ctx/.github \
@@ -24,7 +24,6 @@ RUN test ! -e /ctx/.git \
     && test -f /ctx/backend/composer.json \
     && test -f /ctx/frontend/package.json \
     && test -f /ctx/frontend/src/main.jsx \
-    && test -f /ctx/frontend/nginx.conf \
     && test -f /ctx/deploy/compose.yaml
 DOCKER
 

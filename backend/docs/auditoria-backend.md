@@ -35,11 +35,9 @@
 > pendientes; `required` rechaza espacios; las fechas se validan con calendario
 > y `Validador`; y la zona horaria de negocio es `America/Lima`.
 >
-> Sobre `Config\App::$proxyIPs`: en la arquitectura oficial Nginx resuelve la IP
-> real con `real_ip` a partir de `TRAEFIK_ENTRY_IP` y entrega `REMOTE_ADDR` a
-> PHP-FPM, por lo que no es un pendiente para el flujo actual. Solo se
-> configuraría `proxyIPs` si cambia el gateway o se expone PHP-FPM detrás de otro
-> proxy.
+> Sobre `Config\App::$proxyIPs`: en el entorno local el tráfico llega
+> directamente al backend, por lo que no es un pendiente. Si en el futuro se
+> coloca un proxy delante, configure `proxyIPs` con su dirección.
 >
 > Quedan como **recomendaciones no bloqueantes**, no como vulnerabilidades
 > actuales: ampliar la cobertura de auditoría (F16), métricas/consultas N+1
@@ -307,7 +305,7 @@ endpoint de lectura de auditoría.
 | S10 | RECOMENDACIÓN | Enumeración por mensajes en registro público | `AuthService.php:132-137` | Mensaje genérico. |
 | S11 | **RESUELTO (2026-09-15)** | `limite` sin tope en listados admin | `UsuariosController.php`, `EmpresasController.php`, `SolicitudesEmpresaController.php` | Acotado a 1–200 con `offset` >= 0. |
 | S12 | **RESUELTO (2026-09-10)** | Trazas en errores no controlados si el entorno es `development` y sin HTTPS forzado | `.env` local (`CI_ENVIRONMENT=development`, `forceGlobalSecureRequests=false`), `Config/Exceptions.php:102-109` | `ApiExceptionHandler` responde mensaje genérico en `500` y registra el detalle solo en el log; confirmar igualmente HTTPS/entorno en despliegue (`.env.example` y `docs/operaciones.md`). |
-| S13 | RECOMENDACIÓN | CORS default de desarrollo | `Config/Cors.php:52` (`http://localhost:5173`) | Confirmar `cors.allowedOrigins` en producción. |
+| S13 | RECOMENDACIÓN | CORS default de desarrollo | `Config/Cors.php:52` (`http://localhost:5173`) | Mantener `cors.allowedOrigins` coherente con el frontend local. |
 | S14 | **RESUELTO POR ARQUITECTURA (2026-11-02)** | IP auditada tras proxy | `AuditoriaService.php:26-29`, `App.php:183` (`proxyIPs=[]`) | Configurar `proxyIPs`. |
 
 **Revisados y limpios**: SQL injection (query builder parametrizado en todas las consultas revisadas); mass assignment (todas las escrituras usan whitelists/arrays fijos); IDOR/BOLA (ownership verificado por sesión en cada ruta con `{id}`; recursos ajenos → 404); hash de contraseñas (bcrypt + `password_verify`, sin md5/plain); `.env` ignorado por git; subida de CV (extensión/MIME/tamaño, nombres generados por el servidor, `writable/uploads` no servido estáticamente); CORS sin wildcard; CSRF desactivado (correcto para API stateless Bearer).

@@ -66,9 +66,9 @@ info:
 
     Notas sobre el entorno:
     * `servers.url` corresponde a la `baseURL` del entorno de desarrollo
-      (`http://localhost:8080`). Debe ajustarse al dominio de producción.
+      (`http://localhost:8080`). En un despliegue real debe ajustarse al dominio público.
     * CORS por defecto solo permite `http://localhost:5173` (frontend de
-      desarrollo); en producción se configura con la variable de entorno
+      desarrollo); en un despliegue real se configura con la variable de entorno
       `cors.allowedOrigins`.
 
     Esta especificación documenta el comportamiento actual del backend. Cuando la
@@ -79,7 +79,7 @@ servers:
   - url: http://localhost:8080
     description: |
       Entorno de desarrollo (valor de `app.baseURL`). Configurable según despliegue:
-      en producción apuntar a la URL pública del backend y revisar CORS.
+      en un despliegue real apuntar a la URL pública del backend y revisar CORS.
 
 tags:
   - name: Sistema
@@ -2719,7 +2719,7 @@ paths:
       summary: URL de descarga del CV propio
       description: |
         Genera la URL de descarga del CV vigente:
-        * Driver `supabase` (configuración de producción): URL firmada (presigned GET,
+        * Driver `supabase`: URL firmada (presigned GET,
           válida 30 min) al bucket privado.
         * Driver `local`: URL interna protegida `.../api/postulante/cv/archivo/{clave}`.
         `data` = `{ "url": string }`. 404 "Aún no ha cargado un CV." si no existe CV activo.
@@ -2764,7 +2764,7 @@ paths:
       description: |
         Sirve el archivo en binario cuando el driver es `local`. `{archivo}` es el
         `object_key` codificado en base64url sin padding. Solo el propietario puede
-        descargar. **Con driver `supabase` (producción) este endpoint responde 404**
+        descargar. **Con driver `supabase` este endpoint responde 404**
         (`rutaLocal` es `null`); en ese modo use la URL firmada de `/cv/descargar`.
       security:
         - bearerAuth: []

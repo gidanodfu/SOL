@@ -4,35 +4,30 @@ umask 077
 
 . "$(dirname -- "$0")/lib/common.sh"
 
-TARGET="${1:-}"
+TARGET="${1:-dev}"
 case "$TARGET" in
-    dev) compose_cmd=compose_dev ;;
-    prod) compose_cmd=compose_prod ;;
+    dev) ;;
     -h|--help)
         cat <<'USAGE'
-Uso: deploy/scripts/backup.sh <dev|prod>
+Uso: deploy/scripts/backup.sh [dev]
 
-Genera un respaldo fechado de MySQL y del volumen writable del backend.
+Genera un respaldo fechado de MySQL y del volumen writable del backend local.
 El destino por defecto es $HOME/sol-backups; puede cambiarse con BACKUP_DIR.
 No elimina respaldos anteriores ni volúmenes. Los archivos quedan con permisos
 600 y se verifica que no estén vacíos. No imprime secretos.
 USAGE
         exit 0
         ;;
-    *) die "Entorno inválido: ${TARGET:-vacío} (use dev o prod)" ;;
+    *) die "Entorno inválido: ${TARGET:-vacío} (solo se admite dev)" ;;
 esac
 
 require_repo
 require_env_file
 docker_available
 validate_env_basics
-if [ "$TARGET" = "prod" ]; then
-    require_prod_project
-else
-    require_dev_project
-fi
-assert_compose_project "$compose_cmd"
-require_service_running "$compose_cmd" db
+require_dev_project
+assert_compose_project compose_dev
+require_service_running compose_dev db
 
 BACKUP_DIR=${BACKUP_DIR:-"$HOME/sol-backups"}
 case "$BACKUP_DIR" in
@@ -54,7 +49,7 @@ MANIFEST="$BACKUP_DIR/sol-backup-$STAMP.txt"
 [ ! -e "$MANIFEST" ] || die "El manifiesto $MANIFEST ya existe; no se sobrescribe."
 
 printf 'Creando respaldo de MySQL...\n'
-$compose_cmd exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --quick --routines --triggers --no-tablespaces --default-character-set=utf8mb4 "$MYSQL_DATABASE"' > "$DB_FILE"
+compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --quick --routines --triggers --no-tablespaces --default-character-set=utf8mb4 "$MYSQL_DATABASE"' > "$DB_FILE"
 [ -s "$DB_FILE" ] || die "El respaldo de MySQL quedó vacío."
 grep -q '^CREATE TABLE' "$DB_FILE" || die "El respaldo de MySQL no contiene tablas; no se considera válido."
 chmod 600 "$DB_FILE"
@@ -88,7 +83,7 @@ fi
 {
     printf 'SOL backup\n'
     printf 'fecha=%s\n' "$(date -Iseconds 2>/dev/null || date)"
-    printf 'entorno=%s\n' "$TARGET"
+    printf 'entorno=dev\n'
     printf 'proyecto=%s\n' "$(project_name)"
     printf 'base=%s\n' "$(env_get DB_DATABASE)"
     printf 'db_file=%s\n' "$(basename "$DB_FILE")"

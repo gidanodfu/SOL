@@ -151,10 +151,10 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 
 ## Pendientes / recomendados
 
-- **Configuración en .env antes de producción**: SMTP (`email.*`) para las notificaciones de aprobación/rechazo, token de SUNAT (`sunat.token`) para verificar RUC y Google (`google.clientId` + `VITE_GOOGLE_CLIENT_ID`).
+- **Configuración opcional en .env**: SMTP (`email.*`) para las notificaciones de aprobación/rechazo, token de SUNAT (`sunat.token`) para verificar RUC y Google (`google.clientId` + `VITE_GOOGLE_CLIENT_ID`).
 - **WhatsApp de notificaciones** (aprobación/rechazo) todavía no integrado; hoy solo correo. Opcional.
-- **Supabase Storage real**: conectar credenciales (driver `supabase`) en producción y
-  re-verificar subida + URL firmada; desarrollo usa driver `local`.
+- **Supabase Storage real**: conectar credenciales (driver `supabase`) y re-verificar
+  subida + URL firmada; el entorno local usa driver `local` por defecto.
 - Roles operativos adicionales para oficinas descentralizadas: la matriz actual
   implementa `admin`, `moderador` y `solo_lectura`; cualquier rol nuevo requiere
   decisión funcional y no debe inferirse de la documentación.

@@ -50,11 +50,10 @@ Para operar el backend:
 ./deploy/scripts/dev.sh down                  # conserva volúmenes
 ```
 
-En producción se usa PHP-FPM dentro de `deploy/compose.prod.yaml`; el
-despliegue se realiza con `./deploy/scripts/deploy.sh`. No ejecute `php spark`,
-Composer ni MySQL en el host. El bootstrap inicial está en
-`./deploy/scripts/bootstrap.sh` (exige `--authorize`) y las operaciones en
-`docs/operaciones.md`.
+El backend se ejecuta en el contenedor de desarrollo con el servidor integrado
+de CodeIgniter. No ejecute `php spark`, Composer ni MySQL en el host. El bootstrap
+inicial está en `./deploy/scripts/bootstrap.sh` (exige `--authorize`) y las
+operaciones en `docs/operaciones.md`.
 
 ## Convenciones
 
@@ -88,7 +87,7 @@ Composer ni MySQL en el host. El bootstrap inicial está en
   [`../docs/base-datos.md`](../docs/base-datos.md).
 - `spark migrate` aplica migraciones pendientes; `bootstrap.sh` es el único
   procedimiento autorizado para una instalación nueva con `SystemSeeder`.
-  `deploy.sh` aplica migraciones en producción previo respaldo.
+  Para actualizar un entorno existente use `dev.sh migrate`.
 - `SystemSeeder` crea el administrador inicial y categorías; `DatosPruebaSeeder`
   y `DatosMasivosSeeder` son fixtures y no forman parte del runtime.
 - Los CV se guardan como archivo en Storage (driver `local` o `supabase`) y

@@ -18,10 +18,7 @@ vendor/
 *.p12
 *.pfx
 
-# Configuración generada de despliegue
-deploy/nginx/conf.d/*.conf
-deploy/nginx/certs/*
-!deploy/nginx/certs/README.md
+# Configuración generada local
 deploy/runtime/
 deploy/backups/
 backups/

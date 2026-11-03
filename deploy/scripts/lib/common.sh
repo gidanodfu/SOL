@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Utilidades compartidas por los scripts de operación de SOL.
+# Utilidades compartidas por los scripts de desarrollo de SOL.
 # No carga el .env con `source`: se parsea de forma segura y sin evaluar shell.
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -21,8 +21,6 @@ else
     BACKEND_ENV_FILE=""
 fi
 COMPOSE_BASE="$ROOT/deploy/compose.yaml"
-COMPOSE_DEV="$ROOT/deploy/compose.dev.yaml"
-COMPOSE_PROD="$ROOT/deploy/compose.prod.yaml"
 
 die() {
     printf 'ERROR: %s\n' "$*" >&2
@@ -105,15 +103,15 @@ prepare_backend_env() {
 
     [ -f "$ENV_FILE" ] || die "No existe $ENV_FILE."
 
-    local runtime_dir="$ROOT/deploy/runtime"
-    local backend_env="$runtime_dir/backend.env"
+    runtime_dir="$ROOT/deploy/runtime"
+    backend_env="$runtime_dir/backend.env"
 
     umask 077
     mkdir -p "$runtime_dir"
     chmod 700 "$runtime_dir"
 
     # Lista explícita: el backend no recibe credenciales de MySQL root,
-    # credenciales iniciales, variables de Vite ni configuración de Nginx/TLS.
+    # credenciales iniciales ni variables de Vite.
     grep -E '^(CI_ENVIRONMENT|APP_URL|TZ|app\.|cors\.|DB_HOST|DB_PORT|DB_DATABASE|DB_USER|DB_PASSWORD|DB_DRIVER|DB_PREFIX|encryption\.|jwt\.|storage\.|s3\.|sunat\.token|jsonpe\.token|RESEND_|email\.|google\.clientId|turnstile\.|activacion\.|cvRateLimit\.)' "$ENV_FILE" > "$backend_env"
     chmod 600 "$backend_env"
     export BACKEND_ENV_FILE="$backend_env"
@@ -121,12 +119,7 @@ prepare_backend_env() {
 
 compose_dev() {
     prepare_backend_env
-    docker compose --project-name "$(project_name)" --env-file "$ENV_FILE" -f "$COMPOSE_BASE" -f "$COMPOSE_DEV" "$@"
-}
-
-compose_prod() {
-    prepare_backend_env
-    docker compose --project-name "$(project_name)" --env-file "$ENV_FILE" -f "$COMPOSE_BASE" -f "$COMPOSE_PROD" "$@"
+    docker compose --project-name "$(project_name)" --env-file "$ENV_FILE" -f "$COMPOSE_BASE" "$@"
 }
 
 export_admin_credentials() {
@@ -141,7 +134,7 @@ project_name() {
 
 require_project_name() {
     name=$(env_get COMPOSE_PROJECT_NAME)
-    [ -n "$name" ] || die "Falta COMPOSE_PROJECT_NAME en $ENV_FILE. Use un nombre único por entorno."
+    [ -n "$name" ] || die "Falta COMPOSE_PROJECT_NAME en $ENV_FILE. Use un nombre único."
     case "$name" in
         *[!A-Za-z0-9_.-]*) die "COMPOSE_PROJECT_NAME contiene caracteres no válidos: use letras, números, punto, guion o guion bajo." ;;
     esac
@@ -156,51 +149,16 @@ assert_compose_project() {
     [ "$actual" = "$expected" ] || die "El proyecto Compose activo ('$actual') no coincide con COMPOSE_PROJECT_NAME ('$expected')."
 }
 
-require_prod_project() {
-    require_project_name
-    [ "$(env_get CI_ENVIRONMENT)" = "production" ] || die "El entorno de producción exige CI_ENVIRONMENT=production en $ENV_FILE."
-    case "$(project_name)" in
-        sol_dev|sol_dev_*) die "Producción no puede usar un proyecto de desarrollo. Defina un nombre propio, por ejemplo sol_prod." ;;
-    esac
-}
-
 require_dev_project() {
     require_project_name
     case "$(env_get CI_ENVIRONMENT)" in
         development|testing) ;;
         *) die "El entorno de desarrollo exige CI_ENVIRONMENT=development o testing en $ENV_FILE." ;;
     esac
-    case "$(project_name)" in
-        sol_prod|sol_prod_*) die "Desarrollo no puede usar un proyecto de producción (sol_prod*)." ;;
-    esac
-    [ "$(project_name)" = "sol_dev" ] || warn "Desarrollo usa COMPOSE_PROJECT_NAME=$(project_name); el valor recomendado es sol_dev."
-}
-
-# Resuelve una ruta relativa al directorio deploy/ o devuelve una absoluta.
-resolve_deploy_path() {
-    case "$1" in
-        /*) printf '%s' "$1" ;;
-        *) printf '%s/deploy/%s' "$ROOT" "${1#./}" ;;
-    esac
 }
 
 volume_name() {
     printf '%s_%s' "$(project_name)" "$1"
-}
-
-sol_entry_network() {
-    name=$(env_get SOL_ENTRY_NETWORK)
-    printf '%s' "${name:-sol_entry}"
-}
-
-valid_ipv4() {
-    case "$1" in
-        ''|*[!0-9.]*) return 1 ;;
-    esac
-    printf '%s\n' "$1" | awk -F. '
-        NF == 4 { ok=1; for (i=1; i<=4; i++) if ($i !~ /^[0-9]+$/ || $i < 0 || $i > 255) ok=0 }
-        END { exit ok ? 0 : 1 }
-    '
 }
 
 trim_value() {
@@ -238,7 +196,7 @@ valid_origin() {
     _hostport=$_rest
     _host=${_hostport%%:*}
     [ -n "$_host" ] || return 1
-    valid_hostname "$_host" || valid_ipv4 "$_host" || return 1
+    valid_hostname "$_host" || return 1
     if [ "$_hostport" != "$_host" ]; then
         _port=${_hostport#"$_host"}
         case "$_port" in
@@ -315,7 +273,6 @@ local_origin_matches() {
 }
 
 validate_turnstile() {
-    _environment=$1
     _enabled=$(env_get turnstile.enabled)
     if is_enabled "$_enabled"; then
         _turnstile_on=1
@@ -323,10 +280,6 @@ validate_turnstile() {
         _turnstile_on=0
     else
         die "turnstile.enabled debe ser un booleano (true/false)."
-    fi
-
-    if [ "$_environment" = "production" ] && [ "$_turnstile_on" != "1" ]; then
-        die "Turnstile debe estar habilitado en producción: configure turnstile.enabled=true."
     fi
     [ "$_turnstile_on" = "1" ] || return 0
 
@@ -340,10 +293,8 @@ validate_turnstile() {
         valid_hostname "$_item" \
             || die "turnstile.hostnames debe contener hostnames sin protocolo, ruta ni puerto."
     done
-
-    _app_domain=$(lower_value "$(trim_value "$(env_get APP_DOMAIN)")")
-    list_has "$_hosts" "$_app_domain" \
-        || die "turnstile.hostnames debe incluir $_app_domain."
+    list_has "$_hosts" localhost \
+        || die "turnstile.hostnames debe incluir localhost para el entorno local."
 }
 
 validate_google_oauth() {
@@ -359,27 +310,6 @@ validate_google_oauth() {
 }
 
 validate_domains_and_urls() {
-    _environment=$1
-    _app_domain=$(lower_value "$(trim_value "$(env_get APP_DOMAIN)")")
-    _api_domain=$(lower_value "$(trim_value "$(env_get API_DOMAIN)")")
-    [ -n "$_api_domain" ] || _api_domain=$_app_domain
-
-    valid_hostname "$_app_domain" \
-        || die "APP_DOMAIN debe ser un hostname válido, sin protocolo ni ruta."
-    valid_hostname "$_api_domain" \
-        || die "API_DOMAIN debe ser un hostname válido, sin protocolo ni ruta."
-
-    case "$(env_get NGINX_MODE)" in
-        same-domain)
-            [ "$_app_domain" = "$_api_domain" ] \
-                || die "NGINX_MODE=same-domain exige APP_DOMAIN=API_DOMAIN."
-            ;;
-        subdomain)
-            [ "$_app_domain" != "$_api_domain" ] \
-                || die "NGINX_MODE=subdomain exige APP_DOMAIN distinto de API_DOMAIN."
-            ;;
-    esac
-
     _app_url=$(trim_value "$(env_get APP_URL)")
     url_is_origin "$_app_url" \
         || die "APP_URL debe ser un origen http(s) sin ruta."
@@ -393,25 +323,13 @@ validate_domains_and_urls() {
     _frontend_port=$(dev_port DEV_FRONTEND_PORT 5173)
     _api_port=$(dev_port DEV_API_PORT 8080)
 
-    if [ "$_environment" = "production" ]; then
-        [ "$(lower_value "$_app_origin")" = "https://$_app_domain" ] \
-            || die "APP_URL debe corresponder a https://$_app_domain."
-        [ "$(lower_value "$_base_origin")" = "https://$_api_domain" ] \
-            || die "app.baseURL debe corresponder a https://$_api_domain/."
-        _expected_public_api="https://$_api_domain"
-    else
-        local_origin_matches "$_app_origin" "$_frontend_port" \
-            || die "APP_URL debe apuntar a http://localhost:$_frontend_port (o 127.0.0.1)."
-        local_origin_matches "$_base_origin" "$_api_port" \
-            || die "app.baseURL debe apuntar a http://localhost:$_api_port/ (o 127.0.0.1)."
-        _expected_public_api="http://localhost:$_api_port"
-    fi
+    local_origin_matches "$_app_origin" "$_frontend_port" \
+        || die "APP_URL debe apuntar a http://localhost:$_frontend_port (o 127.0.0.1)."
+    local_origin_matches "$_base_origin" "$_api_port" \
+        || die "app.baseURL debe apuntar a http://localhost:$_api_port/ (o 127.0.0.1)."
 
     _cors=$(env_get cors.allowedOrigins)
     if [ -z "$(trim_value "$_cors")" ]; then
-        if [ "$_environment" = "production" ]; then
-            die "cors.allowedOrigins debe incluir $_app_origin."
-        fi
         warn "cors.allowedOrigins está vacío; se usará el valor por defecto del backend."
     else
         for _origin in $(printf '%s' "$_cors" | tr ',' ' '); do
@@ -428,30 +346,12 @@ validate_domains_and_urls() {
         url_is_origin "$_vite_api" \
             || die "VITE_API_URL debe ser un origen http(s), sin ruta."
         _vite_origin=$(origin_from_url "$_vite_api")
-    else
-        _vite_origin=""
-    fi
-
-    if [ "$_app_domain" = "$_api_domain" ]; then
-        if [ -n "$_vite_origin" ]; then
-            if [ "$_environment" = "production" ]; then
-                [ "$(lower_value "$_vite_origin")" = "https://$_app_domain" ] \
-                    || die "En dominio único, VITE_API_URL debe estar vacío o ser https://$_app_domain."
-            else
-                local_origin_matches "$_vite_origin" "$_api_port" \
-                    || die "En desarrollo, VITE_API_URL debe apuntar a http://localhost:$_api_port (o 127.0.0.1)."
-            fi
-        fi
-    else
-        [ -n "$_vite_origin" ] \
-            || die "VITE_API_URL es obligatorio cuando APP_DOMAIN y API_DOMAIN son distintos."
-        [ "$(lower_value "$_vite_origin")" = "$(lower_value "$_expected_public_api")" ] \
-            || die "VITE_API_URL debe corresponder a $_expected_public_api."
+        local_origin_matches "$_vite_origin" "$_api_port" \
+            || die "VITE_API_URL debe apuntar a http://localhost:$_api_port (o 127.0.0.1)."
     fi
 }
 
 validate_secrets() {
-    _environment=$1
     _db_password=$(env_get DB_PASSWORD)
     _db_root=$(env_get DB_ROOT_PASSWORD)
     _jwt=$(env_get jwt.secret)
@@ -471,23 +371,14 @@ validate_secrets() {
         ''|password|secret|changeme|change-me) die "DB_ROOT_PASSWORD no puede estar vacío ni ser un valor de ejemplo." ;;
     esac
 
-    if [ "$_environment" = "production" ]; then
-        [ "${#_db_password}" -ge 12 ] 2>/dev/null || die "DB_PASSWORD debe tener al menos 12 caracteres en producción."
-        [ "${#_db_root}" -ge 12 ] 2>/dev/null || die "DB_ROOT_PASSWORD debe tener al menos 12 caracteres en producción."
-        [ "${#_encryption}" -ge 32 ] 2>/dev/null || die "encryption.key debe tener al menos 32 caracteres en producción."
-        [ "${#_jwt}" -ge 32 ] 2>/dev/null || die "jwt.secret debe tener al menos 32 caracteres en producción."
-        [ "$_db_password" != "$_db_root" ] || die "DB_PASSWORD y DB_ROOT_PASSWORD deben ser distintas."
-        [ "$_jwt" != "$_encryption" ] || die "jwt.secret y encryption.key deben ser claves distintas."
-    else
-        if [ "${#_db_password}" -lt 12 ] 2>/dev/null; then
-            warn "DB_PASSWORD tiene menos de 12 caracteres; use una contraseña más fuerte."
-        fi
-        if [ "$_db_password" = "$_db_root" ]; then
-            warn "DB_PASSWORD y DB_ROOT_PASSWORD son iguales; use contraseñas distintas."
-        fi
-        if [ "$_jwt" = "$_encryption" ]; then
-            warn "jwt.secret y encryption.key son iguales; use claves distintas."
-        fi
+    if [ "${#_db_password}" -lt 12 ] 2>/dev/null; then
+        warn "DB_PASSWORD tiene menos de 12 caracteres; use una contraseña más fuerte."
+    fi
+    if [ "$_db_password" = "$_db_root" ]; then
+        warn "DB_PASSWORD y DB_ROOT_PASSWORD son iguales; use contraseñas distintas."
+    fi
+    if [ "$_jwt" = "$_encryption" ]; then
+        warn "jwt.secret y encryption.key son iguales; use claves distintas."
     fi
 
     case "$(env_get storage.driver)" in
@@ -500,47 +391,6 @@ validate_secrets() {
             ;;
         *) die "storage.driver debe ser local o supabase." ;;
     esac
-}
-
-
-require_sol_entry_network() {
-    network=$(sol_entry_network)
-    [ "$network" != "proxy" ] || die "SOL_ENTRY_NETWORK no puede ser la red compartida 'proxy'; use una red exclusiva Traefik ↔ SOL."
-    docker network inspect "$network" >/dev/null 2>&1 \
-        || die "No existe la red de entrada exclusiva '$network'. Despliegue primero deploy/infra/traefik/compose.yaml."
-}
-
-find_traefik_id() {
-    id=""
-    if [ -n "${TRAEFIK_CONTAINER:-}" ]; then
-        id=$(docker ps -q --filter "name=$TRAEFIK_CONTAINER" --filter status=running)
-    fi
-    if [ -z "$id" ]; then
-        id=$(docker ps -q --filter 'label=com.sol.infra=traefik' --filter status=running)
-    fi
-    printf '%s' "$id"
-}
-
-require_traefik_running() {
-    id=$(find_traefik_id)
-    [ -n "$id" ] || die "No se detectó un Traefik compartido en ejecución. Despliegue deploy/infra/traefik o defina TRAEFIK_CONTAINER."
-}
-
-# Verifica que Traefik esté conectado a la red exclusiva de SOL y que use la
-# misma IP fija que Nginx acepta para X-Forwarded-For/Proto.
-require_traefik_entry() {
-    network=$(sol_entry_network)
-    expected_ip=$(env_get TRAEFIK_ENTRY_IP)
-    [ -n "$expected_ip" ] || die "Falta TRAEFIK_ENTRY_IP para validar la confianza de X-Forwarded-*."
-    require_sol_entry_network
-    require_traefik_running
-    id=$(find_traefik_id)
-    attached=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$id" 2>/dev/null || true)
-    printf '%s\n' "$attached" | grep -Fxq "$network" \
-        || die "Traefik no está conectado a la red de entrada exclusiva '$network'."
-    actual_ip=$(docker inspect --format "{{(index .NetworkSettings.Networks \"$network\").IPAddress}}" "$id" 2>/dev/null || true)
-    [ "$actual_ip" = "$expected_ip" ] \
-        || die "Traefik usa la IP '$actual_ip' en '$network', pero TRAEFIK_ENTRY_IP='$expected_ip'. Corrija .env o la infraestructura."
 }
 
 wait_for_service() {
@@ -564,37 +414,6 @@ http_ok() {
     url="$1"
     require_cmd curl
     curl -fsS --max-time 10 "$url" >/dev/null
-}
-
-# Health check interno: no usa DNS público, Cloudflare ni certificados.
-# Se ejecuta dentro del contenedor Nginx con el Host de la API.
-nginx_internal_health() {
-    compose_cmd="$1"
-    api_domain=$(env_get API_DOMAIN)
-    [ -n "$api_domain" ] || api_domain=$(env_get APP_DOMAIN)
-    [ -n "$api_domain" ] || die "Falta API_DOMAIN o APP_DOMAIN para el health check interno."
-
-    id=$($compose_cmd ps -q nginx 2>/dev/null || true)
-    [ -n "$id" ] || die "El servicio nginx no está iniciado; no se puede ejecutar el health check interno."
-    docker exec "$id" wget -qO- --header="Host: $api_domain" http://127.0.0.1/health >/dev/null 2>&1 \
-        || die "El health check interno de Nginx falló (Host: $api_domain). No depende de DNS público."
-}
-
-# Smoke público separado: requiere DNS, TLS y certificado válidos.
-public_nginx_health() {
-    http_ok "$(nginx_health_url)"
-}
-
-nginx_health_url() {
-    mode=$(env_get NGINX_MODE)
-    app_domain=$(env_get APP_DOMAIN)
-    api_domain=$(env_get API_DOMAIN)
-    if [ "$mode" = "subdomain" ] || { [ "$mode" = "http" ] && [ "$app_domain" != "$api_domain" ]; }; then
-        printf 'https://%s/health' "$api_domain"
-    else
-        base=$(env_get APP_URL)
-        printf '%s/health' "${base%/}"
-    fi
 }
 
 docker_available() {
@@ -626,7 +445,7 @@ require_service_running() {
     compose_cmd="$1"
     service="$2"
     id=$($compose_cmd ps -q "$service" 2>/dev/null || true)
-    [ -n "$id" ] || die "El servicio '$service' no está iniciado. Ejecute dev.sh up o el procedimiento de despliegue correspondiente."
+    [ -n "$id" ] || die "El servicio '$service' no está iniciado. Ejecute dev.sh up."
     status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null || true)
     [ "$status" = "running" ] || [ "$status" = "healthy" ] || die "El servicio '$service' no está en ejecución (estado: ${status:-desconocido})."
 }
@@ -642,12 +461,16 @@ validate_env_basics() {
     if env_has_duplicates; then
         die "Hay variables duplicadas en $ENV_FILE. Deje una sola definición por variable."
     fi
-    require_env CI_ENVIRONMENT "Defina development, testing o production."
+    require_env CI_ENVIRONMENT "Defina development o testing."
     require_env COMPOSE_PROJECT_NAME "Defina un nombre de proyecto Compose único."
     require_project_name
-    require_env APP_DOMAIN "Defina el dominio público del frontend."
-    require_env APP_URL "Defina la URL pública del frontend."
-    require_env app.baseURL "Defina la URL pública de la API."
+    case "$(env_get CI_ENVIRONMENT)" in
+        development|testing) ;;
+        *) die "CI_ENVIRONMENT debe ser development o testing en este repositorio." ;;
+    esac
+    require_dev_project
+    require_env APP_URL "Defina la URL local del frontend."
+    require_env app.baseURL "Defina la URL local de la API."
     require_env DB_DATABASE "Defina el nombre de la base de datos."
     require_env DB_USER "Defina el usuario de la base de datos."
     require_env DB_PASSWORD "Defina la contraseña de la base de datos."
@@ -658,47 +481,9 @@ validate_env_basics() {
     case "$(env_get DB_PORT)" in
         ''|*[!0-9]*) die "DB_PORT debe ser numérico." ;;
     esac
-    case "$(env_get NGINX_MODE)" in
-        ''|http|same-domain|subdomain) ;;
-        *) die "NGINX_MODE debe ser http, same-domain o subdomain." ;;
-    esac
 
-    environment=$(env_get CI_ENVIRONMENT)
-    case "$environment" in
-        production)
-            require_prod_project
-            require_env SOL_ENTRY_NETWORK "Defina la red de entrada exclusiva Traefik ↔ SOL, por ejemplo sol_entry."
-            require_env TRAEFIK_ENTRY_IP "Defina la IP fija de Traefik en la red de entrada, por ejemplo 172.31.0.2."
-            require_env API_DOMAIN "Defina el dominio de la API (puede ser igual a APP_DOMAIN)."
-            [ "$(env_get SOL_ENTRY_NETWORK)" != "proxy" ] || die "SOL_ENTRY_NETWORK no puede ser 'proxy'; use una red exclusiva Traefik ↔ SOL."
-            valid_ipv4 "$(env_get TRAEFIK_ENTRY_IP)" || die "TRAEFIK_ENTRY_IP debe ser una dirección IPv4 válida."
-            [ "$(env_get NGINX_MODE)" = "http" ] || die "Detrás de Traefik, NGINX_MODE debe ser http; el TLS termina en Traefik."
-            case "$(lower_value "$(trim_value "$(env_get APP_DOMAIN)")")" in
-                localhost|127.0.0.1) die "APP_DOMAIN no puede ser localhost en producción." ;;
-            esac
-            case "$(lower_value "$(trim_value "$(env_get API_DOMAIN)")")" in
-                localhost|127.0.0.1) die "API_DOMAIN no puede ser localhost en producción." ;;
-            esac
-            ;;
-        development|testing)
-            require_dev_project
-            ;;
-        *) die "CI_ENVIRONMENT debe ser development, testing o production." ;;
-    esac
-
-    validate_domains_and_urls "$environment"
-    validate_turnstile "$environment"
+    validate_domains_and_urls
+    validate_turnstile
     validate_google_oauth
-    validate_secrets "$environment"
-
-    if [ "$environment" = "production" ]; then
-        case "$(env_get APP_URL)" in
-            https://*) ;;
-            *) die "APP_URL debe usar HTTPS en producción." ;;
-        esac
-        case "$(env_get app.baseURL)" in
-            https://*) ;;
-            *) die "app.baseURL debe usar HTTPS en producción." ;;
-        esac
-    fi
+    validate_secrets
 }

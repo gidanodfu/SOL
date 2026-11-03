@@ -29,6 +29,4 @@ tests
 docs
 deploy/backups
 deploy/runtime/
-deploy/nginx/certs/*
-!deploy/nginx/certs/README.md
 *.log

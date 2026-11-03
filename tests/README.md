@@ -10,7 +10,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 ./deploy/scripts/test.sh backend    # PHPUnit en el contenedor backend
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo
-./deploy/scripts/test.sh validation # validación preventiva, health interno, WebP, contexto Docker, rutas privadas y ACME
+./deploy/scripts/test.sh validation # validación de variables y contexto Docker
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 
@@ -54,26 +54,14 @@ externo) y `test_docker_http.sh` (`test.sh http`).
 
 `test.sh validation` ejecuta:
 
-- `tests/deploy/test_validation.sh`: Turnstile, Google OAuth, dominios, URLs,
-  CORS, VITE, secretos y configuración de subdominios, sin leer el `.env` real.
-- `tests/deploy/test_internal_health.sh`: health de Nginx sin resolución DNS.
-- `tests/deploy/test_webp_nginx.sh`: MIME `image/webp` y entrega íntegra de WebP,
-  PNG y JPEG con la configuración Nginx del frontend.
+- `tests/deploy/test_validation.sh`: Turnstile, Google OAuth, URLs locales,
+  CORS, VITE, secretos de ejemplo y valores de desarrollo, sin leer el `.env` real.
 - `tests/deploy/test_docker_context.sh`: construye un contexto Docker mínimo y
   comprueba que no incluye `.git` ni `.github`, y que conserva `VERSION`,
-  backend, frontend, `nginx.conf` y Compose.
-- `tests/deploy/test_prod_images.sh`: construye las imágenes de producción y
-  verifica que no contengan `.git`/`.github` y que conserven `public/index.php`
-  y `dist`.
-- `tests/deploy/test_nginx_private_paths.sh`: comprueba que `/.git`,
-  `/.git/config`, `/.github`, `/.github/workflows/ci.yml` y `.env` responden
-  `404`, y que las plantillas del gateway contienen el bloqueo de dotfiles.
-- `tests/infra/test_traefik_acme.sh`: inicialización real del resolver
-  `letsencrypt` y uso por un router temporal, sin contactar Let's Encrypt ni
-  publicar puertos.
+  backend, frontend y Compose.
 
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
-secretos reales, DNS de producción, Cloudflare ni certificados.
+secretos reales ni servicios externos.
 
 > `test.sh smoke` ejecuta 27 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
@@ -150,7 +138,7 @@ desaparece; activo = 0 la oculta sin cambiar su ciclo; cancelado nunca se
 publica. También comprueba la ausencia de `fecha_publicacion`, `empresa_id`,
 `razon_social` y `ruc` en las respuestas, y la inmutabilidad HTTP de
 finalizadas. Cada suite usa un esquema MySQL efímero propio y no toca datos de
-desarrollo ni de producción.
+desarrollo.
 
 `tests/smoke/test_actividades_finalizadas.sh` comprueba que una actividad
 finalizada manualmente o por fecha de fin (America/Lima) sea de solo lectura:

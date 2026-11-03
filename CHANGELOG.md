@@ -4,6 +4,18 @@ Todos los cambios notables del Sistema de Empleo MDJLO se documentan en este
 archivo. El formato sigue la convención de *Keep a Changelog* y la versión
 oficial es la del archivo raíz `VERSION`.
 
+## [Sin publicar]
+
+### Cambiado
+
+- El repositorio queda destinado exclusivamente al desarrollo local: se retiran
+  el Compose y los scripts de producción, Traefik, Nginx de borde, certificados,
+  dominios públicos y los stages `prod` de los Dockerfiles.
+- Se consolida `deploy/compose.yaml` como único stack de desarrollo.
+- La documentación, `.env.example` y la CI describen únicamente el entorno local.
+- Se conservan el backend, el frontend, las migraciones, los seeds, los datos y
+  las pruebas funcionales sin cambios.
+
 ## [1.4.8] — 2026-11-02
 
 ### Añadido

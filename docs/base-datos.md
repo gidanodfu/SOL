@@ -180,29 +180,21 @@ Orden cronológico (los nombres son la fuente exacta):
 ```bash
 cp .env.example .env
 chmod 600 .env
-./deploy/scripts/bootstrap.sh --dev --authorize   # o --prod --authorize
+./deploy/scripts/bootstrap.sh --dev --authorize
 ```
 
 `bootstrap.sh` aplica todas las migraciones y ejecuta `SystemSeeder` una sola
-vez. No se ejecutan seeders desde `dev.sh up`, `deploy.sh` ni `restart`.
+vez. No se ejecutan seeders desde `dev.sh up` ni `restart`.
 
 ### Actualización de una instalación existente
-
-```bash
-./deploy/scripts/deploy.sh
-```
-
-El despliegue crea un respaldo verificado, reconstruye imágenes, aplica las
-migraciones pendientes y recrea los servicios. Para desarrollo:
 
 ```bash
 ./deploy/scripts/dev.sh migrate
 ./deploy/scripts/dev.sh migration-status
 ```
 
-No ejecute `down()` en producción sin respaldo y autorización. Las migraciones
-históricas no se modifican; los cambios de esquema se hacen con una migración
-nueva y reversible cuando sea posible.
+Las migraciones históricas no se modifican; los cambios de esquema se hacen con
+una migración nueva y reversible cuando sea posible.
 
 ## 6. Consultas de diagnóstico
 

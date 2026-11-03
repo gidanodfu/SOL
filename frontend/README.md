@@ -7,7 +7,7 @@ la autorización viven en el backend (`../backend`). Ver el
 ## Stack
 
 - React 19 + Vite 8 · react-router-dom 7 · TanStack Query · Axios
-- Node.js 22.23.4 (imagen fijada `node:22.23.4-alpine`) · Nginx 1.27.5 en producción
+- Node.js 22.23.4 (imagen fijada `node:22.23.4-alpine`); servidor de desarrollo Vite
 - Iconos: Tabler Icons (`@tabler/icons-webfont`, CSS importado en `main.jsx`) y
   `lucide-react` · Tipografías Google (Inter, Sora; Playfair Display en el portal)
 
@@ -43,7 +43,7 @@ monta el `.env` privado completo en el contenedor frontend.
 
 | Variable | Descripción |
 |---|---|
-| `VITE_API_URL` | Base del backend, p. ej. `http://localhost:8080`; vacío en same-domain |
+| `VITE_API_URL` | Base del backend, p. ej. `http://localhost:8080` |
 | `VITE_GOOGLE_CLIENT_ID` | Client ID OAuth de Google (habilita el botón de Google) |
 | `VITE_TURNSTILE_SITE_KEY` | Site key pública de Cloudflare Turnstile |
 

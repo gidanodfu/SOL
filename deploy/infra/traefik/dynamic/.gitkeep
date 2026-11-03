@@ -1,2 +1,0 @@
-# Archivos dinámicos opcionales de Traefik.
-# El enrutamiento de SOL se declara con labels en deploy/compose.prod.yaml.
