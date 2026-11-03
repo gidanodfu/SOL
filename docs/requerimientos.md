@@ -1,5 +1,8 @@
 # Requerimientos del Sistema de Empleo — MDJLO
 
+> Sincronizado con SOL **1.4.8** (2026-11-02). El cuerpo describe el
+> comportamiento vigente; los anexos conservan decisiones y cambios históricos.
+
 Documento de especificación que rige el desarrollo. Los códigos (RF-XX, RN-XX, RT-XX,
 RNF-XX, RT-CV-XX) se referencian en código y migraciones para trazabilidad. Los cambios de
 modelo aprobados con posterioridad se documentan en los anexos (§17, §18, §19) y el cuerpo
@@ -295,7 +298,7 @@ supervisa y reporta.
 - **RT-CV-03** Actualización gestionada por backend (sustitución/versión + referencia). Un postulante mantiene un único CV activo; las versiones anteriores se conservan inactivas.
 - **RT-CV-04** Acceso controlado por CI4: la empresa solo ve CV de postulaciones autorizadas.
 - **RT-CV-05** Sin URLs públicas permanentes; URL temporal/firmada generada por CI4.
-- **RT-CV-06** Validar extensión, MIME y tamaño antes de almacenar.
+- **RT-CV-06** Validar extensión, MIME, firma binaria, estructura y tamaño máximo (5 MB) antes de almacenar.
 - **RT-CV-07** Nombres generados por el sistema.
 - **RT-CV-08** Historial/versiones del CV cuando sea necesario.
 - **RT-CV-09** Sin cuota mensual. Rate limiting configurable por usuario (por defecto

@@ -47,9 +47,9 @@ info:
       siempre de la sesión; acceder a un recurso de otro rol/empresa/postulante
       devuelve `404` (no `403`) para no revelar existencia (anti-enumeración).
     * **Fechas**: los campos `date`/`datetime` se devuelven como cadenas
-      (`YYYY-MM-DD` y `YYYY-MM-DD HH:MM:SS`). El backend opera en UTC
-      (`Config/App.php appTimezone = 'UTC'`); las validaciones de "hoy" y los
-      rangos usan `date('Y-m-d')` en esa zona.
+      (`YYYY-MM-DD` y `YYYY-MM-DD HH:MM:SS`). El backend opera en
+      `America/Lima` (`Config/App.php appTimezone = 'America/Lima'`); las
+      validaciones de "hoy" y los rangos usan esa zona.
     * **Rate limiting**: los endpoints sensibles usan el Throttler nativo de CI4
       (`app/Filters/ThrottleFilter.php` y `AuthService`), que implementa un **token bucket**:
       permite una ráfaga inicial (la capacidad) y luego repone 1 token a intervalos de
@@ -3887,6 +3887,424 @@ paths:
         '500':
           $ref: '#/components/responses/ErrorInterno'
 
+  /api/verificar-dni:
+    post:
+      tags: [Autenticación]
+      operationId: verificarDni
+      summary: Verificar DNI para autocompletar el registro
+      description: |
+        Consulta el DNI en el proveedor configurado y devuelve los datos
+        disponibles junto con `dni_token`, que el registro usa para acreditar la
+        verificación. Requiere 8 dígitos y está limitado por IP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dni]
+              properties:
+                dni:
+                  type: string
+                  pattern: '^\d{8}$'
+      responses:
+        '200':
+          description: DNI verificado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string, example: DNI verificado.}
+                  data:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      dni: {type: string}
+                      nombres: {type: string}
+                      apellidos: {type: string}
+                      dni_token: {type: string}
+        '422': {$ref: '#/components/responses/Validacion'}
+        '429': {$ref: '#/components/responses/DemasiadasSolicitudes'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/empresas/{id}/logo:
+    get:
+      tags: [Catálogos y divulgación]
+      operationId: empresaLogoPublico
+      summary: Logo público de una empresa
+      description: Proxy público de la imagen; no expone la clave interna de Storage.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Imagen del logo.
+          content:
+            image/png: {schema: {type: string, format: binary}}
+            image/jpeg: {schema: {type: string, format: binary}}
+            image/webp: {schema: {type: string, format: binary}}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/postulantes/{id}/foto:
+    get:
+      tags: [Catálogos y divulgación]
+      operationId: postulanteFotoPublica
+      summary: Foto pública de un postulante
+      description: Proxy público de la foto de perfil; no expone la clave interna de Storage.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Imagen de perfil.
+          content:
+            image/png: {schema: {type: string, format: binary}}
+            image/jpeg: {schema: {type: string, format: binary}}
+            image/webp: {schema: {type: string, format: binary}}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/actividades/{id}/imagen:
+    get:
+      tags: [Catálogos y divulgación]
+      operationId: actividadImagenPublica
+      summary: Imagen pública de una actividad
+      description: Proxy público de la imagen de la actividad.
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Imagen de la actividad.
+          content:
+            image/png: {schema: {type: string, format: binary}}
+            image/jpeg: {schema: {type: string, format: binary}}
+            image/webp: {schema: {type: string, format: binary}}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/cuenta/preferencias:
+    get:
+      tags: [Cuenta]
+      operationId: cuentaPreferencias
+      summary: Preferencias de interfaz del usuario
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Preferencias de interfaz.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data:
+                    type: object
+                    required: [theme, mode, font, reducedMotion, highContrast]
+                    properties:
+                      theme: {type: string, enum: [blue, olive, amber, obsidian, red]}
+                      mode: {type: string, enum: [light, dark, system]}
+                      font: {type: string, enum: [default]}
+                      reducedMotion: {type: boolean}
+                      highContrast: {type: boolean}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+    put:
+      tags: [Cuenta]
+      operationId: cuentaGuardarPreferencias
+      summary: Guardar preferencias de interfaz
+      description: |
+        Actualización parcial. Solo se modifican las claves enviadas; al menos
+        una debe ser válida o responde 422.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                theme: {type: string, enum: [blue, olive, amber, obsidian, red]}
+                mode: {type: string, enum: [light, dark, system]}
+                font: {type: string, enum: [default]}
+                reducedMotion: {type: boolean}
+                highContrast: {type: boolean}
+      responses:
+        '200':
+          description: Preferencias guardadas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data:
+                    type: object
+                    additionalProperties: true
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '422': {$ref: '#/components/responses/Validacion'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/admin/pendientes:
+    get:
+      tags: [Admin]
+      operationId: adminPendientes
+      summary: Conteos de pendientes administrativos
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pendientes de atención.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data:
+                    type: object
+                    required: [ofertas, solicitudes]
+                    properties:
+                      ofertas: {type: integer}
+                      solicitudes: {type: integer}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/admin/empleabilidad:
+    get:
+      tags: [Admin]
+      operationId: adminEmpleabilidad
+      summary: Estadísticas de empleabilidad
+      description: Agregados de ofertas, empresas y situación de contrataciones.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Estadísticas de empleabilidad.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data:
+                    type: object
+                    required: [ofertas_generadas, ofertas_vigentes, contrataciones, empresas, situaciones]
+                    properties:
+                      ofertas_generadas: {type: integer}
+                      ofertas_vigentes: {type: integer}
+                      contrataciones: {type: integer}
+                      empresas:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            empresa_id: {type: integer}
+                            razon_social: {type: string}
+                            ruc: {type: string}
+                            total_ofertas: {type: integer}
+                            vigentes: {type: integer}
+                      situaciones:
+                        type: object
+                        additionalProperties: {type: integer}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/empresa/pendientes:
+    get:
+      tags: [Empresa]
+      operationId: empresaPendientes
+      summary: Conteos de pendientes de la empresa
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pendientes de atención.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data:
+                    type: object
+                    required: [ofertas_observadas, ofertas_rechazadas, postulaciones]
+                    properties:
+                      ofertas_observadas: {type: integer}
+                      ofertas_rechazadas: {type: integer}
+                      postulaciones: {type: integer}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/admin/solicitudes-empresa/{id}/reenviar:
+    post:
+      tags: [Admin]
+      operationId: adminReenviarSolicitudEmpresa
+      summary: Reenviar el enlace de activación empresarial
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: Resultado del reenvío.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success: {type: boolean, example: true}
+                  message: {type: string}
+                  data:
+                    type: object
+                    properties:
+                      correo_enviado: {type: boolean}
+                      correo_destino: {type: string, nullable: true}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '409': {$ref: '#/components/responses/Conflicto'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/admin/actividades/{id}/imagen:
+    post:
+      tags: [Admin]
+      operationId: adminSubirImagenActividad
+      summary: Subir o reemplazar la imagen de una actividad
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [imagen]
+              properties:
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '200': {$ref: '#/components/responses/OkVacio200'}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '409': {$ref: '#/components/responses/Conflicto'}
+        '422': {$ref: '#/components/responses/Validacion'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+    delete:
+      tags: [Admin]
+      operationId: adminEliminarImagenActividad
+      summary: Eliminar la imagen de una actividad
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': {$ref: '#/components/responses/OkVacio200'}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '409': {$ref: '#/components/responses/Conflicto'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/empresa/perfil/logo:
+    post:
+      tags: [Empresa]
+      operationId: empresaSubirLogo
+      summary: Subir o reemplazar el logo de la empresa
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200': {$ref: '#/components/responses/OkVacio200'}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '422': {$ref: '#/components/responses/Validacion'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+    delete:
+      tags: [Empresa]
+      operationId: empresaEliminarLogo
+      summary: Eliminar el logo de la empresa
+      security:
+        - bearerAuth: []
+      responses:
+        '200': {$ref: '#/components/responses/OkVacio200'}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+  /api/postulante/perfil/foto:
+    post:
+      tags: [Postulante]
+      operationId: postulanteSubirFoto
+      summary: Subir o reemplazar la foto de perfil
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [foto]
+              properties:
+                foto:
+                  type: string
+                  format: binary
+      responses:
+        '200': {$ref: '#/components/responses/OkVacio200'}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '422': {$ref: '#/components/responses/Validacion'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+    delete:
+      tags: [Postulante]
+      operationId: postulanteEliminarFoto
+      summary: Eliminar la foto de perfil
+      security:
+        - bearerAuth: []
+      responses:
+        '200': {$ref: '#/components/responses/OkVacio200'}
+        '401': {$ref: '#/components/responses/NoAutorizado'}
+        '403': {$ref: '#/components/responses/Prohibido'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '500': {$ref: '#/components/responses/ErrorInterno'}
+
+
 components:
   parameters:
     IdPath:
@@ -4727,7 +5145,7 @@ components:
         fecha_cierre:
           type: string
           format: date
-          description: No puede ser anterior a hoy (se compara en UTC).
+          description: No puede ser anterior a hoy (se compara en America/Lima).
         categoria_id:
           type: integer
           description: Debe existir en `categorias` si se envía.
@@ -4859,7 +5277,8 @@ components:
         Fila de `oportunidades`. `estado` es el valor persistido;
         `estado_efectivo` deriva el ciclo de vida por fecha;
         `estado_publicacion` y `es_visible_publicamente` describen la
-        disponibilidad pública derivada de activo y de la ventana de fechas.
+        disponibilidad pública derivada de activo, programación completa y
+        `fecha_fin`. `fecha_inicio` solo determina el estado efectivo.
       properties:
         id:
           type: integer
@@ -4942,11 +5361,11 @@ components:
         fecha_inicio:
           type: string
           example: '2026-07-15 09:00:00'
-          description: Fecha y hora local (America/Lima) obligatorias; abre la ventana pública.
+          description: Fecha y hora local (America/Lima) obligatorias; al alcanzarla la oportunidad pasa a `en_curso`, pero no bloquea la publicación.
         fecha_fin:
           type: string
           example: '2026-07-20 18:00:00'
-          description: No puede ser anterior a `fecha_inicio`; la igualdad se admite. Cierra la ventana pública.
+          description: No puede ser anterior a `fecha_inicio`; la igualdad se admite. Al alcanzarla la oportunidad deja de publicarse.
         modalidad:
           type: string
           enum: [presencial, virtual, mixta]

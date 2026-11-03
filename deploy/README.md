@@ -230,6 +230,12 @@ Versiones fijadas actualmente:
 | Administración dev | `adminer:5.3.0` |
 | Utilidades temporales | `alpine:3.21` |
 
+Estas son versiones de infraestructura y dependencias, **no** la versión de la
+aplicación. La versión actual de SOL es `1.4.8`; vive únicamente en el archivo
+raíz `VERSION`, se inyecta en el bundle al compilar el frontend y se documenta
+en `README.md` y `CHANGELOG.md`. No cambie la versión de la aplicación en
+Dockerfiles, Compose ni `package.json`.
+
 Procedimiento autorizado para actualizar:
 
 1. Revisar notas de la versión y compatibilidad con CodeIgniter/React.
@@ -377,6 +383,9 @@ base vacía. La instalación actual ya tiene migraciones, `SystemSeeder` y el
 administrador; no se debe volver a ejecutar.
 
 ## Datos, respaldos y restauración
+
+El esquema, las relaciones y el orden de migraciones se documentan en
+[`../docs/base-datos.md`](../docs/base-datos.md).
 
 `backup.sh` usa `mysqldump` consistente y respalda el volumen
 `backend_writable`. El destino por defecto es `$HOME/sol-backups`; use

@@ -1,5 +1,7 @@
 # Operaciones de SOL
 
+> Documentación operativa sincronizada con SOL **1.4.8** (2026-11-02).
+
 Docker es la única vía oficial. Los comandos de aplicación se ejecutan dentro de
 contenedores; no se requiere PHP, Composer, Node.js, npm ni MySQL en el host.
 
@@ -225,9 +227,9 @@ valores de `fecha_publicacion` en
 se aplican con `deploy.sh` y sus `down()` son reversibles en una base de
 pruebas. No ejecutar `down()` en producción sin respaldo y autorización.
 
-La migración `2026-11-02-100000_CuotasCvYActivoUnico` crea
-`cv_cuotas_mensuales` (clave única por postulante/periodo, consumo mensual) y
-`cv_activos` (una fila por postulante con el CV vigente y unicidad sobre
+La migración histórica `2026-11-02-100000_CuotasCvYActivoUnico` creó
+`cv_cuotas_mensuales` (clave única por postulante/periodo, consumo mensual; hoy
+tabla legado) y `cv_activos` (una fila por postulante con el CV vigente y unicidad sobre
 `cv_id`). El backfill cuenta los CV históricos por mes y conserva la versión
 activa más reciente; no elimina versiones anteriores.
 
@@ -280,6 +282,10 @@ reconstruir la imagen frontend; no basta con reiniciar el contenedor. El formato
 y el procedimiento de etiquetado están documentados en el README.
 
 ## 6. Base de datos y persistencia
+
+El esquema, las relaciones, las tablas legado y el orden de migraciones están
+documentados en [`base-datos.md`](base-datos.md). La versión actual del sistema
+es `1.4.8` (fuente única: `VERSION`).
 
 - Volumen MySQL: `sol_<proyecto>_mysql_data`.
 - Volumen de escritura del backend: `sol_<proyecto>_backend_writable`

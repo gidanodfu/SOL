@@ -1,5 +1,8 @@
 # Matriz de cumplimiento — Sistema de Empleo MDJLO
 
+> Sincronizada con SOL **1.4.8** (2026-11-02). Refleja el comportamiento
+> implementado en `backend/`, `frontend/`, migraciones y pruebas.
+
 Estado por código de requerimiento y dónde está implementado (endpoint de la API /
 pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 ⬤ parcial (funcionalidad básica; ampliación prevista), ✘ pendiente.
@@ -27,7 +30,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-17 Conservación de información | ✔ | flags de estado; sin borrado físico |
 | RF-18 Registro de postulantes (manual DNI + Google) | ✔ | `POST /api/registro/postulante` y `POST /api/auth/google` · Registro |
 | RF-19/20 Perfil laboral + actualización | ✔ | datos personales/contacto + CV; **para postular solo se exige contacto completo + CV vigente** (las secciones de formación/experiencia/habilidades/cursos se retiraron del producto) |
-| RF-21 CV cargar/consultar | ✔ | `POST/GET /api/postulante/cv*` · "Mi perfil y CV"; máximo **4 CV/mes** (ver RT-CV y endurecimiento 2026-09) |
+| RF-21 CV cargar/consultar | ✔ | `POST/GET /api/postulante/cv*` · "Mi perfil y CV"; sin cuota mensual; rate limiting configurable por usuario/IP y una carga simultánea por postulante; `429` con `Retry-After` |
 | RF-22 Registro de ofertas | ✔ | `api/empresa/ofertas*` · Ofertas (empresa); campos de negocio obligatorios, ubicación del catálogo compartido y cierre no anterior a hoy |
 | RF-23 Estados de oferta | ✔ | pendiente → publicada / rechazada → cerrada; `borrador` solo heredado. `vencida` es un estado efectivo derivado de `publicada` + `fecha_cierre`, distinto del cierre manual |
 | RF-24 La empresa envía a revisión; no publica por sí misma | ✔ | `PUT /api/empresa/ofertas/{id}/enviar-revision`; el `POST` nace `pendiente` |
@@ -110,7 +113,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RT-CV-03 | ✔ | cada carga crea versión y desactiva la anterior (`CvService`) |
 | RT-CV-04 | ✔ | empresa ve CV solo de postulaciones propias (`PostulacionService`) |
 | RT-CV-05 | ✔ | URL firmada generada por el backend (driver local = ruta interna autorizada) |
-| RT-CV-06/07 | ✔ | validación extensión/MIME/tamaño; `object_key` generada por el sistema |
+| RT-CV-06/07 | ✔ | validación de extensión, MIME, firma binaria, estructura y tamaño (máx. 5 MB); `object_key` generada por el sistema |
 | RT-CV-08 | ✔ | historial de versiones conservado |
 | RT-CV-09 | ✔ | sin cuota mensual; rate limiting configurable por usuario/IP (`rate_limit_contadores`, `CvRateLimiter`) y una carga simultánea por postulante (`GET_LOCK`); `429` con `Retry-After` |
 
@@ -152,12 +155,15 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 - **WhatsApp de notificaciones** (aprobación/rechazo) todavía no integrado; hoy solo correo. Opcional.
 - **Supabase Storage real**: conectar credenciales (driver `supabase`) en producción y
   re-verificar subida + URL firmada; desarrollo usa driver `local`.
-- Roles secundarios del personal municipal (hoy un único rol `admin`).
+- Roles operativos adicionales para oficinas descentralizadas: la matriz actual
+  implementa `admin`, `moderador` y `solo_lectura`; cualquier rol nuevo requiere
+  decisión funcional y no debe inferirse de la documentación.
 - Integración de oficinas descentralizadas (matriz de la Resolución).
 - Difusión hacia empresas (ver ferias/oportunidades desde la cuenta empresa).
 - **Tablas en desuso** (`formacion_academica`, `experiencia_laboral`, `habilidades`,
   `cursos_certificaciones`, `atenciones`): no se eliminan hasta confirmar que ningún
   entorno tiene datos reales; el borrado se haría con una migración nueva.
-- **Hallazgos menores de la auditoría** (`backend/docs/auditoria-backend.md`, sección F):
-  dueño único de `users.estado`/`empresas.estado`, auditoría ampliada, N+1 en listados,
-  zona horaria Perú y validación calendárica quedan para una fase posterior.
+- **Hallazgos menores de la auditoría** (`backend/docs/auditoria-backend.md`):
+  dueño único de `users.estado`/`empresas.estado`, auditoría ampliada, N+1 en listados
+  e índices de consulta quedan como recomendaciones; la zona horaria de aplicación y
+  la validación calendárica ya están implementadas y cubiertas por pruebas.

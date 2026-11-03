@@ -8,6 +8,22 @@ empresas con aprobación municipal, postulaciones con CV y trazabilidad de la co
 La especificación funcional está en `docs/requerimientos.md` y la trazabilidad RF/RN/RT en
 `docs/matriz-cumplimiento.md`.
 
+**Versión actual:** `1.4.8` (fuente única: `VERSION`).
+
+### Documentación
+
+- [`docs/requerimientos.md`](docs/requerimientos.md) — requisitos funcionales y reglas de negocio.
+- [`docs/matriz-cumplimiento.md`](docs/matriz-cumplimiento.md) — trazabilidad RF/RN/RT.
+- [`docs/base-datos.md`](docs/base-datos.md) — esquema, relaciones y migraciones.
+- [`docs/operaciones.md`](docs/operaciones.md) — operación, respaldos y recuperación.
+- [`backend/README.md`](backend/README.md) — arquitectura y convenciones de la API.
+- [`frontend/README.md`](frontend/README.md) — arquitectura React y sistema visual.
+- [`deploy/README.md`](deploy/README.md) — Docker, Traefik, Nginx, despliegue y rollback.
+- [`tests/README.md`](tests/README.md) — pruebas unitarias, smoke, frontend y despliegue.
+- [`backend/docs/auditoria-backend.md`](backend/docs/auditoria-backend.md) — auditoría histórica y estado de hallazgos.
+- [`docs/identidad-conflictos.md`](docs/identidad-conflictos.md) — diagnóstico histórico de identidad y reservas.
+- [`CHANGELOG.md`](CHANGELOG.md) — registro de versiones.
+
 ## 2. Arquitectura
 
 ```

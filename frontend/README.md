@@ -28,6 +28,13 @@ El servidor de desarrollo (Vite) se inicia con `dev.sh up` en
 `http://localhost:5173`, con recarga automática mediante los volúmenes de
 `src/`, `public/`, `index.html`, `vite.config.js` y `package.json`.
 
+`./deploy/scripts/test.sh frontend` ejecuta `npm test`, `npm run lint` y
+`npm run build` dentro de Docker. La suite cubre, entre otros, versión y
+`/about`, documentos legales, catálogo de ubicaciones, validaciones de
+formularios, CV/rate limiting, oportunidades y reglas de postulaciones. Al
+cierre de la versión 1.4.8 reporta **79/79 tests**, lint con **0 errores** y
+build correcto. Los warnings de Oxlint son estáticos y no bloquean el build.
+
 ## Variables de entorno
 
 La configuración pública se toma del `.env` de la **raíz** del repositorio (Vite usa
@@ -42,14 +49,49 @@ monta el `.env` privado completo en el contenedor frontend.
 
 Las variables `VITE_*` se incorporan al bundle público. No incluya secretos del backend.
 
+## Sesión, datos y errores
+
+- `AuthContext` restaura la sesión con `GET /api/auth/me`, guarda los tokens en
+  `localStorage`, renueva el access token con `/api/auth/refresh` y cierra
+  sesión en el backend.
+- `services/api.js` centraliza Axios con `baseURL=/api`, añade el Bearer y
+  redirige a `/login` cuando la sesión expira.
+- TanStack Query es la caché de datos de servidor. Las mutaciones invalidan las
+  claves afectadas (por ejemplo, `oportunidades-publicas`, `cv`, `perfil-*` y
+  las bandejas administrativas) para refrescar la vista sin polling.
+- `utils.js` contiene `errorApi`, `esEnlaceSeguro`, helpers de fechas y
+  descargas; las páginas muestran el `message` del backend y, cuando existe,
+  `campos` para asociar el error al control.
+- Las validaciones del frontend son de presentación y usabilidad. El backend
+  revalida tipos, permisos, propiedad, unicidad y reglas de negocio; ninguna
+  regla de seguridad depende del cliente.
+
+## Versión y build
+
+`vite.config.js` lee `../VERSION`, valida el formato con
+`src/config/versionFormat.js` e inyecta `import.meta.env.VITE_SOL_VERSION`.
+`src/config/version.js` transforma ese valor y `/about` lo muestra como
+`X.Y.Z ESTABLE` o el canal correspondiente. `VERSION` es la única fuente; no se
+edita la versión en `package.json`, `constants.js` ni componentes.
+
+## Editor y temas
+
+- El editor de texto enriquecido usa TiPTap y se carga de forma diferida; el
+  HTML se sanea en backend y se renderiza con DOMPurify a través de
+  `ContenidoEnriquecido`.
+- `ThemeContext` aplica tema cromático, modo claro/oscuro/sistema, reducción de
+  movimiento y alto contraste. Las preferencias se persisten por usuario en
+  `ui_preferences` mediante `/api/cuenta/preferencias`.
+
 ## Estructura
 
 ```
 src/
 ├── components/     UI compartida (UI, PageHeader, CvUploader, StatCard, GoogleButton,
 │                   SeoMeta…)
-├── context/        AuthContext (sesión, login/logout, refresh)
-├── hooks/          useAccion, useClickFuera
+├── context/        AuthContext y ThemeContext (sesión, tema y preferencias)
+├── hooks/          useAccion, useClickFuera, usePermisosMunicipales,
+│                   useSidebarColapsado y utilidades de UI
 ├── layouts/        LayoutApp (admin legacy), LayoutAdmin, LayoutEmpresa,
 │                   LayoutPostulante y LayoutBusqueda (bolsa pública sin sesión)
 ├── pages/          auth (login, registro, registro-empresa, activar-cuenta),
@@ -84,9 +126,12 @@ src/
 - El perfil de postulante (datos + CV) exige contacto completo y CV vigente para postular.
 - **Teléfono**: los formularios filtran a solo dígitos (`soloDigitos`) y validan 9 u 11
   dígitos (`esTelefonoValido`) antes de enviar; el backend revalida.
-- **CV**: `CvUploader` muestra el botón "Subir CV" o "Actualizar CV" según exista un CV
-  vigente, el contador de consumo mensual ("Ha usado X de 4…") y se deshabilita al alcanzar
-  el límite (4/mes), mostrando el mensaje del backend.
+- **CV**: `CvUploader` muestra "Subir CV" o "Actualizar CV" según exista una
+  versión vigente. No hay cuota mensual: la carga se protege con rate limiting
+  configurable por usuario e IP, una operación simultánea por postulante y
+  respuestas `429` con `Retry-After`. El historial de versiones y el único CV
+  activo se conservan; el backend valida MIME, firma binaria, estructura y
+  tamaño antes de almacenar.
 - **Errores**: `errorApi` (en `utils.js`) extrae el `message` del sobre de error y tolera
   respuestas no JSON, `429` (rate limit) y errores de red/`5xx`; el interceptor de Axios
   renueva el token en `401` y redirige a `/login` si la sesión expiró.

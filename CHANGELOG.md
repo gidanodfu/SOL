@@ -46,6 +46,10 @@ oficial es la del archivo raíz `VERSION`.
   archivo raíz `VERSION`; no se duplica en `package.json` ni en constantes React.
 - OpenAPI, README, documentación de operaciones y matriz de cumplimiento se
   actualizan a la versión `1.4.8`.
+- Se sincronizó la documentación con el estado real: nuevo `docs/base-datos.md`
+  con diagrama ER y catálogo de tablas, OpenAPI con 89 rutas y 107 operaciones,
+  READMEs de backend/frontend/despliegue/pruebas y estado vigente de la
+  auditoría histórica.
 
 ### Corregido
 
@@ -83,7 +87,7 @@ oficial es la del archivo raíz `VERSION`.
 - Backend: 220 tests, 1247 assertions.
 - Frontend: 79/79 tests, lint sin errores y build correcto.
 - Smoke: 27 suites, 0 fallos y 0 marcadores de aserción.
-- Validación de despliegue correcta; OpenAPI válido con 91 `operationId`.
+- Validación de despliegue correcta; OpenAPI válido con 107 `operationId`.
 - Verificación visual con Chromium de `/activar-cuenta` y de los indicadores de
   oportunidades/postulaciones.
 

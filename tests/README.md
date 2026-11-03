@@ -14,6 +14,44 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 ./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
 ```
 
+### Inventario de suites smoke
+
+| Suite | Cobertura |
+|---|---|
+| `test_api.sh` | Contrato base de la API, autenticación, ofertas, postulaciones y CV. |
+| `test_ofertas.sh` | CRUD y consulta pública de ofertas. |
+| `test_aprobacion_ofertas.sh` | Aprobación, observación, rechazo y visibilidad municipal. |
+| `test_ofertas_campos.sh` | Campos obligatorios, catálogo de ubicaciones y edición de ofertas. |
+| `test_reglas_ofertas.sh` | Vencimiento efectivo, selección formal y bloqueos de postulación. |
+| `test_retiro_postulacion.sh` | Retiro voluntario y activación solo para seleccionados. |
+| `test_concurrencia.sh` | Carreras de postulación, selección, retiro y reactivación. |
+| `test_fase3.sh` | Perfil del postulante y CV. |
+| `test_fase4.sh` | Bandeja de empresa, transiciones y contratación. |
+| `test_fase5.sh` | Actividades, difusión y dashboard municipal. |
+| `test_fase6.sh` | Contrataciones y reportes. |
+| `test_seguridad.sh` | XSS, enlaces, rate limiting, cabeceras, rutas privadas y errores saneados. |
+| `test_rte.sh` | Editor enriquecido, sanitización HTML y autolink. |
+| `test_identidad.sh` | Identidad, normalización y reglas de unicidad. |
+| `test_reporte_empresa.sh` | Reportes de la empresa. |
+| `test_reporte_ofertas.sh` | Reporte de ofertas y estados efectivos. |
+| `test_reporte_pdf.sh` | PDF/Excel, autorización, aislamiento y contenido institucional. |
+| `test_perfiles_municipales.sh` | Perfiles `admin/moderador/solo_lectura`, permisos y auditoría. |
+| `test_unicidad_municipal.sh` | Unicidad global de correo/teléfono y concurrencia de altas. |
+| `test_actividades_obligatorias.sh` | Creación/edición de actividades e imágenes. |
+| `test_actividades_finalizadas.sh` | Inmutabilidad de actividades finalizadas. |
+| `test_oportunidades_campos.sh` | Creación y edición de oportunidades. |
+| `test_oportunidades_ciclo.sh` | Publicación inmediata, estados efectivos y cierre por fecha. |
+| `test_cv.sh` | CV válido, descarga, rate limiting, quinto CV y CV activo. |
+| `test_cv_concurrencia.sh` | Bloqueo simultáneo, seis cargas y contadores. |
+| `test_cv_rate_limit.sh` | Ventanas configurables, reinicio y `Retry-After`. |
+| `test_validaciones_estrictas.sh` | Tipos, IDs, booleanos, fechas y contacto. |
+| `test_desarrollo_nuevo.sh` | Manual y externo: requiere SUNAT/RUC real; no se ejecuta por defecto. |
+| `test_docker_http.sh` | Se ejecuta con `test.sh http` contra el stack de desarrollo. |
+
+La tabla incluye las **27 suites automáticas** del runner (`test.sh smoke`) y dos
+procedimientos que se ejecutan fuera de él: `test_desarrollo_nuevo.sh` (manual y
+externo) y `test_docker_http.sh` (`test.sh http`).
+
 `test.sh validation` ejecuta:
 
 - `tests/deploy/test_validation.sh`: Turnstile, Google OAuth, dominios, URLs,
@@ -172,13 +210,22 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 
 ### Backend
 
-`tests/unit/` cubre validaciones sin tocar la base: `ValidadorTest`,
-`ImageWebpTest`,
-`SystemSeederTest`, `IdentidadTest`, `OfertaVencimientoTest`,
-`OfertaCatalogoTest`, `ActividadVencimientoTest`, `ReporteExcelServiceTest`,
-`ReportePdfServiceTest`, `AutorizacionMunicipalServiceTest`,
-`HtmlSanitizerTest`, `PostulacionAuthorizationTest`, `TerminosTest`,
-`EnlaceActivacionTest` y las pruebas de correo.
+`tests/unit/` cubre, entre otras, `ValidadorTest`, `IdentidadTest`,
+`RegistroValidacionTest`, `OfertaVencimientoTest`, `OfertaCatalogoTest`,
+`ActividadVencimientoTest`, `ActividadInmutabilidadTest`,
+`ActividadValidacionTest`, `OportunidadVencimientoTest`,
+`OportunidadCreacionValidacionTest`, `PostulacionAuthorizationTest`,
+`AutorizacionMunicipalServiceTest`, `HtmlSanitizerTest`,
+`DocumentoServiceTest`, `CvServiceClaveTest`, `StorageServiceTest`,
+`ReporteExcelServiceTest`, `ReportePdfServiceTest`, `EmailServiceTest`,
+`EmailServiceResendTest`, `ImageWebpTest`, `SystemSeederTest`,
+`TerminosTest`, `EnlaceActivacionTest`, `ContentDispositionTest`,
+`SuperficieRiesgoTest` y las pruebas de correo. Las validaciones que no
+dependen de la base se ejecutan con PHPUnit; las reglas de persistencia,
+autorización y concurrencia se cubren en smoke.
+
+Al cierre de la versión 1.4.8 la ejecución reporta **220 tests y 1247
+assertions**.
 
 ```bash
 ./deploy/scripts/test.sh backend
@@ -196,11 +243,11 @@ centralizado del logo municipal (sin URLs externas ni favicons antiguos), botone
 fechas de exportación Excel/PDF, selector de perfil municipal, validación y errores
 por campo del alta municipal, permisos de UI y rutas protegidas, lint y build. La imagen de
 desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
-La ejecución actual reporta **19 advertencias de Oxlint y 0 errores**: 10 de
-`only-export-components`, 7 de `set-state-in-effect` y 2 de `refs`. Son
-advertencias estáticas/React Compiler, no errores de compilación y no bloquean
-el build; no se hizo una refactorización masiva porque requeriría separar
-módulos y revisar los flujos de efectos/refs.
+La ejecución actual reporta **79/79 tests, 0 fallos** y **19 advertencias de
+Oxlint y 0 errores**: 10 de `only-export-components`, 7 de
+`set-state-in-effect` y 2 de `refs`. Son advertencias estáticas/React Compiler,
+no errores de compilación y no bloquean el build; no se hizo una refactorización
+masiva porque requeriría separar módulos y revisar los flujos de efectos/refs.
 
 El rate limiting de `/verificar-ruc`, el saneamiento de errores y varios
 controles de seguridad se cubren en `test_seguridad.sh`. El rate limiting de CV,

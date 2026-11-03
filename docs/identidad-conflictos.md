@@ -1,5 +1,9 @@
 # Diagnóstico de identidad y duplicados históricos
 
+> Documento histórico de la intervención del 2026-10-21. El mecanismo de
+> `identidades_reservadas` descrito sigue vigente; los conflictos enumerados
+> corresponden al entorno local revisado en esa fecha.
+
 **Fecha:** 2026-10-21 · **Alcance:** inspección de solo lectura + backfill local. No se
 fusionaron, eliminaron ni reasignaron cuentas.
 

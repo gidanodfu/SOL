@@ -14,7 +14,8 @@ está en el [`README.md`](../README.md) de la raíz.
 app/
 ├── Config/            rutas (Routes.php), filtros, CORS, Database…
 ├── Controllers/Api/   endpoints por rol (Admin/, Empresa/, Postulante/) y públicos
-├── Services/          reglas de negocio (Auth, SolicitudEmpresa, Oferta, Postulacion…)
+├── Services/          reglas de negocio (Auth, SolicitudEmpresa, Oferta, Postulacion,
+│                      CvService, CvRateLimiter…)
 ├── Repositories/      acceso a datos reutilizable
 ├── Models/            modelos Eloquent-style de CodeIgniter
 ├── Database/Migrations/  esquema completo (usuarios→solicitudes/activaciones/proveedor)
@@ -62,9 +63,13 @@ Composer ni MySQL en el host. El bootstrap inicial está en
   errores no controlados (`500`) responden un mensaje genérico y se registran en el log;
   nunca exponen SQL, rutas ni stack traces.
 - Rate limiting: Throttler nativo de CI4 (token bucket: ráfaga inicial + 1 token por
-  intervalo) en login (5 tokens/300 s por IP+usuario, solo fallos), refresh/Google/registro
-  (10/300 s por IP) y subida de CV (10/3600 s por IP). Responde `429` con `Retry-After`
-  (≈ intervalo), no un bloqueo fijo de 5 min.
+  intervalo) en login (5 tokens/300 s por IP+usuario, solo fallos),
+  refresh/Google/registro/verificación de DNI (10/300 s por IP) y
+  verificar-RUC/solicitudes-empresa (5/300 s por IP). La subida de CV usa
+  `CvRateLimiter` con ventanas fijas persistidas en `rate_limit_contadores`:
+  por defecto 5/10 min y 20/hora por usuario, 10/10 min y 40/hora por IP
+  (`cvRateLimit.*`), más una carga simultánea por postulante con `GET_LOCK`.
+  Responde `429` con `Retry-After`. No existe cuota mensual de CV.
 - Validación: `telefono` exige 9 u 11 dígitos (`^(?:\d{9}|\d{11})$`); el backend es la
   validación definitiva.
 - Conexión MySQL: gestión nativa de CI4 (`db_connect()` comparte una conexión por
@@ -76,12 +81,28 @@ Composer ni MySQL en el host. El bootstrap inicial está en
   pública), `categorias`, `oportunidades`, `actividades`. El resto exige `jwt` + `rol`.
 - No hay DELETE físico para entidades de negocio: se desactivan (excepto CV y archivos).
 
+## Base de datos, migraciones y almacenamiento
+
+- Esquema MySQL 8.0, tablas InnoDB y migraciones en `app/Database/Migrations/`.
+  El catálogo de tablas, relaciones y orden de migraciones está en
+  [`../docs/base-datos.md`](../docs/base-datos.md).
+- `spark migrate` aplica migraciones pendientes; `bootstrap.sh` es el único
+  procedimiento autorizado para una instalación nueva con `SystemSeeder`.
+  `deploy.sh` aplica migraciones en producción previo respaldo.
+- `SystemSeeder` crea el administrador inicial y categorías; `DatosPruebaSeeder`
+  y `DatosMasivosSeeder` son fixtures y no forman parte del runtime.
+- Los CV se guardan como archivo en Storage (driver `local` o `supabase`) y
+  metadatos en `cvs`; `cv_activos` garantiza un único CV vigente. Si falla la
+  transacción se compensa el archivo almacenado.
+- Las descargas de CV y documentos privados se autorizan en el backend; nunca
+  se exponen claves internas ni URLs públicas permanentes.
+
 ## Documentación de la API
 
-- `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 completa (91 operaciones,
-  versión 1.4.8). Incluye rate limits (`429`), rate limiting configurable de CV, validación de
-  teléfono y respuestas de error saneadas. Abrir `public/swagger/index.html` (Swagger UI
-  por CDN).
+- `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 completa (89 rutas /
+  107 operaciones, versión 1.4.8). Incluye rate limits (`429`), rate limiting
+  configurable de CV, validación de teléfono y respuestas de error saneadas.
+  Abrir `public/swagger/index.html` (Swagger UI por CDN).
 - `docs/auditoria-backend.md` — auditoría de seguridad/calidad con nota de vigencia y
   sección "Actualización post-correcciones (2026-09-10)".
 - `docs/_validate_openapi.py` — validador opcional; requiere PyYAML y debe ejecutarse
