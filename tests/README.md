@@ -134,10 +134,12 @@ obligatoriedad de todos los campos de creación, los editores enriquecidos
 vacíos, salario/vacantes, la fecha de cierre de Lima y la conservación de una
 oferta histórica con ubicación o fecha no pertenecientes al catálogo actual.
 
-`test_retiro_postulacion.sh` retira una postulación como postulante y comprueba
-que la empresa recibe `409` al intentar reactivarla, sin cambios de estado,
-actividad ni historial; también verifica que una desactivación propia sí puede
-reactivarse y que otra empresa recibe `404`.
+`test_retiro_postulacion.sh` cubre la activación restringida: una postulación
+en `pendiente`, `en_revision` o `no_seleccionado` recibe `409` al intentar
+activarla o desactivarla sin alterar `activo`, `updated_at` ni historial; solo
+un candidato `seleccionado` puede desactivarse y reactivarse. El retiro
+voluntario bloquea ambas operaciones incluso sin efecto, y otra empresa recibe
+`404`.
 
 `test_concurrencia.sh` levanta dos procesos `spark serve` sobre el mismo MySQL
 para enviar peticiones realmente paralelas: valida que dos altas simultáneas a

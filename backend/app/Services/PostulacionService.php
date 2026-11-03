@@ -307,23 +307,17 @@ class PostulacionService
     /**
      * Activar/desactivar postulación sin eliminarla (RF-37/38, RN-17).
      *
-     * Una postulación retirada voluntariamente por el postulante no puede ser
-     * reactivada por la empresa. El bloqueo se decide en backend y se coordina
-     * con el retiro mediante bloqueo pesimista de la misma fila.
+     * La empresa solo puede alternar la activación de candidatos seleccionados
+     * formalmente. Una postulación retirada voluntariamente por el postulante
+     * no puede modificarse, ni siquiera con una petición sin efecto. El bloqueo
+     * se decide en backend y se coordina con el retiro mediante bloqueo
+     * pesimista de la misma fila.
      */
     public function cambiarActivacionDeEmpresa(int $empresaId, int $id, bool $activo): void
     {
-        // Primera lectura: resuelve pertenencia y el caso sin cambios sin abrir
-        // transacción. La comprobación decisiva se repite bajo bloqueo.
-        $postulacion = $this->exigirEmpresa($empresaId, $id);
-        if ($activo && (int) ($postulacion['retirada_postulante'] ?? 0) === 1) {
-            throw ApiException::conflicto(
-                'Esta postulación fue retirada por el postulante y no puede reactivarse desde la empresa.',
-            );
-        }
-        if ((int) $postulacion['activo'] === (int) $activo) {
-            return;
-        }
+        // Primera lectura: resuelve pertenencia antes de abrir transacción. Una
+        // empresa ajena recibe 404 sin tocar bloqueos ni datos.
+        $this->exigirEmpresa($empresaId, $id);
 
         $db = $this->postulaciones->db;
         $db->transBegin();
@@ -334,13 +328,24 @@ class PostulacionService
                 [$id, $empresaId],
             );
 
+            // Relectura bajo bloqueo: el estado o la marca de retiro pudieron
+            // cambiar mientras esperábamos el turno.
             $postulacion = $this->exigirEmpresa($empresaId, $id);
 
-            if ($activo && (int) ($postulacion['retirada_postulante'] ?? 0) === 1) {
+            if ((int) ($postulacion['retirada_postulante'] ?? 0) === 1) {
                 throw ApiException::conflicto(
-                    'Esta postulación fue retirada por el postulante y no puede reactivarse desde la empresa.',
+                    'El postulante retiró voluntariamente esta postulación. La empresa no puede modificar su activación.',
                 );
             }
+
+            if ((string) $postulacion['estado'] !== 'seleccionado') {
+                throw ApiException::conflicto(
+                    'Solo puede activar o desactivar postulaciones de candidatos que hayan sido seleccionados formalmente.',
+                );
+            }
+
+            // La comprobación de estado y retiro se ejecuta incluso cuando el
+            // valor solicitado coincide con el actual (petición sin efecto).
             if ((int) $postulacion['activo'] === (int) $activo) {
                 $db->transCommit();
 

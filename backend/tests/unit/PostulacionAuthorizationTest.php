@@ -68,4 +68,10 @@ final class PostulacionAuthorizationTest extends TestCase
         $this->expectException(ApiException::class);
         $this->servicioConPropiedad(null)->cambiarActivacionDeEmpresa(2, 10, true);
     }
+
+    public function testDesactivacionDeOtraEmpresaNoSeAplica(): void
+    {
+        $this->expectException(ApiException::class);
+        $this->servicioConPropiedad(null)->cambiarActivacionDeEmpresa(2, 10, false);
+    }
 }

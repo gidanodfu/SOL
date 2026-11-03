@@ -6,6 +6,18 @@ oficial es la del archivo raíz `VERSION`.
 
 ## [Unreleased]
 
+### Cambiado
+
+- La empresa solo puede activar o desactivar postulaciones en estado
+  `seleccionado`. En `pendiente`, `en_revision` o `no_seleccionado` la API
+  responde `409` y no modifica `activo`, `updated_at` ni el historial.
+- El retiro voluntario (`retirada_postulante = 1`) bloquea cualquier cambio de
+  activación de la empresa, incluso cuando el valor solicitado coincide con el
+  actual. Ya no se muestra el botón deshabilitado de reactivación: no se ofrece
+  ningún control de activación para esos registros.
+- La bandeja de la empresa muestra la indicación "La activación estará
+  disponible cuando el candidato sea seleccionado" en estados no seleccionados.
+
 ### Corregido
 
 - La publicación pública de oportunidades ya no depende de `fecha_inicio`: una

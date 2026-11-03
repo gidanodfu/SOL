@@ -205,19 +205,12 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
       acciones={(
         <>
           <Boton variante="gris" onClick={verCv}><Download size={16} aria-hidden="true" />Ver CV</Boton>
-          {activo === 1 ? (
+          {estado === 'seleccionado' && !retirada && activo === 1 && (
             <Boton variante="gris" cargando={enviando} onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, false))}>
               <UserX size={16} aria-hidden="true" />Desactivar
             </Boton>
-          ) : retirada ? (
-            <Boton
-              variante="gris"
-              disabled
-              title="El postulante retiró esta postulación; la empresa no puede reactivarla."
-            >
-              <UserCheck size={16} aria-hidden="true" />No se puede reactivar
-            </Boton>
-          ) : (
+          )}
+          {estado === 'seleccionado' && !retirada && activo !== 1 && (
             <Boton variante="exito" cargando={enviando} onClick={() => guardar(() => cambiarActivacionPostulacion(postulacion.id, true))}>
               <UserCheck size={16} aria-hidden="true" />Reactivar
             </Boton>
@@ -244,7 +237,12 @@ function DetalleCandidato({ postulacion, alCerrar, alCambio }) {
       <Mensaje>{error}</Mensaje>
       {retirada && (
         <p className="modal-texto" style={{ color: 'var(--amber-tx)' }}>
-          El postulante retiró voluntariamente esta postulación. Se conserva el historial, pero la empresa no puede reactivarla.
+          El postulante retiró voluntariamente esta postulación. Se conserva el historial, pero la empresa no puede modificar su activación.
+        </p>
+      )}
+      {!retirada && estado !== 'seleccionado' && (
+        <p className="modal-texto" style={{ color: 'var(--text-3)' }}>
+          La activación estará disponible cuando el candidato sea seleccionado.
         </p>
       )}
       {isLoading && !detalle && <p className="vacio">Cargando detalle…</p>}

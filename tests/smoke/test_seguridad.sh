@@ -66,11 +66,17 @@ for i in 1 2 3 4 5 6; do
   if [ "$i" -le 5 ]; then check_code "verificar-ruc intento $i" 400 "$CODE"; else check_code "verificar-ruc intento $i" 429 "$CODE"; fi
 done
 
-paso "8. activación de postulación con string false (empresa)"
+paso "8. activación de postulación con string false (empresa, solo seleccionado)"
 PID=$(curl -s "$B/api/empresa/postulaciones" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];a=[p["id"] for p in d if p["activo"]==1];print(a[0] if a else "")')
 if [ -n "$PID" ]; then
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/api/empresa/postulaciones/$PID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":"false"}')
-  check_code "desactivar postulación" 200 "$CODE"
+  check_code "desactivar postulación pendiente rechazado" 409 "$CODE"
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/api/empresa/postulaciones/$PID/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"estado":"en_revision"}')
+  check_code "postulación a en revisión" 200 "$CODE"
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/api/empresa/postulaciones/$PID/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"estado":"seleccionado"}')
+  check_code "postulación seleccionada" 200 "$CODE"
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/api/empresa/postulaciones/$PID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":"false"}')
+  check_code "desactivar postulación seleccionada" 200 "$CODE"
   curl -s "$B/api/empresa/postulaciones" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];print("activo:",[p["activo"] for p in d if p["id"]==int("'$PID'")][0])'
   curl -s -o /dev/null -X PUT "$B/api/empresa/postulaciones/$PID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}'
 else

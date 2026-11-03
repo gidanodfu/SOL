@@ -3115,9 +3115,14 @@ paths:
       operationId: empresaCambiarActivacionPostulacion
       summary: Activar/desactivar postulación
       description: |
-        Activa/desactiva la postulación (vista "retirar" desde la empresa) sin cambiar su
-        estado. **Importante**: `(bool)` en PHP; envíe booleano nativo (la cadena "false"
-        sería interpretada como `true`). No-op si el valor coincide.
+        Activa/desactiva la postulación sin cambiar su estado. Solo se permite
+        cuando `estado = seleccionado` y `retirada_postulante = 0`. En
+        `pendiente`, `en_revision` o `no_seleccionado` responde `409`; una
+        postulación retirada voluntariamente por el postulante también responde
+        `409`, incluso si el valor solicitado coincide con el actual. El
+        booleano se interpreta de forma estricta: envíe un booleano nativo.
+        Una petición sin efecto sobre una postulación seleccionada no
+        retirada responde `200` sin modificar `updated_at`.
       security:
         - bearerAuth: []
       parameters:
@@ -3137,6 +3142,8 @@ paths:
           $ref: '#/components/responses/Prohibido'
         '404':
           $ref: '#/components/responses/NoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflicto'
         '500':
           $ref: '#/components/responses/ErrorInterno'
 

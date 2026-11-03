@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Retiro voluntario del postulante: la empresa no puede reactivar ese mismo
-# registro, pero sí puede reactivar otras desactivaciones y el postulante puede
-# crear una nueva postulación independiente.
+# Activación de postulaciones: solo para candidatos seleccionados; el retiro
+# voluntario bloquea cualquier cambio de activación de la empresa.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080
@@ -28,6 +27,13 @@ tok() {
 
 id_json() {
     python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is True and d.get("data"), "respuesta sin data";print(d["data"]["id"])'
+}
+
+db_scalar() {
+    php -r '
+$pdo = new PDO("mysql:host=" . getenv("DB_HOST") . ";dbname=" . getenv("DB_DATABASE"), getenv("DB_USER"), getenv("DB_PASSWORD"), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+echo $pdo->query($argv[1])->fetchColumn();
+' "$1"
 }
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
@@ -56,7 +62,7 @@ $pdo = new PDO("mysql:host=" . getenv("DB_HOST") . ";dbname=" . getenv("DB_DATAB
 echo (string) $pdo->query("SELECT updated_at FROM postulaciones WHERE id = 1")->fetchColumn();
 ')
 
-printf '\n== 2. la empresa no puede reactivar el mismo registro ==\n'
+printf '\n== 2. la empresa no puede modificar una postulación retirada ==\n'
 code=$(curl -s -o /tmp/opencode/retiro_activacion.json -w '%{http_code}' \
     -X PUT "$B/api/empresa/postulaciones/1/activacion" -H "Authorization: Bearer $TE" \
     -H 'Content-Type: application/json' -d '{"activo":true}')
@@ -65,9 +71,15 @@ python3 - <<'PY'
 import json
 d = json.load(open('/tmp/opencode/retiro_activacion.json'))
 assert d.get('success') is False, d
-assert 'retirada por el postulante' in d.get('message', '').lower(), d
-print('mensaje de bloqueo OK')
+assert 'retiró voluntariamente' in d.get('message', '').lower(), d
+assert 'no puede modificar su activación' in d.get('message', '').lower(), d
+print('mensaje de bloqueo de retiro OK')
 PY
+
+code=$(curl -s -o /tmp/opencode/retiro_desactivacion.json -w '%{http_code}' \
+    -X PUT "$B/api/empresa/postulaciones/1/activacion" -H "Authorization: Bearer $TE" \
+    -H 'Content-Type: application/json' -d '{"activo":false}')
+check_code 'desactivación sin efecto rechazada en retirada' 409 "$code"
 
 curl -s "$B/api/empresa/postulaciones/1" -H "Authorization: Bearer $TE" > /tmp/opencode/retiro_detalle_2.json
 python3 - <<PY
@@ -101,8 +113,9 @@ CREATE_B=$(curl -s -o /tmp/opencode/retiro_empresa_b.json -w '%{http_code}' -X P
 check_code 'crear empresa B' 201 "$CREATE_B"
 TE2=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"20605555555","password":"Retiro12345!"}' | tok)
 check_code 'empresa B no puede reactivar la postulación ajena' 404 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/1/activacion" -H "Authorization: Bearer $TE2" -H 'Content-Type: application/json' -d '{"activo":true}')"
+check_code 'empresa B no puede desactivar la postulación ajena' 404 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/1/activacion" -H "Authorization: Bearer $TE2" -H 'Content-Type: application/json' -d '{"activo":false}')"
 
-printf '\n== 4. nueva postulación independiente y desactivación de la empresa ==\n'
+printf '\n== 4. activación solo para seleccionados y retiro voluntario ==\n'
 check_code 'completar perfil del postulante' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/postulante/perfil" \
     -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' \
     -d '{"nombres":"Ana","apellidos":"Torres Rojas","email":"ana.torres@mail.com","telefono":"987654321","direccion":"Av. Chiclayo 100","distrito":"José Leonardo Ortiz","fecha_nacimiento":"1990-01-15","tipo_documento":"DNI","numero_documento":"12345678"}')"
@@ -115,10 +128,87 @@ code=$(curl -s -o /tmp/opencode/retiro_nueva_postulacion.json -w '%{http_code}' 
 check_code 'nueva postulación a la misma oferta' 201 "$code"
 NUEVA_ID=$(id_json < /tmp/opencode/retiro_nueva_postulacion.json)
 
-check_code 'empresa desactiva la nueva postulación' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":false}')"
-check_code 'empresa reactiva una desactivación propia' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}')"
-curl -s "$B/api/empresa/postulaciones/$NUEVA_ID" -H "Authorization: Bearer $TE" \
-    | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"];assert d["activo"]==1;assert d["retirada_postulante"]==0;print("reactivación permitida sin marca de retiro OK")'
+ACTIVO_ANTES=$(db_scalar "SELECT activo FROM postulaciones WHERE id=$NUEVA_ID")
+RETIRADA_ANTES=$(db_scalar "SELECT retirada_postulante FROM postulaciones WHERE id=$NUEVA_ID")
+UPDATED_ANTES=$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")
+HIST_ANTES=$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")
+
+code=$(curl -s -o /tmp/opencode/retiro_pendiente_off.json -w '%{http_code}' \
+    -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" \
+    -H 'Content-Type: application/json' -d '{"activo":false}')
+check_code 'pendiente: desactivar rechazado' 409 "$code"
+python3 - <<'PY'
+import json
+d = json.load(open('/tmp/opencode/retiro_pendiente_off.json'))
+assert d.get('success') is False, d
+assert 'seleccionados formalmente' in d.get('message', '').lower(), d
+print('mensaje de selección formal OK')
+PY
+check_code 'pendiente: reactivar rechazado' 409 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}')"
+
+[ "$(db_scalar "SELECT activo FROM postulaciones WHERE id=$NUEVA_ID")" = "$ACTIVO_ANTES" ] \
+    && [ "$(db_scalar "SELECT retirada_postulante FROM postulaciones WHERE id=$NUEVA_ID")" = "$RETIRADA_ANTES" ] \
+    && [ "$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")" = "$UPDATED_ANTES" ] \
+    && [ "$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")" = "$HIST_ANTES" ] \
+    && ok 'rechazos en pendiente no alteraron activo, updated_at ni historial' \
+    || fail 'un rechazo en pendiente alteró la postulación'
+
+check_code 'pasar pendiente a no seleccionado' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"estado":"no_seleccionado"}')"
+UPDATED_ANTES=$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")
+HIST_ANTES=$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")
+check_code 'no seleccionado: desactivar rechazado' 409 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":false}')"
+check_code 'no seleccionado: reactivar rechazado' 409 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}')"
+[ "$(db_scalar "SELECT activo FROM postulaciones WHERE id=$NUEVA_ID")" = "1" ] \
+    && [ "$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")" = "$UPDATED_ANTES" ] \
+    && [ "$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")" = "$HIST_ANTES" ] \
+    && ok 'rechazos en no seleccionado no alteraron activo, updated_at ni historial' \
+    || fail 'un rechazo en no seleccionado alteró la postulación'
+
+check_code 'reabrir no seleccionado a en revisión' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"estado":"en_revision"}')"
+UPDATED_ANTES=$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")
+HIST_ANTES=$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")
+check_code 'en revisión: desactivar rechazado' 409 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":false}')"
+check_code 'en revisión: reactivar rechazado' 409 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}')"
+[ "$(db_scalar "SELECT activo FROM postulaciones WHERE id=$NUEVA_ID")" = "1" ] \
+    && [ "$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")" = "$UPDATED_ANTES" ] \
+    && [ "$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")" = "$HIST_ANTES" ] \
+    && ok 'rechazos en revisión no alteraron activo, updated_at ni historial' \
+    || fail 'un rechazo en revisión alteró la postulación'
+
+check_code 'seleccionar formalmente al candidato' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/estado" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"estado":"seleccionado"}')"
+check_code 'seleccionado activo: desactivar permitido' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":false}')"
+[ "$(db_scalar "SELECT activo FROM postulaciones WHERE id=$NUEVA_ID")" = "0" ] \
+    && ok 'desactivación de seleccionado persistida' \
+    || fail 'la desactivación de seleccionado no persistió'
+check_code 'seleccionado inactivo: reactivar permitido' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}')"
+[ "$(db_scalar "SELECT activo FROM postulaciones WHERE id=$NUEVA_ID")" = "1" ] \
+    && ok 'reactivación de seleccionado persistida' \
+    || fail 'la reactivación de seleccionado no persistió'
+
+check_code 'retiro voluntario del seleccionado' 200 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/postulante/postulaciones/$NUEVA_ID/retirar" -H "Authorization: Bearer $TP")"
+[ "$(db_scalar "SELECT CONCAT(activo,':',retirada_postulante,':',estado) FROM postulaciones WHERE id=$NUEVA_ID")" = "0:1:seleccionado" ] \
+    && ok 'retiro voluntario persistido sin borrar el registro' \
+    || fail 'el retiro voluntario no quedó persistido'
+
+UPDATED_ANTES=$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")
+HIST_ANTES=$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")
+code=$(curl -s -o /tmp/opencode/retiro_sel_off.json -w '%{http_code}' \
+    -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" \
+    -H 'Content-Type: application/json' -d '{"activo":false}')
+check_code 'seleccionado retirado: desactivar rechazado' 409 "$code"
+python3 - <<'PY'
+import json
+d = json.load(open('/tmp/opencode/retiro_sel_off.json'))
+assert d.get('success') is False, d
+assert 'retiró voluntariamente' in d.get('message', '').lower(), d
+print('mensaje de retiro en seleccionado OK')
+PY
+check_code 'seleccionado retirado: reactivar rechazado' 409 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/api/empresa/postulaciones/$NUEVA_ID/activacion" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"activo":true}')"
+[ "$(db_scalar "SELECT CONCAT(activo,':',retirada_postulante) FROM postulaciones WHERE id=$NUEVA_ID")" = "0:1" ] \
+    && [ "$(db_scalar "SELECT updated_at FROM postulaciones WHERE id=$NUEVA_ID")" = "$UPDATED_ANTES" ] \
+    && [ "$(db_scalar "SELECT COUNT(*) FROM postulacion_historial WHERE postulacion_id=$NUEVA_ID")" = "$HIST_ANTES" ] \
+    && ok 'rechazos sobre retirada seleccionada no alteraron la postulación' \
+    || fail 'un rechazo sobre retirada seleccionada alteró la postulación'
 
 printf '\nFIN retiro de postulación\n'
 [ "$fallos" -eq 0 ] || exit 1

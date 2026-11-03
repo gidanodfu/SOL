@@ -41,7 +41,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RF-34 Pendientes primero, recientes dentro de estado | ✔ | orden `FIELD(estado…)` + `fecha_postulacion DESC` |
 | RF-35 Detalle del postulante (datos de contacto, CV, oferta) | ✔ | `GET /api/empresa/postulaciones/{id}` |
 | RF-36 Gestión de estado | ✔ | `PUT .../estado` con transiciones validadas |
-| RF-37/38 Activar/desactivar sin eliminar | ✔ | `PUT .../activacion`; el retiro voluntario del postulante no puede reactivarse desde la empresa |
+| RF-37/38 Activar/desactivar sin eliminar | ✔ | `PUT .../activacion` solo para `estado=seleccionado`; `409` en pendiente/en revisión/no seleccionado; el retiro voluntario bloquea activar y desactivar; sin borrado físico |
 | RF-39 Historial de estados | ✔ | tabla `postulacion_historial` (cada cambio, usuario y fecha) |
 | RF-40 La empresa selecciona | ✔ | el admin solo supervisa; selección por la empresa (RN-18). Un postulante seleccionado no puede postular a otra oferta de la misma empresa |
 | RF-41/42/43 Atenciones con tipos y seguimiento | ✘ retirado (2026-09) | módulo de atenciones eliminado de la API y el frontend; la tabla `atenciones` queda sin uso |
@@ -80,7 +80,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RN-12 | ✔ | desactivación conserva registros |
 | RN-13/14/15 | ✔ | registro por postulación, único activo, bandeja por empresa |
 | RN-16 | ✔ | pendientes primero en bandeja |
-| RN-17 | ✔ | activar/desactivar, sin borrado físico |
+| RN-17 | ✔ | activar/desactivar solo candidatos seleccionados, sin borrado físico; el retiro voluntario es irreversible desde la empresa |
 | RN-18 | ✔ | selección/contratación solo por la empresa |
 | RN-19 | ✔ | solo las ofertas `publicada` reciben postulaciones; la aprobación municipal es obligatoria y editar una publicada la devuelve a revisión |
 | RN-20 | ✔ | historiales y auditoría |

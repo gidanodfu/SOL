@@ -54,10 +54,13 @@ test('el formulario de oferta exige los campos de negocio y usa selector de ubic
   assert.doesNotMatch(fuente, /Sin categoría/);
 });
 
-test('la empresa no ofrece reactivar una postulación retirada por el postulante', () => {
+test('la empresa solo ofrece activación para postulaciones seleccionadas', () => {
   const fuente = leer('../src/pages/empresa/Postulaciones.jsx');
 
   assert.match(fuente, /retirada_postulante/);
   assert.match(fuente, /Retirada por el postulante/);
-  assert.match(fuente, /No se puede reactivar/);
+  assert.match(fuente, /estado === 'seleccionado' && !retirada && activo === 1/);
+  assert.match(fuente, /estado === 'seleccionado' && !retirada && activo !== 1/);
+  assert.match(fuente, /La activación estará disponible cuando el candidato sea seleccionado\./);
+  assert.doesNotMatch(fuente, /No se puede reactivar/);
 });

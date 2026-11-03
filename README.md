@@ -76,10 +76,12 @@ MySQL es la fuente de verdad.
   anterior al día actual de Lima. Endpoints:
   `PUT /api/admin/ofertas/{id}/aprobar|observar|rechazar|cerrar` y
   `PUT /api/empresa/ofertas/{id}/enviar-revision|cerrar`.
-- **Retiro de postulaciones**: el postulante puede retirar su postulación; el registro
-  se conserva inactivo y marcado como retiro voluntario. La empresa no puede reactivar
-  ese mismo registro, pero sí puede reactivar desactivaciones propias. El postulante
-  puede crear una nueva postulación independiente si las demás reglas lo permiten.
+- **Activación de postulaciones**: la empresa solo puede activar o desactivar
+  postulaciones cuyo estado sea `seleccionado`. En `pendiente`, `en_revision` o
+  `no_seleccionado` la API responde `409`. El retiro voluntario del postulante se
+  conserva inactivo y marcado; la empresa no puede reactivarlo ni desactivarlo, ni
+  siquiera mediante una petición sin efecto. El postulante puede crear una nueva
+  postulación independiente si las demás reglas lo permiten.
 - **Selección por empresa**: cuando una empresa marca una postulación como
   `seleccionado`, el postulante no puede crear nuevas postulaciones a ninguna
   oferta de esa empresa. Puede seguir postulando a otras empresas. La regla se
