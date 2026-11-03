@@ -53,10 +53,19 @@ fi
 if [ "$TARGET" = "http" ]; then
     require_service_running compose_dev backend
     require_service_running compose_dev frontend
-    B="http://127.0.0.1:$(env_get DEV_API_PORT)"
-    F="http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)"
-    printf 'Ejecutando smoke HTTP no destructivo (%s, %s)...\n' "$B" "$F"
-    B="$B" F="$F" "$ROOT/tests/smoke/test_docker_http.sh"
+    HTTP_IMAGE=sol_backend_test:local
+    if ! docker image inspect "$HTTP_IMAGE" >/dev/null 2>&1; then
+        printf 'Construyendo imagen de diagnóstico HTTP...\n'
+        docker build --target test -t "$HTTP_IMAGE" -f "$ROOT/backend/Dockerfile" "$ROOT" >/dev/null
+    fi
+    NET=$(docker network ls --format '{{.Name}}' | grep -Fx "$(project_name)_internal" | head -n 1)
+    [ -n "$NET" ] || die "No se encontró la red interna del proyecto Compose."
+    printf 'Ejecutando smoke HTTP no destructivo dentro de Docker...\n'
+    docker run --rm --network "$NET" \
+        -v "$ROOT/tests:/var/www/sol/tests:ro" \
+        -e B=http://backend:8080 \
+        -e F=http://frontend:5173 \
+        "$HTTP_IMAGE" bash /var/www/sol/tests/smoke/test_docker_http.sh
     exit 0
 fi
 

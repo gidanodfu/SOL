@@ -34,5 +34,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // El smoke HTTP se ejecuta en otro contenedor y accede como `frontend`.
+    allowedHosts: ['frontend'],
   },
 })

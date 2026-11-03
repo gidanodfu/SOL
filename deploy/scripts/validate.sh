@@ -131,8 +131,8 @@ fi
 if [ "$RUNTIME" = "1" ]; then
     printf 'Comprobando servicios en ejecución...\n'
     compose_dev ps
-    http_ok "http://127.0.0.1:$(env_get DEV_API_PORT)/health" || die "Backend no responde en /health."
-    http_ok "http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)/" || die "Frontend no responde."
+    dev_health compose_dev backend http://127.0.0.1:8080/health || die "Backend no responde en /health."
+    dev_health compose_dev frontend http://127.0.0.1:5173/ || die "Frontend no responde."
 fi
 
 printf 'Configuración válida para desarrollo. Las comprobaciones no ejecutadas no se consideran superadas.\n'

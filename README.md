@@ -89,12 +89,15 @@ Las imágenes están fijadas en `backend/Dockerfile`, `frontend/Dockerfile` y
 
 ## 5. Requisitos
 
-- Docker Engine >= 24.
-- Docker Compose v2 >= 2.24.
-- Git.
-- `sh`, `awk`, `grep`, `sed` y `curl` para los scripts.
+Solo se necesita:
 
-No es necesario instalar PHP, Composer, Node.js, npm ni MySQL en el host.
+- Git.
+- Docker Engine >= 24 o Docker Desktop.
+- Docker Compose v2 >= 2.24.
+
+En Windows se recomienda WSL2; los scripts también funcionan desde Git Bash.
+No es necesario instalar PHP, Composer, Node.js, npm, MySQL ni ninguna
+dependencia de SOL en el host. Todo se ejecuta en contenedores.
 
 ## 6. Preparación del entorno
 
@@ -111,11 +114,13 @@ Edite `.env` y complete al menos:
 - `jwt.secret` y `encryption.key` (claves aleatorias distintas).
 - `INITIAL_ADMIN_USERNAME` e `INITIAL_ADMIN_PASSWORD`.
 
-Puede generar claves con:
+Genere cada clave dentro del contenedor, sin instalar PHP en el host:
 
 ```bash
-openssl rand -hex 32
+./deploy/scripts/dev.sh run backend php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
 ```
+
+Ejecútelo dos veces: una para `jwt.secret` y otra para `encryption.key`.
 
 `.env` no se versiona. No comparta ni suba sus credenciales.
 
@@ -135,16 +140,23 @@ openssl rand -hex 32
 El backend consume un archivo filtrado, `deploy/runtime/backend.env`, generado
 automáticamente por los scripts. No lo edite ni lo versione.
 
-## 8. Instalación de dependencias y arranque
-
-Las dependencias se instalan dentro de las imágenes; no ejecute `composer install`
-ni `npm install` en el host para el flujo oficial.
+## 8. Inicio rápido
 
 ```bash
-./deploy/scripts/dev.sh up          # construye y levanta el entorno
-./deploy/scripts/dev.sh status
-./deploy/scripts/dev.sh logs backend
+# 1. Construir imágenes e iniciar servicios
+./deploy/scripts/dev.sh up
+
+# 2. Reinstalar dependencias desde los lockfiles (opcional al inicio o tras
+#    cambiar composer.lock / package-lock.json)
+./deploy/scripts/dev.sh deps
+
+# 3. Inicializar base de datos, migraciones y administrador
+./deploy/scripts/bootstrap.sh --dev --authorize
 ```
+
+El primer `up` ya instala Composer y npm dentro de las imágenes. `deps`
+reconstruye esas capas cuando cambian los lockfiles; nunca ejecute
+`composer install` ni `npm install` en el host.
 
 Accesos:
 
@@ -200,6 +212,9 @@ disponibilidad.
 ./deploy/scripts/dev.sh restart            # reiniciar servicios
 ./deploy/scripts/dev.sh down               # detener (conserva volúmenes)
 ./deploy/scripts/dev.sh build              # reconstruir imágenes
+./deploy/scripts/dev.sh deps               # reinstalar Composer/npm desde lockfiles
+./deploy/scripts/dev.sh build-frontend     # build de producción del frontend
+./deploy/scripts/dev.sh cache              # limpiar caché de CodeIgniter
 ./deploy/scripts/dev.sh status             # estado y salud
 ./deploy/scripts/dev.sh logs [servicio]    # logs
 ./deploy/scripts/dev.sh shell [servicio]   # shell interactiva
@@ -212,6 +227,17 @@ disponibilidad.
 ./deploy/scripts/dev.sh seed <seeder> --yes
 ./deploy/scripts/dev.sh validate           # validar configuración
 ./deploy/scripts/dev.sh test [objetivo]    # pruebas
+```
+
+Las herramientas viven dentro de los contenedores; puede comprobarlo sin
+instalar nada en el host:
+
+```bash
+./deploy/scripts/dev.sh exec backend php -v
+./deploy/scripts/dev.sh exec backend composer --version
+./deploy/scripts/dev.sh exec frontend node -v
+./deploy/scripts/dev.sh exec frontend npm -v
+./deploy/scripts/dev.sh exec db mysql --version
 ```
 
 Validación y respaldos:

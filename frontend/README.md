@@ -19,8 +19,9 @@ Todos los comandos se ejecutan dentro de Docker; no instale Node.js ni
 ```bash
 # desde la raíz del repositorio
 ./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh deps
 ./deploy/scripts/dev.sh exec frontend npm run lint
-./deploy/scripts/dev.sh exec frontend npm run build
+./deploy/scripts/dev.sh build-frontend
 ./deploy/scripts/test.sh frontend     # tests + lint + build
 ```
 

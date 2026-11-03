@@ -100,8 +100,8 @@ for service in db backend frontend; do
     wait_for_service compose_dev "$service" 90
 done
 
-http_ok "http://127.0.0.1:$(env_get DEV_API_PORT)/health" || die "La verificación /health del backend falló."
-http_ok "http://127.0.0.1:$(env_get DEV_FRONTEND_PORT)/" || die "El frontend no responde."
+dev_health compose_dev backend http://127.0.0.1:8080/health || die "La verificación /health del backend falló."
+dev_health compose_dev frontend http://127.0.0.1:5173/ || die "El frontend no responde."
 
 printf '\nRestauración completada.\n'
 printf 'Proyecto: %s\n' "$(project_name)"

@@ -40,6 +40,29 @@ No incluya secretos en Git. `deploy/runtime/backend.env` se genera con permisos
 ./deploy/scripts/dev.sh status
 ```
 
+Las dependencias PHP y npm se instalan dentro de las imágenes durante `up`.
+Si cambia `composer.lock` o `package-lock.json`:
+
+```bash
+./deploy/scripts/dev.sh deps
+```
+
+No instale Composer, Node.js ni npm en el host. Para ejecutar herramientas:
+
+```bash
+./deploy/scripts/dev.sh exec backend php -v
+./deploy/scripts/dev.sh exec backend composer --version
+./deploy/scripts/dev.sh exec frontend node -v
+./deploy/scripts/dev.sh exec frontend npm -v
+./deploy/scripts/dev.sh exec db mysql --version
+```
+
+Generar secretos locales sin instalar PHP:
+
+```bash
+./deploy/scripts/dev.sh run backend php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'
+```
+
 Servicios y puertos:
 
 - Frontend: `http://localhost:5173`
@@ -146,6 +169,8 @@ aplicación, restaura el SQL, verifica tablas y `users`, y reinicia los servicio
 ./deploy/scripts/dev.sh logs frontend
 ./deploy/scripts/dev.sh exec backend php spark routes
 ./deploy/scripts/dev.sh exec backend php spark migrate:status
+./deploy/scripts/dev.sh cache
+./deploy/scripts/dev.sh build-frontend
 ./deploy/scripts/dev.sh db
 ./deploy/scripts/dev.sh status
 ```
@@ -171,6 +196,7 @@ construir el frontend. Después de modificarla, reconstruya el frontend:
 
 ```bash
 ./deploy/scripts/dev.sh build
+./deploy/scripts/dev.sh build-frontend
 ```
 
 No duplique la versión en `package.json`, `composer.json` ni componentes.

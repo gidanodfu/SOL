@@ -45,12 +45,12 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 | `test_cv_concurrencia.sh` | Bloqueo simultáneo, seis cargas y contadores. |
 | `test_cv_rate_limit.sh` | Ventanas configurables, reinicio y `Retry-After`. |
 | `test_validaciones_estrictas.sh` | Tipos, IDs, booleanos, fechas y contacto. |
-| `test_desarrollo_nuevo.sh` | Manual y externo: requiere SUNAT/RUC real; no se ejecuta por defecto. |
+| `test_desarrollo_nuevo.sh` | Externo: requiere SUNAT/RUC real y tokens; se solicita por nombre y corre dentro de Docker. |
 | `test_docker_http.sh` | Se ejecuta con `test.sh http` contra el stack de desarrollo. |
 
 La tabla incluye las **27 suites automáticas** del runner (`test.sh smoke`) y dos
-procedimientos que se ejecutan fuera de él: `test_desarrollo_nuevo.sh` (manual y
-externo) y `test_docker_http.sh` (`test.sh http`).
+procedimientos adicionales: `test_desarrollo_nuevo.sh` (externo, se solicita por
+nombre) y `test_docker_http.sh` (`test.sh http`).
 
 `test.sh validation` ejecuta:
 
@@ -72,9 +72,10 @@ secretos reales ni servicios externos.
 > un estado HTTP no coincide con el valor entre paréntesis.
 > No imprime JWT ni refresh tokens; los campos sensibles se redactan.
 
-`test.sh http` requiere el stack activo (`./deploy/scripts/dev.sh up`) y comprueba
-`/health`, `/`, `/api/ofertas`, el `401` de `/api/auth/me`, CORS y el frontend.
-No crea ni modifica datos.
+`test.sh http` requiere el stack activo (`./deploy/scripts/dev.sh up`). Se ejecuta
+en un contenedor de la red interna y comprueba `/health`, `/`, `/api/ofertas`,
+el `401` de `/api/auth/me`, CORS y el frontend. No usa curl del host ni crea o
+modifica datos.
 
 ## Integración profunda en Docker
 
@@ -91,7 +92,11 @@ No crea ni modifica datos.
 
 No usa `sol_dev_mysql_data`, no publica puertos y no toca datos reales. El
 script `test_desarrollo_nuevo.sh` se excluye por defecto porque consulta SUNAT
-y requiere un RUC real y token externo autorizado.
+y requiere un RUC real y token externo autorizado; para ejecutarlo:
+
+```bash
+./deploy/scripts/smoke.sh test_desarrollo_nuevo.sh
+```
 
 Los fixtures de CV están en `tests/fixtures/`: `cv.pdf` y `cv.docx` son
 documentos válidos; `cv-malformado.pdf` se usa como caso negativo.

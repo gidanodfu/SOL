@@ -23,11 +23,13 @@ deploy/
 
 ## 2. Requisitos
 
-- Docker Engine >= 24.
+- Docker Engine >= 24 o Docker Desktop.
 - Docker Compose v2 >= 2.24.
-- Shell POSIX, `awk`, `grep`, `sed` y `curl`.
+- Git.
 
-No se requiere PHP, Composer, Node.js, npm ni MySQL en el host.
+No se requiere PHP, Composer, Node.js, npm ni MySQL en el host. En Windows
+use WSL2 o Git Bash para ejecutar los scripts. No existe Makefile ni flujo
+alternativo que instale herramientas en el sistema operativo.
 
 ## 3. Configuración
 
@@ -58,10 +60,27 @@ Complete en `.env`:
 Todos los puertos se publican solo en `127.0.0.1`. La red `internal` es privada
 del proyecto Compose.
 
-## 5. Inicio y operación
+## 5. Dependencias
+
+Composer y npm se ejecutan durante la construcción de las imágenes:
+
+- `backend/composer.lock` → `vendor/` dentro de la imagen backend.
+- `frontend/package-lock.json` → `node_modules/` dentro de la imagen frontend.
+
+No se montan `vendor/` ni `node_modules/` del host. Si cambia un lockfile:
+
+```bash
+./deploy/scripts/dev.sh deps
+```
+
+Ese comando reconstruye las capas de dependencias. Para ejecutar herramientas
+puntuales use `dev.sh exec` o `dev.sh run`; nunca las instale en el host.
+
+## 6. Inicio y operación
 
 ```bash
 ./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh deps       # reinstalar desde composer.lock / package-lock.json
 ./deploy/scripts/dev.sh status
 ./deploy/scripts/dev.sh logs backend
 ./deploy/scripts/dev.sh down      # conserva volúmenes
@@ -82,7 +101,7 @@ Actualización de un entorno existente:
 ./deploy/scripts/dev.sh migrate
 ```
 
-## 6. Volúmenes y persistencia
+## 7. Volúmenes y persistencia
 
 | Volumen | Contenido |
 |---|---|
@@ -93,7 +112,7 @@ Actualización de un entorno existente:
 `docker compose down -v`, `docker volume prune`, `docker system prune --volumes`
 o `docker volume rm` sobre estos volúmenes.
 
-## 7. Respaldos y restauración
+## 8. Respaldos y restauración
 
 ```bash
 ./deploy/scripts/backup.sh dev
@@ -116,7 +135,7 @@ Restauración destructiva y explícita:
 Antes de restaurar se crea un respaldo de seguridad. Al final se verifican las
 tablas, la tabla `users` y el acceso HTTP.
 
-## 8. Migraciones y seeds
+## 9. Migraciones y seeds
 
 ```bash
 ./deploy/scripts/dev.sh migrate
@@ -128,7 +147,7 @@ tablas, la tabla `users` y el acceso HTTP.
 `SystemSeeder` solo se ejecuta desde `bootstrap.sh` con `--authorize`. Las
 migraciones son la única fuente del esquema; no se editan migraciones históricas.
 
-## 9. Validación y pruebas
+## 10. Validación y pruebas
 
 ```bash
 ./deploy/scripts/validate.sh --dev
@@ -145,7 +164,7 @@ migraciones son la única fuente del esquema; no se editan migraciones históric
 backend, `.dockerignore` y ausencia de secretos versionados. No imprime valores
 privados.
 
-## 10. Entorno filtrado del backend
+## 11. Entorno filtrado del backend
 
 Los scripts generan `deploy/runtime/backend.env` con permisos `600`, ignorado por
 Git y por Docker. El contenedor backend solo recibe las variables que necesita:
@@ -156,7 +175,7 @@ iniciales ni variables `VITE_*`.
 No edite ese archivo a mano. Si invoca Compose manualmente después de ejecutar un
 script, exporte `BACKEND_ENV_FILE="$PWD/deploy/runtime/backend.env"`.
 
-## 11. Actualizar versiones de imágenes
+## 12. Actualizar versiones de imágenes
 
 Las versiones están fijadas y no se usa `latest`.
 
@@ -168,7 +187,7 @@ Las versiones están fijadas y no se usa `latest`.
 Estas versiones son de infraestructura, no la versión de la aplicación. La
 versión de SOL vive únicamente en `VERSION` y se inyecta al compilar el frontend.
 
-## 12. Diagnóstico
+## 13. Diagnóstico
 
 ```bash
 docker compose -p sol_dev ps

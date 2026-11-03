@@ -1,6 +1,6 @@
 #!/bin/sh
 # Smoke HTTP no destructivo contra el stack de desarrollo activo.
-# No crea, modifica ni elimina datos. Requiere curl en el host.
+# Se ejecuta dentro de Docker mediante `test.sh http`; no usa herramientas del host.
 set -u
 
 B=${B:-http://127.0.0.1:8080}
@@ -35,7 +35,7 @@ body_check() {
 }
 
 if ! command -v curl >/dev/null 2>&1; then
-    printf 'ERROR: se requiere curl para la prueba HTTP. Use la imagen de diagnóstico o instale curl en el host.\n' >&2
+    printf 'ERROR: curl no está disponible. Ejecute la prueba con ./deploy/scripts/test.sh http.\n' >&2
     exit 1
 fi
 

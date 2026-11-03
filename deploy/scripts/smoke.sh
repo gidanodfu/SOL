@@ -40,8 +40,9 @@ alguna aserción o respuesta falla. No toca `sol_dev_*`, no usa la base de
 desarrollo y no publica puertos.
 
 Sin argumentos ejecuta la lista segura (excluye test_desarrollo_nuevo.sh porque
-depende de SUNAT y de un RUC real). Requiere `dev.sh build` o construye la
-imagen de pruebas automáticamente.
+depende de SUNAT y de un RUC real). Puede solicitar esa suite explícitamente;
+requiere `sunat.token`/`jsonpe.token` reales en el `.env` y acceso externo.
+Requiere `dev.sh build` o construye la imagen de pruebas automáticamente.
 USAGE
         exit 0
         ;;
@@ -58,9 +59,6 @@ fi
 
 for test in $TESTS; do
     case "$test" in
-        test_desarrollo_nuevo.sh)
-            die "test_desarrollo_nuevo.sh requiere SUNAT/RUC real; ejecútelo manualmente con credenciales autorizadas."
-            ;;
         test_docker_http.sh)
             die "test_docker_http.sh se ejecuta con test.sh http contra el stack de desarrollo."
             ;;
@@ -122,6 +120,16 @@ storage.driver=local
 turnstile.enabled=false
 TZ=America/Lima
 EOF
+
+# La suite externa de SUNAT/RUC solo se ejecuta cuando se solicita por nombre.
+case " $TESTS " in
+    *test_desarrollo_nuevo.sh*)
+        for key in sunat.token jsonpe.token; do
+            value=$(env_get "$key")
+            [ -n "$value" ] && printf '%s=%s\n' "$key" "$value" >> "$TEST_ENV"
+        done
+        ;;
+esac
 
 run_test() {
     db="${CURRENT_DB:-sistema_empleo}"

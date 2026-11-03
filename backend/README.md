@@ -36,6 +36,7 @@ se ejecuta siempre dentro de Docker.
 cp .env.example .env
 chmod 600 .env
 ./deploy/scripts/dev.sh up
+./deploy/scripts/dev.sh deps                     # tras cambiar composer.lock
 ./deploy/scripts/dev.sh migrate
 ./deploy/scripts/bootstrap.sh --dev --authorize   # solo instalación nueva
 ```

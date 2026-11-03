@@ -20,6 +20,9 @@ dentro de contenedores; no se requiere PHP, Composer, Node.js ni MySQL en el hos
   status             Muestra estado y salud de los contenedores.
   logs [servicio]    Sigue los logs (por defecto, todos).
   build              Reconstruye las imágenes de desarrollo.
+  deps               Reinstala dependencias PHP/npm desde los lockfiles.
+  build-frontend     Genera el build de producción del frontend en el contenedor.
+  cache              Limpia la caché de CodeIgniter.
   shell [servicio]   Abre una shell (por defecto backend).
   exec <svc> <cmd...> Ejecuta un comando en un contenedor en ejecución.
   run <svc> <cmd...>  Ejecuta un comando en un contenedor temporal.
@@ -35,6 +38,7 @@ dentro de contenedores; no se requiere PHP, Composer, Node.js ni MySQL en el hos
 Ejemplos:
   ./deploy/scripts/dev.sh up
   ./deploy/scripts/dev.sh logs backend
+  ./deploy/scripts/dev.sh deps
   ./deploy/scripts/dev.sh exec backend php spark migrate:status
   ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes
   ./deploy/scripts/dev.sh test http
@@ -73,6 +77,23 @@ case "${1:-help}" in
         ;;
     build)
         compose_dev build
+        ;;
+    deps)
+        validate_env_basics
+        require_dev_project
+        printf 'Reconstruyendo imágenes para reinstalar dependencias desde los lockfiles...\n'
+        compose_dev build backend frontend
+        compose_dev up -d --no-build
+        for service in db backend frontend; do
+            wait_for_service compose_dev "$service" 90
+        done
+        printf 'Dependencias PHP/npm actualizadas dentro de las imágenes.\n'
+        ;;
+    build-frontend)
+        compose_dev exec -T frontend npm run build
+        ;;
+    cache)
+        compose_dev exec -T backend php spark cache:clear
         ;;
     shell)
         servicio="${2:-backend}"

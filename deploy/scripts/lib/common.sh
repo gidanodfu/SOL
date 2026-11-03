@@ -410,10 +410,12 @@ wait_for_service() {
     die "El servicio '$service' no alcanzó estado healthy."
 }
 
-http_ok() {
-    url="$1"
-    require_cmd curl
-    curl -fsS --max-time 10 "$url" >/dev/null
+# Comprobación HTTP dentro del contenedor; no requiere curl en el host.
+dev_health() {
+    compose_cmd="$1"
+    service="$2"
+    url="$3"
+    $compose_cmd exec -T "$service" wget -qO- "$url" >/dev/null 2>&1
 }
 
 docker_available() {

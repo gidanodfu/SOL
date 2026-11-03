@@ -5,6 +5,10 @@
 # activación -> login por RUC; revisión municipal de ofertas + cierre admin;
 # bolsa pública sin sesión; dashboard admin enriquecido.
 set -u
+[ -d /var/www/sol/backend ] || {
+    echo "ERROR: ejecute esta suite dentro de Docker: ./deploy/scripts/smoke.sh test_desarrollo_nuevo.sh" >&2
+    exit 1
+}
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080
 LOG=/tmp/opencode/spark_dev.log
