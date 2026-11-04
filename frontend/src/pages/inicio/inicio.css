@@ -2,7 +2,9 @@
 /* Landing institucional pública. Solo tokens del sistema; no define colores. */
 
 .inicio-page {
-  --inicio-w: min(1360px, calc(100% - 80px));
+  --inicio-w: min(1280px, calc(100% - 80px));
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   padding: 12px 0 0;
   background: var(--fondo);
@@ -12,7 +14,7 @@
 
 .inicio-nav,
 .inicio-main,
-.inicio-como,
+.inicio-pasos,
 .inicio-footer {
   width: var(--inicio-w);
   margin-inline: auto;
@@ -99,9 +101,7 @@
 .inicio-nav-acciones {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .inicio-nav-link {
@@ -117,23 +117,12 @@
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .inicio-nav-link:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.5);
-}
-
-.inicio-nav-link.solid {
-  background: var(--accion-primario);
-  border-color: var(--accion-primario);
-  color: var(--accion-primario-texto);
-}
-
-.inicio-nav-link.solid:hover {
-  background: var(--accion-primario-hover);
-  border-color: var(--accion-primario-hover);
 }
 
 .inicio-nav .btn-tema {
@@ -150,14 +139,14 @@
   outline-color: #fff;
 }
 
-/* ---------- Bloque principal ---------- */
+/* ---------- Hero ---------- */
 .inicio-main {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.85fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.8fr);
   align-items: start;
-  gap: clamp(24px, 3.2vw, 44px);
+  gap: clamp(28px, 3.6vw, 52px);
   margin-top: 16px;
-  padding: clamp(24px, 4vw, 48px);
+  padding: clamp(28px, 4vw, 48px);
   border: 1px solid var(--line);
   border-radius: var(--radius-2xl);
   background: var(--white);
@@ -166,31 +155,24 @@
 
 .inicio-info {
   min-width: 0;
+  padding-top: 4px;
 }
 
 .inicio-eyebrow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
   margin: 0 0 16px;
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.inicio-eyebrow span + span::before {
-  content: '·';
-  margin-right: 10px;
-}
-
 .inicio-info h1 {
-  max-width: 17ch;
+  max-width: 16ch;
   margin: 0 0 18px;
   color: var(--navy);
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  font-size: clamp(2rem, 3.4vw, 3.35rem);
+  font-size: clamp(2rem, 3.1vw, 3rem);
   line-height: 1.08;
   letter-spacing: -0.025em;
 }
@@ -200,84 +182,35 @@
 }
 
 .inicio-intro {
-  max-width: 72ch;
-  margin: 0 0 12px;
+  max-width: 62ch;
+  margin: 0;
   color: var(--text-2);
   font-size: 14.5px;
   line-height: 1.65;
 }
 
-.inicio-capacidades {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 22px;
-  margin: 26px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.inicio-capacidad {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-}
-
-.inicio-capacidad-icono,
-.inicio-como-icono {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  border-radius: var(--radius-md);
-  background: var(--sky);
-  color: var(--blue-dark);
-}
-
-.inicio-capacidad-texto {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.inicio-capacidad-texto strong {
-  color: var(--text-1);
-  font-size: 13.5px;
-}
-
-.inicio-capacidad-texto span {
-  color: var(--text-2);
-  font-size: 12.8px;
+.inicio-linea {
+  margin: 22px 0 0;
+  color: var(--text-3);
+  font-size: 12.5px;
+  font-weight: 600;
   line-height: 1.5;
 }
 
 /* ---------- Panel de acceso ---------- */
 .inicio-acceso {
   min-width: 0;
-  padding: clamp(20px, 2.5vw, 30px);
+  padding: clamp(20px, 2.4vw, 28px);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--sky);
 }
 
-.inicio-acceso-etiqueta {
-  display: inline-block;
-  margin-bottom: 10px;
-  color: var(--enlace);
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .inicio-acceso h2 {
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   color: var(--text-1);
-  font-size: clamp(1.35rem, 1.9vw, 1.8rem);
-  line-height: 1.18;
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
 
 .inicio-acceso-sub {
@@ -289,27 +222,23 @@
 .inicio-cta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
   width: 100%;
-  padding: 13px 17px;
+  min-height: 44px;
+  padding: 11px 16px;
   border-radius: var(--radius-pill);
   background: var(--accion-primario);
   color: var(--accion-primario-texto);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
+  text-align: center;
   text-decoration: none;
-  box-shadow: var(--sombra-tarjeta);
-  transition: background 0.15s, transform 0.15s;
-}
-
-.inicio-cta svg {
-  flex: 0 0 auto;
+  transition: background 0.15s;
 }
 
 .inicio-cta:hover {
   background: var(--accion-primario-hover);
-  transform: translateY(-1px);
 }
 
 .inicio-grupo {
@@ -319,75 +248,126 @@
 }
 
 .inicio-grupo h3 {
-  margin: 0 0 6px;
-  color: var(--text-1);
-  font-size: 13px;
+  margin: 0 0 5px;
+  color: var(--text-3);
+  font-size: 10.5px;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .inicio-grupo a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: block;
   min-height: 34px;
-  padding: 6px 2px;
+  padding: 7px 0;
   color: var(--enlace);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
-  transition: color 0.15s;
 }
 
 .inicio-grupo a:hover {
-  color: var(--accion-primario-hover);
   text-decoration: underline;
 }
 
 /* ---------- Cómo funciona ---------- */
-.inicio-como {
-  margin-top: 16px;
-  padding: clamp(20px, 3vw, 32px);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-2xl);
-  background: var(--white);
+.inicio-pasos {
+  margin-top: 12px;
+  padding: clamp(22px, 3vw, 34px) 4px 4px;
 }
 
-.inicio-como h2 {
-  margin: 0 0 20px;
+.inicio-pasos-head {
+  max-width: 760px;
+  margin-bottom: 20px;
+}
+
+.inicio-pasos-head h2 {
+  margin: 0 0 5px;
   color: var(--navy);
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  font-size: clamp(1.35rem, 2vw, 1.85rem);
+  font-size: clamp(1.25rem, 1.8vw, 1.6rem);
+  line-height: 1.2;
 }
 
-[data-theme="dark"] .inicio-como h2 {
+[data-theme="dark"] .inicio-pasos-head h2 {
   color: var(--text-1);
 }
 
-.inicio-como-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
+.inicio-pasos-head p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
-.inicio-como-bloque {
+.inicio-pasos-lista {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inicio-paso {
   display: flex;
   align-items: flex-start;
-  gap: 11px;
+  gap: 13px;
+  min-width: 0;
+  padding-right: clamp(16px, 2.4vw, 32px);
+}
+
+.inicio-paso + .inicio-paso {
+  padding-left: clamp(16px, 2.4vw, 32px);
+  border-left: 1px solid var(--line);
+}
+
+.inicio-paso-numero {
+  flex: 0 0 auto;
+  color: var(--blue);
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.inicio-paso-texto {
   min-width: 0;
 }
 
-.inicio-como-bloque h3 {
-  margin: 0 0 4px;
+.inicio-paso-texto h3 {
+  margin: 0 0 5px;
   color: var(--text-1);
-  font-size: 13.5px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-transform: uppercase;
 }
 
-.inicio-como-bloque p {
+.inicio-paso-texto p {
   margin: 0;
   color: var(--text-2);
   font-size: 12.8px;
   line-height: 1.55;
+}
+
+.inicio-empresas {
+  margin: 22px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12.8px;
+  line-height: 1.6;
+}
+
+.inicio-empresas a {
+  color: var(--enlace);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.inicio-empresas a:hover {
+  text-decoration: underline;
 }
 
 /* ---------- Pie institucional ---------- */
@@ -397,7 +377,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px 20px;
-  padding: 18px 4px 28px;
+  margin-top: 12px;
+  padding: 16px 2px 26px;
   color: var(--text-3);
   font-size: 12px;
 }
@@ -423,7 +404,14 @@
 }
 
 /* ---------- Adaptación ---------- */
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
+  .inicio-main {
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 28px;
+  }
+}
+
+@media (max-width: 900px) {
   .inicio-main {
     grid-template-columns: 1fr;
   }
@@ -432,9 +420,20 @@
     order: 2;
   }
 
-  .inicio-como-grid {
+  .inicio-pasos-lista {
     grid-template-columns: 1fr;
-    gap: 16px;
+  }
+
+  .inicio-paso {
+    padding-right: 0;
+  }
+
+  .inicio-paso + .inicio-paso {
+    margin-top: 14px;
+    padding-top: 14px;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 }
 
@@ -447,34 +446,8 @@
     padding: 12px 14px;
   }
 
-  .inicio-main,
-  .inicio-como {
-    padding: 22px 18px;
-  }
-
-  .inicio-capacidades {
-    gap: 13px 18px;
-  }
-}
-
-@media (max-width: 700px) {
-  .inicio-nav {
-    flex-wrap: wrap;
-    row-gap: 9px;
-  }
-
-  .inicio-nav-acciones {
-    flex: 1 1 100%;
-    justify-content: flex-start;
-  }
-
-  .inicio-info h1 {
-    max-width: none;
-    font-size: clamp(1.75rem, 6vw, 2.35rem);
-  }
-
-  .inicio-capacidades {
-    grid-template-columns: 1fr;
+  .inicio-main {
+    padding: 24px 20px;
   }
 }
 
@@ -484,8 +457,8 @@
   }
 
   .inicio-nav {
-    padding: 11px 12px;
     gap: 10px;
+    padding: 11px 12px;
   }
 
   .inicio-nav-acciones {
@@ -493,31 +466,41 @@
   }
 
   .inicio-nav-link {
-    flex: 1 1 auto;
-    justify-content: center;
     min-height: 36px;
-    padding: 7px 9px;
+    padding: 7px 10px;
     font-size: 12.5px;
   }
 
   .inicio-main {
     margin-top: 10px;
-    padding: 19px 15px;
+    padding: 20px 16px;
     border-radius: var(--radius-xl);
+  }
+
+  .inicio-pasos {
+    margin-top: 8px;
+    padding: 20px 2px 2px;
+  }
+
+  .inicio-pasos-head {
+    margin-bottom: 16px;
+  }
+
+  .inicio-paso-numero {
+    font-size: 1.35rem;
   }
 
   .inicio-acceso {
     padding: 18px 15px;
   }
 
-  .inicio-cta {
-    border-radius: var(--radius-xl);
+  .inicio-info h1 {
+    max-width: none;
+    font-size: clamp(1.75rem, 7vw, 2.3rem);
   }
 
-  .inicio-como {
-    margin-top: 10px;
-    padding: 18px 15px;
-    border-radius: var(--radius-xl);
+  .inicio-cta {
+    min-height: 46px;
   }
 
   .inicio-footer {
@@ -533,10 +516,6 @@
   }
 
   .inicio-nav-link {
-    flex: 1 1 calc(50% - 6px);
-  }
-
-  .inicio-nav .btn-tema {
-    margin-left: auto;
+    padding-inline: 9px;
   }
 }

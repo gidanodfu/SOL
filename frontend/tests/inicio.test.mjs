@@ -34,51 +34,85 @@ test('la raíz redirige a /inicio para visitantes y conserva los paneles por rol
   assert.doesNotMatch(login, /desde \|\| RUTA_BIENVENIDA_PUBLICA/);
 });
 
-test('la landing reutiliza logo, tema y enlaces correctos', () => {
+test('la navbar es mínima: marca, buscar empleo y tema', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
+  const navbar = pagina.slice(
+    pagina.indexOf('<header className="inicio-nav">'),
+    pagina.indexOf('</header>'),
+  );
 
-  assert.match(pagina, /import BotonTema from '\.\.\/\.\.\/components\/BotonTema'/);
-  assert.match(pagina, /import LogoMunicipal from '\.\.\/\.\.\/components\/LogoMunicipal'/);
-  assert.match(pagina, /<LogoMunicipal decorative \/>/);
-  assert.match(pagina, /<BotonTema \/>/);
+  assert.match(pagina, /import BotonTema/);
+  assert.match(pagina, /import LogoMunicipal/);
+  assert.match(navbar, /<LogoMunicipal decorative \/>/);
+  assert.match(navbar, /to="\/inicio"/);
+  assert.match(navbar, /Empleo MDJLO/);
+  assert.match(navbar, /Sistema de intermediación laboral/);
+  assert.match(navbar, /to="\/postulante\/buscar"/);
+  assert.match(navbar, /Buscar empleo/);
+  assert.match(navbar, /<BotonTema \/>/);
+  assert.doesNotMatch(navbar, /to="\/login"|to="\/registro"|Mi panel/);
   assert.doesNotMatch(pagina, /<img[^>]+sol-logo\.png/);
-
-  assert.match(pagina, /to="\/inicio"/);
-  assert.match(pagina, /to="\/postulante\/buscar"/);
-  assert.match(pagina, /to="\/registro"/);
-  assert.match(pagina, /to="\/login"/);
-  assert.match(pagina, /to="\/registro-empresa"/);
-
-  // El CTA principal y los accesos no apuntan todos al mismo destino.
-  assert.match(pagina, /className="inicio-cta"/);
-  assert.match(pagina, /Busca empleo, crea tu cuenta y descubre nuevas oportunidades\./);
-  assert.match(pagina, /Para trabajadores/);
-  assert.match(pagina, /Para empleadores/);
 });
 
-test('la landing muestra la información institucional y los cinco bloques del sistema', () => {
+test('el hero conserva el mensaje institucional sin tarjetas de funcionalidades', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
 
-  assert.match(pagina, /Empleo MDJLO/);
-  assert.match(pagina, /Sistema de intermediación laboral/);
   assert.match(pagina, /Municipalidad Distrital de José Leonardo Ortiz/);
-  assert.match(pagina, /Unidad Funcional del Empleo/);
-  assert.match(pagina, /Conectamos talento local con oportunidades laborales\./);
-  assert.match(pagina, /Búsqueda de empleo/);
-  assert.match(pagina, /Perfil profesional/);
-  assert.match(pagina, /Postulaciones/);
-  assert.match(pagina, /Empresas/);
-  assert.match(pagina, /Oportunidades/);
+  assert.match(pagina, /Conectamos talento con oportunidades laborales\./);
+  assert.match(
+    pagina,
+    /Empleo MDJLO es el sistema de intermediación laboral de la Municipalidad\s+Distrital de José Leonardo Ortiz, que facilita el encuentro entre personas\s+que buscan empleo y empresas que necesitan incorporar talento\./,
+  );
+  assert.match(pagina, /Consulta ofertas · Gestiona tu perfil · Realiza postulaciones/);
+
+  // Se eliminó la grilla de cinco capacidades y la sección informativa inferior.
+  assert.doesNotMatch(pagina, /Búsqueda de empleo/);
+  assert.doesNotMatch(pagina, /Perfil profesional/);
+  assert.doesNotMatch(pagina, /Una plataforma para conectar oportunidades/);
+  assert.doesNotMatch(pagina, /inicio-capacidades/);
+  assert.doesNotMatch(pagina, /inicio-como/);
 });
 
-test('la landing incluye el cómo funciona y los documentos legales existentes', () => {
+test('el panel de acceso mantiene CTA y enlaces diferenciados', () => {
+  const pagina = leer('../src/pages/inicio/Inicio.jsx');
+
+  assert.match(pagina, /Accede al sistema/);
+  assert.match(pagina, /¿Eres trabajador o empleador\?/);
+  assert.match(pagina, /Explorar ofertas laborales/);
+  assert.match(pagina, /to="\/postulante\/buscar"/);
+  assert.match(pagina, /Trabajadores/);
+  assert.match(pagina, /to="\/registro">Crear cuenta/);
+  assert.match(pagina, /to="\/login">Iniciar sesión/);
+  assert.match(pagina, /Empleadores/);
+  assert.match(pagina, /to="\/registro-empresa">Registrar empresa/);
+  assert.match(pagina, /Para trabajadores|Trabajadores/);
+});
+
+test('la sección ¿Cómo funciona? presenta tres pasos y el acceso para empresas', () => {
+  const pagina = leer('../src/pages/inicio/Inicio.jsx');
+
+  assert.match(pagina, /¿Cómo funciona\?/);
+  assert.match(pagina, /Encuentra oportunidades y participa en tres sencillos pasos\./);
+  assert.match(pagina, /01/);
+  assert.match(pagina, /02/);
+  assert.match(pagina, /03/);
+  assert.match(pagina, /Explora ofertas/);
+  assert.match(pagina, /Consulta las oportunidades laborales disponibles y conoce sus requisitos\./);
+  assert.match(pagina, /Crea tu perfil/);
+  assert.match(pagina, /Registra tus datos personales y experiencia profesional/);
+  assert.match(pagina, /Postula/);
+  assert.match(pagina, /Envía tu candidatura y consulta el estado de tus postulaciones\./);
+  assert.match(pagina, /¿Representas a una empresa\?/);
+  assert.match(pagina, /Incorpora oportunidades laborales y encuentra talento\./);
+  assert.match(pagina, /to="\/registro-empresa">Acceso para empresas/);
+  assert.doesNotMatch(pagina, /lucide-react/);
+});
+
+test('el pie enlaza los documentos legales existentes', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
   const legales = leer('../src/legal/documentos.js');
 
-  assert.match(pagina, /Una plataforma para conectar oportunidades\./);
-  assert.match(pagina, /Para quienes buscan empleo/);
-  assert.match(pagina, /Para las empresas/);
-  assert.match(pagina, /Para la municipalidad/);
+  assert.match(pagina, /Unidad Funcional del Empleo/);
   assert.match(pagina, /LEGAL_LINKS/);
   assert.match(legales, /\/politica-privacidad/);
   assert.match(legales, /\/terminos-condiciones/);
@@ -117,10 +151,12 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
     assert.match(estilos, new RegExp(token));
   }
 
-  assert.match(estilos, /\.inicio-main\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.45fr\) minmax\(300px, 0\.85fr\)/s);
-  assert.match(estilos, /@media \(max-width: 1100px\)[\s\S]*?\.inicio-main\s*\{[^}]*grid-template-columns:\s*1fr/s);
-  assert.match(estilos, /@media \(max-width: 700px\)/);
+  assert.match(estilos, /\.inicio-main\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.35fr\) minmax\(300px, 0\.8fr\)/s);
+  assert.match(estilos, /\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-main\s*\{[^}]*grid-template-columns:\s*1fr/s);
+  assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 560px\)/);
   assert.match(estilos, /\.inicio-acceso\s*\{[^}]*order:\s*2/s);
+  assert.doesNotMatch(estilos, /inicio-capacidades|inicio-como/);
   assert.doesNotMatch(estilos, /--navy:\s*#/);
 });

@@ -1,70 +1,28 @@
 // SPDX-License-Identifier: MIT
 import { Link } from 'react-router-dom';
-import {
-  Briefcase,
-  CalendarDays,
-  Check,
-  FileCheck2,
-  KeyRound,
-  Megaphone,
-  Search,
-  UserRound,
-} from 'lucide-react';
 import BotonTema from '../../components/BotonTema';
 import LogoMunicipal from '../../components/LogoMunicipal';
-import { useAuth } from '../../context/AuthContext';
 import { LEGAL_LINKS } from '../../legal/documentos';
-import { rutaPanel } from '../../constants';
 
-const CAPACIDADES = [
+const PASOS = [
   {
-    Icono: Search,
-    titulo: 'Búsqueda de empleo',
-    texto: 'Consulta las ofertas laborales disponibles y utiliza los filtros para encontrar oportunidades.',
+    numero: '01',
+    titulo: 'Explora ofertas',
+    texto: 'Consulta las oportunidades laborales disponibles y conoce sus requisitos.',
   },
   {
-    Icono: UserRound,
-    titulo: 'Perfil profesional',
-    texto: 'Registra tus datos y administra tu currículum vitae.',
+    numero: '02',
+    titulo: 'Crea tu perfil',
+    texto: 'Registra tus datos personales y experiencia profesional para participar en los procesos de selección.',
   },
   {
-    Icono: FileCheck2,
-    titulo: 'Postulaciones',
-    texto: 'Presenta tu candidatura y consulta el estado de tus procesos.',
-  },
-  {
-    Icono: Briefcase,
-    titulo: 'Empresas',
-    texto: 'Solicita afiliación, publica ofertas y gestiona las candidaturas recibidas.',
-  },
-  {
-    Icono: Megaphone,
-    titulo: 'Oportunidades',
-    texto: 'Consulta actividades, ferias, talleres y convocatorias difundidas.',
-  },
-];
-
-const COMO_FUNCIONA = [
-  {
-    Icono: UserRound,
-    titulo: 'Para quienes buscan empleo',
-    texto: 'Consulta ofertas, crea tu perfil y presenta postulaciones.',
-  },
-  {
-    Icono: Briefcase,
-    titulo: 'Para las empresas',
-    texto: 'Incorpora oportunidades laborales y administra sus procesos de selección.',
-  },
-  {
-    Icono: CalendarDays,
-    titulo: 'Para la municipalidad',
-    texto: 'Facilita la gestión y difusión de oportunidades, actividades y servicios de intermediación laboral.',
+    numero: '03',
+    titulo: 'Postula',
+    texto: 'Envía tu candidatura y consulta el estado de tus postulaciones.',
   },
 ];
 
 export default function Inicio() {
-  const { usuario } = useAuth();
-
   return (
     <div className="inicio-page">
       <header className="inicio-nav">
@@ -82,114 +40,71 @@ export default function Inicio() {
           <Link to="/postulante/buscar" className="inicio-nav-link">
             Buscar empleo
           </Link>
-          {usuario ? (
-            <Link to={rutaPanel(usuario.rol)} className="inicio-nav-link solid">
-              Mi panel
-            </Link>
-          ) : (
-            <>
-              <Link to="/login" className="inicio-nav-link">
-                Iniciar sesión
-              </Link>
-              <Link to="/registro" className="inicio-nav-link solid">
-                Registrarme
-              </Link>
-            </>
-          )}
           <BotonTema />
         </nav>
       </header>
 
       <main className="inicio-main">
         <section className="inicio-info" aria-labelledby="inicio-titulo">
-          <p className="inicio-eyebrow">
-            <span>Municipalidad Distrital de José Leonardo Ortiz</span>
-            <span>Unidad Funcional del Empleo</span>
-          </p>
+          <p className="inicio-eyebrow">Municipalidad Distrital de José Leonardo Ortiz</p>
 
-          <h1 id="inicio-titulo">Conectamos talento local con oportunidades laborales.</h1>
+          <h1 id="inicio-titulo">Conectamos talento con oportunidades laborales.</h1>
 
           <p className="inicio-intro">
             Empleo MDJLO es el sistema de intermediación laboral de la Municipalidad
-            Distrital de José Leonardo Ortiz, creado para facilitar el encuentro entre
-            personas que buscan empleo y empresas que necesitan incorporar talento.
-          </p>
-          <p className="inicio-intro">
-            A través de esta plataforma puedes consultar ofertas laborales, conocer
-            oportunidades y actividades de empleo, gestionar tu perfil profesional y
-            realizar tus postulaciones en línea.
+            Distrital de José Leonardo Ortiz, que facilita el encuentro entre personas
+            que buscan empleo y empresas que necesitan incorporar talento.
           </p>
 
-          <ul className="inicio-capacidades" aria-label="Capacidades del sistema">
-            {CAPACIDADES.map(({ Icono, titulo, texto }) => (
-              <li key={titulo} className="inicio-capacidad">
-                <span className="inicio-capacidad-icono" aria-hidden="true">
-                  <Icono size={18} />
-                </span>
-                <span className="inicio-capacidad-texto">
-                  <strong>{titulo}</strong>
-                  <span>{texto}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <p className="inicio-linea">
+            Consulta ofertas · Gestiona tu perfil · Realiza postulaciones
+          </p>
         </section>
 
         <aside className="inicio-acceso" aria-labelledby="inicio-acceso-titulo">
-          <span className="inicio-acceso-etiqueta">Acceso rápido</span>
-          <h2 id="inicio-acceso-titulo">¿Eres trabajador o empleador?</h2>
-          <p className="inicio-acceso-sub">Regístrate o inicia sesión aquí.</p>
+          <h2 id="inicio-acceso-titulo">Accede al sistema</h2>
+          <p className="inicio-acceso-sub">¿Eres trabajador o empleador?</p>
 
           <Link to="/postulante/buscar" className="inicio-cta">
-            <Search size={19} aria-hidden="true" />
-            <span>Busca empleo, crea tu cuenta y descubre nuevas oportunidades.</span>
+            Explorar ofertas laborales
           </Link>
 
           <div className="inicio-grupo">
-            <h3>Para trabajadores</h3>
-            <Link to="/postulante/buscar">
-              <span>Buscar empleo</span>
-              <Check size={16} aria-hidden="true" />
-            </Link>
-            <Link to="/registro">
-              <span>Crear cuenta</span>
-              <Check size={16} aria-hidden="true" />
-            </Link>
-            <Link to="/login">
-              <span>Iniciar sesión</span>
-              <KeyRound size={16} aria-hidden="true" />
-            </Link>
+            <h3>Trabajadores</h3>
+            <Link to="/registro">Crear cuenta</Link>
+            <Link to="/login">Iniciar sesión</Link>
           </div>
 
           <div className="inicio-grupo">
-            <h3>Para empleadores</h3>
-            <Link to="/registro-empresa">
-              <span>Registro de empresa</span>
-              <Briefcase size={16} aria-hidden="true" />
-            </Link>
-            <Link to="/login">
-              <span>Iniciar sesión</span>
-              <KeyRound size={16} aria-hidden="true" />
-            </Link>
+            <h3>Empleadores</h3>
+            <Link to="/registro-empresa">Registrar empresa</Link>
+            <Link to="/login">Iniciar sesión</Link>
           </div>
         </aside>
       </main>
 
-      <section className="inicio-como" aria-labelledby="inicio-como-titulo">
-        <h2 id="inicio-como-titulo">Una plataforma para conectar oportunidades.</h2>
-        <div className="inicio-como-grid">
-          {COMO_FUNCIONA.map(({ Icono, titulo, texto }) => (
-            <article key={titulo} className="inicio-como-bloque">
-              <span className="inicio-como-icono" aria-hidden="true">
-                <Icono size={20} />
-              </span>
-              <div>
+      <section className="inicio-pasos" aria-labelledby="inicio-pasos-titulo">
+        <div className="inicio-pasos-head">
+          <h2 id="inicio-pasos-titulo">¿Cómo funciona?</h2>
+          <p>Encuentra oportunidades y participa en tres sencillos pasos.</p>
+        </div>
+
+        <ol className="inicio-pasos-lista">
+          {PASOS.map(({ numero, titulo, texto }) => (
+            <li key={numero} className="inicio-paso">
+              <span className="inicio-paso-numero" aria-hidden="true">{numero}</span>
+              <div className="inicio-paso-texto">
                 <h3>{titulo}</h3>
                 <p>{texto}</p>
               </div>
-            </article>
+            </li>
           ))}
-        </div>
+        </ol>
+
+        <p className="inicio-empresas">
+          ¿Representas a una empresa? Incorpora oportunidades laborales y encuentra talento.{' '}
+          <Link to="/registro-empresa">Acceso para empresas</Link>
+        </p>
       </section>
 
       <footer className="inicio-footer">
