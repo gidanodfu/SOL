@@ -171,6 +171,18 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
   assert.match(estilos, /\.inicio-paso\s*\{[^}]*background:\s*var\(--fondo\)/s);
   assert.match(estilos, /\.inicio-paso\s*\{[^}]*border-radius:\s*var\(--radius-xl\)/s);
   assert.match(estilos, /\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+  assert.match(
+    estilos,
+    /\.inicio-nav,\s*\.inicio-main,\s*\.inicio-pasos,\s*\.inicio-footer\s*\{[^}]*width:\s*var\(--inicio-w\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.inicio-footer\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center[^}]*justify-content:\s*space-between/s,
+  );
+  assert.match(estilos, /\.inicio-footer\s*\{[^}]*border-radius:\s*var\(--radius-pill\)/s);
+  assert.match(estilos, /\.inicio-footer\s*\{[^}]*background:\s*var\(--white\)/s);
+  assert.match(estilos, /\.inicio-footer\s*\{[^}]*border:\s*1px solid var\(--line\)/s);
+  assert.doesNotMatch(estilos, /\.inicio-footer\s*\{[^}]*flex-direction:\s*column/s);
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-main\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 560px\)/);
