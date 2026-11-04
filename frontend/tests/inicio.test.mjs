@@ -57,17 +57,20 @@ test('la navbar es mínima: marca, buscar empleo y tema', () => {
 test('el hero conserva el mensaje institucional sin tarjetas de funcionalidades', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
 
-  assert.match(pagina, /Municipalidad Distrital de José Leonardo Ortiz/);
-  assert.match(pagina, /Conectamos talento con oportunidades laborales\./);
+  assert.match(pagina, /Municipalidad Distrital de José Leonardo Ortiz · Unidad Funcional del Empleo/);
+  assert.match(pagina, /Consulta ofertas laborales y encuentra oportunidades en todo Chiclayo\./);
   assert.match(
     pagina,
-    /Empleo MDJLO es el sistema de intermediación laboral de la Municipalidad\s+Distrital de José Leonardo Ortiz, que facilita el encuentro entre personas\s+que buscan empleo y empresas que necesitan incorporar talento\./,
+    /El Portal de Empleo MDJLO permite consultar ofertas laborales publicadas,\s+revisar sus requisitos y fechas de cierre, crear un perfil profesional y\s+registrar postulaciones en línea\./,
   );
-  assert.match(pagina, /Consulta ofertas · Gestiona tu perfil · Realiza postulaciones/);
+  assert.match(pagina, /Ofertas laborales · Perfil profesional · Seguimiento de postulaciones/);
+  assert.doesNotMatch(
+    pagina,
+    /Conectamos talento|Impulsamos tu futuro|Construimos oportunidades|Tu próxima oportunidad comienza aquí/,
+  );
 
   // Se eliminó la grilla de cinco capacidades y la sección informativa inferior.
   assert.doesNotMatch(pagina, /Búsqueda de empleo/);
-  assert.doesNotMatch(pagina, /Perfil profesional/);
   assert.doesNotMatch(pagina, /Una plataforma para conectar oportunidades/);
   assert.doesNotMatch(pagina, /inicio-capacidades/);
   assert.doesNotMatch(pagina, /inicio-como/);
@@ -76,7 +79,7 @@ test('el hero conserva el mensaje institucional sin tarjetas de funcionalidades'
 test('el panel de acceso mantiene CTA y enlaces diferenciados', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
 
-  assert.match(pagina, /Accede al sistema/);
+  assert.match(pagina, /Accede al Portal laboral/);
   assert.match(pagina, /¿Eres trabajador o empleador\?/);
   assert.match(pagina, /Explorar ofertas laborales/);
   assert.match(pagina, /to="\/postulante\/buscar"/);

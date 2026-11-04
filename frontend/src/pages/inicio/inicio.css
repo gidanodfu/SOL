@@ -168,7 +168,7 @@
 }
 
 .inicio-info h1 {
-  max-width: 16ch;
+  max-width: 22ch;
   margin: 0 0 18px;
   color: var(--navy);
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
@@ -424,6 +424,10 @@
 @media (max-width: 900px) {
   .inicio-main {
     grid-template-columns: 1fr;
+  }
+
+  .inicio-info h1 {
+    max-width: none;
   }
 
   .inicio-acceso {

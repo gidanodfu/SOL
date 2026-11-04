@@ -70,23 +70,27 @@ export default function Inicio() {
 
       <main className="inicio-main">
         <section className="inicio-info" aria-labelledby="inicio-titulo">
-          <p className="inicio-eyebrow">Municipalidad Distrital de José Leonardo Ortiz</p>
+          <p className="inicio-eyebrow">
+            Municipalidad Distrital de José Leonardo Ortiz · Unidad Funcional del Empleo
+          </p>
 
-          <h1 id="inicio-titulo">Conectamos talento con oportunidades laborales.</h1>
+          <h1 id="inicio-titulo">
+            Consulta ofertas laborales y encuentra oportunidades en todo Chiclayo.
+          </h1>
 
           <p className="inicio-intro">
-            Empleo MDJLO es el sistema de intermediación laboral de la Municipalidad
-            Distrital de José Leonardo Ortiz, que facilita el encuentro entre personas
-            que buscan empleo y empresas que necesitan incorporar talento.
+            El Portal de Empleo MDJLO permite consultar ofertas laborales publicadas,
+            revisar sus requisitos y fechas de cierre, crear un perfil profesional y
+            registrar postulaciones en línea.
           </p>
 
           <p className="inicio-linea">
-            Consulta ofertas · Gestiona tu perfil · Realiza postulaciones
+            Ofertas laborales · Perfil profesional · Seguimiento de postulaciones
           </p>
         </section>
 
         <aside className="inicio-acceso" aria-labelledby="inicio-acceso-titulo">
-          <h2 id="inicio-acceso-titulo">Accede al sistema</h2>
+          <h2 id="inicio-acceso-titulo">Accede al Portal laboral</h2>
           <p className="inicio-acceso-sub">¿Eres trabajador o empleador?</p>
 
           <Link to="/postulante/buscar" className="inicio-cta">
