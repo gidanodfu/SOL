@@ -44,6 +44,30 @@ export default function Inicio() {
         </nav>
       </header>
 
+      <section className="inicio-pasos" aria-labelledby="inicio-pasos-titulo">
+        <div className="inicio-pasos-head">
+          <h2 id="inicio-pasos-titulo">¿Cómo funciona?</h2>
+          <p>Encuentra oportunidades y participa en tres sencillos pasos.</p>
+        </div>
+
+        <ol className="inicio-pasos-lista">
+          {PASOS.map(({ numero, titulo, texto }) => (
+            <li key={numero} className="inicio-paso">
+              <span className="inicio-paso-numero" aria-hidden="true">{numero}</span>
+              <div className="inicio-paso-texto">
+                <h3>{titulo}</h3>
+                <p>{texto}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <p className="inicio-empresas">
+          ¿Representas a una empresa? Incorpora oportunidades laborales y encuentra talento.{' '}
+          <Link to="/registro-empresa">Acceso para empresas</Link>
+        </p>
+      </section>
+
       <main className="inicio-main">
         <section className="inicio-info" aria-labelledby="inicio-titulo">
           <p className="inicio-eyebrow">Municipalidad Distrital de José Leonardo Ortiz</p>
@@ -82,30 +106,6 @@ export default function Inicio() {
           </div>
         </aside>
       </main>
-
-      <section className="inicio-pasos" aria-labelledby="inicio-pasos-titulo">
-        <div className="inicio-pasos-head">
-          <h2 id="inicio-pasos-titulo">¿Cómo funciona?</h2>
-          <p>Encuentra oportunidades y participa en tres sencillos pasos.</p>
-        </div>
-
-        <ol className="inicio-pasos-lista">
-          {PASOS.map(({ numero, titulo, texto }) => (
-            <li key={numero} className="inicio-paso">
-              <span className="inicio-paso-numero" aria-hidden="true">{numero}</span>
-              <div className="inicio-paso-texto">
-                <h3>{titulo}</h3>
-                <p>{texto}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        <p className="inicio-empresas">
-          ¿Representas a una empresa? Incorpora oportunidades laborales y encuentra talento.{' '}
-          <Link to="/registro-empresa">Acceso para empresas</Link>
-        </p>
-      </section>
 
       <footer className="inicio-footer">
         <p>Municipalidad Distrital de José Leonardo Ortiz · Unidad Funcional del Empleo</p>

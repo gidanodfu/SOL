@@ -272,20 +272,24 @@
 
 /* ---------- Cómo funciona ---------- */
 .inicio-pasos {
-  margin-top: 12px;
-  padding: clamp(22px, 3vw, 34px) 4px 4px;
+  margin-top: 16px;
+  padding: clamp(24px, 3.2vw, 38px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2xl);
+  background: var(--white);
+  box-shadow: var(--sombra-tarjeta);
 }
 
 .inicio-pasos-head {
   max-width: 760px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .inicio-pasos-head h2 {
   margin: 0 0 5px;
   color: var(--navy);
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  font-size: clamp(1.25rem, 1.8vw, 1.6rem);
+  font-size: clamp(1.3rem, 1.9vw, 1.7rem);
   line-height: 1.2;
 }
 
@@ -303,6 +307,7 @@
 .inicio-pasos-lista {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 1.8vw, 20px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -310,22 +315,19 @@
 
 .inicio-paso {
   display: flex;
-  align-items: flex-start;
-  gap: 13px;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
-  padding-right: clamp(16px, 2.4vw, 32px);
-}
-
-.inicio-paso + .inicio-paso {
-  padding-left: clamp(16px, 2.4vw, 32px);
-  border-left: 1px solid var(--line);
+  padding: clamp(16px, 2vw, 22px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--fondo);
 }
 
 .inicio-paso-numero {
-  flex: 0 0 auto;
   color: var(--blue);
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   line-height: 1;
 }
@@ -423,18 +425,6 @@
   .inicio-pasos-lista {
     grid-template-columns: 1fr;
   }
-
-  .inicio-paso {
-    padding-right: 0;
-  }
-
-  .inicio-paso + .inicio-paso {
-    margin-top: 14px;
-    padding-top: 14px;
-    padding-left: 0;
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
 }
 
 @media (max-width: 860px) {
@@ -478,16 +468,17 @@
   }
 
   .inicio-pasos {
-    margin-top: 8px;
-    padding: 20px 2px 2px;
+    margin-top: 10px;
+    padding: 20px 16px;
+    border-radius: var(--radius-xl);
   }
 
   .inicio-pasos-head {
     margin-bottom: 16px;
   }
 
-  .inicio-paso-numero {
-    font-size: 1.35rem;
+  .inicio-paso {
+    padding: 16px;
   }
 
   .inicio-acceso {

@@ -88,6 +88,19 @@ test('el panel de acceso mantiene CTA y enlaces diferenciados', () => {
   assert.match(pagina, /Para trabajadores|Trabajadores/);
 });
 
+test('la sección ¿Cómo funciona? aparece antes de la presentación institucional', () => {
+  const pagina = leer('../src/pages/inicio/Inicio.jsx');
+
+  assert.ok(
+    pagina.indexOf('<section className="inicio-pasos"') < pagina.indexOf('<main className="inicio-main">'),
+    '¿Cómo funciona? debe ir inmediatamente después de la navbar',
+  );
+  assert.ok(
+    pagina.indexOf('<main className="inicio-main">') < pagina.indexOf('<footer className="inicio-footer">'),
+    'el footer debe quedar después de ambas secciones',
+  );
+});
+
 test('la sección ¿Cómo funciona? presenta tres pasos y el acceso para empresas', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
 
@@ -105,6 +118,7 @@ test('la sección ¿Cómo funciona? presenta tres pasos y el acceso para empresa
   assert.match(pagina, /¿Representas a una empresa\?/);
   assert.match(pagina, /Incorpora oportunidades laborales y encuentra talento\./);
   assert.match(pagina, /to="\/registro-empresa">Acceso para empresas/);
+  assert.match(pagina, /PASOS\.map/);
   assert.doesNotMatch(pagina, /lucide-react/);
 });
 
@@ -152,6 +166,10 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
   }
 
   assert.match(estilos, /\.inicio-main\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.35fr\) minmax\(300px, 0\.8fr\)/s);
+  assert.match(estilos, /\.inicio-pasos\s*\{[^}]*background:\s*var\(--white\)/s);
+  assert.match(estilos, /\.inicio-pasos\s*\{[^}]*border-radius:\s*var\(--radius-2xl\)/s);
+  assert.match(estilos, /\.inicio-paso\s*\{[^}]*background:\s*var\(--fondo\)/s);
+  assert.match(estilos, /\.inicio-paso\s*\{[^}]*border-radius:\s*var\(--radius-xl\)/s);
   assert.match(estilos, /\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-main\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*1fr/s);
