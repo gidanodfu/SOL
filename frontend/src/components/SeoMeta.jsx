@@ -9,6 +9,10 @@ import { useLocation } from 'react-router-dom';
 const BASE = 'Empleo MDJLO';
 
 const PAGINAS = {
+  '/inicio': {
+    titulo: 'Inicio',
+    descripcion: 'Conoce Empleo MDJLO, el sistema de intermediación laboral de la Municipalidad Distrital de José Leonardo Ortiz. Explora ofertas de empleo y oportunidades laborales.',
+  },
   '/login': {
     titulo: 'Iniciar sesión',
     descripcion: 'Accede al Sistema de Ofertas Laborales de la Municipalidad Distrital de José Leonardo Ortiz.',

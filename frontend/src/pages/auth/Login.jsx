@@ -8,7 +8,7 @@ import GoogleButton from '../../components/GoogleButton';
 import Turnstile from '../../components/Turnstile';
 import AuthFooter from '../../components/AuthFooter';
 import LogoMunicipal from '../../components/LogoMunicipal';
-import { ROLES, RUTA_INICIO_PUBLICA, rutaPanel } from '../../constants';
+import { ROLES, RUTA_BUSQUEDA_EMPLEO, rutaPanel } from '../../constants';
 import { errorApi } from '../../utils';
 
 export default function Login() {
@@ -32,7 +32,7 @@ export default function Login() {
   const destinoPostLogin = (usuario) => {
     const desde = location.state?.from;
     // El postulante conserva el destino previo o cae en la bolsa pública.
-    if (usuario.rol === ROLES.POSTULANTE) return desde || RUTA_INICIO_PUBLICA;
+    if (usuario.rol === ROLES.POSTULANTE) return desde || RUTA_BUSQUEDA_EMPLEO;
     return rutaPanel(usuario.rol);
   };
 

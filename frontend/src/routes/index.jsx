@@ -4,9 +4,10 @@ import { Cargando, RutaProtegida, RutaPublica } from './Guardas';
 import { LayoutApp } from '../layouts/AppLayout';
 import { LayoutBusqueda } from '../layouts/LayoutBusqueda';
 import { useAuth } from '../context/AuthContext';
-import { ROLES, rutaPanel } from '../constants';
+import { ROLES, RUTA_BIENVENIDA_PUBLICA, rutaPanel } from '../constants';
 
 import Login from '../pages/auth/Login';
+import InicioLanding from '../pages/inicio/Inicio';
 import Registro from '../pages/auth/Registro';
 import RegistroEmpresa from '../pages/auth/RegistroEmpresa';
 import ActivarCuenta from '../pages/auth/ActivarCuenta';
@@ -40,7 +41,11 @@ export function Rutas() {
     <Routes>
       {/* La raíz es pública: resuelve visitante o panel según la sesión ya
           restaurada por AuthContext. Nunca depende del hostname. */}
-      <Route path="/" element={<Inicio />} />
+      <Route path="/" element={<Raiz />} />
+
+      {/* Landing institucional pública, independiente de los layouts por rol.
+          Permanece visible incluso con una sesión activa. */}
+      <Route path="/inicio" element={<InicioLanding />} />
 
       <Route path="/login" element={<RutaPublica><Login /></RutaPublica>} />
       <Route path="/registro" element={<RutaPublica><Registro /></RutaPublica>} />
@@ -111,12 +116,13 @@ export function Rutas() {
   );
 }
 
-function Inicio() {
+function Raiz() {
   const { usuario, cargando } = useAuth();
 
   // La sesión se está restaurando (incluido el refresh): no redirigir todavía.
   if (cargando) return <Cargando />;
 
-  // Sin sesión válida, o con un rol no reconocido, se continúa como visitante.
-  return <Navigate to={rutaPanel(usuario?.rol)} replace />;
+  // Visitantes y roles desconocidos entran por la landing institucional.
+  if (!usuario) return <Navigate to={RUTA_BIENVENIDA_PUBLICA} replace />;
+  return <Navigate to={rutaPanel(usuario.rol)} replace />;
 }

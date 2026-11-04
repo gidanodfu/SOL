@@ -11,8 +11,14 @@ export const ROLES = {
   POSTULANTE: 'postulante',
 };
 
-/** Destino público por defecto cuando no hay sesión o el rol no es reconocido. */
-export const RUTA_INICIO_PUBLICA = '/postulante/buscar';
+/** Ruta de bienvenida pública; es la entrada para visitantes. */
+export const RUTA_BIENVENIDA_PUBLICA = '/inicio';
+
+/** Ruta de búsqueda de empleo; conserva el flujo posterior al login. */
+export const RUTA_BUSQUEDA_EMPLEO = '/postulante/buscar';
+
+/** Alias de compatibilidad: destino histórico del postulante sin `from`. */
+export const RUTA_INICIO_PUBLICA = RUTA_BUSQUEDA_EMPLEO;
 
 /** Panel inicial por rol; es la única fuente de esta resolución en el frontend. */
 export const PANEL_POR_ROL = {
@@ -21,7 +27,7 @@ export const PANEL_POR_ROL = {
   [ROLES.POSTULANTE]: '/postulante/dashboard',
 };
 
-export const rutaPanel = (rol, porDefecto = RUTA_INICIO_PUBLICA) => PANEL_POR_ROL[rol] || porDefecto;
+export const rutaPanel = (rol, porDefecto = RUTA_BIENVENIDA_PUBLICA) => PANEL_POR_ROL[rol] || porDefecto;
 
 export const ESTADOS_OFERTA = ['borrador', 'pendiente', 'publicada', 'vencida', 'rechazada', 'observada', 'cerrada'];
 export const ESTADOS_POSTULACION = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
