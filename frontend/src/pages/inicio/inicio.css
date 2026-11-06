@@ -292,9 +292,10 @@
   outline-offset: 2px;
 }
 
-/* Accesos secundarios de trabajadores: agrupador propio y controles con
-   superficie, sin alterar los enlaces de empleadores. */
-.inicio-acceso-enlaces--trabajadores {
+/* Accesos secundarios agrupados (trabajadores y empleadores): superficie
+   propia y controles individuales, sin alterar el resto del panel. */
+.inicio-acceso-enlaces--trabajadores,
+.inicio-acceso-enlaces--empleadores {
   gap: 8px;
   margin-top: 12px;
   padding: 8px;
@@ -303,7 +304,8 @@
   background: var(--sky-2);
 }
 
-.inicio-acceso-enlaces--trabajadores a {
+.inicio-acceso-enlaces--trabajadores a,
+.inicio-acceso-enlaces--empleadores a {
   flex: 1 1 7rem;
   justify-content: center;
   min-height: 40px;
@@ -314,12 +316,14 @@
   text-align: center;
 }
 
-.inicio-acceso-enlaces--trabajadores a:hover {
+.inicio-acceso-enlaces--trabajadores a:hover,
+.inicio-acceso-enlaces--empleadores a:hover {
   border-color: var(--enlace);
   text-decoration: none;
 }
 
-.inicio-acceso-enlaces--trabajadores a:active {
+.inicio-acceso-enlaces--trabajadores a:active,
+.inicio-acceso-enlaces--empleadores a:active {
   background: var(--sky-2);
 }
 

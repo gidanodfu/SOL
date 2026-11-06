@@ -93,10 +93,11 @@ test('el panel de acceso mantiene CTA y enlaces diferenciados', () => {
   assert.match(pagina, /to="\/login" aria-label="Iniciar sesión como empleador">Iniciar sesión/);
 
   assert.match(pagina, /className="inicio-acceso-enlaces inicio-acceso-enlaces--trabajadores"/);
-  assert.match(pagina, /className="inicio-acceso-enlaces">\s*<Link to="\/registro-empresa"/);
+  assert.match(pagina, /className="inicio-acceso-enlaces inicio-acceso-enlaces--empleadores"/);
   assert.ok(
-    pagina.match(/inicio-acceso-enlaces--trabajadores/g)?.length === 1,
-    'solo los accesos de trabajadores usan el agrupador destacado',
+    pagina.match(/inicio-acceso-enlaces--trabajadores/g)?.length === 1
+    && pagina.match(/inicio-acceso-enlaces--empleadores/g)?.length === 1,
+    'cada grupo de accesos usa su propio agrupador destacado',
   );
 
   assert.match(pagina, /className="inicio-acceso-divisor" role="separator"/);
@@ -210,14 +211,20 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
   assert.match(estilos, /\.inicio-acceso-enlaces\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
   assert.match(
     estilos,
-    /\.inicio-acceso-enlaces--trabajadores\s*\{[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*var\(--radius-lg\)[^}]*background:\s*var\(--sky-2\)/s,
+    /\.inicio-acceso-enlaces--trabajadores,\s*\.inicio-acceso-enlaces--empleadores\s*\{[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*var\(--radius-lg\)[^}]*background:\s*var\(--sky-2\)/s,
   );
   assert.match(
     estilos,
-    /\.inicio-acceso-enlaces--trabajadores a\s*\{[^}]*min-height:\s*40px[^}]*border-radius:\s*var\(--radius-md\)[^}]*background:\s*var\(--white\)/s,
+    /\.inicio-acceso-enlaces--trabajadores a,\s*\.inicio-acceso-enlaces--empleadores a\s*\{[^}]*min-height:\s*40px[^}]*border-radius:\s*var\(--radius-md\)[^}]*background:\s*var\(--white\)/s,
   );
-  assert.match(estilos, /\.inicio-acceso-enlaces--trabajadores a:hover\s*\{[^}]*border-color:\s*var\(--enlace\)/s);
-  assert.match(estilos, /\.inicio-acceso-enlaces--trabajadores a:active\s*\{/);
+  assert.match(
+    estilos,
+    /\.inicio-acceso-enlaces--trabajadores a:hover,\s*\.inicio-acceso-enlaces--empleadores a:hover\s*\{[^}]*border-color:\s*var\(--enlace\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.inicio-acceso-enlaces--trabajadores a:active,\s*\.inicio-acceso-enlaces--empleadores a:active\s*\{/s,
+  );
   assert.match(estilos, /\.inicio-acceso-divisor\s*\{[^}]*border-top:\s*1px solid var\(--line\)/s);
   assert.doesNotMatch(estilos, /inicio-capacidades|inicio-como|\.inicio-grupo/);
   assert.doesNotMatch(estilos, /--navy:\s*#/);

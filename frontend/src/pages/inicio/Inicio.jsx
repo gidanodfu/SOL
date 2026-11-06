@@ -114,7 +114,7 @@ export default function Inicio() {
             <p className="inicio-acceso-descripcion">
               Publica oportunidades laborales y encuentra talento para tu empresa
             </p>
-            <div className="inicio-acceso-enlaces">
+            <div className="inicio-acceso-enlaces inicio-acceso-enlaces--empleadores">
               <Link to="/registro-empresa">Registrar empresa</Link>
               <Link to="/login" aria-label="Iniciar sesión como empleador">Iniciar sesión</Link>
             </div>
