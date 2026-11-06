@@ -26,7 +26,6 @@ jwt.secret=0123456789abcdef0123456789abcdef0123456789abcdef
 encryption.key=fedcba9876543210fedcba9876543210fedcba9876543210
 turnstile.enabled=true
 turnstile.secretKey=validation-turnstile-secret
-turnstile.action=login
 turnstile.hostnames=localhost,127.0.0.1
 VITE_TURNSTILE_SITE_KEY=validation-turnstile-site-key
 google.clientId=validation.apps.googleusercontent.com
@@ -93,6 +92,12 @@ expect_fail_contains 'Turnstile exige site key' 'Falta VITE_TURNSTILE_SITE_KEY' 
     "$(variant 's|^VITE_TURNSTILE_SITE_KEY=.*|VITE_TURNSTILE_SITE_KEY=|')"
 expect_fail_contains 'Turnstile exige secret key' 'Falta turnstile.secretKey' \
     "$(variant 's|^turnstile.secretKey=.*|turnstile.secretKey=|')"
+expect_fail_contains 'Turnstile exige hostnames' 'no puede estar vacío' \
+    "$(variant 's|^turnstile.hostnames=.*|turnstile.hostnames=|')"
+expect_fail_contains 'Turnstile rechaza booleano inválido' 'booleano' \
+    "$(variant 's|^turnstile.enabled=.*|turnstile.enabled=quizas|')"
+expect_ok 'Turnstile deshabilitado explícitamente en desarrollo' \
+    "$(variant 's|^turnstile.enabled=.*|turnstile.enabled=false|')"
 expect_fail_contains 'Turnstile no acepta protocolo en hostnames' 'hostnames sin protocolo' \
     "$(variant 's|^turnstile.hostnames=.*|turnstile.hostnames=https://localhost|')"
 expect_fail_contains 'OAuth rechaza clientes distintos' 'mismo cliente web' \

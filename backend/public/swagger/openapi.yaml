@@ -3340,6 +3340,10 @@ paths:
                 id_token:
                   type: string
                   description: Credencial JWT de Google Sign-In.
+                turnstile_token:
+                  type: string
+                  maxLength: 2048
+                  description: Token de Turnstile. Obligatorio cuando la protección está activa; acción `auth`.
       responses:
         '200':
           description: Sesión iniciada (mismo contrato que el login).
@@ -3439,6 +3443,10 @@ paths:
                 terms_accepted:
                   type: boolean
                   description: Debe ser exactamente `true`. El servidor registra la versión vigente de los Términos y Condiciones y la fecha de aceptación.
+                turnstile_token:
+                  type: string
+                  maxLength: 2048
+                  description: Token de Turnstile. Obligatorio cuando la protección está activa; acción `registro_empresa`.
       responses:
         '201':
           description: Solicitud enviada (queda pendiente de aprobación municipal).
@@ -4487,6 +4495,10 @@ components:
         password:
           type: string
           format: password
+        turnstile_token:
+          type: string
+          maxLength: 2048
+          description: Token de Cloudflare Turnstile. Obligatorio cuando `turnstile.enabled=true`; el backend lo valida con Siteverify y exige la acción `auth` y un hostname autorizado.
 
     RefreshBody:
       type: object
@@ -4530,6 +4542,10 @@ components:
         terms_accepted:
           type: boolean
           description: Debe ser exactamente `true`. El servidor registra la versión vigente de los Términos y Condiciones y la fecha de aceptación.
+        turnstile_token:
+          type: string
+          maxLength: 2048
+          description: Token de Cloudflare Turnstile. Obligatorio cuando `turnstile.enabled=true`; el backend lo valida con Siteverify y exige la acción `auth` y un hostname autorizado.
 
     CambiarContrasenaBody:
       type: object

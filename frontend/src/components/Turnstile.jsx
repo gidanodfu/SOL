@@ -1,52 +1,76 @@
 // SPDX-License-Identifier: MIT
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
-// Site Key pública (Cloudflare). La Secret Key NUNCA llega al frontend.
 const SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY || '').trim();
 const SCRIPT_ID = 'cf-turnstile-script';
 const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+const CARGA_TIMEOUT_MS = 10000;
 
-/** Carga el API oficial de Turnstile una sola vez (render explícito para SPA). */
+let promesaCarga = null;
+
+/** Carga el API oficial una sola vez y permite reintentar si falla. */
 function cargarApi() {
-  return new Promise((resolve) => {
-    if (window.turnstile) return resolve(true);
-    const existente = document.getElementById(SCRIPT_ID);
-    if (existente) {
-      existente.addEventListener('load', () => resolve(Boolean(window.turnstile)), { once: true });
+  if (window.turnstile) return Promise.resolve(true);
+  if (promesaCarga) return promesaCarga;
+
+  promesaCarga = new Promise((resolve) => {
+    let terminado = false;
+    let script = document.getElementById(SCRIPT_ID);
+
+    const finalizar = (ok) => {
+      if (terminado) return;
+      terminado = true;
+      clearTimeout(temporizador);
+      promesaCarga = null;
+      resolve(ok);
+    };
+
+    const fallar = () => {
+      script?.remove();
+      finalizar(false);
+    };
+
+    const temporizador = setTimeout(() => {
+      if (!window.turnstile) script?.remove();
+      finalizar(false);
+    }, CARGA_TIMEOUT_MS);
+
+    if (script) {
+      script.addEventListener('load', () => finalizar(Boolean(window.turnstile)), { once: true });
+      script.addEventListener('error', fallar, { once: true });
       return;
     }
-    const script = document.createElement('script');
+
+    script = document.createElement('script');
     script.id = SCRIPT_ID;
     script.src = SCRIPT_URL;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(Boolean(window.turnstile));
-    script.onerror = () => resolve(false);
+    script.onload = () => finalizar(Boolean(window.turnstile));
+    script.onerror = fallar;
     document.head.appendChild(script);
   });
+
+  return promesaCarga;
 }
 
 /**
- * Widget compartido de Cloudflare Turnstile (login, registro y afiliación de
- * empresa). Render explícito (SPA), `size: flexible` para adaptarse al ancho del
- * formulario, en español y con el tema de la aplicación. La presentación usa el
- * contenedor Rounded del Design System; el contenido interno del iframe no se
- * modifica (no soportado por Cloudflare).
- *
- * Entrega el token por `onToken`; expone `reset()` (los tokens son de un solo uso).
- * El backend es la única autoridad de validación (Siteverify).
+ * Widget compartido de Cloudflare Turnstile. Solo presenta el widget y entrega
+ * el token; el backend valida siempre mediante Siteverify.
  */
 const Turnstile = forwardRef(function Turnstile(
-  { onToken, onExpire, accion = 'login', tema = 'auto', idioma = 'es', tamano = 'flexible' },
+  { onToken, onExpire, onError, accion = 'auth', tema = 'auto', idioma = 'es', tamano = 'flexible' },
   ref,
 ) {
   const contenedor = useRef(null);
   const widgetId = useRef(null);
-  const callbacks = useRef({ onToken, onExpire });
-  callbacks.current = { onToken, onExpire };
+  const callbacks = useRef({ onToken, onExpire, onError });
+  const [error, setError] = useState(false);
+  callbacks.current = { onToken, onExpire, onError };
 
   useImperativeHandle(ref, () => ({
     reset() {
+      setError(false);
       callbacks.current.onToken?.(null);
       if (window.turnstile && widgetId.current !== null) {
         try { window.turnstile.reset(widgetId.current); } catch { /* widget ya no existe */ }
@@ -58,18 +82,44 @@ const Turnstile = forwardRef(function Turnstile(
     if (!SITE_KEY || !contenedor.current) return undefined;
     let activo = true;
 
+    setError(false);
     cargarApi().then((listo) => {
-      if (!activo || !listo || !window.turnstile || !contenedor.current || widgetId.current !== null) return;
-      widgetId.current = window.turnstile.render(contenedor.current, {
-        sitekey: SITE_KEY,
-        action: accion,
-        theme: tema,
-        language: idioma,
-        size: tamano,
-        callback: (token) => callbacks.current.onToken?.(token),
-        'expired-callback': () => { callbacks.current.onToken?.(null); callbacks.current.onExpire?.(); },
-        'error-callback': () => { callbacks.current.onToken?.(null); },
-      });
+      if (!activo) return;
+      if (!listo) {
+        setError(true);
+        callbacks.current.onToken?.(null);
+        callbacks.current.onError?.();
+        return;
+      }
+      if (!contenedor.current || widgetId.current !== null) return;
+
+      try {
+        widgetId.current = window.turnstile.render(contenedor.current, {
+          sitekey: SITE_KEY,
+          action: accion,
+          theme: tema,
+          language: idioma,
+          size: tamano,
+          callback: (token) => {
+            setError(false);
+            callbacks.current.onToken?.(token);
+          },
+          'expired-callback': () => {
+            setError(false);
+            callbacks.current.onToken?.(null);
+            callbacks.current.onExpire?.();
+          },
+          'error-callback': () => {
+            setError(true);
+            callbacks.current.onToken?.(null);
+            callbacks.current.onError?.();
+          },
+        });
+      } catch {
+        setError(true);
+        callbacks.current.onToken?.(null);
+        callbacks.current.onError?.();
+      }
     });
 
     return () => {
@@ -82,9 +132,15 @@ const Turnstile = forwardRef(function Turnstile(
   }, [accion, tema, idioma, tamano]);
 
   if (!SITE_KEY) return null;
+
   return (
     <div className="auth-turnstile">
       <div className="auth-turnstile-box" ref={contenedor} />
+      {error && (
+        <p className="auth-turnstile-error" role="status" aria-live="polite">
+          No se pudo cargar la verificación de seguridad. Recarga la página o inténtalo nuevamente.
+        </p>
+      )}
     </div>
   );
 });

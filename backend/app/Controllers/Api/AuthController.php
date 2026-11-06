@@ -81,7 +81,15 @@ class AuthController extends BaseApiController
             throw ApiException::validacion('No se recibió la credencial de Google.', ['No se recibió la credencial de Google.']);
         }
 
-        return $this->ok($this->auth->autenticarConGoogle($idToken), 'Bienvenido.');
+        $turnstileToken = $datos['turnstile_token'] ?? $datos['cf-turnstile-response'] ?? null;
+        if ($turnstileToken !== null && ! is_string($turnstileToken)) {
+            throw ApiException::validacion('La credencial anti-bot no es válida.', ['La credencial anti-bot no es válida.']);
+        }
+
+        return $this->ok(
+            $this->auth->autenticarConGoogle($idToken, $turnstileToken),
+            'Bienvenido.',
+        );
     }
 
     /**

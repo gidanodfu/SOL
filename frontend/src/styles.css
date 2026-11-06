@@ -1307,6 +1307,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   overflow: hidden;
 }
 [data-theme="dark"] .auth-turnstile-box { color-scheme: dark; }
+.auth-turnstile-error { margin: .45rem 0 0; color: var(--red-tx); font-size: .78rem; line-height: 1.4; text-align: center; }
 
 .login-campo-ayuda { margin: .35rem 0 0; font-size: .78rem; color: var(--text-3); line-height: 1.35; }
 

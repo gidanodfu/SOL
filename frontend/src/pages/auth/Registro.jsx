@@ -119,10 +119,14 @@ export default function Registro() {
   // el perfil incompleto se lleva al postulante a completar los datos que
   // Google no aporta; si ya está completo, directo a la bolsa de empleo.
   const conGoogle = async (idToken) => {
+    if (turnstileRequerido && !turnstileToken) {
+      setError('Completa la verificación de seguridad e inténtalo de nuevo.');
+      return;
+    }
     setEnviando(true);
     setError(null);
     try {
-      const datos = await loginGoogle(idToken);
+      const datos = await loginGoogle(idToken, turnstileToken);
       const destino = datos.usuario?.rol === 'postulante' && datos.perfil_completo === false
         ? '/postulante/perfil'
         : '/postulante/buscar';
@@ -131,6 +135,8 @@ export default function Registro() {
       setError(errorApi(err));
     } finally {
       setEnviando(false);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -429,7 +435,7 @@ export default function Registro() {
 
           <Turnstile
             ref={turnstileRef}
-            accion="registro"
+            accion="auth"
             tema={modoEfectivo}
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}

@@ -210,14 +210,15 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 `OportunidadCreacionValidacionTest`, `PostulacionAuthorizationTest`,
 `AutorizacionMunicipalServiceTest`, `HtmlSanitizerTest`,
 `DocumentoServiceTest`, `CvServiceClaveTest`, `StorageServiceTest`,
-`ReporteExcelServiceTest`, `ReportePdfServiceTest`, `EmailServiceTest`,
+`ReporteExcelServiceTest`, `ReportePdfServiceTest`, `TurnstileServiceTest`,
+`TurnstileFlowsTest`, `EmailServiceTest`,
 `EmailServiceResendTest`, `ImageWebpTest`, `SystemSeederTest`,
 `TerminosTest`, `EnlaceActivacionTest`, `ContentDispositionTest`,
 `SuperficieRiesgoTest` y las pruebas de correo. Las validaciones que no
 dependen de la base se ejecutan con PHPUnit; las reglas de persistencia,
 autorización y concurrencia se cubren en smoke.
 
-Al cierre de la versión 1.4.8 la ejecución reporta **220 tests y 1247
+Al cierre de la versión 1.4.8 la ejecución reporta **233 tests y 1276
 assertions**.
 
 ```bash
@@ -236,7 +237,7 @@ centralizado del logo municipal (sin URLs externas ni favicons antiguos), botone
 fechas de exportación Excel/PDF, selector de perfil municipal, validación y errores
 por campo del alta municipal, permisos de UI y rutas protegidas, lint y build. La imagen de
 desarrollo instala dependencias con `npm ci`; no usa `node_modules` del host.
-La ejecución actual reporta **79/79 tests, 0 fallos** y **19 advertencias de
+La ejecución actual reporta **93/93 tests, 0 fallos** y **19 advertencias de
 Oxlint y 0 errores**: 10 de `only-export-components`, 7 de
 `set-state-in-effect` y 2 de `refs`. Son advertencias estáticas/React Compiler,
 no errores de compilación y no bloquean el build; no se hizo una refactorización

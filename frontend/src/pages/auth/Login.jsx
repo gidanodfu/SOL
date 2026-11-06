@@ -65,11 +65,15 @@ export default function Login() {
   // Google no aporta; ya completado, ingresa directo a la bolsa de empleo.
   const conGoogle = async (idToken) => {
     if (enProceso.current) return;
+    if (turnstileRequerido && !turnstileToken) {
+      setError('Completa la verificación de seguridad e inténtalo de nuevo.');
+      return;
+    }
     enProceso.current = true;
     setEnviando(true);
     setError(null);
     try {
-      const datos = await loginGoogle(idToken);
+      const datos = await loginGoogle(idToken, turnstileToken);
       const destino = datos.usuario?.rol === ROLES.POSTULANTE && datos.perfil_completo === false
         ? '/postulante/perfil'
         : destinoPostLogin(datos.usuario);
@@ -79,6 +83,8 @@ export default function Login() {
     } finally {
       enProceso.current = false;
       setEnviando(false);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -183,7 +189,7 @@ export default function Login() {
 
           <Turnstile
             ref={turnstileRef}
-            accion="login"
+            accion="auth"
             tema={modoEfectivo}
             onToken={setTurnstileToken}
             onExpire={() => setTurnstileToken(null)}

@@ -26,8 +26,9 @@ final class EmailServiceTest extends TestCase
     public function testAplicaLayoutInstitucionalRounded(): void
     {
         $html = (new EmailService())->preparar('<p>Contenido</p>', []);
+        $marca = trim((string) (env('EMAIL_BRAND_NAME') ?: env('RESEND_FROM_NAME') ?: 'Empleo MDJLO'));
 
-        $this->assertStringContainsString('Empleo MDJLO', $html);
+        $this->assertStringContainsString($marca, $html);
         $this->assertStringContainsString('Contenido', $html);
         $this->assertStringContainsString('border-radius:16px', $html);
         $this->assertStringContainsString('©', $html);

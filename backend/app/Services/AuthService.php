@@ -83,7 +83,7 @@ class AuthService
 
         // Verificación anti-bot (Cloudflare Turnstile) antes de tocar credenciales.
         if ($this->turnstile->habilitado()) {
-            $this->turnstile->verificar($turnstileToken, $this->ipCliente());
+            $this->turnstile->verificar($turnstileToken, 'auth', $this->ipCliente());
         }
 
         // El identificador de acceso depende del rol:
@@ -298,6 +298,17 @@ class AuthService
             );
         }
 
+        $turnstileToken = $datos['turnstile_token'] ?? null;
+        if ($turnstileToken !== null && ! is_string($turnstileToken)) {
+            throw ApiException::validacion(
+                'La credencial anti-bot no es válida.',
+                ['La credencial anti-bot no es válida.'],
+            );
+        }
+        if ($this->turnstile->habilitado()) {
+            $this->turnstile->verificar($turnstileToken, 'auth', $this->ipCliente());
+        }
+
         if ($this->users->buscarPorUsername($dni) !== null) {
             throw ApiException::conflicto('Este DNI ya está asociado a una cuenta. Verifica tus datos o utiliza el acceso de la cuenta existente.');
         }
@@ -364,11 +375,21 @@ class AuthService
      *
      * @return array<string, mixed>
      */
-    public function autenticarConGoogle(string $idToken): array
+    public function autenticarConGoogle(string $idToken, mixed $turnstileToken = null): array
     {
         $clientId = (string) env('google.clientId');
         if ($clientId === '') {
             throw ApiException::badRequest('El ingreso con Google no está habilitado en este momento.');
+        }
+
+        if ($turnstileToken !== null && ! is_string($turnstileToken)) {
+            throw ApiException::validacion(
+                'La credencial anti-bot no es válida.',
+                ['La credencial anti-bot no es válida.'],
+            );
+        }
+        if ($this->turnstile->habilitado()) {
+            $this->turnstile->verificar($turnstileToken, 'auth', $this->ipCliente());
         }
 
         $payload = $this->verificarIdTokenGoogle($idToken, $clientId);

@@ -39,6 +39,8 @@ class SolicitudEmpresaService
 
     private IdentidadService $identidad;
 
+    private TurnstileService $turnstile;
+
     public function __construct(
         ?SolicitudEmpresaRepository $repository = null,
         ?SolicitudEmpresaModel $solicitudes = null,
@@ -49,6 +51,7 @@ class SolicitudEmpresaService
         ?EmailService $correo = null,
         ?RucService $ruc = null,
         ?IdentidadService $identidad = null,
+        ?TurnstileService $turnstile = null,
     ) {
         $this->repository   = $repository ?? new SolicitudEmpresaRepository();
         $this->solicitudes  = $solicitudes ?? model(SolicitudEmpresaModel::class);
@@ -59,6 +62,7 @@ class SolicitudEmpresaService
         $this->correo       = $correo ?? new EmailService();
         $this->ruc          = $ruc ?? new RucService();
         $this->identidad    = $identidad ?? new IdentidadService();
+        $this->turnstile    = $turnstile ?? new TurnstileService();
     }
 
     /**
@@ -83,6 +87,17 @@ class SolicitudEmpresaService
             'representante'  => ['required', 'max:150'],
             'terms_accepted' => ['required', 'aceptacion'],
         ]);
+
+        $turnstileToken = $datos['turnstile_token'] ?? null;
+        if ($turnstileToken !== null && ! is_string($turnstileToken)) {
+            throw ApiException::validacion(
+                'La credencial anti-bot no es válida.',
+                ['La credencial anti-bot no es válida.'],
+            );
+        }
+        if ($this->turnstile->habilitado()) {
+            $this->turnstile->verificar($turnstileToken, 'registro_empresa', $this->ipCliente());
+        }
 
         $ruc = $datos['ruc'];
 
@@ -577,6 +592,17 @@ class SolicitudEmpresaService
         ]);
 
         return self::enlaceActivacion($this->baseUrlFrontend(), $token);
+    }
+
+    private function ipCliente(): ?string
+    {
+        try {
+            $ip = trim((string) service('request')->getIPAddress());
+
+            return $ip === '' ? null : $ip;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

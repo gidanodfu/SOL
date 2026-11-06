@@ -54,8 +54,8 @@ export function AuthProvider({ children }) {
     return datos;
   }, [hidratarPreferencias]);
 
-  const loginGoogle = useCallback(async (idToken) => {
-    const datos = await apiLoginGoogle(idToken);
+  const loginGoogle = useCallback(async (idToken, turnstileToken) => {
+    const datos = await apiLoginGoogle(idToken, turnstileToken);
     guardarSesion(datos);
     setUsuario(datos.usuario);
     await hidratarPreferencias();

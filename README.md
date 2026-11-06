@@ -28,7 +28,8 @@ empresas, postulaciones con CV y trazabilidad de contrataciones.
 - **Administración municipal**: usuarios, empresas, solicitudes, ofertas,
   actividades, oportunidades, contrataciones, dashboards y reportes Excel/PDF.
 - **Seguridad**: JWT con refresh rotativo, autorización por rol y propiedad,
-  validación de entradas, sanitización HTML, rate limiting y errores saneados.
+  validación de entradas, sanitización HTML, rate limiting, Cloudflare Turnstile
+  validado en backend y errores saneados.
 - **Interfaz**: React con temas claro/oscuro, editor de texto enriquecido,
   preferencias por usuario y diseño responsive.
 

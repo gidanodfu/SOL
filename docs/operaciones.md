@@ -33,6 +33,22 @@ Variables principales:
 No incluya secretos en Git. `deploy/runtime/backend.env` se genera con permisos
 `600` y contiene solo las variables que el backend necesita.
 
+
+### Cloudflare Turnstile
+
+- `turnstile.enabled` debe ser un booleano explícito. En desarrollo puede quedar
+  en `false`; en un entorno protegido debe activarse junto con la Site Key, la
+  Secret Key y los hostnames.
+- `turnstile.secretKey` queda exclusivamente en el backend.
+- `VITE_TURNSTILE_SITE_KEY` es pública y se compila en el frontend.
+- `turnstile.hostnames` contiene hostnames sin protocolo, ruta ni puerto.
+- Las acciones las decide el backend: `auth` para login, Google y registro de
+  postulante; `registro_empresa` para afiliación empresarial.
+- El backend valida siempre contra Siteverify. Token ausente, inválido, expirado,
+  duplicado, error HTTP o de transporte rechaza la operación.
+- El frontend solo renderiza el widget y transporta el token; no es una barrera
+  de seguridad.
+
 ## 2. Arranque
 
 ```bash
