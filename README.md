@@ -4,11 +4,27 @@ Sistema de intermediación laboral de la Unidad Funcional del Empleo (Resolució
 Gerencia Municipal N.° 000197-2025-MDJLO-GM): bolsa de empleo pública, registro de
 empresas, postulaciones con CV y trazabilidad de contrataciones.
 
-> **Distribución de desarrollo local.** Este repositorio contiene únicamente la
-> configuración para desarrollar y probar SOL en una máquina local con Docker.
-> No incluye infraestructura, dominios, certificados ni procedimientos de
-> despliegue productivo. Cada institución puede desplegar el código mediante sus
-> propios procedimientos.
+> **Distribución de desarrollo local**
+>
+> Este repositorio proporciona exclusivamente un entorno de desarrollo local de
+> SOL, ejecutado mediante Docker y Docker Compose.
+>
+> Permite construir, ejecutar, modificar, depurar y probar SOL sin instalar
+> dependencias del stack en el sistema anfitrión.
+>
+> La infraestructura Docker incluida está destinada exclusivamente al desarrollo
+> local y no constituye una arquitectura de despliegue productivo.
+>
+> SOL no prescribe ni proporciona una solución universal de despliegue para
+> municipalidades, instituciones, organizaciones o servidores externos.
+>
+> Cada entidad que adopte el proyecto deberá definir independientemente su
+> arquitectura de despliegue, infraestructura, seguridad, almacenamiento, redes,
+> dominios, certificados, monitoreo y procedimientos operativos, según sus
+> propias necesidades y políticas.
+>
+> La distribución local no debe utilizarse directamente como configuración de
+> producción.
 
 **Versión actual:** `1.4.8` (fuente única: `VERSION`).
 
