@@ -207,6 +207,22 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-main\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 560px\)/);
+  assert.match(
+    estilos,
+    /@media \(max-width: 560px\)[\s\S]*?\.inicio-footer\s*\{[^}]*display:\s*block/s,
+  );
+  assert.match(
+    estilos,
+    /@media \(max-width: 560px\)[\s\S]*?\.inicio-footer p\s*\{[^}]*display:\s*none/s,
+  );
+  assert.match(
+    estilos,
+    /@media \(max-width: 560px\)[\s\S]*?\.inicio-footer-links\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s,
+  );
+  assert.match(
+    estilos,
+    /@media \(max-width: 560px\)[\s\S]*?\.inicio-footer-links a\s*\{[^}]*text-align:\s*center[^}]*overflow-wrap:\s*anywhere/s,
+  );
   assert.match(estilos, /\.inicio-acceso\s*\{[^}]*order:\s*2/s);
   assert.match(estilos, /\.inicio-acceso-enlaces\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
   assert.match(
