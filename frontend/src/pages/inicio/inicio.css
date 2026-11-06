@@ -292,6 +292,37 @@
   outline-offset: 2px;
 }
 
+/* Accesos secundarios de trabajadores: agrupador propio y controles con
+   superficie, sin alterar los enlaces de empleadores. */
+.inicio-acceso-enlaces--trabajadores {
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--sky-2);
+}
+
+.inicio-acceso-enlaces--trabajadores a {
+  flex: 1 1 7rem;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  text-align: center;
+}
+
+.inicio-acceso-enlaces--trabajadores a:hover {
+  border-color: var(--enlace);
+  text-decoration: none;
+}
+
+.inicio-acceso-enlaces--trabajadores a:active {
+  background: var(--sky-2);
+}
+
 .inicio-acceso-divisor {
   margin: 16px 0;
   border-top: 1px solid var(--line);

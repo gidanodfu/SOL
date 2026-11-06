@@ -101,7 +101,7 @@ export default function Inicio() {
             <Link to="/postulante/buscar" className="inicio-cta">
               Explorar ofertas laborales
             </Link>
-            <div className="inicio-acceso-enlaces">
+            <div className="inicio-acceso-enlaces inicio-acceso-enlaces--trabajadores">
               <Link to="/registro">Crear cuenta</Link>
               <Link to="/login" aria-label="Iniciar sesión como trabajador">Iniciar sesión</Link>
             </div>
