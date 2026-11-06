@@ -80,15 +80,25 @@ test('el panel de acceso mantiene CTA y enlaces diferenciados', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
 
   assert.match(pagina, /Accede al Portal laboral/);
-  assert.match(pagina, /¿Eres trabajador o empleador\?/);
+  assert.match(pagina, /Selecciona cómo deseas participar en el portal/);
+  assert.match(pagina, /Trabajadores/);
+  assert.match(pagina, /Encuentra oportunidades laborales y gestiona tus postulaciones/);
   assert.match(pagina, /Explorar ofertas laborales/);
   assert.match(pagina, /to="\/postulante\/buscar"/);
-  assert.match(pagina, /Trabajadores/);
   assert.match(pagina, /to="\/registro">Crear cuenta/);
-  assert.match(pagina, /to="\/login">Iniciar sesión/);
+  assert.match(pagina, /to="\/login" aria-label="Iniciar sesión como trabajador">Iniciar sesión/);
   assert.match(pagina, /Empleadores/);
+  assert.match(pagina, /Publica oportunidades laborales y encuentra talento para tu empresa/);
   assert.match(pagina, /to="\/registro-empresa">Registrar empresa/);
-  assert.match(pagina, /Para trabajadores|Trabajadores/);
+  assert.match(pagina, /to="\/login" aria-label="Iniciar sesión como empleador">Iniciar sesión/);
+
+  assert.match(pagina, /className="inicio-acceso-divisor" role="separator"/);
+  assert.ok(
+    pagina.indexOf('acceso-trabajadores') < pagina.indexOf('inicio-acceso-divisor')
+    && pagina.indexOf('inicio-acceso-divisor') < pagina.indexOf('acceso-empleadores'),
+    'trabajadores, separador y empleadores deben mantener el orden',
+  );
+  assert.doesNotMatch(pagina, /inicio-grupo/);
 });
 
 test('la sección ¿Cómo funciona? aparece antes de la presentación institucional', () => {
@@ -190,6 +200,8 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
   assert.match(estilos, /@media \(max-width: 900px\)[\s\S]*?\.inicio-pasos-lista\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.match(estilos, /@media \(max-width: 560px\)/);
   assert.match(estilos, /\.inicio-acceso\s*\{[^}]*order:\s*2/s);
-  assert.doesNotMatch(estilos, /inicio-capacidades|inicio-como/);
+  assert.match(estilos, /\.inicio-acceso-enlaces\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/s);
+  assert.match(estilos, /\.inicio-acceso-divisor\s*\{[^}]*border-top:\s*1px solid var\(--line\)/s);
+  assert.doesNotMatch(estilos, /inicio-capacidades|inicio-como|\.inicio-grupo/);
   assert.doesNotMatch(estilos, /--navy:\s*#/);
 });

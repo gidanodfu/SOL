@@ -91,23 +91,34 @@ export default function Inicio() {
 
         <aside className="inicio-acceso" aria-labelledby="inicio-acceso-titulo">
           <h2 id="inicio-acceso-titulo">Accede al Portal laboral</h2>
-          <p className="inicio-acceso-sub">¿Eres trabajador o empleador?</p>
+          <p className="inicio-acceso-sub">Selecciona cómo deseas participar en el portal</p>
 
-          <Link to="/postulante/buscar" className="inicio-cta">
-            Explorar ofertas laborales
-          </Link>
+          <section className="inicio-acceso-grupo" aria-labelledby="acceso-trabajadores">
+            <h3 id="acceso-trabajadores">Trabajadores</h3>
+            <p className="inicio-acceso-descripcion">
+              Encuentra oportunidades laborales y gestiona tus postulaciones
+            </p>
+            <Link to="/postulante/buscar" className="inicio-cta">
+              Explorar ofertas laborales
+            </Link>
+            <div className="inicio-acceso-enlaces">
+              <Link to="/registro">Crear cuenta</Link>
+              <Link to="/login" aria-label="Iniciar sesión como trabajador">Iniciar sesión</Link>
+            </div>
+          </section>
 
-          <div className="inicio-grupo">
-            <h3>Trabajadores</h3>
-            <Link to="/registro">Crear cuenta</Link>
-            <Link to="/login">Iniciar sesión</Link>
-          </div>
+          <div className="inicio-acceso-divisor" role="separator" />
 
-          <div className="inicio-grupo">
-            <h3>Empleadores</h3>
-            <Link to="/registro-empresa">Registrar empresa</Link>
-            <Link to="/login">Iniciar sesión</Link>
-          </div>
+          <section className="inicio-acceso-grupo" aria-labelledby="acceso-empleadores">
+            <h3 id="acceso-empleadores">Empleadores</h3>
+            <p className="inicio-acceso-descripcion">
+              Publica oportunidades laborales y encuentra talento para tu empresa
+            </p>
+            <div className="inicio-acceso-enlaces">
+              <Link to="/registro-empresa">Registrar empresa</Link>
+              <Link to="/login" aria-label="Iniciar sesión como empleador">Iniciar sesión</Link>
+            </div>
+          </section>
         </aside>
       </main>
 

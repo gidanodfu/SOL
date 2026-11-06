@@ -87,7 +87,7 @@
 .inicio-brand:focus-visible,
 .inicio-nav-link:focus-visible,
 .inicio-cta:focus-visible,
-.inicio-grupo a:focus-visible,
+.inicio-acceso-enlaces a:focus-visible,
 .inicio-footer-links a:focus-visible {
   outline: 2px solid var(--accion-foco);
   outline-offset: 2px;
@@ -241,14 +241,16 @@
   background: var(--accion-primario-hover);
 }
 
-.inicio-grupo {
-  margin-top: 18px;
-  padding-top: 15px;
-  border-top: 1px solid var(--line);
+.inicio-acceso-grupo {
+  margin-top: 16px;
 }
 
-.inicio-grupo h3 {
-  margin: 0 0 5px;
+.inicio-acceso-grupo:first-of-type {
+  margin-top: 0;
+}
+
+.inicio-acceso-grupo h3 {
+  margin: 0 0 4px;
   color: var(--text-3);
   font-size: 10.5px;
   font-weight: 800;
@@ -256,18 +258,43 @@
   text-transform: uppercase;
 }
 
-.inicio-grupo a {
-  display: block;
-  min-height: 34px;
-  padding: 7px 0;
+.inicio-acceso-descripcion {
+  margin: 0 0 10px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.inicio-acceso-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 10px;
+}
+
+.inicio-acceso-enlaces a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 3px 0;
   color: var(--enlace);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
 }
 
-.inicio-grupo a:hover {
+.inicio-acceso-enlaces a:hover {
   text-decoration: underline;
+}
+
+.inicio-acceso-enlaces a:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+
+.inicio-acceso-divisor {
+  margin: 16px 0;
+  border-top: 1px solid var(--line);
 }
 
 /* ---------- Cómo funciona ---------- */
