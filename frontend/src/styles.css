@@ -1759,14 +1759,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   justify-content: center;
   gap: 0.15rem 1.5rem;
 }
-/* Página legal en consulta: fondo suave y color de enlace, sin convertirse
-   en un botón principal. El padding base del enlace ya equilibra el área. */
+/* Página legal en consulta: solo color y peso, sin fondo ni forma de botón. */
 .login-footer.login-footer--legal .login-footer-links a.login-footer-link--active {
-  background: var(--sky-2);
+  background: transparent;
   color: var(--enlace);
-  border-radius: var(--radius-sm);
   font-weight: 600;
-  transition: background 0.15s, color 0.15s;
 }
 
 /* ---------- Responsive (auth) ---------- */

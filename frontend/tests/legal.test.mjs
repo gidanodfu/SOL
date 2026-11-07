@@ -109,14 +109,18 @@ test('el layout legal elimina la navegación redundante y marca la página activ
   assert.match(footer, /className=\{activo \? 'login-footer-link--active' : undefined\}/);
   assert.match(footer, /aria-current=\{activo \? 'page' : undefined\}/);
 
-  // El resaltado queda acotado a la variante legal y usa tokens del sistema.
+  // El resaltado es solo tipográfico y queda acotado a la variante legal.
   assert.match(
     estilos,
-    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*background:\s*var\(--sky-2\)[^}]*color:\s*var\(--enlace\)[^}]*border-radius:\s*var\(--radius-sm\)/s,
+    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*background:\s*transparent[^}]*color:\s*var\(--enlace\)[^}]*font-weight:\s*600/s,
   );
-  assert.match(
+  assert.doesNotMatch(
     estilos,
-    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*font-weight:\s*600/s,
+    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*background:\s*var\(--sky-2\)/s,
+  );
+  assert.doesNotMatch(
+    estilos,
+    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*border-radius:/s,
   );
   assert.doesNotMatch(estilos, /\.legal-related/);
 });
