@@ -93,6 +93,34 @@ test('ambos formularios incluyen la casilla y envían la aceptación explícita'
   assert.match(validacion, /Debes aceptar los Términos y Condiciones/);
 });
 
+test('el layout legal elimina la navegación redundante y marca la página activa', () => {
+  const layout = leer('../src/pages/legal/LegalPage.jsx');
+  const footer = leer('../src/components/AuthFooter.jsx');
+  const estilos = leer('../src/styles.css');
+
+  assert.doesNotMatch(layout, /legal-related/);
+  assert.doesNotMatch(layout, /También puede consultar/);
+  assert.doesNotMatch(layout, /LEGAL_LINKS/);
+  assert.match(layout, /<AuthFooter legal activePath=\{documento\.path\} \/>/);
+
+  // El footer distingue el enlace activo y no lo marca en el resto.
+  assert.match(footer, /activePath = null/);
+  assert.match(footer, /const activo = activePath === enlace\.to/);
+  assert.match(footer, /className=\{activo \? 'login-footer-link--active' : undefined\}/);
+  assert.match(footer, /aria-current=\{activo \? 'page' : undefined\}/);
+
+  // El resaltado queda acotado a la variante legal y usa tokens del sistema.
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*background:\s*var\(--sky-2\)[^}]*color:\s*var\(--enlace\)[^}]*border-radius:\s*var\(--radius-sm\)/s,
+  );
+  assert.match(
+    estilos,
+    /\.login-footer\.login-footer--legal \.login-footer-links a\.login-footer-link--active\s*\{[^}]*font-weight:\s*600/s,
+  );
+  assert.doesNotMatch(estilos, /\.legal-related/);
+});
+
 test('cada documento legal reutiliza el layout común', () => {
   for (const archivo of ['PoliticaPrivacidad.jsx', 'TerminosCondiciones.jsx', 'AvisoLegal.jsx', 'PoliticaTecnologiasWeb.jsx']) {
     assert.match(leer(`../src/pages/legal/${archivo}`), /LegalPage/);
@@ -108,7 +136,7 @@ test('las páginas legales comparten ancho y superficies redondeadas', () => {
   assert.match(layout, /className="legal-shell"/);
   assert.match(layout, /className="legal-topbar"/);
   assert.match(layout, /className="legal-main"/);
-  assert.match(layout, /<AuthFooter legal \/>/);
+  assert.match(layout, /<AuthFooter legal activePath=\{documento\.path\} \/>/);
   assert.match(footer, /legal = false/);
   assert.match(footer, /login-footer--legal/);
 

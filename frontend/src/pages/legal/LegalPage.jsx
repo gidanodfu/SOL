@@ -2,7 +2,7 @@
 import { Link } from 'react-router-dom';
 import AuthFooter from '../../components/AuthFooter';
 import LogoMunicipal from '../../components/LogoMunicipal';
-import { LEGAL_DOCUMENTS, LEGAL_LINKS } from '../../legal/documentos';
+import { LEGAL_DOCUMENTS } from '../../legal/documentos';
 
 /**
  * Layout común de los documentos legales públicos. Las tres superficies
@@ -10,7 +10,6 @@ import { LEGAL_DOCUMENTS, LEGAL_LINKS } from '../../legal/documentos';
  */
 export default function LegalPage({ documentKey, children }) {
   const documento = LEGAL_DOCUMENTS[documentKey];
-  const otros = LEGAL_LINKS.filter((enlace) => enlace.to !== documento.path);
 
   return (
     <div className="legal-page">
@@ -42,17 +41,10 @@ export default function LegalPage({ documentKey, children }) {
             </header>
 
             <div className="legal-content">{children}</div>
-
-            <nav className="legal-related" aria-label="Otros documentos legales">
-              <span>También puede consultar:</span>
-              {otros.map((enlace) => (
-                <Link key={enlace.to} to={enlace.to}>{enlace.label}</Link>
-              ))}
-            </nav>
           </article>
         </main>
 
-        <AuthFooter legal />
+        <AuthFooter legal activePath={documento.path} />
       </div>
     </div>
   );

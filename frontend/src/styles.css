@@ -1738,20 +1738,6 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .legal-content th,
 .legal-content td { padding: 9px 10px; vertical-align: top; }
 .legal-content td { overflow-wrap: anywhere; }
-.legal-related {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 32px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-  color: var(--text-2);
-  font-size: 13px;
-}
-.legal-related span { width: 100%; font-weight: 600; }
-.legal-related a { color: var(--enlace); text-decoration: none; }
-.legal-related a:hover { text-decoration: underline; }
-
 /* Footer de las páginas legales: misma superficie y ancho que el encabezado y
    la tarjeta documental. Sin escudo, porque ya aparece en el encabezado. */
 .login-footer.login-footer--legal {
@@ -1772,6 +1758,15 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   flex: 0 1 auto;
   justify-content: center;
   gap: 0.15rem 1.5rem;
+}
+/* Página legal en consulta: fondo suave y color de enlace, sin convertirse
+   en un botón principal. El padding base del enlace ya equilibra el área. */
+.login-footer.login-footer--legal .login-footer-links a.login-footer-link--active {
+  background: var(--sky-2);
+  color: var(--enlace);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
 }
 
 /* ---------- Responsive (auth) ---------- */

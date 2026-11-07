@@ -13,7 +13,7 @@ import LogoMunicipal from './LogoMunicipal';
  * encabezado y su tarjeta documental. En ambas variantes el escudo ya está en
  * la cabecera, por lo que se omite en el pie para evitar duplicarlo.
  */
-export default function AuthFooter({ rounded = false, legal = false }) {
+export default function AuthFooter({ rounded = false, legal = false, activePath = null }) {
   const superficie = rounded || legal;
   const clases = ['login-footer'];
   if (rounded) clases.push('login-footer--rounded');
@@ -24,11 +24,20 @@ export default function AuthFooter({ rounded = false, legal = false }) {
       <div className="login-footer-inner">
         {!superficie && <LogoMunicipal className="login-footer-logo" />}
         <nav className="login-footer-links" aria-label="Documentos legales">
-          {LEGAL_LINKS.map((enlace) => (
-            <Link key={enlace.to} to={enlace.to}>
-              {enlace.label}
-            </Link>
-          ))}
+          {LEGAL_LINKS.map((enlace) => {
+            const activo = activePath === enlace.to;
+
+            return (
+              <Link
+                key={enlace.to}
+                to={enlace.to}
+                className={activo ? 'login-footer-link--active' : undefined}
+                aria-current={activo ? 'page' : undefined}
+              >
+                {enlace.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </footer>
