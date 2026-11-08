@@ -3,7 +3,7 @@ openapi: 3.0.3
 
 info:
   title: API Sistema de Empleo — Municipalidad Distrital de José Leonardo Ortiz (SOL)
-  version: 1.4.8
+  version: 1.5.4
   description: |
     Especificación generada a partir de la revisión del código real del backend
     (CodeIgniter 4.7, PHP 8.2+, MySQL) y de sus rutas en `app/Config/Routes.php`.

@@ -1,6 +1,6 @@
 # Requerimientos del Sistema de Empleo — MDJLO
 
-> Sincronizado con SOL **1.4.8** (2026-11-02). El cuerpo describe el
+> Sincronizado con SOL **1.5.4** (2026-11-07). El cuerpo describe el
 > comportamiento vigente; los anexos conservan decisiones y cambios históricos.
 
 Documento de especificación que rige el desarrollo. Los códigos (RF-XX, RN-XX, RT-XX,

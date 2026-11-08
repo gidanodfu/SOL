@@ -1,6 +1,6 @@
 # Matriz de cumplimiento — Sistema de Empleo MDJLO
 
-> Sincronizada con SOL **1.4.8** (2026-11-02). Refleja el comportamiento
+> Sincronizada con SOL **1.5.4** (2026-11-07). Refleja el comportamiento
 > implementado en `backend/`, `frontend/`, migraciones y pruebas.
 
 Estado por código de requerimiento y dónde está implementado (endpoint de la API /

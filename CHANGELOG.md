@@ -16,6 +16,22 @@ oficial es la del archivo raíz `VERSION`.
 - Se conservan el backend, el frontend, las migraciones, los seeds, los datos y
   las pruebas funcionales sin cambios.
 
+## [1.5.4] — 2026-11-07
+
+### Cambiado
+
+- Rediseño unificado de la barra lateral en Administración (incluye moderador y
+  solo lectura) y Empresa: panel blanco independiente con borde sutil, radios y
+  sombra, sin divisores horizontales entre categorías.
+- El estado activo usa fondo azul muy claro, texto e icono institucionales y
+  mayor peso, conservando la paleta de SOL.
+- El pie de usuario se presenta como tarjeta suave y el cierre de sesión se
+  adapta al fondo claro.
+- El comportamiento responsive del drawer móvil, el contraído de escritorio y
+  la navegación por teclado se mantienen.
+- La versión oficial del proyecto pasa de `1.4.8` a `1.5.4`; la página Acerca de
+  sigue leyendo el archivo raíz `VERSION` a través de Vite.
+
 ## [1.4.8] — 2026-11-02
 
 ### Añadido
@@ -184,6 +200,7 @@ oficial es la del archivo raíz `VERSION`.
 
 - Primera versión estable del Sistema de Empleo MDJLO.
 
+[1.5.4]: #154--2026-11-07
 [1.4.8]: #148--2026-11-02
 [1.1.0]: #110--2026-11-01
 [1.0.1]: #101--2026-10-31

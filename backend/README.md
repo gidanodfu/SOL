@@ -100,7 +100,7 @@ operaciones en `docs/operaciones.md`.
 ## Documentación de la API
 
 - `public/swagger/openapi.yaml` — especificación OpenAPI 3.0.3 completa (89 rutas /
-  107 operaciones, versión 1.4.8). Incluye rate limits (`429`), rate limiting
+  107 operaciones, versión 1.5.4). Incluye rate limits (`429`), rate limiting
   configurable de CV, validación de teléfono y respuestas de error saneadas.
   Abrir `public/swagger/index.html` (Swagger UI por CDN).
 - `docs/auditoria-backend.md` — auditoría de seguridad/calidad con nota de vigencia y

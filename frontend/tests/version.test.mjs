@@ -35,8 +35,8 @@ test('rechaza versiones ausentes o con formato inválido', () => {
 
 test('el archivo VERSION es la fuente única de la versión oficial', () => {
   const version = leer('../../VERSION').trim();
-  assert.equal(version, '1.4.8');
-  assert.equal(formatSystemVersion(version), '1.4.8 ESTABLE');
+  assert.equal(version, '1.5.4');
+  assert.equal(formatSystemVersion(version), '1.5.4 ESTABLE');
 });
 
 test('Vite incorpora la versión al bundle y no queda en package.json', () => {

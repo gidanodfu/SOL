@@ -1,6 +1,6 @@
 # Operaciones de SOL (desarrollo local)
 
-> Documentación operativa sincronizada con SOL **1.4.8**. Describe únicamente el
+> Documentación operativa sincronizada con SOL **1.5.4**. Describe únicamente el
 > entorno local de desarrollo; el despliegue productivo queda fuera del repositorio.
 
 Docker es la única vía oficial. Los comandos de aplicación se ejecutan dentro de

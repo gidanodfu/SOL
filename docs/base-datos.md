@@ -1,6 +1,6 @@
 # Base de datos y migraciones
 
-> Sincronizado con SOL **1.4.8** (2026-11-02).
+> Sincronizado con SOL **1.5.4** (2026-11-07).
 
 Documento de referencia del esquema MySQL real de SOL. La fuente de verdad son
 las migraciones de `backend/app/Database/Migrations/`; este documento las

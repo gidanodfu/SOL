@@ -26,7 +26,7 @@ empresas, postulaciones con CV y trazabilidad de contrataciones.
 > La distribución local no debe utilizarse directamente como configuración de
 > producción.
 
-**Versión actual:** `1.4.8` (fuente única: `VERSION`).
+**Versión actual:** `1.5.4` (fuente única: `VERSION`).
 
 ## 1. Características principales
 
