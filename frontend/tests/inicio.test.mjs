@@ -34,7 +34,7 @@ test('la raíz redirige a /inicio para visitantes y conserva los paneles por rol
   assert.doesNotMatch(login, /desde \|\| RUTA_BIENVENIDA_PUBLICA/);
 });
 
-test('la navbar es mínima: marca, buscar empleo y tema', () => {
+test('la navbar es mínima: marca y cambio de tema, sin acceso duplicado', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
   const navbar = pagina.slice(
     pagina.indexOf('<header className="inicio-nav">'),
@@ -47,11 +47,14 @@ test('la navbar es mínima: marca, buscar empleo y tema', () => {
   assert.match(navbar, /to="\/inicio"/);
   assert.match(navbar, /Empleo MDJLO/);
   assert.match(navbar, /Sistema de intermediación laboral/);
-  assert.match(navbar, /to="\/postulante\/buscar"/);
-  assert.match(navbar, /Buscar empleo/);
   assert.match(navbar, /<BotonTema \/>/);
+  assert.doesNotMatch(navbar, /postulante\/buscar|Buscar empleo/);
   assert.doesNotMatch(navbar, /to="\/login"|to="\/registro"|Mi panel/);
   assert.doesNotMatch(pagina, /<img[^>]+sol-logo\.png/);
+
+  // El acceso principal a las ofertas sigue en el segundo contenedor.
+  assert.match(pagina, /to="\/postulante\/buscar" className="inicio-cta"/);
+  assert.match(pagina, /Explorar ofertas laborales/);
 });
 
 test('el hero conserva el mensaje institucional sin tarjetas de funcionalidades', () => {
@@ -122,7 +125,7 @@ test('la sección ¿Cómo funciona? aparece antes de la presentación institucio
   );
 });
 
-test('la sección ¿Cómo funciona? presenta tres pasos y el acceso para empresas', () => {
+test('la sección ¿Cómo funciona? presenta solo los tres pasos', () => {
   const pagina = leer('../src/pages/inicio/Inicio.jsx');
 
   assert.match(pagina, /¿Cómo funciona\?/);
@@ -136,10 +139,12 @@ test('la sección ¿Cómo funciona? presenta tres pasos y el acceso para empresa
   assert.match(pagina, /Registra tus datos personales y experiencia profesional/);
   assert.match(pagina, /Postula/);
   assert.match(pagina, /Envía tu candidatura y consulta el estado de tus postulaciones\./);
-  assert.match(pagina, /¿Representas a una empresa\?/);
-  assert.match(pagina, /Incorpora oportunidades laborales y encuentra talento\./);
-  assert.match(pagina, /to="\/registro-empresa">Acceso para empresas/);
+  assert.doesNotMatch(pagina, /¿Representas a una empresa\?|Acceso para empresas/);
+  assert.doesNotMatch(pagina, /Incorpora oportunidades laborales y encuentra talento/);
   assert.match(pagina, /PASOS\.map/);
+  // El acceso empresarial vive en el segundo contenedor.
+  assert.match(pagina, /to="\/registro-empresa">Registrar empresa/);
+  assert.match(pagina, /aria-label="Iniciar sesión como empleador">Iniciar sesión/);
   assert.doesNotMatch(pagina, /lucide-react/);
 });
 
@@ -242,6 +247,6 @@ test('los estilos usan tokens del sistema y definen adaptación responsive', () 
     /\.inicio-acceso-enlaces--trabajadores a:active,\s*\.inicio-acceso-enlaces--empleadores a:active\s*\{/s,
   );
   assert.match(estilos, /\.inicio-acceso-divisor\s*\{[^}]*border-top:\s*1px solid var\(--line\)/s);
-  assert.doesNotMatch(estilos, /inicio-capacidades|inicio-como|\.inicio-grupo/);
+  assert.doesNotMatch(estilos, /inicio-capacidades|inicio-como|\.inicio-grupo|\.inicio-nav-link|\.inicio-empresas/);
   assert.doesNotMatch(estilos, /--navy:\s*#/);
 });

@@ -37,9 +37,6 @@ export default function Inicio() {
         </Link>
 
         <nav className="inicio-nav-acciones" aria-label="Accesos principales">
-          <Link to="/postulante/buscar" className="inicio-nav-link">
-            Buscar empleo
-          </Link>
           <BotonTema />
         </nav>
       </header>
@@ -61,11 +58,6 @@ export default function Inicio() {
             </li>
           ))}
         </ol>
-
-        <p className="inicio-empresas">
-          ¿Representas a una empresa? Incorpora oportunidades laborales y encuentra talento.{' '}
-          <Link to="/registro-empresa">Acceso para empresas</Link>
-        </p>
       </section>
 
       <main className="inicio-main">
