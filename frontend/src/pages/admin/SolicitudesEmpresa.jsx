@@ -194,6 +194,8 @@ function DetalleSolicitud({ solicitud, puedeGestionar, alCerrar, alCambio, alGen
       titulo: 'Rechazar solicitud',
       mensaje: 'El motivo se notificará a la empresa.',
       etiqueta: 'Motivo del rechazo',
+      multilinea: true,
+      placeholder: 'Describe detalladamente el motivo del rechazo...',
       min: 1,
       textoConfirmar: 'Rechazar',
       variante: 'peligro',
