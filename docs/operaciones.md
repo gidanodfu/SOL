@@ -27,11 +27,21 @@ Variables principales:
 | Seguridad | `encryption.key`, `jwt.secret`, `jwt.accessExpiresMinutes`, `jwt.refreshExpiresDays`, `INITIAL_ADMIN_*` |
 | Almacenamiento | `storage.driver`, `storage.bucket`, `s3.*` |
 | Correo | `RESEND_*`, `email.*`, `activacion.expiraDias` |
+| Identidad DNI/RUC | `apisperu.baseURL`, `apisperu.token`, `apisperu.timeout` (solo backend) |
 | Google/Turnstile | `google.clientId`, `turnstile.*`, `VITE_*` |
 | Rate limiting de CV | `cvRateLimit.*` |
 
 No incluya secretos en Git. `deploy/runtime/backend.env` se genera con permisos
 `600` y contiene solo las variables que el backend necesita.
+
+### APIsPERU (DNI/RUC)
+
+- `apisperu.token` es privado y solo lo recibe el backend.
+- `apisperu.baseURL` y `apisperu.timeout` se configuran en el `.env` local.
+- Sin token, las consultas devuelven un error controlado; no hay fallback a
+  otros proveedores.
+- Detalle de normalización, errores y migración en
+  `docs/integraciones/apisperu.md`.
 
 
 ### Cloudflare Turnstile

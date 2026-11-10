@@ -13,6 +13,13 @@ oficial es la del archivo raíz `VERSION`.
   dominios públicos y los stages `prod` de los Dockerfiles.
 - Se consolida `deploy/compose.yaml` como único stack de desarrollo.
 - La documentación, `.env.example` y la CI describen únicamente el entorno local.
+- La consulta de DNI/RUC se centraliza en APIsPERU mediante `ApisperuClient`,
+  con configuración exclusiva del backend (`apisperu.baseURL`, `apisperu.token`,
+  `apisperu.timeout`). Se retiran JSON.pe, Decolecta y sus variables.
+- El comprobante `dni_token` incluye la identidad verificada (nombres y
+  apellidos) y el registro la persiste en lugar de los datos del navegador.
+- La solicitud empresarial reutiliza también APIsPERU para el RUC y mantiene los
+  datos comerciales del proveedor como fuente de verdad.
 - Se conservan el backend, el frontend, las migraciones, los seeds, los datos y
   las pruebas funcionales sin cambios.
 

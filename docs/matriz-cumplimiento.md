@@ -151,7 +151,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 
 ## Pendientes / recomendados
 
-- **Configuración opcional en .env**: SMTP (`email.*`) para las notificaciones de aprobación/rechazo, token de SUNAT (`sunat.token`) para verificar RUC y Google (`google.clientId` + `VITE_GOOGLE_CLIENT_ID`).
+- **Configuración opcional en .env**: SMTP (`email.*`) para las notificaciones de aprobación/rechazo, token de APIsPERU (`apisperu.token`) para verificar DNI y RUC y Google (`google.clientId` + `VITE_GOOGLE_CLIENT_ID`).
 - **WhatsApp de notificaciones** (aprobación/rechazo) todavía no integrado; hoy solo correo. Opcional.
 - **Supabase Storage real**: conectar credenciales (driver `supabase`) y re-verificar
   subida + URL firmada; el entorno local usa driver `local` por defecto.

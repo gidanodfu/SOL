@@ -112,7 +112,7 @@ prepare_backend_env() {
 
     # Lista explícita: el backend no recibe credenciales de MySQL root,
     # credenciales iniciales ni variables de Vite.
-    grep -E '^(CI_ENVIRONMENT|APP_URL|TZ|app\.|cors\.|DB_HOST|DB_PORT|DB_DATABASE|DB_USER|DB_PASSWORD|DB_DRIVER|DB_PREFIX|encryption\.|jwt\.|storage\.|s3\.|sunat\.token|jsonpe\.token|RESEND_|email\.|google\.clientId|turnstile\.|VITE_TURNSTILE_SITE_KEY|activacion\.|cvRateLimit\.)' "$ENV_FILE" > "$backend_env"
+    grep -E '^(CI_ENVIRONMENT|APP_URL|TZ|app\.|cors\.|DB_HOST|DB_PORT|DB_DATABASE|DB_USER|DB_PASSWORD|DB_DRIVER|DB_PREFIX|encryption\.|jwt\.|storage\.|s3\.|apisperu\.|RESEND_|email\.|google\.clientId|turnstile\.|VITE_TURNSTILE_SITE_KEY|activacion\.|cvRateLimit\.)' "$ENV_FILE" > "$backend_env"
     chmod 600 "$backend_env"
     export BACKEND_ENV_FILE="$backend_env"
 }

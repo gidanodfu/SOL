@@ -18,7 +18,7 @@ fallos=0
 check_code() { nombre="$1"; esperado="$2"; real="$3"; if [ "$real" = "$esperado" ]; then printf 'OK   %-52s %s\n' "$nombre" "$real"; else printf 'FAIL %-52s %s (esperado %s)\n' "$nombre" "$real" "$esperado"; fallos=$((fallos + 1)); fi; }
 
 token_dni() {
-    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1"
+    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"nombres"=>"Prueba","apellidos"=>"Seguridad","iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1"
 }
 
 TA=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d '{"username":"admin","password":"Admin123!"}' | tok)
@@ -56,9 +56,15 @@ check_code "fecha contrataciones inválida" 422 "$CODE"
 CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$B/api/empresa/ofertas" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d '{"puesto":"Fecha mala","categoria_id":1,"tipo_empleo":"tiempo_completo","ubicacion":"Pimentel","vacantes":1,"remuneracion":"1000.00","formacion_requerida":"Secundaria completa","experiencia_requerida":"Sin experiencia","fecha_cierre":"2026-02-31","habilidades":["Excel"],"descripcion":"Descripción","funciones":"Funciones","requisitos":"Requisitos"}')
 check_code "fecha oferta inválida" 422 "$CODE"
 
-paso "6. mass assignment en registro: rol/estado manipulados se ignoran"
+paso "6. mass assignment en registro: rol/estado manipulados se ignoran y la identidad sale del comprobante"
 DNI=$((10000000 + RANDOM % 89999999))
-curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d "{\"dni\":\"$DNI\",\"nombres\":\"Prueba\",\"apellidos\":\"Seguridad\",\"email\":\"seguridad.$DNI@example.pe\",\"telefono\":\"9$DNI\",\"password\":\"Clave12345!\",\"password2\":\"Clave12345!\",\"terms_accepted\":true,\"rol\":\"admin\",\"estado\":\"inactivo\",\"dni_token\":\"$(token_dni "$DNI")\"}" | python3 -c 'import sys,json;d=json.load(sys.stdin)["data"]["usuario"];print("rol:",d["rol"])'
+curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d "{\"dni\":\"$DNI\",\"nombres\":\"Hackeado\",\"apellidos\":\"Manipulado\",\"email\":\"seguridad.$DNI@example.pe\",\"telefono\":\"9$DNI\",\"password\":\"Clave12345!\",\"password2\":\"Clave12345!\",\"terms_accepted\":true,\"rol\":\"admin\",\"estado\":\"inactivo\",\"dni_token\":\"$(token_dni "$DNI")\"}" | python3 -c '
+import sys, json
+d = json.load(sys.stdin)["data"]["usuario"]
+real = (d["rol"], d["nombres"], d["apellidos"])
+esperado = ("postulante", "Prueba", "Seguridad")
+print("OK   rol y nombres canónicos" if real == esperado else "FAIL rol o nombres manipulables: " + str(real))
+'
 
 paso "7. rate limit público en /verificar-ruc (ráfaga 5)"
 for i in 1 2 3 4 5 6; do

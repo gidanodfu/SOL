@@ -186,6 +186,30 @@ class AuthService
     }
 
     /**
+     * Identidad canónica incluida en el comprobante de verificación DNI.
+     *
+     * @param array<string, mixed> $verificacion
+     *
+     * @return array{nombres: string, apellidos: string}
+     */
+    private function identidadVerificada(array $verificacion): array
+    {
+        $nombres   = trim((string) ($verificacion['nombres'] ?? ''));
+        $apellidos = trim((string) ($verificacion['apellidos'] ?? ''));
+
+        if ($nombres === '' || $apellidos === ''
+            || mb_strlen($nombres) > 100 || mb_strlen($apellidos) > 100) {
+            throw ApiException::validacion(
+                'La verificación del DNI no contiene una identidad válida. Vuelve a consultar el documento.',
+                ['La verificación del DNI no contiene una identidad válida. Vuelve a consultar el documento.'],
+                ['dni_token' => 'La verificación del DNI no contiene una identidad válida. Vuelve a consultar el documento.'],
+            );
+        }
+
+        return ['nombres' => $nombres, 'apellidos' => $apellidos];
+    }
+
+    /**
      * IP del cliente para el `remoteip` de Turnstile. Null si no está disponible.
      */
     private function ipCliente(): ?string
@@ -297,6 +321,12 @@ class AuthService
                 ['dni_token' => 'Debe verificar el DNI antes de crear la cuenta.'],
             );
         }
+
+        // La identidad canónica viaja firmada en el comprobante: los nombres
+        // que envíe el navegador se ignoran y nunca se persisten.
+        $identidad = $this->identidadVerificada($verificacion);
+        $datos['nombres']   = $identidad['nombres'];
+        $datos['apellidos'] = $identidad['apellidos'];
 
         $turnstileToken = $datos['turnstile_token'] ?? null;
         if ($turnstileToken !== null && ! is_string($turnstileToken)) {

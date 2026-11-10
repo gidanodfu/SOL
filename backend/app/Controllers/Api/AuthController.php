@@ -112,7 +112,11 @@ class AuthController extends BaseApiController
         }
 
         $datos = (new DniService())->consultar($dni);
-        $datos['dni_token'] = service('jwtService')->crearTokenVerificacionDni($dni);
+        $datos['dni_token'] = service('jwtService')->crearTokenVerificacionDni(
+            $dni,
+            $datos['nombres'],
+            $datos['apellidos'],
+        );
 
         return $this->ok($datos, 'DNI verificado.');
     }

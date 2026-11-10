@@ -151,7 +151,8 @@ Ejecútelo dos veces: una para `jwt.secret` y otra para `encryption.key`.
 | Seguridad | `encryption.key`, `jwt.secret`, `jwt.accessExpiresMinutes`, `jwt.refreshExpiresDays`, `INITIAL_ADMIN_*` |
 | Almacenamiento | `storage.driver`, `storage.bucket`, `s3.*` |
 | Rate limiting de CV | `cvRateLimit.*` |
-| Servicios externos | `sunat.token`, `jsonpe.token`, `RESEND_*`, `email.*`, `google.clientId`, `turnstile.*` |
+| Identidad DNI/RUC | `apisperu.baseURL`, `apisperu.token`, `apisperu.timeout` (solo backend) |
+| Servicios externos | `RESEND_*`, `email.*`, `google.clientId`, `turnstile.*` |
 | Frontend público | `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_TURNSTILE_SITE_KEY` |
 
 El backend consume un archivo filtrado, `deploy/runtime/backend.env`, generado

@@ -3374,8 +3374,11 @@ paths:
       operationId: verificarRuc
       summary: Verificar RUC en SUNAT
       description: |
-        Consulta el RUC en SUNAT (token `sunat.token`) y autocompleta `razon_social`,
+        Consulta el RUC en SUNAT a través de APIsPERU (configuración
+        `apisperu.*` en el backend) y autocompleta `razon_social`,
         `nombre_comercial` y `direccion` para el formulario de solicitud.
+        Los datos comerciales definitivos se vuelven a consultar al crear la
+        solicitud; el cliente no los impone.
       requestBody:
         required: true
         content:
@@ -3901,9 +3904,11 @@ paths:
       operationId: verificarDni
       summary: Verificar DNI para autocompletar el registro
       description: |
-        Consulta el DNI en el proveedor configurado y devuelve los datos
+        Consulta el DNI en RENIEC a través de APIsPERU y devuelve los datos
         disponibles junto con `dni_token`, que el registro usa para acreditar la
-        verificación. Requiere 8 dígitos y está limitado por IP.
+        verificación. El comprobante incluye la identidad canónica (nombres y
+        apellidos) y el registro la persiste, ignorando los nombres enviados
+        por el navegador. Requiere 8 dígitos y está limitado por IP.
       requestBody:
         required: true
         content:

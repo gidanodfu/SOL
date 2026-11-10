@@ -91,7 +91,7 @@ final class TurnstileFlowsTest extends TestCase
             'password'       => 'Clave123!',
             'password2'      => 'Clave123!',
             'terms_accepted' => true,
-            'dni_token'      => $jwt->crearTokenVerificacionDni('12345678'),
+            'dni_token'      => $jwt->crearTokenVerificacionDni('12345678', 'Ana', 'Torres'),
             'turnstile_token' => 'token-invalido',
         ];
 

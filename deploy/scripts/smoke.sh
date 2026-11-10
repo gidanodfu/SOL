@@ -40,8 +40,9 @@ alguna aserción o respuesta falla. No toca `sol_dev_*`, no usa la base de
 desarrollo y no publica puertos.
 
 Sin argumentos ejecuta la lista segura (excluye test_desarrollo_nuevo.sh porque
-depende de SUNAT y de un RUC real). Puede solicitar esa suite explícitamente;
-requiere `sunat.token`/`jsonpe.token` reales en el `.env` y acceso externo.
+depende de APIsPERU, de un RUC real y de un token válido). Puede solicitar esa
+suite explícitamente; requiere `apisperu.token` real en el `.env` y acceso
+externo.
 Requiere `dev.sh build` o construye la imagen de pruebas automáticamente.
 USAGE
         exit 0
@@ -121,10 +122,10 @@ turnstile.enabled=false
 TZ=America/Lima
 EOF
 
-# La suite externa de SUNAT/RUC solo se ejecuta cuando se solicita por nombre.
+# La suite externa de APIsPERU (DNI/RUC) solo se ejecuta cuando se solicita por nombre.
 case " $TESTS " in
     *test_desarrollo_nuevo.sh*)
-        for key in sunat.token jsonpe.token; do
+        for key in apisperu.baseURL apisperu.token apisperu.timeout; do
             value=$(env_get "$key")
             [ -n "$value" ] && printf '%s=%s\n' "$key" "$value" >> "$TEST_ENV"
         done
