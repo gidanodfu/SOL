@@ -61,7 +61,7 @@ La aplicación opera sobre **MariaDB 11.4.13 LTS** con el driver `MySQLi`, sin c
 | 18 | Smoke HTTP contra datos migrados | `./deploy/scripts/test.sh http` | PASS — 10/10 |
 | 19 | E2E con Chromium contra datos migrados | `./deploy/scripts/test.sh e2e` | PASS — 34/34 |
 | 19b | E2E con escritura de perfil en base desechable | `E2E_WRITES=1 test.sh e2e` | PASS — 35/35 |
-| 20 | CI workflow | GitHub Actions run `43107972526` | PASS — 7/7 jobs en success |
+| 20 | CI workflow | GitHub Actions runs `43107972526`, `43109044353` | PASS — 7/7 jobs en success |
 | 20b | Jobs CI (PHP, frontend, MariaDB, compatibilidad, smoke, E2E, gate) | revisión de dependencias | PASS estático |
 La tabla `migrations` se compara por `version`, `class`, `namespace` y `group`.
 Se excluyen `id`, `time` y `batch` porque dependen del historial de ejecución de
@@ -81,7 +81,7 @@ con todas sus columnas.
 | Rollback de migraciones | **CERRADA** | Rollback deja solo `migrations`; re-migración restaura 28 tablas y restricciones |
 | Cobertura E2E de escrituras | **CERRADA** | 35 comprobaciones; edición de perfil persiste y se restaura en base desechable; resto de escrituras cubiertas por smoke/API |
 | APIsPERU | **CERRADA POR MOCK / INTEGRACIÓN REAL BLOCKED** | `test_apisperu_mock.sh` valida DNI/RUC, token canónico y persistencia; no se usó token real |
-| CI remoto | **CERRADA** | Run `43107972526` sobre `acd46dd`: 7/7 jobs success |
+| CI remoto | **CERRADA** | Runs `43107972526`/`43109044353`: 7/7 jobs success en ambos |
 | Validación productiva | **BLOCKED / NOT APPLICABLE** | El repositorio solo contiene el stack de desarrollo local |
 
 ### Tabla 28: `migrations`
@@ -145,6 +145,13 @@ Reglas críticas verificadas: ofertas vencidas fuera de búsqueda, bloqueo de po
 - CI multi-job para cualquier rama: PHP, frontend, MariaDB, compatibilidad MySQL→MariaDB, smoke y E2E, con artifacts y gate final.
 - E2E en imagen propia con Chromium Headless Shell; navegador fuera del repositorio.
 - No se modificaron datos de producción ni volúmenes históricos.
+
+### CI posterior a esta validación
+
+Las ejecuciones `43107972526`/`43109044353` validaron el pipeline multi-job
+anterior. Los ajustes posteriores de `queue: max`, `upload-artifact` v7.0.2 y
+la protección de `.env` no se han publicado; su estado remoto es **BLOCKED**
+hasta un push y una ejecución real sobre el commit actualizado.
 
 ### Producción
 

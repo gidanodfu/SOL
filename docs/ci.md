@@ -34,11 +34,15 @@ Las credenciales son sintéticas y las genera
 ```yaml
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
+  queue: max
   cancel-in-progress: false
 ```
 
-Cada referencia tiene su cola. Un push nuevo **no cancela** la ejecución
-pendiente; espera su turno. Esto conserva la evidencia de ejecuciones previas.
+Cada referencia tiene su propia cola. `queue: max` permite hasta **100
+ejecuciones pendientes** en el mismo grupo; cuando la cola está llena, las
+ejecuciones adicionales se cancelan. El orden es FIFO según el momento en que
+cada ejecución empezó a esperar. Un push nuevo no cancela la ejecución en
+curso ni la pendiente anterior.
 
 ## 4. Jobs
 
@@ -81,7 +85,8 @@ No se imprime ningún secreto. `.env` está en `.gitignore` y excluido de Docker
 
 ## 7. Artifacts
 
-Cada job publica con `if: always()` y retención de 7 días:
+Cada job publica con `if: always()` y retención de 7 días. La acción está
+fijada por SHA a `actions/upload-artifact` **v7.0.2** (Node 24).
 
 | Artifact | Contenido |
 |---|---|
@@ -111,10 +116,20 @@ gh run watch <run-id> --repo gidanodfu/SOL
 
 ## 9. Reproducción local
 
-```bash
-cp .env.example .env
-bash .github/scripts/prepare-ci-env.sh   # opcional: mismo entorno sintético
+El script `.github/scripts/prepare-ci-env.sh` **se niega a sobrescribir** un
+`.env` existente. Para reproducir CI sin tocar la configuración real, use un
+worktree o clon temporal:
 
+```bash
+git worktree add /tmp/sol-ci <rama>
+cd /tmp/sol-ci
+bash .github/scripts/prepare-ci-env.sh
+```
+
+Si ya dispone de un `.env` local válido, no ejecute el script: use directamente
+los comandos de prueba con su configuración.
+
+```bash
 ./deploy/scripts/test.sh php-lint
 ./deploy/scripts/test.sh validation
 ./deploy/scripts/test.sh backend
@@ -169,16 +184,25 @@ autorización y permisos de administración.
 
 ## 12. Estado remoto
 
-Validado en GitHub Actions sobre el commit `acd46dd`, rama
-`refactor/mariadb-migration`:
+Las ejecuciones remotas `43107972526` (`acd46dd`) y `43109044353` (`f41af56`)
+terminaron con los **7 jobs en success**. Ambas validaron el pipeline anterior.
 
-- Run: `43107972526`.
-- Resultado: **success**.
-- Jobs: PHP, Frontend, MariaDB, Compatibilidad, Smoke, E2E y Validación global,
-  todos en `success`.
+Los cambios de concurrencia (`queue: max`), `upload-artifact` v7.0.2 y la
+protección de `.env` **no están validados todavía en GitHub Actions**: el
+workflow modificado no se ha publicado. El estado de esta configuración es
+**BLOCKED** hasta hacer push y comprobar una ejecución real sobre el commit
+actualizado.
 
-Futuras ejecuciones deben comprobarse en **Actions → CI SOL**. El YAML por sí
-solo no se considera evidencia de CI remoto.
+Futuras ejecuciones deben revisarse en **Actions → CI SOL**. Un YAML válido o
+una ejecución anterior no sustituyen la comprobación remota del commit nuevo.
+
+### Nota sobre actionlint
+
+`actionlint` 1.7.12 no reconoce todavía la clave `queue` del bloque
+`concurrency` (desfase de su esquema respecto a GitHub). El workflow completo
+pasa `actionlint` al retirar esa clave; el resto de jobs, `needs`, acciones y
+artifacts no presentan errores. La sintaxis `queue: max` está documentada por
+GitHub y se mantiene.
 
 ## 13. Producción
 

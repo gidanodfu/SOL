@@ -8,10 +8,11 @@ on:
 permissions:
   contents: read
 
-# Cola por referencia: no se cancela una ejecución pendiente. Un push nuevo
-# espera su turno para que la evidencia anterior no se pierda.
+# Cola FIFO por referencia: hasta 100 ejecuciones pendientes. Si la cola se
+# llena, las adicionales se cancelan; no se cancela la ejecución en curso.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
+  queue: max
   cancel-in-progress: false
 
 jobs:
@@ -46,7 +47,7 @@ jobs:
 
       - name: Publicar evidencias PHP
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         with:
           name: php-logs
           path: artifacts/php
@@ -74,7 +75,7 @@ jobs:
 
       - name: Publicar evidencias frontend
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         with:
           name: frontend-logs
           path: artifacts/frontend
@@ -131,7 +132,7 @@ jobs:
 
       - name: Publicar evidencias MariaDB
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         with:
           name: mariadb-logs
           path: artifacts/mariadb
@@ -160,7 +161,7 @@ jobs:
 
       - name: Publicar evidencias de comparación
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         with:
           name: compatibility-evidence
           path: artifacts/compatibility
@@ -188,7 +189,7 @@ jobs:
 
       - name: Publicar evidencias smoke
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         with:
           name: smoke-logs
           path: artifacts/smoke
@@ -232,7 +233,7 @@ jobs:
 
       - name: Publicar evidencias E2E
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact v7.0.2
         with:
           name: e2e-evidence
           path: artifacts/e2e

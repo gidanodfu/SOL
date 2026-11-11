@@ -2,6 +2,11 @@
 # Prepara un .env sintético y efímero para CI. Nunca lee el .env real.
 set -euo pipefail
 
+if [ -e .env ]; then
+    echo "ERROR: .env ya existe; no se sobrescribe. Use un clon limpio o un worktree temporal para CI." >&2
+    exit 1
+fi
+
 cp .env.example .env
 sed -i \
     -e 's|^CI_ENVIRONMENT=.*|CI_ENVIRONMENT=development|' \
