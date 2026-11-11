@@ -169,10 +169,16 @@ autorización y permisos de administración.
 
 ## 12. Estado remoto
 
-El workflow está validado localmente con `actionlint` y ejecuciones locales.
-**La ejecución remota permanece `BLOCKED`** hasta publicar un commit y
-comprobar una ejecución real en GitHub Actions. El dictamen de CI remoto no se
-considera aprobado solo por validar el YAML.
+Validado en GitHub Actions sobre el commit `acd46dd`, rama
+`refactor/mariadb-migration`:
+
+- Run: `43107972526`.
+- Resultado: **success**.
+- Jobs: PHP, Frontend, MariaDB, Compatibilidad, Smoke, E2E y Validación global,
+  todos en `success`.
+
+Futuras ejecuciones deben comprobarse en **Actions → CI SOL**. El YAML por sí
+solo no se considera evidencia de CI remoto.
 
 ## 13. Producción
 

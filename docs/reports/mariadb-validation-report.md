@@ -6,7 +6,7 @@
 
 La aplicación opera sobre **MariaDB 11.4.13 LTS** con el driver `MySQLi`, sin cambios en los contratos de la API ni en las reglas de negocio. Se validaron instalación limpia, importación de datos desde MySQL 8.0.46, restricciones críticas, JSON, columnas generadas, smoke funcional y E2E con Chromium.
 
-**Dictamen: APROBADO CON OBSERVACIONES.** No se detectaron fallos bloqueantes de integridad ni regresiones funcionales. La comparación determinista fila a fila quedó cerrada con 0 diferencias sobre 28 tablas y el rollback fue validado sin limitaciones. Permanecen abiertas únicamente la CI remota (no publicada) y la integración real con APIsPERU/producción.
+**Dictamen: APROBADO CON OBSERVACIONES.** No se detectaron fallos bloqueantes de integridad ni regresiones funcionales. La comparación determinista fila a fila quedó cerrada con 0 diferencias sobre 28 tablas, el rollback fue validado sin limitaciones y CI remoto pasó en GitHub Actions. Permanecen abiertas únicamente la integración real con APIsPERU y la configuración productiva.
 
 ## B. Cambios realizados
 
@@ -61,7 +61,7 @@ La aplicación opera sobre **MariaDB 11.4.13 LTS** con el driver `MySQLi`, sin c
 | 18 | Smoke HTTP contra datos migrados | `./deploy/scripts/test.sh http` | PASS — 10/10 |
 | 19 | E2E con Chromium contra datos migrados | `./deploy/scripts/test.sh e2e` | PASS — 34/34 |
 | 19b | E2E con escritura de perfil en base desechable | `E2E_WRITES=1 test.sh e2e` | PASS — 35/35 |
-| 20 | CI workflow | `.github/workflows/ci.yml` + `actionlint` | PASS local; remoto BLOCKED |
+| 20 | CI workflow | GitHub Actions run `43107972526` | PASS — 7/7 jobs en success |
 | 20b | Jobs CI (PHP, frontend, MariaDB, compatibilidad, smoke, E2E, gate) | revisión de dependencias | PASS estático |
 La tabla `migrations` se compara por `version`, `class`, `namespace` y `group`.
 Se excluyen `id`, `time` y `batch` porque dependen del historial de ejecución de
@@ -81,7 +81,7 @@ con todas sus columnas.
 | Rollback de migraciones | **CERRADA** | Rollback deja solo `migrations`; re-migración restaura 28 tablas y restricciones |
 | Cobertura E2E de escrituras | **CERRADA** | 35 comprobaciones; edición de perfil persiste y se restaura en base desechable; resto de escrituras cubiertas por smoke/API |
 | APIsPERU | **CERRADA POR MOCK / INTEGRACIÓN REAL BLOCKED** | `test_apisperu_mock.sh` valida DNI/RUC, token canónico y persistencia; no se usó token real |
-| CI remoto | **BLOCKED** | Workflow actualizado; no se publicó la rama en esta fase |
+| CI remoto | **CERRADA** | Run `43107972526` sobre `acd46dd`: 7/7 jobs success |
 | Validación productiva | **BLOCKED / NOT APPLICABLE** | El repositorio solo contiene el stack de desarrollo local |
 
 ### Tabla 28: `migrations`
@@ -157,11 +157,10 @@ definirse en la infraestructura de cada institución.
 
 ## H. Limitaciones
 
-1. **CI remoto no ejecutado**: el workflow multi-job está actualizado para `push`/`pull_request`/`workflow_dispatch` en cualquier rama, validado con `actionlint` y jobs locales, pero no se publicó en esta fase; queda `BLOCKED` hasta integrar la rama.
-2. **`test_desarrollo_nuevo.sh` no ejecutado contra APIsPERU real**: requiere token y RUC autorizados. La lógica del proveedor y la persistencia están cubiertas con `test_apisperu_mock.sh` y transporte simulado en PHPUnit; la integración real sigue `BLOCKED`.
-3. **E2E con integraciones externas desactivadas**: para evitar CAPTCHA/Google en headless se desactivaron temporalmente Turnstile y Google; se restauró `.env` al finalizar.
-4. **Cobertura E2E de escrituras**: se validó la edición de perfil con persistencia real en una base desechable; las demás escrituras (ofertas, postulaciones, selección, contratación) se cubren en smoke/API, no todas mediante clics en el navegador.
-5. **`deploy/compose.prod.yaml` no existe**: el repositorio solo mantiene el stack de desarrollo local. No hay una configuración productiva validada; desplegar requiere definir variables `DB_*`/`MARIADB_*`, red, TLS, respaldos y monitoreo.
+1. **`test_desarrollo_nuevo.sh` no ejecutado contra APIsPERU real**: requiere token y RUC autorizados. La lógica del proveedor y la persistencia están cubiertas con `test_apisperu_mock.sh` y transporte simulado en PHPUnit; la integración real sigue `BLOCKED`.
+2. **E2E con integraciones externas desactivadas**: para evitar CAPTCHA/Google en headless se desactivaron temporalmente Turnstile y Google; se restauró `.env` al finalizar.
+3. **Cobertura E2E de escrituras**: se validó la edición de perfil con persistencia real en una base desechable; las demás escrituras (ofertas, postulaciones, selección, contratación) se cubren en smoke/API, no todas mediante clics en el navegador.
+4. **`deploy/compose.prod.yaml` no existe**: el repositorio solo mantiene el stack de desarrollo local. No hay una configuración productiva validada; desplegar requiere definir variables `DB_*`/`MARIADB_*`, red, TLS, respaldos y monitoreo.
 
 ## I. Riesgos restantes
 
@@ -174,7 +173,7 @@ definirse en la infraestructura de cada institución.
 
 **APROBADO CON OBSERVACIONES.**
 
-No hay fallos bloqueantes de integridad, compatibilidad ni reglas de negocio en las pruebas ejecutadas. Las observaciones de la sección H impiden declarar una aprobación total sin reservas, especialmente por la CI remota y la integración real con APIsPERU/producción.
+No hay fallos bloqueantes de integridad, compatibilidad ni reglas de negocio en las pruebas ejecutadas. Las observaciones de la sección H impiden declarar una aprobación total sin reservas, especialmente por la integración real con APIsPERU y la ausencia de configuración productiva validada.
 
 ### Comandos de reproducción
 
