@@ -67,8 +67,8 @@ Servicios locales:
 
 ```
 Host ──127.0.0.1:5173──▶ frontend (Vite + hot reload)
-     ──127.0.0.1:8080──▶ backend (PHP Spark + MySQL)
-     ──127.0.0.1:3307──▶ db (MySQL 8)
+     ──127.0.0.1:8080──▶ backend (PHP Spark + MariaDB)
+     ──127.0.0.1:3307──▶ db (MariaDB 11.4)
      ──127.0.0.1:8082──▶ Adminer (perfil opcional "tools")
 ```
 
@@ -81,7 +81,7 @@ local; el frontend llama directamente a la API configurada en `VITE_API_URL`.
 |---|---|
 | Backend | CodeIgniter 4.7, PHP 8.4.27 |
 | Frontend | React 19, Vite 8, Node.js 22.23.4 |
-| Base de datos | MySQL 8.0.46 (driver `MySQLi`) |
+| Base de datos | MariaDB 11.4.13 LTS (driver `MySQLi`) |
 | Autenticación | JWT HS256 con refresh tokens rotativos |
 | Almacenamiento de CV | Local o Supabase Storage (S3) |
 | Contenedores | Docker Engine >= 24, Docker Compose >= 2.24 |
@@ -113,7 +113,7 @@ Solo se necesita:
 - Docker Compose v2 >= 2.24.
 
 En Windows se recomienda WSL2; los scripts también funcionan desde Git Bash.
-No es necesario instalar PHP, Composer, Node.js, npm, MySQL ni ninguna
+No es necesario instalar PHP, Composer, Node.js, npm, MariaDB ni ninguna
 dependencia de SOL en el host. Todo se ejecuta en contenedores.
 
 ## 6. Preparación del entorno
@@ -180,7 +180,7 @@ Accesos:
 
 - Frontend: <http://localhost:5173>
 - API: <http://localhost:8080>
-- MySQL: `127.0.0.1:3307`
+- MariaDB: `127.0.0.1:3307`
 - Adminer opcional: <http://localhost:8082> (`./deploy/scripts/dev.sh tools`)
 
 ## 9. Base de datos, migraciones y seeds
@@ -209,6 +209,11 @@ Fixtures de prueba (con confirmación explícita):
 ./deploy/scripts/dev.sh seed DatosMasivosSeeder --yes
 ```
 
+La base operativa es **MariaDB 11.4.13 LTS** con el driver `MySQLi`. El volumen
+histórico de MySQL (`sol_dev_mysql_data`) se conserva sin uso. El procedimiento
+de instalación limpia, actualización desde MySQL, respaldo y restauración está
+en [`docs/migracion-mariadb.md`](docs/migracion-mariadb.md).
+
 El catálogo de tablas, relaciones y orden de migraciones está en
 [`docs/base-datos.md`](docs/base-datos.md).
 
@@ -222,7 +227,7 @@ El catálogo de tablas, relaciones y orden de migraciones está en
 La API responde en <http://localhost:8080>; `GET /health` permite comprobar
 disponibilidad.
 
-### Conexión a MySQL desde DBeaver
+### Conexión a MariaDB desde DBeaver
 
 | Campo | Valor |
 |---|---|
@@ -258,7 +263,7 @@ contenedor con `./deploy/scripts/dev.sh db`.
 ./deploy/scripts/dev.sh shell [servicio]   # shell interactiva
 ./deploy/scripts/dev.sh exec <svc> <cmd>   # comando puntual
 ./deploy/scripts/dev.sh run <svc> <cmd>    # contenedor temporal
-./deploy/scripts/dev.sh db                 # cliente MySQL
+./deploy/scripts/dev.sh db                 # cliente MariaDB
 ./deploy/scripts/dev.sh tools              # Adminer
 ./deploy/scripts/dev.sh migrate            # migraciones pendientes
 ./deploy/scripts/dev.sh migration-status   # estado de migraciones
@@ -294,7 +299,8 @@ Validación y respaldos:
 ./deploy/scripts/test.sh backend    # PHPUnit
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP contra el stack activo
-./deploy/scripts/test.sh smoke      # integración aislada en MySQL temporal
+./deploy/scripts/test.sh smoke      # integración aislada en MariaDB temporal
+./deploy/scripts/test.sh e2e        # Chromium headless contra el stack activo
 ./deploy/scripts/test.sh validation # validación de variables y contexto Docker
 ```
 
@@ -304,7 +310,8 @@ El detalle de suites y responsabilidades está en [`tests/README.md`](tests/READ
 
 Volúmenes nombrados:
 
-- `sol_dev_mysql_data` — datos de MySQL.
+- `sol_dev_mariadb_data` — datos de MariaDB.
+- `sol_dev_mysql_data` — volumen histórico de MySQL; se conserva intacto y no se reutiliza.
 - `sol_dev_backend_writable` — caché, logs y archivos de escritura del backend.
 
 `dev.sh down` no elimina volúmenes. Para respaldar antes de una migración o
@@ -327,7 +334,7 @@ Si usa Supabase para CV, respalde también el bucket desde el proveedor.
 |---|---|
 | `Falta .env` | `cp .env.example .env` y completar valores. |
 | Puerto ocupado | Cambiar `DEV_API_PORT`, `DEV_FRONTEND_PORT` o `DEV_DB_PORT` en `.env` y actualizar `app.baseURL`/`VITE_API_URL`/`cors.allowedOrigins` si corresponde. |
-| Backend no healthy | `./deploy/scripts/dev.sh logs backend`; verificar credenciales de MySQL. |
+| Backend no healthy | `./deploy/scripts/dev.sh logs backend`; verificar credenciales de MariaDB. |
 | Migraciones pendientes | `./deploy/scripts/dev.sh migrate`. |
 | Base con datos inesperados | Revisar `./deploy/scripts/dev.sh db` y los respaldos locales. |
 | Frontend sin API | Confirmar `VITE_API_URL` y `cors.allowedOrigins`. |

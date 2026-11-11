@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Reporte Excel de empresa: autenticación, aislamiento por empresa, filtros y columnas.
-# Requiere MySQL migrado con SystemSeeder + DatosPruebaSeeder.
+# Requiere MariaDB migrado con SystemSeeder + DatosPruebaSeeder.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080

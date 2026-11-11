@@ -12,7 +12,7 @@ jobs:
   checks:
     name: Validación y pruebas
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         # actions/checkout v7.0.1, fijado por SHA oficial del repositorio.
@@ -63,6 +63,9 @@ jobs:
 
       - name: Smoke HTTP local
         run: ./deploy/scripts/test.sh http
+
+      - name: Pruebas E2E con Chromium
+        run: ./deploy/scripts/test.sh e2e
 
       - name: Smoke completo aislado
         run: ./deploy/scripts/test.sh smoke

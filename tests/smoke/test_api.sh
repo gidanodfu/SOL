@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Prueba de humo de la API (iteración 1). Requiere MySQL migrado y seed.
+# Prueba de humo de la API (iteración 1). Requiere MariaDB migrado y seed.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080

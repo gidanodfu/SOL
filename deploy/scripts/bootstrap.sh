@@ -55,7 +55,7 @@ compose_dev up -d db
 wait_for_service compose_dev db 90
 
 printf 'Comprobando que la base esté vacía...\n'
-HAS_USERS=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL'
+HAS_USERS=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot -N "$MARIADB_DATABASE"' <<'SQL'
 SELECT COUNT(*) FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_name = 'users';
 SQL
@@ -63,7 +63,7 @@ SQL
 HAS_USERS=$(printf '%s' "$HAS_USERS" | tr -d '[:space:]')
 
 if [ "${HAS_USERS:-0}" != "0" ]; then
-    USER_COUNT=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL'
+    USER_COUNT=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot -N "$MARIADB_DATABASE"' <<'SQL'
 SELECT COUNT(*) FROM users;
 SQL
 ) || die "No se pudo contar los usuarios existentes."
@@ -84,7 +84,7 @@ compose_dev run --rm -e INITIAL_ADMIN_USERNAME -e INITIAL_ADMIN_PASSWORD backend
 
 ADMIN_USER=$(env_get INITIAL_ADMIN_USERNAME)
 ADMIN_USER_SQL=$(printf '%s' "$ADMIN_USER" | sed "s/\\\\/\\\\\\\\/g; s/'/''/g")
-ADMIN_COUNT=$(printf "SELECT COUNT(*) FROM users WHERE username='%s' AND rol='admin' AND estado='activo';\n" "$ADMIN_USER_SQL" | compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"') || die "No se pudo verificar el administrador inicial."
+ADMIN_COUNT=$(printf "SELECT COUNT(*) FROM users WHERE username='%s' AND rol='admin' AND estado='activo';\n" "$ADMIN_USER_SQL" | compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot -N "$MARIADB_DATABASE"') || die "No se pudo verificar el administrador inicial."
 ADMIN_COUNT=$(printf '%s' "$ADMIN_COUNT" | tr -d '[:space:]')
 [ "${ADMIN_COUNT:-0}" = "1" ] || die "No se pudo verificar el administrador inicial. Revise los logs del backend."
 

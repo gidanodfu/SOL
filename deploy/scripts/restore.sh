@@ -64,20 +64,28 @@ printf 'Base de datos: %s\n' "$(env_get DB_DATABASE)"
 printf 'Asegurando base de datos y creando respaldo de seguridad...\n'
 compose_dev up -d db
 wait_for_service compose_dev db 90
-"$ROOT/deploy/scripts/backup.sh" dev
+PREV_TABLES=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot -N "$MARIADB_DATABASE"' <<'SQL' | tr -d '[:space:]'
+SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE();
+SQL
+) || die "No se pudo inspeccionar la base antes de restaurar."
+if [ "${PREV_TABLES:-0}" -gt 0 ]; then
+    "$ROOT/deploy/scripts/backup.sh" dev
+else
+    warn "La base está vacía; se omite el respaldo de seguridad previo."
+fi
 
 printf 'Deteniendo servicios de aplicación (sin tocar el volumen)...\n'
 compose_dev stop backend frontend 2>/dev/null || true
 
 printf 'Restaurando base de datos...\n'
-compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot "$MYSQL_DATABASE"' < "$DB_FILE"
+compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot "$MARIADB_DATABASE"' < "$DB_FILE"
 
-TABLE_COUNT=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL' | tr -d '[:space:]'
+TABLE_COUNT=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot -N "$MARIADB_DATABASE"' <<'SQL' | tr -d '[:space:]'
 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE();
 SQL
 ) || die "No se pudo verificar la estructura restaurada."
 [ "${TABLE_COUNT:-0}" -gt 0 ] || die "La restauración no dejó tablas en la base de destino."
-USER_COUNT=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -N "$MYSQL_DATABASE"' <<'SQL' | tr -d '[:space:]'
+USER_COUNT=$(compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot -N "$MARIADB_DATABASE"' <<'SQL' | tr -d '[:space:]'
 SELECT COUNT(*) FROM users;
 SQL
 ) || die "No se pudo verificar la tabla users después de restaurar."
@@ -87,10 +95,12 @@ if [ -n "$FILES_FILE" ]; then
     VOL=$(volume_name backend_writable)
     docker volume inspect "$VOL" >/dev/null 2>&1 || die "No existe el volumen $VOL; no se restauraron archivos."
     printf 'Restaurando archivos en %s...\n' "$VOL"
+    FILES_NAME=$(basename "$FILES_FILE")
+    FILES_DIR=$(CDPATH= cd -- "$(dirname -- "$FILES_FILE")" && pwd)
     docker run --rm \
         -v "$VOL:/dest" \
-        -v "$(CDPATH= cd -- "$(dirname -- "$FILES_FILE")" && pwd):/backup:ro" \
-        alpine:3.21 sh -c 'tar xzf "/backup/$(basename "$FILES_FILE")" -C /dest'
+        -v "$FILES_DIR:/backup:ro" \
+        alpine:3.21 tar xzf "/backup/$FILES_NAME" -C /dest
     printf 'Archivos restaurados. Los archivos no presentes en el respaldo no se eliminan.\n'
 fi
 

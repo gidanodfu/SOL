@@ -62,8 +62,8 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 - **RF-01** Login con identificador exclusivo por rol: RUC para empresa, DNI para
   postulante y usuario/correo para administración, siempre con contraseña. Las cuentas
   Google de postulante conservan su ingreso por Google.
-- **RF-02** Autenticación procesada por el backend CI4 contra MySQL.
-- **RF-03** MySQL es la fuente de verdad de identidad, rol, estado y relaciones.
+- **RF-02** Autenticación procesada por el backend CI4 contra MariaDB.
+- **RF-03** MariaDB es la fuente de verdad de identidad, rol, estado y relaciones.
 - **RF-04** El rol se identifica automáticamente desde la BD; el usuario no puede elegirlo.
 - **RF-05** El backend verifica rol y permisos antes de cada operación. En el ámbito
   municipal, `perfil_municipal` (ADMIN/MODERADOR/SOLO LECTURA) se evalúa en cada request.
@@ -246,8 +246,8 @@ seguimiento de resultados; además de ferias, capacitaciones, difusión y report
 
 ## 7. Requerimientos no funcionales (RNF)
 
-- **RNF-01** Arquitectura desacoplada React → API REST → CI4 → MySQL.
-- **RNF-02/03/04** Backend PHP/CI4, frontend React, datos en MySQL.
+- **RNF-01** Arquitectura desacoplada React → API REST → CI4 → MariaDB.
+- **RNF-02/03/04** Backend PHP/CI4, frontend React, datos en MariaDB.
 - **RNF-05** Seguridad: hash, sesiones, permisos, rutas, validación, rate limiting, acceso
   no autorizado.
 - **RNF-06** Integridad referencial.
@@ -292,8 +292,8 @@ supervisa y reporta.
 
 ## 10. CV y almacenamiento externo (RT-CV)
 
-- **RT-CV-01** CV en servicio externo S3-compatible (Supabase Storage), no en MySQL.
-- **RT-CV-02** MySQL guarda metadatos y referencia (postulante, nombre original, MIME,
+- **RT-CV-01** CV en servicio externo S3-compatible (Supabase Storage), no en MariaDB.
+- **RT-CV-02** MariaDB guarda metadatos y referencia (postulante, nombre original, MIME,
   tamaño, ruta del objeto, fecha de actualización).
 - **RT-CV-03** Actualización gestionada por backend (sustitución/versión + referencia). Un postulante mantiene un único CV activo; las versiones anteriores se conservan inactivas.
 - **RT-CV-04** Acceso controlado por CI4: la empresa solo ve CV de postulaciones autorizadas.
@@ -306,7 +306,7 @@ supervisa y reporta.
   persistidas en `rate_limit_contadores`; una carga simultánea por postulante mediante
   bloqueo de aplicación. Al superar un límite responde `429` con `Retry-After`.
 
-Decisión: MySQL = datos y referencias; Supabase Storage = archivos; CI4 controla permisos;
+Decisión: MariaDB = datos y referencias; Supabase Storage = archivos; CI4 controla permisos;
 React solo interfaz. `frontend/public/` únicamente recursos públicos (logos, iconos).
 
 ## 11. Arquitectura y organización (RT-01..RT-06)
@@ -314,12 +314,12 @@ React solo interfaz. `frontend/public/` únicamente recursos públicos (logos, i
 - **RT-01** Frontend y backend como proyectos independientes; comunicación solo por API REST.
 - **RT-02** Frontend independiente: interfaces, componentes, formularios, navegación,
   validaciones de presentación, consumo de API, estado de UI. Sin reglas de negocio ni
-  credenciales MySQL.
+  credenciales MariaDB.
 - **RT-03** Backend independiente: auth, autorización, reglas de negocio, validación,
-  gestión de usuarios/roles/empresas/ofertas/postulaciones, acceso MySQL, respuestas API.
+  gestión de usuarios/roles/empresas/ofertas/postulaciones, acceso MariaDB, respuestas API.
 - **RT-04** Frontend solo presentación y API; la restricción visual no reemplaza la del backend.
 - **RT-05** Backend implementa las reglas de negocio (¿puede esta empresa modificar esta oferta?).
-- **RT-06** Solo el backend habla con MySQL.
+- **RT-06** Solo el backend habla con MariaDB.
 
 ### Estructura frontend
 ```
@@ -372,7 +372,7 @@ backend/  app/{Config,Controllers,Models,Services,Repositories,Entities,Filters,
 
 > Frontend y backend son proyectos completamente independientes. React es responsable
 > exclusivamente de la presentación y consumo de la API. CodeIgniter es responsable de la
-> lógica de negocio, autenticación, autorización y acceso a datos. MySQL es la fuente de
+> lógica de negocio, autenticación, autorización y acceso a datos. MariaDB es la fuente de
 > verdad de la información persistente. Ninguna decisión crítica de seguridad o negocio
 > dependerá exclusivamente del frontend.
 
@@ -457,7 +457,7 @@ variables `.env`. La actualización del CV del 2026-11-02 sí añade la tabla
 - **Errores seguros**: toda excepción HTTP responde el sobre uniforme
   `{success, message, errors}`; los `500` usan un mensaje genérico y el detalle (SQL,
   rutas, stack traces) se registra solo en el log.
-- **Conexiones MySQL**: se mantiene la gestión nativa de CI4 (una conexión compartida por
+- **Conexiones MariaDB**: se mantiene la gestión nativa de CI4 (una conexión compartida por
   request vía `db_connect()`); no se implementó un pool personalizado.
 - **Metadescripciones por ruta** en el frontend (`SeoMeta`) con descripciones propias por
   página y `<meta name="description">` por defecto en `index.html`.

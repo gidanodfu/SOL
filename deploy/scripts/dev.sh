@@ -11,7 +11,7 @@ uso() {
 Uso: deploy/scripts/dev.sh <comando> [argumentos]
 
 Entorno de desarrollo aislado. Todos los comandos de aplicación se ejecutan
-dentro de contenedores; no se requiere PHP, Composer, Node.js ni MySQL en el host.
+dentro de contenedores; no se requiere PHP, Composer, Node.js ni MariaDB en el host.
 
   up                 Inicia el entorno local (construye si hace falta).
   up --no-build      Inicia sin reconstruir imágenes.
@@ -26,9 +26,9 @@ dentro de contenedores; no se requiere PHP, Composer, Node.js ni MySQL en el hos
   shell [servicio]   Abre una shell (por defecto backend).
   exec <svc> <cmd...> Ejecuta un comando en un contenedor en ejecución.
   run <svc> <cmd...>  Ejecuta un comando en un contenedor temporal.
-  db                 Abre el cliente MySQL dentro del contenedor db.
+  db                 Abre el cliente MariaDB dentro del contenedor db.
   tools              Inicia Adminer opcional en 127.0.0.1:8082.
-  test [objetivo]    Ejecuta test.sh (all|backend|frontend|http|smoke|validation).
+  test [objetivo]    Ejecuta test.sh (all|backend|frontend|http|smoke|e2e|validation).
   validate           Ejecuta validate.sh.
   migrate            Aplica migraciones pendientes en desarrollo.
   migration-status   Consulta el estado de las migraciones.
@@ -114,7 +114,7 @@ case "${1:-help}" in
         compose_dev run --rm "$servicio" "$@"
         ;;
     db)
-        compose_dev exec db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot "$MYSQL_DATABASE"'
+        compose_dev exec db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb -uroot "$MARIADB_DATABASE"'
         ;;
     tools)
         compose_dev --profile tools up -d adminer

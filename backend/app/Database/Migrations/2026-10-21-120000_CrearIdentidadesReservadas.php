@@ -43,9 +43,12 @@ class CrearIdentidadesReservadas extends Migration
         // para el mismo RUC incluso con peticiones simultáneas.
         if (! $this->db->fieldExists('ruc_reservado', 'solicitudes_empresa')) {
             $this->db->query(
+                // RTRIM: MariaDB rechaza una expresión generada que devuelve
+                // directamente una columna CHAR (depende de PAD_CHAR_TO_FULL_LENGTH).
+                // El RUC no tiene espacios de relleno, así que el valor es idéntico.
                 "ALTER TABLE solicitudes_empresa
                  ADD COLUMN ruc_reservado CHAR(11)
-                 GENERATED ALWAYS AS (CASE WHEN estado IN ('pendiente','aprobada') THEN ruc ELSE NULL END) STORED"
+                 GENERATED ALWAYS AS (CASE WHEN estado IN ('pendiente','aprobada') THEN RTRIM(ruc) ELSE NULL END) STORED"
             );
         }
 

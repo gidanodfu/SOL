@@ -1,6 +1,6 @@
 #!/bin/sh
 # Sube los CV ficticios del dataset masivo usando la API real de SOL.
-# Todo se ejecuta en Docker: no requiere PHP, Python, curl ni MySQL en el host.
+# Todo se ejecuta en Docker: no requiere PHP, Python, curl ni MariaDB en el host.
 set -eu
 
 . "$(dirname -- "$0")/../../deploy/scripts/lib/common.sh"

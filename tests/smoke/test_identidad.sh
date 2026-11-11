@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Identidad de acceso y unicidad global. Requiere MySQL migrado + seeds de prueba
+# Identidad de acceso y unicidad global. Requiere MariaDB migrado + seeds de prueba
 # y Turnstile deshabilitado en el .env de la raíz (igual que el resto de smoke tests).
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1

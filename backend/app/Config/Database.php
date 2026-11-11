@@ -22,6 +22,9 @@ class Database extends Config
     /**
      * The default database connection.
      *
+     * MariaDB 11.4 es compatible con el driver `MySQLi`; no se requiere un
+     * driver distinto. El esquema usa InnoDB, `utf8mb4` y `utf8mb4_general_ci`.
+     *
      * Reutilización de conexiones: CI4 no necesita un pool propio. `db_connect()`
      * / `Database::connect()` cachean una única conexión por grupo durante cada
      * request (los repositorios y modelos la comparten), y PHP-FPM la libera al

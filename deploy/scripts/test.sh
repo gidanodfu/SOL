@@ -7,7 +7,7 @@ TARGET=all
 BUILD=1
 for arg in "$@"; do
     case "$arg" in
-        all|backend|frontend|http|smoke|validation) TARGET=$arg ;;
+        all|backend|frontend|http|smoke|validation|e2e) TARGET=$arg ;;
         --no-build) BUILD=0 ;;
         -h|--help)
             cat <<'USAGE'
@@ -19,7 +19,8 @@ Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host.
   backend     PHPUnit dentro del contenedor backend
   frontend    npm test + lint + build dentro del contenedor frontend
   http        smoke HTTP no destructivo contra el stack de desarrollo activo
-  smoke       suite de humo aislada en un MySQL temporal con esquema por suite
+  smoke       suite de humo aislada en un MariaDB temporal con esquema por suite
+  e2e         navegador Chromium headless contra el stack activo
   validation  validación de variables y del contexto Docker
 
 Opciones:
@@ -41,6 +42,11 @@ printf 'Validando configuración antes de las pruebas...\n'
 
 if [ "$TARGET" = "smoke" ]; then
     "$ROOT/deploy/scripts/smoke.sh" || exit $?
+    exit 0
+fi
+
+if [ "$TARGET" = "e2e" ]; then
+    "$ROOT/deploy/scripts/e2e.sh" || exit $?
     exit 0
 fi
 

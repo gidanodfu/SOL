@@ -6,7 +6,7 @@ info:
   version: 1.5.4
   description: |
     Especificación generada a partir de la revisión del código real del backend
-    (CodeIgniter 4.7, PHP 8.2+, MySQL) y de sus rutas en `app/Config/Routes.php`.
+    (CodeIgniter 4.7, PHP 8.2+, MariaDB) y de sus rutas en `app/Config/Routes.php`.
 
     Actualización 2026-11-02 (versión 1.4.8): rate limiting configurable de CV y
     retiro de la cuota mensual, endurecimiento de validaciones de escritura,
@@ -24,13 +24,13 @@ info:
       No incluye `data`. `errors` siempre es un arreglo de cadenas (puede ser `[]`).
       Códigos usados: `400`, `401`, `403`, `404`, `409`, `422`, `429`, `500`.
     * **Autenticación**: header `Authorization: Bearer <access_token>` (JWT HS256).
-      El rol y el estado `activo` del usuario se recargan desde MySQL en cada
+      El rol y el estado `activo` del usuario se recargan desde MariaDB en cada
       petición; no se confía en el `rol` del token.
     * **Roles**: los grupos de rutas aplican `rol:admin`, `rol:empresa` o
       `rol:postulante`. Un rol distinto recibe `403`.
     * **Perfiles municipales**: dentro de `rol=admin`, `perfil_municipal` puede ser
       `admin`, `moderador` o `solo_lectura`. El filtro central `permiso` aplica la matriz
-      de `AutorizacionMunicipalService` en cada petición; el perfil se recarga de MySQL y
+      de `AutorizacionMunicipalService` en cada petición; el perfil se recarga de MariaDB y
       no viaja como autoridad en el JWT. Un perfil sin el permiso recibe `403`.
     * **Importante (comportamiento real, no un error de esta documentación)**:
       el helper `sinContenido()` del backend responde **HTTP 200** (no 204) con
@@ -56,7 +56,7 @@ info:
       `segundos / capacidad`. No es una ventana fija de bloqueo: al agotar la ráfaga
       responde `429` con `Retry-After` (≈ `segundos / capacidad`) y habilita un intento por
       intervalo. La carga de CV usa además `CvRateLimiter` con **ventanas fijas
-      persistidas en MySQL** (usuario + IP) y un bloqueo por postulante; sus valores se
+      persistidas en MariaDB** (usuario + IP) y un bloqueo por postulante; sus valores se
       detallan en `POST /api/postulante/cv`.
     * **Teléfono**: los campos `telefono` de los cuerpos validados aceptan 9 u 11 dígitos
       (`^(?:\d{9}|\d{11})$`); el backend es la validación definitiva.
@@ -303,7 +303,7 @@ paths:
       summary: Datos de la cuenta autenticada
       description: |
         Devuelve el usuario público de la sesión. Acepta cualquier rol autenticado y
-        activo. El `rol` refleja el estado vigente en MySQL (se recarga en cada petición).
+        activo. El `rol` refleja el estado vigente en MariaDB (se recarga en cada petición).
       security:
         - bearerAuth: []
       responses:
@@ -2635,7 +2635,7 @@ paths:
         **Una carga simultánea por postulante**: si ya hay una operación en curso para
         el mismo postulante, responde `429` con `Retry-After: 1` sin consumir cupo.
         El rate limiting no sustituye la transacción ni la restricción única de
-        `cv_activos`; la integridad se mantiene en MySQL.
+        `cv_activos`; la integridad se mantiene en MariaDB.
 
         `message` de éxito: "CV cargado correctamente." en la primera carga y
         "CV actualizado correctamente." si ya existía un CV vigente.
@@ -4425,7 +4425,7 @@ components:
       bearerFormat: JWT
       description: |
         Access token JWT firmado HS256 (expiración por defecto 120 min). Debe enviarse el
-        header `Authorization: Bearer <token>`. El rol y el estado se recargan de MySQL en
+        header `Authorization: Bearer <token>`. El rol y el estado se recargan de MariaDB en
         cada petición. El refresh token se obtiene en `POST /api/auth/login` o
         `POST /api/auth/refresh` (no es un JWT; es una cadena de 64 caracteres hex).
 
@@ -5034,7 +5034,7 @@ components:
         remuneracion:
           type: string
           nullable: true
-          description: 'DECIMAL(10,2). MySQL lo entrega como cadena (p. ej. "1130.00").'
+          description: 'DECIMAL(10,2). El driver MySQLi lo entrega como cadena (p. ej. "1130.00").'
         vacantes:
           type: integer
         fecha_publicacion:

@@ -12,8 +12,8 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | Código | Estado | Ubicación |
 |---|---|---|
 | RF-01 Login | ✔ | `POST /api/auth/login`: empresa con RUC, postulante con DNI, admin con usuario/correo · login |
-| RF-02 Auth en backend CI4 vs MySQL | ✔ | `Services/AuthService`, `UserModel` |
-| RF-03 MySQL fuente de verdad | ✔ | JWT solo transporta id; rol/estado se recargan de BD (`JwtAuthFilter`) |
+| RF-02 Auth en backend CI4 vs MariaDB | ✔ | `Services/AuthService`, `UserModel` |
+| RF-03 MariaDB fuente de verdad | ✔ | JWT solo transporta id; rol/estado se recargan de BD (`JwtAuthFilter`) |
 | RF-04 Rol desde BD, no elegible | ✔ | columna `users.rol`; no editable por frontend |
 | RF-05 Control de acceso | ✔ | filtros `jwt` + `rol:...` + `permiso:...` por ruta |
 | RF-06 Cuentas activo/inactivo | ✔ | login bloqueado; admin activa/desactiva (`UsuariosController`, `EmpresasController`) |
@@ -96,7 +96,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 | RT-01/02/03 Independencia y responsabilidades | ✔ | `backend/` (CI4) y `frontend/` (React) separados; solo API REST |
 | RT-04 Frontend solo presentación | ✔ | sin reglas de negocio ni credenciales |
 | RT-05 Backend valida propiedad/permisos | ✔ | p. ej. ofertas/postulaciones/CV de la propia empresa |
-| RT-06 Solo backend habla con MySQL | ✔ | |
+| RT-06 Solo backend habla con MariaDB | ✔ | |
 | RT-07 Endpoints REST | ✔ | grupo `/api` en `Routes.php` |
 | RT-08 Respuestas uniformes | ✔ | `{success,message,data,errors}` vía `BaseApiController`/`ApiExceptionHandler` |
 | RT-09 Capas SOLID | ✔ | `Controllers → Services → Repositories → Models/Entities` |
@@ -109,7 +109,7 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 
 | Código | Estado | Ubicación |
 |---|---|---|
-| RT-CV-01/02 | ✔ | archivo en Supabase Storage; MySQL guarda metadatos (`cvs`) |
+| RT-CV-01/02 | ✔ | archivo en Supabase Storage; MariaDB guarda metadatos (`cvs`) |
 | RT-CV-03 | ✔ | cada carga crea versión y desactiva la anterior (`CvService`) |
 | RT-CV-04 | ✔ | empresa ve CV solo de postulaciones propias (`PostulacionService`) |
 | RT-CV-05 | ✔ | URL firmada generada por el backend (driver local = ruta interna autorizada) |
@@ -123,11 +123,11 @@ pantalla del frontend / regla en la base de datos). Estados: ✔ implementado,
 |---|---|---|
 | `password_hash` nunca en respuestas | ✔ | `UsuarioRepository::base()` con columnas explícitas; `GET /api/admin/usuarios` sin hash (RT-20) |
 | Rate limiting de autenticación | ✔ | token bucket CI4: login ráfaga 5 (1/60 s) por IP+identificador normalizado, solo fallos (reset en éxito); refresh/Google/registro ráfaga 10 (1/30 s) por IP (`ThrottleFilter`, `AuthService`) |
-| Rate limiting de subida de CV | ✔ | ventanas fijas en MySQL: por defecto 5/10 min y 20/hora por usuario, 10/10 min y 40/hora por IP (`CvRateLimiter`, `cvRateLimit.*`); una carga simultánea por postulante (`GET_LOCK`); `429` con `Retry-After` |
+| Rate limiting de subida de CV | ✔ | ventanas fijas en MariaDB: por defecto 5/10 min y 20/hora por usuario, 10/10 min y 40/hora por IP (`CvRateLimiter`, `cvRateLimit.*`); una carga simultánea por postulante (`GET_LOCK`); `429` con `Retry-After` |
 | Validación de teléfono 9 u 11 dígitos | ✔ | regla `telefono` en `Validador` (backend) + filtrado a dígitos y validación en el frontend |
 | Errores saneados | ✔ | `ApiExceptionHandler` responde JSON uniforme; `500` genérico con log interno; `429` con `Retry-After` |
 | Metadescripciones por ruta | ✔ | `frontend/src/components/SeoMeta.jsx` + `index.html` |
-| Conexión MySQL | ✔ | gestión nativa de CI4 (una conexión por request); sin pool personalizado |
+| Conexión MariaDB | ✔ | gestión nativa de CI4 (una conexión por request); sin pool personalizado |
 | Booleanos de activación estrictos | ✔ | `BaseApiController::booleanoEstricto`; `"false"` desactiva (antes el cast lo activaba) |
 | Fechas calendáricas | ✔ | reglas `fecha`/`fecha_hora` en `Validador` (rechaza `2026-13-01`) |
 | Enlaces de usuario solo `http(s)` | ✔ | `OportunidadService::validar` + `utils.esEnlaceSeguro` |

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Reglas de vigencia de ofertas y bloqueo por selección formal de empresa.
-# Se ejecuta dentro del contenedor de pruebas con un esquema MySQL aislado.
+# Se ejecuta dentro del contenedor de pruebas con un esquema MariaDB aislado.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080
