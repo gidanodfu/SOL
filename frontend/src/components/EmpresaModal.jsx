@@ -41,7 +41,9 @@ export default function EmpresaModal({ empresa, onCerrar }) {
               { etiqueta: 'Antigüedad en la plataforma', valor: empresa.antiguedad },
             ]}
           />
-          <PresenciaDigital datos={empresa} />
+          <div className="empresa-modal-presencia">
+            <PresenciaDigital datos={empresa} variante="detallada" />
+          </div>
           {empresa.info_adicional && (
             <div className="modal-seccion">
               <h3>Información adicional</h3>
