@@ -96,12 +96,14 @@ class CuotasCvYActivoUnico extends Migration
 
     public function down(): void
     {
-        if ($this->db->tableExists('cv_activos')) {
-            $this->forge->dropTable('cv_activos', true);
-        }
-
-        if ($this->db->tableExists(self::TABLA_CUOTAS)) {
-            $this->forge->dropTable(self::TABLA_CUOTAS, true);
-        }
+        // DROP directo: tableExists() cachea el estado anterior al RENAME de
+        // RateLimitCvYRetirarCuotas y puede dejar la tabla con el nombre nuevo.
+        // Ambas tablas y cv_activos pertenecen a esta migración.
+        $this->db->query(
+            'DROP TABLE IF EXISTS '
+            . $this->db->escapeIdentifiers('cv_activos') . ', '
+            . $this->db->escapeIdentifiers(self::TABLA_CUOTAS) . ', '
+            . $this->db->escapeIdentifiers(self::TABLA_CUOTAS . '_legado'),
+        );
     }
 }

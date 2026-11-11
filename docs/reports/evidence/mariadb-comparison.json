@@ -204,6 +204,19 @@
             "columnas": 9
         },
         {
+            "tabla": "migrations",
+            "filas_origen": 27,
+            "filas_destino": 27,
+            "identical": 27,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "version"
+            ],
+            "columnas": 7
+        },
+        {
             "tabla": "ofertas",
             "filas_origen": 3,
             "filas_destino": 3,
@@ -366,7 +379,7 @@
         "missing": 0,
         "extra": 0,
         "modified": 0,
-        "tablas": 27
+        "tablas": 28
     },
     "ok": true
 }

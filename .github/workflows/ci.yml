@@ -2,77 +2,289 @@ name: CI SOL
 
 on:
   push:
-    branches: [main, "feat/**"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Cola por referencia: no se cancela una ejecución pendiente. Un push nuevo
+# espera su turno para que la evidencia anterior no se pierda.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  checks:
-    name: Validación y pruebas
+  php:
+    name: PHP (sintaxis, PHPUnit y configuración)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - name: Checkout
-        # actions/checkout v7.0.1, fijado por SHA oficial del repositorio.
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
-      - name: Preparar entorno sintético de CI
-        shell: bash
+      - name: Preparar entorno sintético
+        run: bash .github/scripts/prepare-ci-env.sh
+
+      - name: Sintaxis de todos los archivos PHP
         run: |
-          # Credenciales exclusivas de CI. No se publican como artefactos:
-          # .env está excluido de Docker y de Git.
-          set -euo pipefail
-          cp .env.example .env
-          sed -i 's|^CI_ENVIRONMENT=.*|CI_ENVIRONMENT=development|' .env
-          sed -i 's|^COMPOSE_PROJECT_NAME=.*|COMPOSE_PROJECT_NAME=sol_dev|' .env
-          sed -i 's|^DB_PASSWORD=.*|DB_PASSWORD=ci-db-password-123456|' .env
-          sed -i 's|^DB_ROOT_PASSWORD=.*|DB_ROOT_PASSWORD=ci-root-password-654321|' .env
-          sed -i 's|^jwt\.secret=.*|jwt.secret=ci-jwt-0123456789abcdef0123456789abcdef0123456789abcdef|' .env
-          sed -i 's|^encryption\.key=.*|encryption.key=ci-encryption-fedcba9876543210fedcba9876543210|' .env
-          sed -i 's|^turnstile\.enabled=.*|turnstile.enabled=false|' .env
-          sed -i 's|^google\.clientId=.*|google.clientId=|' .env
-          sed -i 's|^VITE_GOOGLE_CLIENT_ID=.*|VITE_GOOGLE_CLIENT_ID=|' .env
-          sed -i 's|^APP_URL=.*|APP_URL=http://localhost:5173|' .env
-          sed -i 's|^app\.baseURL=.*|app.baseURL=http://localhost:8080/|' .env
-          sed -i 's|^cors\.allowedOrigins=.*|cors.allowedOrigins=http://localhost:5173|' .env
-          sed -i 's|^VITE_API_URL=.*|VITE_API_URL=http://localhost:8080|' .env
-          sed -i 's|^turnstile\.hostnames=.*|turnstile.hostnames=localhost,127.0.0.1|' .env
-          chmod 600 .env
+          mkdir -p artifacts/php
+          set -o pipefail
+          ./deploy/scripts/test.sh php-lint 2>&1 | tee artifacts/php/php-lint.log
 
-      - name: Validar scripts y configuración de desarrollo
-        run: ./deploy/scripts/validate.sh --dev
+      - name: Validación preventiva y contexto Docker
+        run: |
+          set -o pipefail
+          ./deploy/scripts/test.sh validation 2>&1 | tee artifacts/php/validation.log
 
-      - name: Validación preventiva y health interno
-        run: ./deploy/scripts/test.sh validation
+      - name: PHPUnit
+        run: |
+          set -o pipefail
+          ./deploy/scripts/test.sh backend 2>&1 | tee artifacts/php/phpunit.log
 
-      - name: Pruebas backend, frontend y build
-        run: ./deploy/scripts/test.sh all
+      - name: Publicar evidencias PHP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-logs
+          path: artifacts/php
+          if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Levantar stack de desarrollo aislado
-        run: ./deploy/scripts/dev.sh up --no-build
+  frontend:
+    name: Frontend (tests, lint y build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
-      - name: Aplicar esquema en base de desarrollo efímera
-        run: ./deploy/scripts/dev.sh migrate
+      - name: Preparar entorno sintético
+        run: bash .github/scripts/prepare-ci-env.sh
 
-      - name: Cargar datos de prueba en base efímera
-        run: ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes
+      - name: Tests, lint y build
+        run: |
+          mkdir -p artifacts/frontend
+          set -o pipefail
+          ./deploy/scripts/test.sh frontend 2>&1 | tee artifacts/frontend/frontend.log
 
-      - name: Auditoría de integridad MariaDB
-        run: ./deploy/scripts/test.sh audit
+      - name: Publicar evidencias frontend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-logs
+          path: artifacts/frontend
+          if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Smoke HTTP local
-        run: ./deploy/scripts/test.sh http
+  mariadb:
+    name: MariaDB (migraciones, seeds y auditoría)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
-      - name: Pruebas E2E con Chromium
-        run: ./deploy/scripts/test.sh e2e
+      - name: Preparar entorno sintético
+        run: bash .github/scripts/prepare-ci-env.sh
 
-      - name: Smoke completo aislado
-        run: ./deploy/scripts/test.sh smoke
+      - name: Levantar MariaDB 11.4.13
+        run: |
+          mkdir -p artifacts/mariadb
+          set -o pipefail
+          ./deploy/scripts/dev.sh up 2>&1 | tee artifacts/mariadb/up.log
 
-      - name: Detener stack de CI (conserva volúmenes efímeros)
+      - name: Aplicar migraciones desde cero
+        run: |
+          set -o pipefail
+          ./deploy/scripts/dev.sh migrate 2>&1 | tee artifacts/mariadb/migrate.log
+
+      - name: Cargar datos de prueba
+        run: |
+          set -o pipefail
+          ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes 2>&1 | tee artifacts/mariadb/seed.log
+
+      - name: Auditoría de integridad
+        run: |
+          set -o pipefail
+          ./deploy/scripts/test.sh audit 2>&1 | tee artifacts/mariadb/audit.log
+
+      - name: Smoke HTTP
+        run: |
+          set -o pipefail
+          ./deploy/scripts/test.sh http 2>&1 | tee artifacts/mariadb/http.log
+
+      - name: Compatibilidad MariaDB
+        run: |
+          set -o pipefail
+          ./deploy/scripts/smoke.sh test_mariadb_compat.sh 2>&1 | tee artifacts/mariadb/compat.log
+
+      - name: Detener stack
         if: always()
         run: ./deploy/scripts/dev.sh down
+
+      - name: Publicar evidencias MariaDB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb-logs
+          path: artifacts/mariadb
+          if-no-files-found: ignore
+          retention-days: 7
+
+  compatibility:
+    name: Compatibilidad MySQL 8.0 -> MariaDB 11.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Preparar entorno sintético
+        run: bash .github/scripts/prepare-ci-env.sh
+
+      - name: Importar y comparar 28 tablas
+        run: |
+          mkdir -p artifacts/compatibility
+          set -o pipefail
+          COMPAT_ARTIFACTS="$PWD/artifacts/compatibility" \
+            ./deploy/scripts/test.sh compatibility 2>&1 | tee artifacts/compatibility/compatibility.log
+
+      - name: Publicar evidencias de comparación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-evidence
+          path: artifacts/compatibility
+          if-no-files-found: ignore
+          retention-days: 7
+
+  smoke:
+    name: Smoke (29 suites)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Preparar entorno sintético
+        run: bash .github/scripts/prepare-ci-env.sh
+
+      - name: Smoke completo aislado
+        run: |
+          mkdir -p artifacts/smoke
+          set -o pipefail
+          ./deploy/scripts/test.sh smoke 2>&1 | tee artifacts/smoke/smoke.log
+
+      - name: Publicar evidencias smoke
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-logs
+          path: artifacts/smoke
+          if-no-files-found: ignore
+          retention-days: 7
+
+  e2e:
+    name: E2E (Chromium Headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Preparar entorno sintético
+        run: bash .github/scripts/prepare-ci-env.sh
+
+      - name: Levantar stack con MariaDB temporal
+        run: |
+          mkdir -p artifacts/e2e
+          set -o pipefail
+          ./deploy/scripts/dev.sh up 2>&1 | tee artifacts/e2e/up.log
+
+      - name: Migrar y sembrar datos desechables
+        run: |
+          set -o pipefail
+          ./deploy/scripts/dev.sh migrate 2>&1 | tee artifacts/e2e/migrate.log
+          ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes 2>&1 | tee artifacts/e2e/seed.log
+
+      - name: E2E lectura y escritura
+        run: |
+          set -o pipefail
+          E2E_WRITES=1 E2E_ARTIFACTS="$PWD/artifacts/e2e" \
+            ./deploy/scripts/test.sh e2e 2>&1 | tee artifacts/e2e/e2e.log
+
+      - name: Detener stack
+        if: always()
+        run: ./deploy/scripts/dev.sh down
+
+      - name: Publicar evidencias E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-evidence
+          path: artifacts/e2e
+          if-no-files-found: ignore
+          retention-days: 7
+
+  gate:
+    name: CI Validación global
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [php, frontend, mariadb, compatibility, smoke, e2e]
+    steps:
+      - name: Verificar jobs obligatorios
+        env:
+          RESULT_PHP: ${{ needs.php.result }}
+          RESULT_FRONTEND: ${{ needs.frontend.result }}
+          RESULT_MARIADB: ${{ needs.mariadb.result }}
+          RESULT_COMPATIBILITY: ${{ needs.compatibility.result }}
+          RESULT_SMOKE: ${{ needs.smoke.result }}
+          RESULT_E2E: ${{ needs.e2e.result }}
+        run: |
+          fallos=0
+          for par in \
+            "php:$RESULT_PHP" \
+            "frontend:$RESULT_FRONTEND" \
+            "mariadb:$RESULT_MARIADB" \
+            "compatibility:$RESULT_COMPATIBILITY" \
+            "smoke:$RESULT_SMOKE" \
+            "e2e:$RESULT_E2E"; do
+            nombre=${par%%:*}
+            resultado=${par#*:}
+            printf '%-16s %s\n' "$nombre" "$resultado"
+            if [ "$resultado" != "success" ]; then
+              echo "::error::El job obligatorio '$nombre' terminó como '$resultado'."
+              fallos=$((fallos + 1))
+            fi
+          done
+
+          {
+            echo "## Resultado CI SOL"
+            echo ""
+            echo "| Job | Resultado |"
+            echo "|---|---|"
+            echo "| PHP | $RESULT_PHP |"
+            echo "| Frontend | $RESULT_FRONTEND |"
+            echo "| MariaDB | $RESULT_MARIADB |"
+            echo "| Compatibilidad | $RESULT_COMPATIBILITY |"
+            echo "| Smoke | $RESULT_SMOKE |"
+            echo "| E2E | $RESULT_E2E |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$fallos" -gt 0 ]; then
+            echo "::error::$fallos job(s) obligatorio(s) no finalizaron correctamente."
+            exit 1
+          fi

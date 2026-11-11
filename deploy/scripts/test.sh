@@ -7,11 +7,11 @@ TARGET=all
 BUILD=1
 for arg in "$@"; do
     case "$arg" in
-        all|backend|frontend|http|smoke|validation|e2e|audit) TARGET=$arg ;;
+        all|backend|frontend|http|smoke|validation|e2e|audit|compatibility|php-lint) TARGET=$arg ;;
         --no-build) BUILD=0 ;;
         -h|--help)
             cat <<'USAGE'
-Uso: deploy/scripts/test.sh [all|backend|frontend|http|smoke|validation] [--no-build]
+Uso: deploy/scripts/test.sh [all|backend|frontend|http|smoke|e2e|audit|compatibility|php-lint|validation] [--no-build]
 
 Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host.
 
@@ -22,6 +22,8 @@ Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host.
   smoke       suite de humo aislada en un MariaDB temporal con esquema por suite
   e2e         navegador Chromium headless contra el stack activo
   audit       auditoría de integridad de la base MariaDB activa
+  compatibility  MySQL 8.0.46 -> MariaDB 11.4.13 con comparación determinista
+  php-lint    sintaxis de todos los archivos PHP
   validation  validación de variables y del contexto Docker
 
 Opciones:
@@ -48,6 +50,21 @@ fi
 
 if [ "$TARGET" = "e2e" ]; then
     "$ROOT/deploy/scripts/e2e.sh" || exit $?
+    exit 0
+fi
+
+if [ "$TARGET" = "compatibility" ]; then
+    "$ROOT/deploy/scripts/compare-mysql-mariadb.sh" || exit $?
+    exit 0
+fi
+
+if [ "$TARGET" = "php-lint" ]; then
+    PHP_IMAGE=sol_backend_test:local
+    if ! docker image inspect "$PHP_IMAGE" >/dev/null 2>&1; then
+        docker build --target test -t "$PHP_IMAGE" -f "$ROOT/backend/Dockerfile" "$ROOT" >/dev/null
+    fi
+    docker run --rm -v "$ROOT/backend:/src:ro" -v "$ROOT/tests/tools:/tools:ro" "$PHP_IMAGE" \
+        sh -c 'find /src/app /src/tests /tools -name "*.php" -exec php -l {} \;'
     exit 0
 fi
 

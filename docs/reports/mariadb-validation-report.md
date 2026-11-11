@@ -6,7 +6,7 @@
 
 La aplicación opera sobre **MariaDB 11.4.13 LTS** con el driver `MySQLi`, sin cambios en los contratos de la API ni en las reglas de negocio. Se validaron instalación limpia, importación de datos desde MySQL 8.0.46, restricciones críticas, JSON, columnas generadas, smoke funcional y E2E con Chromium.
 
-**Dictamen: APROBADO CON OBSERVACIONES.** No se detectaron fallos bloqueantes de integridad ni regresiones funcionales. La comparación determinista fila a fila quedó cerrada con 0 diferencias y el rollback fue validado con una limitación documentada. Permanecen abiertas únicamente la CI remota (no publicada) y la integración real con APIsPERU/producción.
+**Dictamen: APROBADO CON OBSERVACIONES.** No se detectaron fallos bloqueantes de integridad ni regresiones funcionales. La comparación determinista fila a fila quedó cerrada con 0 diferencias sobre 28 tablas y el rollback fue validado sin limitaciones. Permanecen abiertas únicamente la CI remota (no publicada) y la integración real con APIsPERU/producción.
 
 ## B. Cambios realizados
 
@@ -61,9 +61,15 @@ La aplicación opera sobre **MariaDB 11.4.13 LTS** con el driver `MySQLi`, sin c
 | 18 | Smoke HTTP contra datos migrados | `./deploy/scripts/test.sh http` | PASS — 10/10 |
 | 19 | E2E con Chromium contra datos migrados | `./deploy/scripts/test.sh e2e` | PASS — 34/34 |
 | 19b | E2E con escritura de perfil en base desechable | `E2E_WRITES=1 test.sh e2e` | PASS — 35/35 |
-| 20 | CI workflow | `.github/workflows/ci.yml` | PASS local; remoto NOT RUN |
-| 21 | Comparación determinista fila a fila | `compare_database_data.php` | PASS — 27 tablas, 0 faltantes/extra/modificadas |
-| 22 | Rollback de migraciones | `spark migrate:rollback` en MariaDB temporal | PASS con limitación — re-migración correcta |
+| 20 | CI workflow | `.github/workflows/ci.yml` + `actionlint` | PASS local; remoto BLOCKED |
+| 20b | Jobs CI (PHP, frontend, MariaDB, compatibilidad, smoke, E2E, gate) | revisión de dependencias | PASS estático |
+La tabla `migrations` se compara por `version`, `class`, `namespace` y `group`.
+Se excluyen `id`, `time` y `batch` porque dependen del historial de ejecución de
+cada motor, no del contenido del esquema. El resto de las 27 tablas se compara
+con todas sus columnas.
+
+| 21 | Comparación determinista fila a fila | `compare_database_data.php` | PASS — 28 tablas, 0 faltantes/extra/modificadas |
+| 22 | Rollback de migraciones | `spark migrate:rollback` en MariaDB temporal | PASS — 1 tabla (`migrations`), re-migración 28 tablas |
 | 23 | APIsPERU | `test_apisperu_mock.sh` + mocks unitarios | PASS con mock; integración real BLOCKED |
 | 24 | Compose de producción | — | NOT APPLICABLE (no existe en el repo) |
 
@@ -71,12 +77,21 @@ La aplicación opera sobre **MariaDB 11.4.13 LTS** con el driver `MySQLi`, sin c
 
 | Observación | Estado | Evidencia |
 |---|---|---|
-| Comparación determinista MySQL→MariaDB | **CERRADA** | 27 tablas, 0 faltantes, 0 extra, 0 modificadas; SHA-256 por fila canonicalizada |
-| Rollback de migraciones | **CERRADA CON LIMITACIÓN** | Rollback OK; queda `cv_cuotas_mensuales` histórica; re-migración restaura 28 tablas |
+| Comparación determinista MySQL→MariaDB | **CERRADA** | 28 tablas, 0 faltantes, 0 extra, 0 modificadas; SHA-256 por fila canonicalizada |
+| Rollback de migraciones | **CERRADA** | Rollback deja solo `migrations`; re-migración restaura 28 tablas y restricciones |
 | Cobertura E2E de escrituras | **CERRADA** | 35 comprobaciones; edición de perfil persiste y se restaura en base desechable; resto de escrituras cubiertas por smoke/API |
 | APIsPERU | **CERRADA POR MOCK / INTEGRACIÓN REAL BLOCKED** | `test_apisperu_mock.sh` valida DNI/RUC, token canónico y persistencia; no se usó token real |
 | CI remoto | **BLOCKED** | Workflow actualizado; no se publicó la rama en esta fase |
 | Validación productiva | **BLOCKED / NOT APPLICABLE** | El repositorio solo contiene el stack de desarrollo local |
+
+### Tabla 28: `migrations`
+
+La tabla que completaba las 28 es `migrations`, que contiene únicamente
+metadatos técnicos del runner (versión, clase, grupo, namespace, batch y
+timestamp de ejecución). No contiene información de negocio. La comparación la
+incluye por `version`, `class`, `namespace` y `group`; se ignoran `id`, `time` y
+`batch` porque dependen del historial de ejecución de cada motor. Con esa
+normalización, las 28 tablas quedan con 0 diferencias.
 
 ## D. Compatibilidad
 
@@ -127,7 +142,7 @@ Reglas críticas verificadas: ofertas vencidas fuera de búsqueda, bloqueo de po
 
 - Compose de desarrollo con MariaDB 11.4.13, healthcheck, volumen `mariadb_data` y volumen histórico `mysql_data` conservado.
 - Backup/restauración con cliente MariaDB, manifiesto y SHA-256.
-- CI actualizada para auditoría y E2E; smoke contra MariaDB real.
+- CI multi-job para cualquier rama: PHP, frontend, MariaDB, compatibilidad MySQL→MariaDB, smoke y E2E, con artifacts y gate final.
 - E2E en imagen propia con Chromium Headless Shell; navegador fuera del repositorio.
 - No se modificaron datos de producción ni volúmenes históricos.
 
@@ -142,12 +157,11 @@ definirse en la infraestructura de cada institución.
 
 ## H. Limitaciones
 
-1. **CI remoto no ejecutado**: el workflow está actualizado y validado localmente, pero no se publicó en esta fase; queda `BLOCKED` hasta integrar la rama.
-2. **Rollback con tabla histórica**: tras el rollback permanece `cv_cuotas_mensuales` por el `down()` de `RateLimitCvYRetirarCuotas`; la re-migración restaura el esquema completo.
-3. **`test_desarrollo_nuevo.sh` no ejecutado contra APIsPERU real**: requiere token y RUC autorizados. La lógica del proveedor y la persistencia están cubiertas con `test_apisperu_mock.sh` y transporte simulado en PHPUnit; la integración real sigue `BLOCKED`.
-4. **E2E con integraciones externas desactivadas**: para evitar CAPTCHA/Google en headless se desactivaron temporalmente Turnstile y Google; se restauró `.env` al finalizar.
-5. **Cobertura E2E de escrituras**: se validó la edición de perfil con persistencia real en una base desechable; las demás escrituras (ofertas, postulaciones, selección, contratación) se cubren en smoke/API, no todas mediante clics en el navegador.
-6. **`deploy/compose.prod.yaml` no existe**: el repositorio solo mantiene el stack de desarrollo local. No hay una configuración productiva validada; desplegar requiere definir variables `DB_*`/`MARIADB_*`, red, TLS, respaldos y monitoreo.
+1. **CI remoto no ejecutado**: el workflow multi-job está actualizado para `push`/`pull_request`/`workflow_dispatch` en cualquier rama, validado con `actionlint` y jobs locales, pero no se publicó en esta fase; queda `BLOCKED` hasta integrar la rama.
+2. **`test_desarrollo_nuevo.sh` no ejecutado contra APIsPERU real**: requiere token y RUC autorizados. La lógica del proveedor y la persistencia están cubiertas con `test_apisperu_mock.sh` y transporte simulado en PHPUnit; la integración real sigue `BLOCKED`.
+3. **E2E con integraciones externas desactivadas**: para evitar CAPTCHA/Google en headless se desactivaron temporalmente Turnstile y Google; se restauró `.env` al finalizar.
+4. **Cobertura E2E de escrituras**: se validó la edición de perfil con persistencia real en una base desechable; las demás escrituras (ofertas, postulaciones, selección, contratación) se cubren en smoke/API, no todas mediante clics en el navegador.
+5. **`deploy/compose.prod.yaml` no existe**: el repositorio solo mantiene el stack de desarrollo local. No hay una configuración productiva validada; desplegar requiere definir variables `DB_*`/`MARIADB_*`, red, TLS, respaldos y monitoreo.
 
 ## I. Riesgos restantes
 
@@ -186,4 +200,5 @@ Migración de datos y recuperación: ver `docs/migracion-mariadb.md`.
 - [`evidence/e2e-writes-resultado.json`](evidence/e2e-writes-resultado.json)
 - [`evidence/e2e-writes-resultado.txt`](evidence/e2e-writes-resultado.txt)
 - [`evidence/rollback.txt`](evidence/rollback.txt)
+- [`evidence/rollback-result.txt`](evidence/rollback-result.txt)
 - [`mariadb-rollback.md`](mariadb-rollback.md)

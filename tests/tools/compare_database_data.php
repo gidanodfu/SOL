@@ -93,10 +93,13 @@ function canonicalJson(mixed $valor): mixed
  * @param array<string, string> $tipos columna => DATA_TYPE
  * @param array<string, true> $json columnas lógicas JSON
  */
-function canonicalizarFila(array $fila, array $tipos, array $json): array
+function canonicalizarFila(array $fila, array $tipos, array $json, array $ignorar = []): array
 {
     $salida = [];
     foreach ($fila as $columna => $valor) {
+        if (isset($ignorar[$columna])) {
+            continue;
+        }
         $tipo = strtolower($tipos[$columna] ?? 'varchar');
 
         if ($valor === null) {
@@ -202,7 +205,7 @@ $tablasDst = array_column($dst->query(
     . " AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME",
 )->fetchAll(), 'TABLE_NAME');
 
-$ignoradas = ['migrations'];
+$ignoradas = [];
 $tablas = array_values(array_diff($tablasSrc, $ignoradas));
 $resultado = [
     'origen' => ['base' => $dbSrc, 'motor' => (string) $src->query('SELECT VERSION()')->fetchColumn()],
@@ -220,6 +223,11 @@ foreach ($tablas as $tabla) {
     }
 
     $pk = primaryKey($src, $dbSrc, $tabla);
+    if ($tabla === 'migrations') {
+        // Metadatos de migraciones: id/time dependen del historial de ejecución.
+        // La identidad estable es la versión y el contenido es class/batch.
+        $pk = ['version'];
+    }
     $tiposSrc = tiposColumnas($src, $dbSrc, $tabla);
     $tiposDst = tiposColumnas($dst, $dbDst, $tabla);
     $columnas = array_keys($tiposSrc);
@@ -243,6 +251,7 @@ foreach ($tablas as $tabla) {
     $columnasSql = implode(', ', array_map('quoteId', $columnas));
     $orderBy = implode(', ', array_map('quoteId', $pk));
 
+    $ignorarTabla = $tabla === 'migrations' ? ['id' => true, 'time' => true, 'batch' => true] : [];
     $jsonTabla = [];
     foreach ($jsonCols as $claveJson => $_) {
         [$tablaJson, $columnaJson] = array_pad(explode('.', $claveJson, 2), 2, '');
@@ -266,12 +275,12 @@ foreach ($tablas as $tabla) {
         $mapaSrc = [];
         $mapaDst = [];
         foreach ($filasSrc as $fila) {
-            $canonica = canonicalizarFila($fila, $tiposSrc, $jsonTabla);
+            $canonica = canonicalizarFila($fila, $tiposSrc, $jsonTabla, $ignorarTabla);
             $clave = json_encode(array_intersect_key($canonica, array_flip($pk)), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             $mapaSrc[$clave] = hashFila($canonica);
         }
         foreach ($filasDst as $fila) {
-            $canonica = canonicalizarFila($fila, $tiposDst, $jsonTabla);
+            $canonica = canonicalizarFila($fila, $tiposDst, $jsonTabla, $ignorarTabla);
             $clave = json_encode(array_intersect_key($canonica, array_flip($pk)), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             $mapaDst[$clave] = hashFila($canonica);
         }

@@ -302,6 +302,8 @@ Validación y respaldos:
 ./deploy/scripts/test.sh smoke      # integración aislada en MariaDB temporal
 ./deploy/scripts/test.sh e2e        # Chromium headless contra el stack activo
 ./deploy/scripts/test.sh audit      # auditoría de integridad de la base activa
+./deploy/scripts/test.sh compatibility # MySQL 8.0.46 -> MariaDB 11.4.13
+./deploy/scripts/test.sh php-lint    # sintaxis de todos los archivos PHP
 ./deploy/scripts/test.sh validation # validación de variables y contexto Docker
 ```
 

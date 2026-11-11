@@ -162,6 +162,8 @@ migraciones son la única fuente del esquema; no se editan migraciones históric
 ./deploy/scripts/test.sh smoke
 ./deploy/scripts/test.sh e2e
 ./deploy/scripts/test.sh audit
+./deploy/scripts/test.sh compatibility
+./deploy/scripts/test.sh php-lint
 ./deploy/scripts/test.sh validation
 ```
 

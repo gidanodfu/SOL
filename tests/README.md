@@ -14,6 +14,8 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MariaDB en el host.
 ./deploy/scripts/test.sh smoke      # integración profunda en MariaDB temporal
 ./deploy/scripts/test.sh e2e        # Chromium headless contra el stack activo
 ./deploy/scripts/test.sh audit      # integridad de la base MariaDB activa
+./deploy/scripts/test.sh compatibility # MySQL 8.0.46 -> MariaDB 11.4.13
+./deploy/scripts/test.sh php-lint    # sintaxis de todos los archivos PHP
 ```
 
 ### Inventario de suites smoke

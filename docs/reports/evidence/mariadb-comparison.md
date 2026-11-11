@@ -2,7 +2,7 @@
 
 - Origen: `sistema_empleo` (8.0.46)
 - Destino: `sistema_empleo` (11.4.13-MariaDB-ubu2404)
-- Tablas comparadas: 27
+- Tablas comparadas: 28
 - Registros faltantes: 0
 - Registros extra: 0
 - Registros modificados: 0
@@ -24,6 +24,7 @@
 | formacion_academica | 0 | 0 | 0 | 0 | 0 | 0 |
 | habilidades | 0 | 0 | 0 | 0 | 0 | 0 |
 | identidades_reservadas | 48 | 48 | 48 | 0 | 0 | 0 |
+| migrations | 27 | 27 | 27 | 0 | 0 | 0 |
 | ofertas | 3 | 3 | 3 | 0 | 0 | 0 |
 | ofertas_habilidades | 12 | 12 | 12 | 0 | 0 | 0 |
 | oportunidades | 5 | 5 | 5 | 0 | 0 | 0 |

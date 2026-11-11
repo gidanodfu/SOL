@@ -19,22 +19,28 @@ Fecha: 2026-11-11 · Entorno: MariaDB 11.4.13 temporal (`--tmpfs`), base `sol_ro
 | Migraciones iniciales | PASS — 28 tablas |
 | Seeds | PASS — 5 usuarios |
 | Rollback | PASS — comando sin errores |
-| Tablas tras rollback | 2 (`migrations` y `cv_cuotas_mensuales`) |
+| Tablas tras rollback | 1 (`migrations`) |
 | Re-migración | PASS — 28 tablas |
 | `ruc_reservado` | PASS — `STORED GENERATED` |
 | `postulacion_unica` | PASS — `VIRTUAL GENERATED` |
 | `uq_solicitud_ruc_activa` | PASS |
 | `uq_postulacion_activa` | PASS |
 
-## Limitación
+## Corrección aplicada
 
-El rollback elimina las tablas creadas por las migraciones, pero deja
-`cv_cuotas_mensuales` como tabla histórica. Esto proviene del diseño de
-`RateLimitCvYRetirarCuotas::down()`, que restaura el nombre original de la tabla
-legado; no es una regresión de MariaDB. El esquema vuelve a quedar correcto al
-re-ejecutar `migrate --all`, con las columnas generadas e índices únicos
-presentes.
+`RateLimitCvYRetirarCuotas::down()` usaba `tableExists()`, cuyo caché podía
+conservar el estado anterior al `RENAME` de `up()` y dejar
+`cv_cuotas_mensuales` tras el rollback. Ahora consulta `information_schema`
+directamente y, si `cv_activos` ya no existe, elimina ambas tablas históricas.
+`CuotasCvYActivoUnico::down()` usa `DROP TABLE IF EXISTS` directo para las tres
+tablas que le pertenecen.
+
+El rollback deja únicamente `migrations`; la re-migración restaura 28 tablas y
+las restricciones críticas. Sin limitación pendiente.
 
 No se ejecutó rollback sobre `sol_dev` ni sobre datos persistentes.
 
-Log completo: [`evidence/rollback.txt`](evidence/rollback.txt).
+Log de comandos: [`evidence/rollback.txt`](evidence/rollback.txt).
+
+Resumen de ejecución (tablas tras rollback y re-migración):
+[`evidence/rollback-result.txt`](evidence/rollback-result.txt).
