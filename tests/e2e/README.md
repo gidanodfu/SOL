@@ -19,6 +19,16 @@ Playwright, nunca se descargan al repositorio.
 ./deploy/scripts/test.sh e2e
 ```
 
+Para validar una escritura real de navegador (edición del perfil de empresa)
+use una base desechable y `E2E_WRITES=1`:
+
+```bash
+E2E_BASE_URL=http://localhost:15176 E2E_WRITES=1 ./deploy/scripts/test.sh e2e
+```
+
+La prueba modifica el nombre comercial y lo restaura al final. No debe
+ejecutarse contra `sol_dev` ni datos persistentes.
+
 Variables opcionales:
 
 - `E2E_BASE_URL`: URL del frontend (por defecto `http://localhost:<DEV_FRONTEND_PORT>`).

@@ -55,7 +55,7 @@ docker_available
 if [ "$#" -gt 0 ]; then
     TESTS="$*"
 else
-    TESTS="test_mariadb_compat.sh test_api.sh test_ofertas.sh test_aprobacion_ofertas.sh test_ofertas_campos.sh test_reglas_ofertas.sh test_retiro_postulacion.sh test_concurrencia.sh test_fase3.sh test_fase4.sh test_fase5.sh test_fase6.sh test_seguridad.sh test_rte.sh test_identidad.sh test_reporte_empresa.sh test_reporte_ofertas.sh test_reporte_pdf.sh test_perfiles_municipales.sh test_unicidad_municipal.sh test_actividades_obligatorias.sh test_oportunidades_campos.sh test_oportunidades_ciclo.sh test_actividades_finalizadas.sh test_cv.sh test_cv_concurrencia.sh test_cv_rate_limit.sh test_validaciones_estrictas.sh"
+    TESTS="test_mariadb_compat.sh test_apisperu_mock.sh test_api.sh test_ofertas.sh test_aprobacion_ofertas.sh test_ofertas_campos.sh test_reglas_ofertas.sh test_retiro_postulacion.sh test_concurrencia.sh test_fase3.sh test_fase4.sh test_fase5.sh test_fase6.sh test_seguridad.sh test_rte.sh test_identidad.sh test_reporte_empresa.sh test_reporte_ofertas.sh test_reporte_pdf.sh test_perfiles_municipales.sh test_unicidad_municipal.sh test_actividades_obligatorias.sh test_oportunidades_campos.sh test_oportunidades_ciclo.sh test_actividades_finalizadas.sh test_cv.sh test_cv_concurrencia.sh test_cv_rate_limit.sh test_validaciones_estrictas.sh"
 fi
 
 for test in $TESTS; do
@@ -121,6 +121,16 @@ storage.driver=local
 turnstile.enabled=false
 TZ=America/Lima
 EOF
+
+# La suite mock de APIsPERU apunta el cliente al servidor local de la propia suite.
+case " $TESTS " in
+    *test_apisperu_mock.sh*)
+        printf '%s\n' \
+            'apisperu.baseURL=http://127.0.0.1:19090/api/v1' \
+            'apisperu.token=token-mock-local' \
+            'apisperu.timeout=5' >> "$TEST_ENV"
+        ;;
+esac
 
 # La suite externa de APIsPERU (DNI/RUC) solo se ejecuta cuando se solicita por nombre.
 case " $TESTS " in

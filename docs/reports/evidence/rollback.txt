@@ -1,0 +1,33 @@
+
+CodeIgniter v4.7.5 Command Line Tool - Server Time: 2026-11-11 16:18:57 UTC-05:00
+
+Rolling back migrations to batch:  0
+PCNTL extension not available. Signal handling disabled.
+	Rolling back: (App) 2026-11-02-120000_App\Database\Migrations\RateLimitCvYRetirarCuotas
+	Rolling back: (App) 2026-11-02-100000_App\Database\Migrations\CuotasCvYActivoUnico
+	Rolling back: (App) 2026-11-01-120000_App\Database\Migrations\ArchivarYRetirarFechaPublicacionOportunidades
+	Rolling back: (App) 2026-11-01-110000_App\Database\Migrations\RetirarEmpresaOportunidades
+	Rolling back: (App) 2026-11-01-100000_App\Database\Migrations\AgregarProgramacionOportunidades
+	Rolling back: (App) 2026-10-28-100000_App\Database\Migrations\AgregarPerfilMunicipal
+	Rolling back: (App) 2026-10-25-100000_App\Database\Migrations\AgregarRetiroPostulante
+	Rolling back: (App) 2026-10-23-100000_App\Database\Migrations\AgregarAceptacionTerminos
+	Rolling back: (App) 2026-10-21-120000_App\Database\Migrations\CrearIdentidadesReservadas
+	Rolling back: (App) 2026-10-20-100001_App\Database\Migrations\AgregarFechaUsoActivacion
+	Rolling back: (App) 2026-10-20-100000_App\Database\Migrations\AgregarTipoDocumentoPostulante
+	Rolling back: (App) 2026-10-15-100000_App\Database\Migrations\AgregarEstadoObservadoOferta
+	Rolling back: (App) 2026-10-08-100000_App\Database\Migrations\AgregarPresenciaDigitalEmpresa
+	Rolling back: (App) 2026-10-07-120000_App\Database\Migrations\EliminarImagenPresentacionEmpresa
+	Rolling back: (App) 2026-10-07-110000_App\Database\Migrations\AgregarFotoPostulante
+	Rolling back: (App) 2026-10-07-100000_App\Database\Migrations\AmpliarEmpleabilidad
+	Rolling back: (App) 2026-10-06-130000_App\Database\Migrations\AgregarPreferenciasUi
+	Rolling back: (App) 2026-10-06-120000_App\Database\Migrations\CrearUiPreferences
+	Rolling back: (App) 2026-10-06-100000_App\Database\Migrations\AgregarEnlaceActividades
+	Rolling back: (App) 2026-09-30-100000_App\Database\Migrations\AgregarImagenActividades
+	Rolling back: (App) 2026-09-09-100000_App\Database\Migrations\NormalizarOfertasHeredadas
+	Rolling back: (App) 2026-09-05-100000_App\Database\Migrations\GoogleYPerfilPostulante
+	Rolling back: (App) 2026-09-04-100000_App\Database\Migrations\CrearSolicitudesEmpresaYActivaciones
+	Rolling back: (App) 2026-09-03-100004_App\Database\Migrations\CrearAtencionesActividadesYResultados
+	Rolling back: (App) 2026-09-03-100003_App\Database\Migrations\CrearOfertasYPostulaciones
+	Rolling back: (App) 2026-09-03-100002_App\Database\Migrations\CrearEmpresasYPostulantes
+	Rolling back: (App) 2026-09-03-100001_App\Database\Migrations\CrearUsuariosYAuditoria
+Done rolling back migrations.

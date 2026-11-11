@@ -291,6 +291,40 @@ try {
         await page.getByRole('heading', { name: /Nueva oferta/ }).first().waitFor();
         await page.getByRole('button', { name: 'Cancelar' }).first().click();
       });
+
+      if (process.env.E2E_WRITES === '1') {
+        await ejecutar('empresa: edición de perfil persiste en MariaDB', async () => {
+          paginaActiva = page;
+          await visitar(page, '/empresa/perfil', 'Mi empresa');
+          const campo = page.getByLabel('Nombre comercial');
+          const original = await campo.inputValue();
+          const nuevo = `${original} E2E`;
+
+          const guardar = async (valor) => {
+            await campo.fill(valor);
+            const respuesta = page.waitForResponse(
+              (r) => r.url().includes('/api/empresa/perfil') && r.request().method() === 'PUT',
+              { timeout: 10000 },
+            );
+            await page.getByRole('button', { name: 'Guardar cambios' }).click();
+            assert.equal((await respuesta).status(), 200);
+          };
+
+          try {
+            await guardar(nuevo);
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.getByLabel('Nombre comercial').waitFor();
+            assert.equal(await page.getByLabel('Nombre comercial').inputValue(), nuevo);
+          } finally {
+            await guardar(original);
+          }
+        });
+      } else {
+        resultados.push({
+          estado: 'NOT RUN',
+          nombre: 'empresa: edición de perfil (requiere E2E_WRITES=1)',
+        });
+      }
     }
 
     await guardarErrores('empresa', errores);

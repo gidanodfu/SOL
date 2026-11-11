@@ -20,6 +20,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MariaDB en el host.
 
 | Suite | Cobertura |
 |---|---|
+| `test_apisperu_mock.sh` | Flujo DNI/RUC con proveedor HTTP mock local, token canónico y persistencia MariaDB. |
 | `test_mariadb_compat.sh` | Versión MariaDB 11.4, InnoDB, columnas generadas, índices únicos, JSON y restricciones críticas. |
 | `test_api.sh` | Contrato base de la API, autenticación, ofertas, postulaciones y CV. |
 | `test_ofertas.sh` | CRUD y consulta pública de ofertas. |
@@ -51,7 +52,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MariaDB en el host.
 | `test_desarrollo_nuevo.sh` | Externo: requiere APIsPERU y un RUC real con token autorizado; se solicita por nombre y corre dentro de Docker. |
 | `test_docker_http.sh` | Se ejecuta con `test.sh http` contra el stack de desarrollo. |
 
-La tabla incluye las **28 suites automáticas** del runner (`test.sh smoke`) y dos
+La tabla incluye las **29 suites automáticas** del runner (`test.sh smoke`) y dos
 procedimientos adicionales: `test_desarrollo_nuevo.sh` (externo, se solicita por
 nombre) y `test_docker_http.sh` (`test.sh http`).
 
@@ -66,7 +67,7 @@ nombre) y `test_docker_http.sh` (`test.sh http`).
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales ni servicios externos.
 
-> `test.sh smoke` ejecuta 28 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 29 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MariaDB propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y

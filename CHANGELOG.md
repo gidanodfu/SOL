@@ -18,7 +18,7 @@ oficial es la del archivo raíz `VERSION`.
 - La columna generada `solicitudes_empresa.ruc_reservado` usa `RTRIM(ruc)` para
   ser compatible con MariaDB sin alterar el valor ni el índice único.
 - El smoke runner usa MariaDB y suma `test_mariadb_compat.sh`; la suite completa
-  queda en 28 suites.
+  queda en 29 suites, con flujo mock de APIsPERU.
 - Corregidos los smoke de API, concurrencia e identidad: sus comprobantes
   `dni_token` ahora incluyen la identidad canónica, por lo que el registro ya
   no los rechaza con `422` y las suites vuelven a validar sus reglas.

@@ -1,0 +1,150 @@
+{
+  "base": "http://localhost:15176",
+  "fecha": "2026-11-11T21:21:49.587Z",
+  "total": 35,
+  "ok": 35,
+  "fallos": 0,
+  "bloqueados": 0,
+  "resultados": [
+    {
+      "estado": "OK",
+      "nombre": "público: /inicio carga y no duplica el acceso a ofertas"
+    },
+    {
+      "estado": "OK",
+      "nombre": "público: login, registro y afiliación cargan"
+    },
+    {
+      "estado": "OK",
+      "nombre": "público: responsive sin desbordamiento"
+    },
+    {
+      "estado": "OK",
+      "nombre": "publico: sin errores de consola/API"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: inicio de sesión"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/dashboard"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/usuarios"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/empresas"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/solicitudes-empresa"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/ofertas"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/actividades"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/oportunidades"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: /admin/contrataciones"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: alta de usuario abre y cierra el formulario"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: editor de actividad abre y cierra"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: editor de oportunidad abre y cierra"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: drawer móvil abre y cierra"
+    },
+    {
+      "estado": "OK",
+      "nombre": "admin: sin errores de consola/API"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: inicio de sesión"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: /empresa/dashboard"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: /empresa/perfil"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: /empresa/ofertas"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: /empresa/postulaciones"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: /empresa/contrataciones"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: /empresa/cuenta"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: formulario de oferta abre y cierra"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: edición de perfil persiste en MariaDB"
+    },
+    {
+      "estado": "OK",
+      "nombre": "empresa: sin errores de consola/API"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: inicio de sesión"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: /postulante/perfil"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: /postulante/postulaciones"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: /postulante/cuenta"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: /postulante/buscar"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: /postulante/oportunidades"
+    },
+    {
+      "estado": "OK",
+      "nombre": "postulante: sin errores de consola/API"
+    }
+  ]
+}

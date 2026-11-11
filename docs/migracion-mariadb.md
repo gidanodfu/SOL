@@ -233,3 +233,43 @@ docker system prune --volumes
 Los respaldos lógicos son el mecanismo de recuperación. Los volúmenes son la
 última copia de seguridad y no deben eliminarse hasta que la migración esté
 aprobada y exista un respaldo verificado fuera del host.
+
+## 11. Producción
+
+Este repositorio **no incluye** `deploy/compose.prod.yaml`, manifiestos de
+Kubernetes, Terraform, certificados ni scripts de despliegue productivo. La
+documentación y el Compose existentes describen exclusivamente el entorno local.
+
+Consecuencias:
+
+- No existe una configuración productiva validada que pueda auditarse aquí.
+- Cada institución debe definir su propia arquitectura, red, TLS, secretos,
+  respaldos, monitoreo y ventana de mantenimiento.
+- No se debe reutilizar el Compose de desarrollo como configuración de
+  producción.
+
+Variables mínimas que deberá definir el entorno productivo, manteniendo la
+separación actual:
+
+```dotenv
+# Backend (nunca en el frontend)
+DB_HOST=<host-mariadb>
+DB_PORT=3306
+DB_DATABASE=<base>
+DB_USER=<usuario>
+DB_PASSWORD=<secreto>
+DB_DRIVER=MySQLi
+jwt.secret=<secreto>
+encryption.key=<secreto>
+
+# Contenedor MariaDB (si se usa la imagen oficial)
+MARIADB_ROOT_PASSWORD=<secreto>
+MARIADB_DATABASE=<base>
+MARIADB_USER=<usuario>
+MARIADB_PASSWORD=<secreto>
+```
+
+Riesgos de desplegar sin una configuración productiva validada: ausencia de
+TLS, exposición de la base, credenciales débiles, falta de respaldos
+verificados, collation distinta a la esperada, límites de conexión y ausencia de
+monitorización. Ninguno de esos puntos se resuelve en este repositorio.
