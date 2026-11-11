@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import Modal from './Modal';
 import PasswordRequirements from './PasswordRequirements';
@@ -128,12 +128,13 @@ function DialogoFeedback({ dialogo, onResolver }) {
   const {
     tipo, titulo, mensaje, etiqueta = 'Valor', textoConfirmar = 'Confirmar',
     textoCancelar = 'Cancelar', variante = 'primario', valorInicial = '', min = 0,
-    placeholder = '',
+    placeholder = '', multilinea = false,
   } = dialogo;
   const [texto, setTexto] = useState(valorInicial);
   const [error, setError] = useState(null);
   const [intento, setIntento] = useState(false);
   const inputRef = useRef(null);
+  const campoId = useId();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -177,17 +178,30 @@ function DialogoFeedback({ dialogo, onResolver }) {
       {mensaje && <p className="modal-texto">{mensaje}</p>}
       {tipo === 'prompt' && (
         <>
-          <label className="campo">
+          <label className="campo" htmlFor={campoId}>
             <span>{etiqueta}</span>
-            <input
-              ref={inputRef}
-              type={dialogo.secreto ? 'password' : 'text'}
-              value={texto}
-              onChange={(e) => { setTexto(e.target.value); setError(null); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') aceptar(); }}
-              placeholder={placeholder}
-              autoComplete="off"
-            />
+            {multilinea ? (
+              <textarea
+                ref={inputRef}
+                id={campoId}
+                className="dialogo-textarea"
+                rows={5}
+                value={texto}
+                onChange={(e) => { setTexto(e.target.value); setError(null); }}
+                placeholder={placeholder}
+              />
+            ) : (
+              <input
+                ref={inputRef}
+                id={campoId}
+                type={dialogo.secreto ? 'password' : 'text'}
+                value={texto}
+                onChange={(e) => { setTexto(e.target.value); setError(null); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') aceptar(); }}
+                placeholder={placeholder}
+                autoComplete="off"
+              />
+            )}
           </label>
           {dialogo.politicaPassword && <PasswordRequirements password={texto} intento={intento} />}
         </>

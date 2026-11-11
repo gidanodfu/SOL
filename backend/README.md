@@ -81,6 +81,17 @@ operaciones en `docs/operaciones.md`.
   pública), `categorias`, `oportunidades`, `actividades`. El resto exige `jwt` + `rol`.
 - No hay DELETE físico para entidades de negocio: se desactivan (excepto CV y archivos).
 
+## Integraciones externas
+
+- **DNI/RUC**: APIsPERU es el proveedor único. `ApisperuClient` centraliza la
+  autenticación Bearer, el transporte y los errores; `DniService` y `RucService`
+  adaptan la respuesta a los contratos internos. La configuración
+  (`apisperu.baseURL`, `apisperu.token`, `apisperu.timeout`) es exclusiva del
+  backend. Ver `docs/integraciones/apisperu.md`.
+- **Correo**: Resend con respaldo SMTP (`RESEND_*`, `email.*`).
+- **Google**: verificación del `id_token` (`google.clientId`).
+- **Cloudflare Turnstile**: validación server-side (`turnstile.*`).
+
 ## Base de datos, migraciones y almacenamiento
 
 - Esquema MySQL 8.0, tablas InnoDB y migraciones en `app/Database/Migrations/`.

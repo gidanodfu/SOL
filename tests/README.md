@@ -45,7 +45,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 | `test_cv_concurrencia.sh` | Bloqueo simultáneo, seis cargas y contadores. |
 | `test_cv_rate_limit.sh` | Ventanas configurables, reinicio y `Retry-After`. |
 | `test_validaciones_estrictas.sh` | Tipos, IDs, booleanos, fechas y contacto. |
-| `test_desarrollo_nuevo.sh` | Externo: requiere SUNAT/RUC real y tokens; se solicita por nombre y corre dentro de Docker. |
+| `test_desarrollo_nuevo.sh` | Externo: requiere APIsPERU y un RUC real con token autorizado; se solicita por nombre y corre dentro de Docker. |
 | `test_docker_http.sh` | Se ejecuta con `test.sh http` contra el stack de desarrollo. |
 
 La tabla incluye las **27 suites automáticas** del runner (`test.sh smoke`) y dos
@@ -91,8 +91,8 @@ modifica datos.
    distinto de cero si alguna suite falla.
 
 No usa `sol_dev_mysql_data`, no publica puertos y no toca datos reales. El
-script `test_desarrollo_nuevo.sh` se excluye por defecto porque consulta SUNAT
-y requiere un RUC real y token externo autorizado; para ejecutarlo:
+script `test_desarrollo_nuevo.sh` se excluye por defecto porque consulta
+APIsPERU y requiere un RUC real y un token externo autorizado; para ejecutarlo:
 
 ```bash
 ./deploy/scripts/smoke.sh test_desarrollo_nuevo.sh
@@ -211,7 +211,8 @@ estados y muestre `Vencida` para el vencimiento efectivo.
 `AutorizacionMunicipalServiceTest`, `HtmlSanitizerTest`,
 `DocumentoServiceTest`, `CvServiceClaveTest`, `StorageServiceTest`,
 `ReporteExcelServiceTest`, `ReportePdfServiceTest`, `TurnstileServiceTest`,
-`TurnstileFlowsTest`, `EmailServiceTest`,
+`TurnstileFlowsTest`, `ApisperuClientTest`, `DniServiceTest`, `RucServiceTest`,
+`EmailServiceTest`,
 `EmailServiceResendTest`, `ImageWebpTest`, `SystemSeederTest`,
 `TerminosTest`, `EnlaceActivacionTest`, `ContentDispositionTest`,
 `SuperficieRiesgoTest` y las pruebas de correo. Las validaciones que no

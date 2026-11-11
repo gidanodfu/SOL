@@ -21,6 +21,7 @@ use App\Services\JwtService;
 use App\Services\RucService;
 use App\Services\SolicitudEmpresaService;
 use App\Services\TurnstileService;
+use Firebase\JWT\JWT;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -112,12 +113,14 @@ final class RegistroValidacionTest extends TestCase
     public function testTokenDeDniQuedaVinculadoAlDocumento(): void
     {
         $jwt = new JwtService();
-        $token = $jwt->crearTokenVerificacionDni('12345678');
+        $token = $jwt->crearTokenVerificacionDni('12345678', 'Ana', 'Torres');
         $payload = $jwt->verificar($token);
 
         $this->assertIsArray($payload);
         $this->assertSame('verificacion_dni', $payload['tipo']);
         $this->assertSame('12345678', $payload['dni']);
+        $this->assertSame('Ana', $payload['nombres']);
+        $this->assertSame('Torres', $payload['apellidos']);
         $this->assertGreaterThan(time(), $payload['exp']);
     }
 
@@ -162,7 +165,7 @@ final class RegistroValidacionTest extends TestCase
             $this->createMock(TurnstileService::class),
             $this->createMock(IdentidadService::class),
         );
-        $tokenDeOtroDni = $jwt->crearTokenVerificacionDni('87654321');
+        $tokenDeOtroDni = $jwt->crearTokenVerificacionDni('87654321', 'Otra', 'Persona');
 
         $e = $this->errorDeValidacion(fn () => $auth->registrarPostulante([
             'dni'            => '12345678',
@@ -177,6 +180,59 @@ final class RegistroValidacionTest extends TestCase
         ]));
 
         $this->assertSame('Debe verificar el DNI antes de crear la cuenta.', $e->getCampos()['dni_token']);
+    }
+
+    public function testLaIdentidadCanonicaProvieneDelComprobanteYNoDelFormulario(): void
+    {
+        $jwt = new JwtService();
+        $payload = $jwt->verificar(
+            $jwt->crearTokenVerificacionDni('12345678', 'NOMBRES VERIFICADOS', 'APELLIDOS VERIFICADOS'),
+        );
+
+        $metodo = new \ReflectionMethod(AuthService::class, 'identidadVerificada');
+        $metodo->setAccessible(true);
+        $identidad = $metodo->invoke($this->auth(), $payload);
+
+        $this->assertSame(
+            ['nombres' => 'NOMBRES VERIFICADOS', 'apellidos' => 'APELLIDOS VERIFICADOS'],
+            $identidad,
+        );
+    }
+
+    public function testRechazaComprobanteSinIdentidadCanonica(): void
+    {
+        $jwt = new JwtService();
+        $token = JWT::encode([
+            'tipo' => 'verificacion_dni',
+            'dni'  => '12345678',
+            'iat'  => time(),
+            'exp'  => time() + 600,
+        ], (string) env('jwt.secret'), 'HS256');
+
+        $auth = new AuthService(
+            $this->createMock(UserModel::class),
+            $this->createMock(PostulanteModel::class),
+            $this->createMock(RefreshTokenModel::class),
+            $jwt,
+            $this->createMock(AuditoriaService::class),
+            $this->createMock(PostulanteRepository::class),
+            $this->createMock(TurnstileService::class),
+            $this->createMock(IdentidadService::class),
+        );
+
+        $e = $this->errorDeValidacion(fn () => $auth->registrarPostulante([
+            'dni'            => '12345678',
+            'nombres'        => 'Ana',
+            'apellidos'      => 'Torres',
+            'email'          => 'ana@example.pe',
+            'telefono'       => '987654321',
+            'password'       => 'Clave123!',
+            'password2'      => 'Clave123!',
+            'terms_accepted' => true,
+            'dni_token'      => $token,
+        ]));
+
+        $this->assertArrayHasKey('dni_token', $e->getCampos());
     }
 
     public function testSolicitudEmpresaRechazaTodosLosCamposObligatoriosVacios(): void

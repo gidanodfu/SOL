@@ -96,7 +96,7 @@ fi
 if grep -q 'VITE_SECRET\|JWT_SECRET\|DB_PASSWORD\|RESEND_API_KEY' "$ROOT/frontend/Dockerfile"; then
     die "El Dockerfile del frontend no debe recibir variables privadas."
 fi
-if [ -f "$ENV_FILE" ] && grep -Eq '^VITE_(JWT|DB_|RESEND|S3_|SMTP|EMAIL_|SUNAT|JSONPE|PRIVATE|SECRET|.*PASSWORD)' "$ENV_FILE"; then
+if [ -f "$ENV_FILE" ] && grep -Eq '^VITE_(JWT|DB_|RESEND|S3_|SMTP|EMAIL_|SUNAT|JSONPE|APISPERU|PRIVATE|SECRET|.*PASSWORD)' "$ENV_FILE"; then
     die "El .env contiene variables VITE_ con nombres de secretos privados."
 fi
 

@@ -85,7 +85,6 @@
 }
 
 .inicio-brand:focus-visible,
-.inicio-nav-link:focus-visible,
 .inicio-cta:focus-visible,
 .inicio-acceso-enlaces a:focus-visible,
 .inicio-footer-links a:focus-visible {
@@ -93,8 +92,7 @@
   outline-offset: 2px;
 }
 
-.inicio-nav .inicio-brand:focus-visible,
-.inicio-nav .inicio-nav-link:focus-visible {
+.inicio-nav .inicio-brand:focus-visible {
   outline-color: #fff;
 }
 
@@ -102,27 +100,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.inicio-nav-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 8px 13px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.inicio-nav-link:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .inicio-nav .btn-tema {
@@ -415,25 +392,6 @@
   line-height: 1.55;
 }
 
-.inicio-empresas {
-  margin: 22px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-  color: var(--text-2);
-  font-size: 12.8px;
-  line-height: 1.6;
-}
-
-.inicio-empresas a {
-  color: var(--enlace);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.inicio-empresas a:hover {
-  text-decoration: underline;
-}
-
 /* ---------- Pie institucional ---------- */
 .inicio-footer {
   display: flex;
@@ -529,12 +487,6 @@
     gap: 6px;
   }
 
-  .inicio-nav-link {
-    min-height: 36px;
-    padding: 7px 10px;
-    font-size: 12.5px;
-  }
-
   .inicio-main {
     margin-top: 10px;
     padding: 20px 16px;
@@ -606,9 +558,5 @@
 @media (max-width: 380px) {
   .inicio-brand-text span {
     display: none;
-  }
-
-  .inicio-nav-link {
-    padding-inline: 9px;
   }
 }

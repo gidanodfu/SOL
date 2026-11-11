@@ -7,46 +7,40 @@ namespace App\Services;
 use App\Exceptions\ApiException;
 
 /**
- * Verificación de RUC en apis.net.pe (endpoint v1 servido por decolecta.com). El
- * token vive solo en el backend (.env: sunat.token). Autocompleta razón social,
- * nombre comercial y dirección para el formulario de registro de la empresa.
+ * Verificación de RUC en SUNAT a través de APIsPERU. El cliente compartido
+ * aporta autenticación, transporte y manejo de errores; aquí solo se valida el
+ * documento y se adapta la respuesta al contrato interno de SOL.
+ *
+ * Contrato interno: {razon_social, nombre_comercial, direccion}
  */
 class RucService
 {
-    private const ENDPOINT = 'https://api.decolecta.com/v1/sunat/ruc';
+    private ApisperuClient $cliente;
+
+    public function __construct(?ApisperuClient $cliente = null)
+    {
+        $this->cliente = $cliente ?? new ApisperuClient();
+    }
 
     /**
      * @return array{razon_social: string, nombre_comercial: ?string, direccion: ?string}
      */
     public function consultar(string $ruc): array
     {
-        $token = (string) env('sunat.token');
-        if ($token === '') {
-            throw ApiException::badRequest('La verificación del RUC no está disponible en este momento.');
+        if (preg_match('/^\d{11}$/', $ruc) !== 1) {
+            throw ApiException::validacion('El RUC debe tener 11 dígitos.', ['El RUC debe tener 11 dígitos.']);
         }
 
-        $ch = curl_init(self::ENDPOINT . '?' . http_build_query(['numero' => $ruc]));
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $token,
-                'Referer: http://apis.net.pe/api-ruc',
-                'Accept: application/json',
-            ],
-        ]);
+        $datos = $this->cliente->consultarRuc($ruc);
 
-        $respuesta = curl_exec($ch);
-        $codigo    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        curl_close($ch);
-
-        if ($respuesta === false || $codigo < 200 || $codigo >= 300) {
-            throw ApiException::badRequest('No se pudo verificar el RUC. Intente nuevamente en unos segundos.');
-        }
-
-        $datos = json_decode($respuesta, true);
-        if (! is_array($datos) || empty($datos['razon_social'])) {
+        $razonSocial = trim((string) ($datos['razonSocial'] ?? ''));
+        if ($razonSocial === '') {
             throw ApiException::badRequest('El RUC no fue encontrado en SUNAT.');
+        }
+
+        $nombreComercial = trim((string) ($datos['nombreComercial'] ?? ''));
+        if ($nombreComercial === '' || $nombreComercial === '-' || $nombreComercial === '—') {
+            $nombreComercial = null;
         }
 
         $partes = array_filter([
@@ -54,12 +48,17 @@ class RucService
             $datos['distrito'] ?? null,
             $datos['provincia'] ?? null,
             $datos['departamento'] ?? null,
-        ], static fn ($v) => is_string($v) && $v !== '' && $v !== '-');
+        ], static fn ($valor) => is_string($valor)
+            && trim($valor) !== ''
+            && trim($valor) !== '-'
+            && trim($valor) !== '—');
 
         return [
-            'razon_social'     => (string) $datos['razon_social'],
-            'nombre_comercial' => null,
-            'direccion'        => $partes === [] ? null : implode(', ', $partes),
+            'razon_social'     => $razonSocial,
+            'nombre_comercial' => $nombreComercial,
+            'direccion'        => $partes === []
+                ? null
+                : implode(', ', array_map('trim', array_values($partes))),
         ];
     }
 }
