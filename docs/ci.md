@@ -184,14 +184,9 @@ autorización y permisos de administración.
 
 ## 12. Estado remoto
 
-Las ejecuciones remotas `43107972526` (`acd46dd`) y `43109044353` (`f41af56`)
-terminaron con los **7 jobs en success**. Ambas validaron el pipeline anterior.
-
-Los cambios de concurrencia (`queue: max`), `upload-artifact` v7.0.2 y la
-protección de `.env` **no están validados todavía en GitHub Actions**: el
-workflow modificado no se ha publicado. El estado de esta configuración es
-**BLOCKED** hasta hacer push y comprobar una ejecución real sobre el commit
-actualizado.
+Las ejecuciones remotas `43107972526` (`acd46dd`), `43109044353` (`f41af56`)
+y `43110059908` (`4dd7594`) terminaron con los **7 jobs en success**. La última
+incluye `queue: max`, `upload-artifact` v7.0.2 y la protección de `.env`.
 
 Futuras ejecuciones deben revisarse en **Actions → CI SOL**. Un YAML válido o
 una ejecución anterior no sustituyen la comprobación remota del commit nuevo.
