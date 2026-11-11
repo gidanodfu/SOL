@@ -100,6 +100,10 @@ APIsPERU y requiere un RUC real y un token externo autorizado; para ejecutarlo:
 
 Los fixtures de CV están en `tests/fixtures/`: `cv.pdf` y `cv.docx` son
 documentos válidos; `cv-malformado.pdf` se usa como caso negativo.
+
+Los smoke que generan un `dni_token` deben firmar también `nombres` y
+`apellidos`: el registro persiste la identidad incluida en el comprobante e
+ignora los nombres enviados por el navegador.
 `tests/smoke/test_cv.sh` cubre carga, consulta, descarga autorizada, rechazos
 de MIME/firma/rol, más de cuatro cargas exitosas en el mismo mes, el `429` por
 rate limiting, la conservación del CV activo y la ausencia de registros

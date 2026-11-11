@@ -19,7 +19,7 @@ safe_session() { python3 -c 'import sys,json;d=json.load(sys.stdin);u=(d.get("da
 safe_error() { python3 -c 'import sys,json;d=json.load(sys.stdin);assert d.get("success") is False and d.get("message"), "FAIL respuesta de error inesperada";print("error esperado:", d.get("message"))' ; }
 
 token_dni() {
-    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1"
+    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"nombres"=>$argv[2],"apellidos"=>$argv[3],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1" "$2" "$3"
 }
 
 paso "0. health check público"
@@ -69,7 +69,7 @@ curl -s "$B/api/postulante/perfil" -H "Authorization: Bearer $AT_P" | python3 -c
 curl -s "$B/api/postulante/dashboard" -H "Authorization: Bearer $AT_P" | js | head -c 300; echo
 
 paso "10. registro nuevo postulante DNI 87654321"
-TOKEN_DNI=$(token_dni 87654321)
+TOKEN_DNI=$(token_dni 87654321 "Luis" "Perez Diaz")
 curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' -d "{\"dni\":\"87654321\",\"nombres\":\"Luis\",\"apellidos\":\"Perez Diaz\",\"email\":\"luis@mail.com\",\"telefono\":\"999888776\",\"password\":\"Clave12345!\",\"password2\":\"Clave12345!\",\"terms_accepted\":true,\"dni_token\":\"$TOKEN_DNI\"}" | safe_session
 
 paso "10b. login nuevo postulante"

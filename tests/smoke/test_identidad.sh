@@ -29,7 +29,7 @@ esperar() {
 }
 
 token_dni() {
-    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1"
+    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"nombres"=>$argv[2],"apellidos"=>$argv[3],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1" "$2" "$3"
 }
 
 esperar 'admin: usuario' 200 POST '/api/auth/login' '{"username":"admin","password":"Admin123!"}'
@@ -48,11 +48,11 @@ esperar 'registro: sin correo' 422 POST '/api/registro/postulante' '{"dni":"7000
 esperar 'registro: sin teléfono' 422 POST '/api/registro/postulante' '{"dni":"70000025","nombres":"Prueba","apellidos":"Sin telefono","email":"sintelefono@example.pe","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
 esperar 'registro: contraseñas distintas' 422 POST '/api/registro/postulante' '{"dni":"70000030","nombres":"Prueba","apellidos":"Distintas","email":"distintas@example.pe","telefono":"999888730","password":"Clave123!","password2":"Otra123!","terms_accepted":true}'
 esperar 'registro: sin token de DNI' 422 POST '/api/registro/postulante' '{"dni":"70000040","nombres":"Prueba","apellidos":"Sin token","email":"sin.token.dni@example.pe","telefono":"999888740","password":"Clave123!","password2":"Clave123!","terms_accepted":true}'
-TOKEN_DNI_SEED=$(token_dni 12345678)
+TOKEN_DNI_SEED=$(token_dni 12345678 "Prueba" "Duplicado")
 esperar 'registro: DNI duplicado' 409 POST '/api/registro/postulante' "{\"dni\":\"12345678\",\"nombres\":\"Prueba\",\"apellidos\":\"Duplicado\",\"email\":\"nuevo.identidad@example.pe\",\"telefono\":\"999888777\",\"password\":\"Clave123!\",\"password2\":\"Clave123!\",\"terms_accepted\":true,\"dni_token\":\"$TOKEN_DNI_SEED\"}"
-TOKEN_DNI_EMAIL=$(token_dni 70000002)
+TOKEN_DNI_EMAIL=$(token_dni 70000002 "Prueba" "Duplicado")
 esperar 'registro: correo duplicado' 409 POST '/api/registro/postulante' "{\"dni\":\"70000002\",\"nombres\":\"Prueba\",\"apellidos\":\"Duplicado\",\"email\":\"admin@mdjlo.gob.pe\",\"telefono\":\"999888771\",\"password\":\"Clave123!\",\"password2\":\"Clave123!\",\"terms_accepted\":true,\"dni_token\":\"$TOKEN_DNI_EMAIL\"}"
-TOKEN_DNI_PHONE=$(token_dni 70000003)
+TOKEN_DNI_PHONE=$(token_dni 70000003 "Prueba" "Duplicado")
 esperar 'registro: teléfono duplicado' 409 POST '/api/registro/postulante' "{\"dni\":\"70000003\",\"nombres\":\"Prueba\",\"apellidos\":\"Duplicado\",\"email\":\"nuevo.identidad2@example.pe\",\"telefono\":\"987654321\",\"password\":\"Clave123!\",\"password2\":\"Clave123!\",\"terms_accepted\":true,\"dni_token\":\"$TOKEN_DNI_PHONE\"}"
 
 esperar 'solicitud: sin aceptación de términos' 422 POST '/api/solicitudes-empresa' '{"ruc":"20111111111","email":"empresa.sin.terminos@example.pe","telefono":"999888776","representante":"Prueba"}'

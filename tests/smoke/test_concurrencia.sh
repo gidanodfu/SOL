@@ -25,7 +25,7 @@ ok() { printf 'OK   %s\n' "$1"; }
 fail() { printf 'FAIL %s\n' "$1"; fallos=$((fallos + 1)); }
 
 token_dni() {
-    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1"
+    php -r 'require "vendor/autoload.php"; echo Firebase\JWT\JWT::encode(["tipo"=>"verificacion_dni","dni"=>$argv[1],"nombres"=>$argv[2],"apellidos"=>$argv[3],"iat"=>time(),"exp"=>time()+600], getenv("jwt.secret"), "HS256");' "$1" "$2" "$3"
 }
 
 tok() {
@@ -54,7 +54,7 @@ TE=$(curl -s -X POST "$B/api/auth/login" -H 'Content-Type: application/json' -d 
 FUTURO=$(php -r 'echo date("Y-m-d", strtotime("+30 days"));')
 
 printf '\n== preparación de candidato aislado ==\n'
-TOKEN_DNI=$(token_dni 87654321)
+TOKEN_DNI=$(token_dni 87654321 "Carla" "Concurrente")
 REG=$(curl -s -X POST "$B/api/registro/postulante" -H 'Content-Type: application/json' \
     -d "{\"dni\":\"87654321\",\"nombres\":\"Carla\",\"apellidos\":\"Concurrente\",\"email\":\"concurrencia@mail.com\",\"telefono\":\"999888777\",\"password\":\"Concur12345!\",\"password2\":\"Concur12345!\",\"terms_accepted\":true,\"dni_token\":\"$TOKEN_DNI\"}")
 TP=$(printf '%s' "$REG" | tok)

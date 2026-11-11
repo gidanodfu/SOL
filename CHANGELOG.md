@@ -8,6 +8,10 @@ oficial es la del archivo raíz `VERSION`.
 
 ### Cambiado
 
+- Corregidos los smoke de API, concurrencia e identidad: sus comprobantes
+  `dni_token` ahora incluyen la identidad canónica, por lo que el registro ya
+  no los rechaza con `422` y las suites vuelven a validar sus reglas.
+
 - El repositorio queda destinado exclusivamente al desarrollo local: se retiran
   el Compose y los scripts de producción, Traefik, Nginx de borde, certificados,
   dominios públicos y los stages `prod` de los Dockerfiles.
