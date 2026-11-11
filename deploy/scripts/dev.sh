@@ -28,7 +28,7 @@ dentro de contenedores; no se requiere PHP, Composer, Node.js ni MariaDB en el h
   run <svc> <cmd...>  Ejecuta un comando en un contenedor temporal.
   db                 Abre el cliente MariaDB dentro del contenedor db.
   tools              Inicia Adminer opcional en 127.0.0.1:8082.
-  test [objetivo]    Ejecuta test.sh (all|backend|frontend|http|smoke|e2e|validation).
+  test [objetivo]    Ejecuta test.sh (all|backend|frontend|http|smoke|e2e|audit|validation).
   validate           Ejecuta validate.sh.
   migrate            Aplica migraciones pendientes en desarrollo.
   migration-status   Consulta el estado de las migraciones.

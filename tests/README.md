@@ -13,6 +13,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MariaDB en el host.
 ./deploy/scripts/test.sh validation # validación de variables y contexto Docker
 ./deploy/scripts/test.sh smoke      # integración profunda en MariaDB temporal
 ./deploy/scripts/test.sh e2e        # Chromium headless contra el stack activo
+./deploy/scripts/test.sh audit      # integridad de la base MariaDB activa
 ```
 
 ### Inventario de suites smoke

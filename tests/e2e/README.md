@@ -44,3 +44,8 @@ entorno local/CI; no son credenciales de producción.
 
 Las pruebas también fallan si una página emite un `pageerror`, un error de
 consola no esperado o una respuesta API 5xx.
+
+La suite acumula los fallos de cada bloque, marca como `BLOCKED` las rutas que
+no pueden ejecutarse por falta de sesión, guarda una captura por fallo y genera
+`resultado.txt` y `resultado.json` incluso si una excepción interrumpe la
+ejecución.

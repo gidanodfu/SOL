@@ -167,6 +167,107 @@ try {
     $pdo->rollBack();
 }
 
+$pdo->beginTransaction();
+try {
+    $documentos = [
+        ['texto' => 'José Leonardo Ortiz', 'numero' => 123, 'bool' => true, 'nulo' => null, 'vacio' => ''],
+        ['lista' => [1, 2, ['anidado' => 'ñandú']]],
+        ['niveles' => ['a' => ['b' => ['c' => ['d' => 'valor']]]]],
+    ];
+    $insertar = $pdo->prepare(
+        "INSERT INTO auditoria (user_id, accion, entidad, entidad_id, detalle, created_at)
+         VALUES (NULL, 'compat_json', 'test', 1, ?, NOW())",
+    );
+    $ids = [];
+    foreach ($documentos as $documento) {
+        $insertar->execute([json_encode($documento, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+        $ids[] = (int) $pdo->lastInsertId();
+    }
+
+    $equivalente = true;
+    foreach ($documentos as $indice => $documento) {
+        $json = $pdo->query('SELECT detalle FROM auditoria WHERE id = ' . $ids[$indice])->fetchColumn();
+        $decodificado = json_decode((string) $json, true, 512, JSON_THROW_ON_ERROR);
+        if ($decodificado !== $documento) {
+            $equivalente = false;
+        }
+    }
+    check('JSON anidado, UTF-8, nulos y booleanos equivalente', $equivalente);
+
+    $referencias = ['origen' => 'prueba', 'anidado' => ['a' => 1], 'utf8' => 'Chiclayo ñ'];
+    $pdo->prepare(
+        "INSERT INTO identidades_reservadas (tipo, valor, estado, referencias)
+         VALUES ('email', 'compat-json@example.test', 'cuenta', ?)",
+    )->execute([json_encode($referencias, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
+    $idReserva = (int) $pdo->lastInsertId();
+    $leidas = json_decode((string) $pdo->query(
+        'SELECT referencias FROM identidades_reservadas WHERE id = ' . $idReserva,
+    )->fetchColumn(), true, 512, JSON_THROW_ON_ERROR);
+    $leidas['agregado'] = ['ok' => true];
+    $pdo->prepare('UPDATE identidades_reservadas SET referencias = ? WHERE id = ?')
+        ->execute([json_encode($leidas, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $idReserva]);
+    $recuperadas = json_decode((string) $pdo->query(
+        'SELECT referencias FROM identidades_reservadas WHERE id = ' . $idReserva,
+    )->fetchColumn(), true, 512, JSON_THROW_ON_ERROR);
+    check('referencias JSON conservan datos al actualizar', $recuperadas === $leidas);
+} finally {
+    $pdo->rollBack();
+}
+
+$pdo->beginTransaction();
+try {
+    $base = $pdo->query('SELECT * FROM postulaciones WHERE activo = 1 ORDER BY id LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+    if ($base === false) {
+        check('postulación activa disponible para probar columnas generadas', false);
+    } else {
+        $id = (int) $base['id'];
+        $esperado = $base['postulante_id'] . '-' . $base['oferta_id'];
+
+        $pdo->exec('UPDATE postulaciones SET activo = 0 WHERE id = ' . $id);
+        $inactiva = $pdo->query('SELECT postulacion_unica FROM postulaciones WHERE id = ' . $id)->fetchColumn();
+        check('postulacion_unica se anula al desactivar', $inactiva === null);
+
+        $pdo->exec('UPDATE postulaciones SET activo = 1 WHERE id = ' . $id);
+        $activa = $pdo->query('SELECT postulacion_unica FROM postulaciones WHERE id = ' . $id)->fetchColumn();
+        check('postulacion_unica se regenera al reactivar', $activa === $esperado);
+    }
+} finally {
+    $pdo->rollBack();
+}
+
+$pdo->beginTransaction();
+try {
+    $pdo->exec("INSERT INTO solicitudes_empresa (ruc, razon_social, email, representante, estado)
+                VALUES ('20999999993', 'Compat D', 'd@example.test', 'D', 'pendiente')");
+    $idSolicitud = (int) $pdo->lastInsertId();
+
+    $reservado = $pdo->query(
+        'SELECT ruc_reservado FROM solicitudes_empresa WHERE id = ' . $idSolicitud,
+    )->fetchColumn();
+    check('ruc_reservado coincide con el RUC activo', $reservado === '20999999993');
+
+    $pdo->exec("UPDATE solicitudes_empresa SET estado = 'rechazada' WHERE id = " . $idSolicitud);
+    $liberado = $pdo->query(
+        'SELECT ruc_reservado FROM solicitudes_empresa WHERE id = ' . $idSolicitud,
+    )->fetchColumn();
+    check('ruc_reservado se libera al rechazar', $liberado === null);
+
+    $pdo->exec("INSERT INTO solicitudes_empresa (ruc, razon_social, email, representante, estado)
+                VALUES ('20999999993', 'Compat E', 'e@example.test', 'E', 'pendiente')");
+    check('RUC puede reutilizarse tras el rechazo', true);
+
+    $duplicado = false;
+    try {
+        $pdo->exec("INSERT INTO solicitudes_empresa (ruc, razon_social, email, representante, estado)
+                    VALUES ('20999999993', 'Compat F', 'f@example.test', 'F', 'pendiente')");
+    } catch (PDOException $e) {
+        $duplicado = $e->getCode() === '23000';
+    }
+    check('RUC activo duplicado se rechaza tras reutilización', $duplicado);
+} finally {
+    $pdo->rollBack();
+}
+
 if ($fallos > 0) {
     echo "Compatibilidad MariaDB con {$fallos} fallo(s).\n";
     exit(1);

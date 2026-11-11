@@ -162,3 +162,74 @@ La suite smoke crea un `mariadb:11.4.13` temporal en `tmpfs`, un esquema por
 suite y ejecuta migraciones y seeders. Incluye `test_mariadb_compat.sh`, que
 verifica versión, InnoDB, columnas generadas, índices únicos, JSON y las
 restricciones críticas de SOL.
+
+## 8. Auditoría y reporte
+
+```bash
+./deploy/scripts/test.sh audit
+```
+
+Ejecuta `tests/tools/audit_database_integrity.php` contra la base activa. El
+auditor no modifica datos, revisa motor, charset/collation, tablas, columnas
+generadas, índices únicos, JSON, FK y datos críticos, y devuelve código distinto
+de cero ante errores.
+
+El informe de la validación integral está en
+[`reports/mariadb-validation-report.md`](reports/mariadb-validation-report.md).
+
+## 9. Recuperación y reversión
+
+### Si falla la importación
+
+1. Detener backend y frontend:
+
+   ```bash
+   docker stop sol_dev-backend-1 sol_dev-frontend-1
+   ```
+
+2. Restaurar el respaldo de MariaDB o volver a crear el esquema con
+   `./deploy/scripts/dev.sh migrate`.
+3. Volver a importar el dump de datos.
+4. Ejecutar `./deploy/scripts/test.sh audit` y `./deploy/scripts/test.sh http`.
+5. Levantar de nuevo:
+
+   ```bash
+   ./deploy/scripts/dev.sh up --no-build
+   ```
+
+### Si se necesita volver temporalmente a MySQL
+
+El volumen `sol_dev_mysql_data` se conserva intacto. No se debe montar en
+MariaDB. Para una reversión operativa:
+
+1. No eliminar `sol_dev_mariadb_data` ni `sol_dev_mysql_data`.
+2. Revisar el commit anterior a la migración y restaurar temporalmente
+   `deploy/compose.yaml` con `mysql:8.0.46` y el volumen `mysql_data`.
+3. Detener el stack actual sin borrar volúmenes:
+
+   ```bash
+   ./deploy/scripts/dev.sh down
+   ```
+
+4. Levantar el stack MySQL anterior y validar el acceso.
+5. Conservar MariaDB como copia de solo lectura hasta confirmar la reversión.
+
+La reversión completa no se ha ejecutado en esta validación porque el volumen
+MySQL es la fuente de comparación y debe permanecer intacto; el procedimiento
+está documentado para una ventana de mantenimiento autorizada.
+
+## 10. Operaciones destructivas
+
+Nunca ejecutar durante la migración:
+
+```text
+docker compose down -v
+docker volume rm sol_dev_mysql_data
+docker volume rm sol_dev_mariadb_data
+docker volume prune
+docker system prune --volumes
+```
+
+Los respaldos lógicos son el mecanismo de recuperación. Los volúmenes son la
+última copia de seguridad y no deben eliminarse hasta que la migración esté
+aprobada y exista un respaldo verificado fuera del host.

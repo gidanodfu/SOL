@@ -7,7 +7,7 @@ TARGET=all
 BUILD=1
 for arg in "$@"; do
     case "$arg" in
-        all|backend|frontend|http|smoke|validation|e2e) TARGET=$arg ;;
+        all|backend|frontend|http|smoke|validation|e2e|audit) TARGET=$arg ;;
         --no-build) BUILD=0 ;;
         -h|--help)
             cat <<'USAGE'
@@ -21,6 +21,7 @@ Ejecuta las pruebas dentro de contenedores; no instala dependencias en el host.
   http        smoke HTTP no destructivo contra el stack de desarrollo activo
   smoke       suite de humo aislada en un MariaDB temporal con esquema por suite
   e2e         navegador Chromium headless contra el stack activo
+  audit       auditoría de integridad de la base MariaDB activa
   validation  validación de variables y del contexto Docker
 
 Opciones:
@@ -48,6 +49,21 @@ fi
 if [ "$TARGET" = "e2e" ]; then
     "$ROOT/deploy/scripts/e2e.sh" || exit $?
     exit 0
+fi
+
+if [ "$TARGET" = "audit" ]; then
+    require_service_running compose_dev backend
+    prepare_backend_env
+    AUDIT_IMAGE=sol_backend_test:local
+    if ! docker image inspect "$AUDIT_IMAGE" >/dev/null 2>&1; then
+        docker build --target test -t "$AUDIT_IMAGE" -f "$ROOT/backend/Dockerfile" "$ROOT" >/dev/null
+    fi
+    NET_NAME="$(project_name)_internal"
+    docker run --rm --network "$NET_NAME" --env-file "$BACKEND_ENV_FILE" \
+        -e DB_HOST=db -e DB_PORT=3306 \
+        -v "$ROOT/tests:/var/www/sol/tests:ro" \
+        "$AUDIT_IMAGE" php /var/www/sol/tests/tools/audit_database_integrity.php
+    exit $?
 fi
 
 if [ "$TARGET" = "validation" ]; then

@@ -301,6 +301,7 @@ Validación y respaldos:
 ./deploy/scripts/test.sh http       # smoke HTTP contra el stack activo
 ./deploy/scripts/test.sh smoke      # integración aislada en MariaDB temporal
 ./deploy/scripts/test.sh e2e        # Chromium headless contra el stack activo
+./deploy/scripts/test.sh audit      # auditoría de integridad de la base activa
 ./deploy/scripts/test.sh validation # validación de variables y contexto Docker
 ```
 

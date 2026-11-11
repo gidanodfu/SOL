@@ -38,16 +38,43 @@ function rutaChromium() {
 
 const resultados = [];
 let fallos = 0;
+let bloqueados = 0;
+let paginaActiva = null;
+
+function slug(texto) {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
 
 async function ejecutar(nombre, accion) {
   try {
     await accion();
-    resultados.push(`OK   ${nombre}`);
+    resultados.push({ estado: 'OK', nombre });
+    return true;
   } catch (error) {
     fallos++;
-    resultados.push(`FAIL ${nombre}: ${error.message}`);
-    throw error;
+    resultados.push({ estado: 'FAIL', nombre, error: error.message });
+    if (paginaActiva) {
+      try {
+        await paginaActiva.screenshot({
+          path: join(ART, `fail-${resultados.length}-${slug(nombre)}.png`),
+          fullPage: true,
+        });
+      } catch {
+        // La captura es evidencia best-effort; no debe ocultar el fallo original.
+      }
+    }
+    return false;
   }
+}
+
+function bloqueado(nombre, motivo) {
+  bloqueados++;
+  resultados.push({ estado: 'BLOCKED', nombre, motivo });
 }
 
 function vigilarErrores(page) {
@@ -80,6 +107,7 @@ async function sinDesbordamiento(page, etiqueta) {
 }
 
 async function visitar(page, ruta, textoEsperado) {
+  paginaActiva = page;
   await page.goto(`${BASE}${ruta}`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
   if (textoEsperado) {
@@ -89,6 +117,7 @@ async function visitar(page, ruta, textoEsperado) {
 }
 
 async function iniciarSesion(page, rol) {
+  paginaActiva = page;
   const { usuario, clave } = CREDENCIALES[rol];
   await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('#username').fill(usuario);
@@ -97,24 +126,42 @@ async function iniciarSesion(page, rol) {
   await page.waitForURL((url) => !url.pathname.endsWith('/login'), { timeout: 15000 });
 }
 
-function guardarErrores(nombre, errores) {
+async function guardarErrores(nombre, errores) {
   if (errores.length > 0) {
     writeFileSync(join(ART, `${nombre}.errores.txt`), errores.join('\n'));
   }
-  assert.deepEqual(errores, [], `${nombre}: errores de consola/API`);
+  await ejecutar(`${nombre}: sin errores de consola/API`, async () => {
+    assert.deepEqual(errores, []);
+  });
 }
 
-const navegador = await chromium.launch({
-  headless: true,
-  executablePath: rutaChromium(),
-});
+function escribirInformes() {
+  const resumen = {
+    base: BASE,
+    fecha: new Date().toISOString(),
+    total: resultados.length,
+    ok: resultados.filter((r) => r.estado === 'OK').length,
+    fallos,
+    bloqueados,
+    resultados,
+  };
+  writeFileSync(
+    join(ART, 'resultado.txt'),
+    resultados.map((r) => `${r.estado.padEnd(7)} ${r.nombre}${r.error ? ': ' + r.error : ''}`).join('\n') + '\n',
+  );
+  writeFileSync(join(ART, 'resultado.json'), JSON.stringify(resumen, null, 2) + '\n');
+}
 
+let navegador = null;
 try {
+  navegador = await chromium.launch({ headless: true, executablePath: rutaChromium() });
+
   // Público
   {
     const contexto = await navegador.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-PE' });
     const page = await contexto.newPage();
     const errores = vigilarErrores(page);
+    paginaActiva = page;
 
     await ejecutar('público: /inicio carga y no duplica el acceso a ofertas', async () => {
       await visitar(page, '/inicio', 'Accede al Portal laboral');
@@ -142,7 +189,7 @@ try {
       }
     });
 
-    guardarErrores('publico', errores);
+    await guardarErrores('publico', errores);
     await contexto.close();
   }
 
@@ -151,7 +198,8 @@ try {
     const contexto = await navegador.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-PE' });
     const page = await contexto.newPage();
     const errores = vigilarErrores(page);
-    await ejecutar('admin: inicio de sesión', () => iniciarSesion(page, 'admin'));
+    paginaActiva = page;
+    const sesion = await ejecutar('admin: inicio de sesión', () => iniciarSesion(page, 'admin'));
 
     const rutas = [
       ['/admin/dashboard', 'Dashboard'],
@@ -164,41 +212,49 @@ try {
       ['/admin/contrataciones', 'Contratos'],
     ];
     for (const [ruta, texto] of rutas) {
+      if (!sesion) {
+        bloqueado(`admin: ${ruta}`, 'sesión de administración no iniciada');
+        continue;
+      }
       await ejecutar(`admin: ${ruta}`, () => visitar(page, ruta, texto));
     }
 
-    await ejecutar('admin: alta de usuario abre y cierra el formulario', async () => {
-      await visitar(page, '/admin/usuarios', 'Usuarios');
-      await page.getByRole('button', { name: /Nuevo usuario municipal/ }).click();
-      await page.getByText('Nuevo personal municipal', { exact: true }).waitFor();
-      await page.getByRole('button', { name: 'Cancelar' }).first().click();
-    });
+    if (!sesion) {
+      bloqueado('admin: interacciones', 'sesión de administración no iniciada');
+    } else {
+      await ejecutar('admin: alta de usuario abre y cierra el formulario', async () => {
+        await visitar(page, '/admin/usuarios', 'Usuarios');
+        await page.getByRole('button', { name: /Nuevo usuario municipal/ }).click();
+        await page.getByText('Nuevo personal municipal', { exact: true }).waitFor();
+        await page.getByRole('button', { name: 'Cancelar' }).first().click();
+      });
 
-    await ejecutar('admin: editor de actividad abre y cierra', async () => {
-      await visitar(page, '/admin/actividades', 'Actividades');
-      await page.getByRole('button', { name: /Nueva actividad/ }).click();
-      await page.getByRole('heading', { name: 'Nueva actividad' }).first().waitFor();
-      await page.getByRole('button', { name: 'Cancelar' }).first().click();
-    });
+      await ejecutar('admin: editor de actividad abre y cierra', async () => {
+        await visitar(page, '/admin/actividades', 'Actividades');
+        await page.getByRole('button', { name: /Nueva actividad/ }).click();
+        await page.getByRole('heading', { name: 'Nueva actividad' }).first().waitFor();
+        await page.getByRole('button', { name: 'Cancelar' }).first().click();
+      });
 
-    await ejecutar('admin: editor de oportunidad abre y cierra', async () => {
-      await visitar(page, '/admin/oportunidades', 'Difusión');
-      await page.getByRole('button', { name: /Nueva oportunidad/ }).click();
-      await page.getByRole('heading', { name: 'Nueva oportunidad' }).first().waitFor();
-      await page.getByRole('button', { name: 'Cancelar' }).first().click();
-    });
+      await ejecutar('admin: editor de oportunidad abre y cierra', async () => {
+        await visitar(page, '/admin/oportunidades', 'Difusión');
+        await page.getByRole('button', { name: /Nueva oportunidad/ }).click();
+        await page.getByRole('heading', { name: 'Nueva oportunidad' }).first().waitFor();
+        await page.getByRole('button', { name: 'Cancelar' }).first().click();
+      });
 
-    await ejecutar('admin: drawer móvil abre y cierra', async () => {
-      await page.setViewportSize({ width: 390, height: 844 });
-      await visitar(page, '/admin/dashboard', 'Dashboard');
-      await page.locator('.side-movil-burger').click();
-      await page.waitForFunction(() => document.querySelector('.sidebar')?.classList.contains('abierto'));
-      await page.locator('.side-cerrar-movil').click();
-      await page.waitForFunction(() => !document.querySelector('.sidebar')?.classList.contains('abierto'));
-      await sinDesbordamiento(page, 'admin móvil');
-    });
+      await ejecutar('admin: drawer móvil abre y cierra', async () => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await visitar(page, '/admin/dashboard', 'Dashboard');
+        await page.locator('.side-movil-burger').click();
+        await page.waitForFunction(() => document.querySelector('.sidebar')?.classList.contains('abierto'));
+        await page.locator('.side-cerrar-movil').click();
+        await page.waitForFunction(() => !document.querySelector('.sidebar')?.classList.contains('abierto'));
+        await sinDesbordamiento(page, 'admin móvil');
+      });
+    }
 
-    guardarErrores('admin', errores);
+    await guardarErrores('admin', errores);
     await contexto.close();
   }
 
@@ -207,7 +263,8 @@ try {
     const contexto = await navegador.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-PE' });
     const page = await contexto.newPage();
     const errores = vigilarErrores(page);
-    await ejecutar('empresa: inicio de sesión', () => iniciarSesion(page, 'empresa'));
+    paginaActiva = page;
+    const sesion = await ejecutar('empresa: inicio de sesión', () => iniciarSesion(page, 'empresa'));
 
     const rutas = [
       ['/empresa/dashboard', 'Panel de empresa'],
@@ -218,17 +275,25 @@ try {
       ['/empresa/cuenta', 'Mi cuenta'],
     ];
     for (const [ruta, texto] of rutas) {
+      if (!sesion) {
+        bloqueado(`empresa: ${ruta}`, 'sesión de empresa no iniciada');
+        continue;
+      }
       await ejecutar(`empresa: ${ruta}`, () => visitar(page, ruta, texto));
     }
 
-    await ejecutar('empresa: formulario de oferta abre y cierra', async () => {
-      await visitar(page, '/empresa/ofertas', 'Ofertas laborales');
-      await page.getByRole('button', { name: /Nueva oferta/ }).click();
-      await page.getByRole('heading', { name: /Nueva oferta/ }).first().waitFor();
-      await page.getByRole('button', { name: 'Cancelar' }).first().click();
-    });
+    if (!sesion) {
+      bloqueado('empresa: formulario de oferta', 'sesión de empresa no iniciada');
+    } else {
+      await ejecutar('empresa: formulario de oferta abre y cierra', async () => {
+        await visitar(page, '/empresa/ofertas', 'Ofertas laborales');
+        await page.getByRole('button', { name: /Nueva oferta/ }).click();
+        await page.getByRole('heading', { name: /Nueva oferta/ }).first().waitFor();
+        await page.getByRole('button', { name: 'Cancelar' }).first().click();
+      });
+    }
 
-    guardarErrores('empresa', errores);
+    await guardarErrores('empresa', errores);
     await contexto.close();
   }
 
@@ -237,17 +302,23 @@ try {
     const contexto = await navegador.newContext({ viewport: { width: 1440, height: 900 }, locale: 'es-PE' });
     const page = await contexto.newPage();
     const errores = vigilarErrores(page);
-    await ejecutar('postulante: inicio de sesión', () => iniciarSesion(page, 'postulante'));
+    paginaActiva = page;
+    const sesion = await ejecutar('postulante: inicio de sesión', () => iniciarSesion(page, 'postulante'));
 
     const rutas = [
       ['/postulante/perfil', 'Mi perfil y CV'],
       ['/postulante/postulaciones', 'Mis postulaciones'],
       ['/postulante/cuenta', 'Mi cuenta'],
-      ['/postulante/buscar', 'Ofertas Disponibles'],
+      ['/postulante/buscar', null],
       ['/postulante/oportunidades', 'Ferias y oportunidades'],
     ];
     for (const [ruta, texto] of rutas) {
+      if (!sesion) {
+        bloqueado(`postulante: ${ruta}`, 'sesión de postulante no iniciada');
+        continue;
+      }
       await ejecutar(`postulante: ${ruta}`, async () => {
+        paginaActiva = page;
         await page.goto(`${BASE}${ruta}`, { waitUntil: 'domcontentloaded' });
         await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
         if (ruta === '/postulante/buscar') {
@@ -261,19 +332,22 @@ try {
       });
     }
 
-    guardarErrores('postulante', errores);
+    await guardarErrores('postulante', errores);
     await contexto.close();
   }
+} catch (error) {
+  fallos++;
+  resultados.push({ estado: 'FAIL', nombre: 'ejecución E2E', error: error.message });
 } finally {
-  await navegador.close();
+  if (navegador) {
+    await navegador.close().catch(() => {});
+  }
+  escribirInformes();
 }
 
-writeFileSync(join(ART, 'resultado.txt'), resultados.join('\n'));
-console.log(resultados.join('\n'));
+console.log(resultados.map((r) => `${r.estado.padEnd(7)} ${r.nombre}${r.error ? ': ' + r.error : ''}`).join('\n'));
+console.log(`E2E: ${resultados.filter((r) => r.estado === 'OK').length} OK, ${fallos} fallo(s), ${bloqueados} bloqueado(s). Evidencias en ${ART}`);
 
-if (fallos > 0) {
-  console.error(`E2E: ${fallos} fallo(s). Evidencias en ${ART}`);
-  process.exit(1);
+if (fallos > 0 || bloqueados > 0) {
+  process.exitCode = 1;
 }
-
-console.log(`E2E: ${resultados.length} comprobaciones correctas.`);

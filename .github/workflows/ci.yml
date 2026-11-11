@@ -61,6 +61,9 @@ jobs:
       - name: Cargar datos de prueba en base efímera
         run: ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes
 
+      - name: Auditoría de integridad MariaDB
+        run: ./deploy/scripts/test.sh audit
+
       - name: Smoke HTTP local
         run: ./deploy/scripts/test.sh http
 
