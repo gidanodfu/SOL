@@ -2623,7 +2623,73 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 .profile-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .profile-image-inicial { font-weight: 700; color: var(--enlace); line-height: 1; }
-.emp-modal-cabecera { display: flex; justify-content: center; margin-bottom: 14px; }
+
+/* ---------- Detalle empresarial compartido ---------- */
+.empresa-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.empresa-detalle-identidad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.empresa-detalle-identidad-texto {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.empresa-detalle-identidad-texto strong {
+  color: var(--text-1);
+  font-size: 1.08rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.empresa-detalle-identidad-texto span {
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.empresa-detalle-insignias {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.empresa-detalle-grupo {
+  min-width: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.empresa-detalle-grupo h3 {
+  margin: 0 0 10px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.empresa-detalle .descripcion {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 560px) {
+  .empresa-detalle .descripcion {
+    grid-template-columns: 1fr;
+  }
+  .empresa-detalle-identidad {
+    align-items: flex-start;
+  }
+  .empresa-detalle-insignias {
+    width: 100%;
+    margin-left: 0;
+  }
+}
 
 /* ---------- Presencia digital (sitio web + redes sociales) ---------- */
 .presencia-digital {
@@ -2675,28 +2741,26 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 .presencia-red:hover { color: var(--blue); border-color: var(--blue); background: var(--sky); }
 .presencia-red:focus-visible { outline: 2px solid var(--accion-foco); outline-offset: 2px; }
-/* Variante pública del modal de empresa. Se aplica solo dentro de
-   .empresa-modal-presencia para no alterar el modal administrativo. */
-.empresa-modal-presencia { margin-top: 20px; }
-.empresa-modal-presencia .presencia-digital {
-  margin-top: 0;
+/* Variante detallada reutilizable por el modal público y el administrativo. */
+.presencia-digital--detallada {
+  margin-top: 20px;
   padding-top: 18px;
   align-items: stretch;
   gap: 12px;
   text-align: left;
 }
-.empresa-modal-presencia .presencia-encabezado {
+.presencia-digital--detallada .presencia-encabezado {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
-.empresa-modal-presencia .presencia-descripcion {
+.presencia-digital--detallada .presencia-descripcion {
   margin: 0;
   color: var(--text-2);
   font-size: 12px;
   line-height: 1.45;
 }
-.empresa-modal-presencia .presencia-web {
+.presencia-digital--detallada .presencia-web {
   display: flex;
   width: 100%;
   max-width: none;
@@ -2710,11 +2774,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   text-align: left;
   box-sizing: border-box;
 }
-.empresa-modal-presencia .presencia-web > svg:first-child {
+.presencia-digital--detallada .presencia-web > svg:first-child {
   flex: none;
   color: var(--blue);
 }
-.empresa-modal-presencia .presencia-web-texto {
+.presencia-digital--detallada .presencia-web-texto {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -2724,14 +2788,14 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   overflow: visible;
   white-space: normal;
 }
-.empresa-modal-presencia .presencia-web-etiqueta {
+.presencia-digital--detallada .presencia-web-etiqueta {
   color: var(--text-3);
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.empresa-modal-presencia .presencia-web-dominio {
+.presencia-digital--detallada .presencia-web-dominio {
   color: var(--blue);
   font-size: 13.5px;
   font-weight: 600;
@@ -2740,14 +2804,14 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.empresa-modal-presencia .presencia-redes {
+.presencia-digital--detallada .presencia-redes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   width: 100%;
   gap: 10px 12px;
   justify-content: stretch;
 }
-.empresa-modal-presencia .presencia-red--detallada {
+.presencia-digital--detallada .presencia-red--detallada {
   display: flex;
   width: 100%;
   height: auto;
@@ -2761,19 +2825,19 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   color: var(--text-1);
   text-align: left;
 }
-.empresa-modal-presencia .presencia-red-logo {
+.presencia-digital--detallada .presencia-red-logo {
   display: inline-flex;
   flex: none;
   color: var(--text-1);
 }
-.empresa-modal-presencia .presencia-red-texto {
+.presencia-digital--detallada .presencia-red-texto {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
 }
-.empresa-modal-presencia .presencia-red-nombre {
+.presencia-digital--detallada .presencia-red-nombre {
   overflow: hidden;
   color: var(--text-1);
   font-size: 13px;
@@ -2781,32 +2845,32 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.empresa-modal-presencia .presencia-red-aux {
+.presencia-digital--detallada .presencia-red-aux {
   color: var(--text-3);
   font-size: 11.5px;
 }
-.empresa-modal-presencia .presencia-externo {
+.presencia-digital--detallada .presencia-externo {
   flex: none;
   margin-left: auto;
   color: var(--text-3);
 }
-.empresa-modal-presencia .presencia-red--detallada:hover {
+.presencia-digital--detallada .presencia-red--detallada:hover {
   border-color: var(--blue);
   background: var(--sky);
   color: var(--blue);
 }
-.empresa-modal-presencia .presencia-red--detallada:hover .presencia-externo,
-.empresa-modal-presencia .presencia-red--detallada:hover .presencia-red-logo {
+.presencia-digital--detallada .presencia-red--detallada:hover .presencia-externo,
+.presencia-digital--detallada .presencia-red--detallada:hover .presencia-red-logo {
   color: var(--blue);
 }
-.empresa-modal-presencia .presencia-web:focus-visible,
-.empresa-modal-presencia .presencia-red--detallada:focus-visible {
+.presencia-digital--detallada .presencia-web:focus-visible,
+.presencia-digital--detallada .presencia-red--detallada:focus-visible {
   outline: 2px solid var(--accion-foco);
   outline-offset: 2px;
 }
 
 @media (max-width: 420px) {
-  .empresa-modal-presencia .presencia-redes { grid-template-columns: 1fr; }
+  .presencia-digital--detallada .presencia-redes { grid-template-columns: 1fr; }
 }
 
 /* =====================================================================

@@ -3,10 +3,8 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cambiarEstadoEmpresa, crearEmpresa, listarEmpresas, resetPasswordEmpresa } from '../../services/empresas';
 import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
-import Modal from '../../components/Modal';
-import FichaDatos from '../../components/FichaDatos';
 import ProfileImage from '../../components/ProfileImage';
-import PresenciaDigital from '../../components/RedesSociales';
+import EmpresaDetalleModal from '../../components/EmpresaDetalleModal';
 import { useToast, useDialogo } from '../../components/Feedbacks';
 import { Check, Eye, KeyRound, Power } from 'lucide-react';
 import { errorApi, fecha, fechaCalendario, soloDigitos, urlArchivo } from '../../utils';
@@ -207,13 +205,51 @@ function DetalleEmpresa({ empresa, puedeGestionar, alCerrar, alCambio }) {
     }
   };
 
+  const secciones = [
+    {
+      titulo: 'Identificación empresarial',
+      items: [
+        { etiqueta: 'RUC', valor: empresa.ruc },
+        { etiqueta: 'Nombre comercial', valor: empresa.nombre_comercial },
+        { etiqueta: 'Representante', valor: empresa.representante },
+      ],
+    },
+    {
+      titulo: 'Contacto y ubicación',
+      items: [
+        { etiqueta: 'Correo', valor: empresa.email },
+        { etiqueta: 'Teléfono', valor: empresa.telefono },
+        { etiqueta: 'Dirección', valor: empresa.direccion },
+      ],
+    },
+    {
+      titulo: 'Cuenta y registro',
+      items: [
+        { etiqueta: 'Usuario', valor: empresa.username },
+        { etiqueta: 'Estado del usuario', valor: empresa.user_estado },
+        { etiqueta: 'Registro', valor: fechaCalendario(empresa.created_at) },
+        { etiqueta: 'Antigüedad en la plataforma', valor: empresa.antiguedad },
+      ],
+    },
+  ];
+
+  const insignias = (
+    <>
+      <Estado valor={empresa.estado} diccionario={estadosEmpresa} />
+      {empresa.evaluacion_presencial ? (
+        <span className="badge badge-green"><Check size={13} aria-hidden="true" style={{ marginRight: 4 }} />Evaluada presencialmente</span>
+      ) : null}
+    </>
+  );
+
   return (
-    <Modal
+    <EmpresaDetalleModal
+      empresa={empresa}
       abierto
-      titulo={empresa.razon_social}
-      subtitulo={`${empresa.nombre_comercial || 'Empresa afiliada'} · RUC ${empresa.ruc}`}
       alCerrar={alCerrar}
-      tamano="ancho"
+      insignias={insignias}
+      error={error}
+      secciones={secciones}
       acciones={puedeGestionar ? (
         <>
           <Boton variante={empresa.estado === 'activo' ? 'peligro' : 'exito'} cargando={enviando} onClick={alternar}>
@@ -224,51 +260,7 @@ function DetalleEmpresa({ empresa, puedeGestionar, alCerrar, alCambio }) {
           </Boton>
         </>
       ) : null}
-    >
-      <div className="form-fila" style={{ marginBottom: '0.8rem' }}>
-        <Estado valor={empresa.estado} diccionario={estadosEmpresa} />
-        {empresa.evaluacion_presencial ? (
-          <span className="badge badge-green"><Check size={13} aria-hidden="true" style={{ marginRight: 4 }} />Evaluada presencialmente</span>
-        ) : null}
-      </div>
-
-      <Mensaje>{error}</Mensaje>
-
-      <div className="emp-modal-cabecera">
-        <ProfileImage
-          src={urlArchivo(empresa.logo_url)}
-          alt={`Foto de ${empresa.razon_social}`}
-          nombre={empresa.razon_social}
-          variant="company"
-          size={88}
-        />
-      </div>
-
-      <FichaDatos
-        items={[
-          { etiqueta: 'RUC', valor: empresa.ruc },
-          { etiqueta: 'Razón social', valor: empresa.razon_social },
-          { etiqueta: 'Nombre comercial', valor: empresa.nombre_comercial },
-          { etiqueta: 'Representante', valor: empresa.representante },
-          { etiqueta: 'Correo', valor: empresa.email },
-          { etiqueta: 'Teléfono', valor: empresa.telefono },
-          { etiqueta: 'Dirección', valor: empresa.direccion },
-          { etiqueta: 'Usuario', valor: empresa.username },
-          { etiqueta: 'Estado del usuario', valor: empresa.user_estado },
-          { etiqueta: 'Registro', valor: fechaCalendario(empresa.created_at) },
-          { etiqueta: 'Antigüedad en la plataforma', valor: empresa.antiguedad },
-        ]}
-      />
-
-      <PresenciaDigital datos={empresa} />
-
-      {empresa.info_adicional && (
-        <div className="modal-seccion">
-          <h3>Información adicional</h3>
-          <p className="modal-texto">{empresa.info_adicional}</p>
-        </div>
-      )}
-    </Modal>
+    />
   );
 }
 
