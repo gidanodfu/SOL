@@ -1,0 +1,179 @@
+{
+    "base": "sistema_empleo",
+    "motor": "11.4.13-MariaDB-ubu2404",
+    "resultados": [
+        {
+            "estado": "OK",
+            "control": "Motor",
+            "detalle": "11.4.13-MariaDB-ubu2404 (MariaDB)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Charset de la base",
+            "detalle": "{\"DEFAULT_CHARACTER_SET_NAME\":\"utf8mb4\",\"DEFAULT_COLLATION_NAME\":\"utf8mb4_uca1400_ai_ci\"}",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Tablas obligatorias",
+            "detalle": "28 tablas presentes",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Collation de tablas",
+            "detalle": "todas utf8mb4_general_ci",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Collation de columnas",
+            "detalle": "solo utf8mb4_general_ci\/utf8mb4_bin",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Columna generada solicitudes_empresa.ruc_reservado",
+            "detalle": "STORED GENERATED",
+            "muestra": [
+                {
+                    "TABLE_NAME": "solicitudes_empresa",
+                    "COLUMN_NAME": "ruc_reservado",
+                    "EXTRA": "STORED GENERATED",
+                    "GENERATION_EXPRESSION": "case when `estado` in ('pendiente','aprobada') then rtrim(`ruc`) else NULL end"
+                }
+            ]
+        },
+        {
+            "estado": "OK",
+            "control": "Columna generada postulaciones.postulacion_unica",
+            "detalle": "VIRTUAL GENERATED",
+            "muestra": [
+                {
+                    "TABLE_NAME": "postulaciones",
+                    "COLUMN_NAME": "postulacion_unica",
+                    "EXTRA": "VIRTUAL GENERATED",
+                    "GENERATION_EXPRESSION": "if(`activo` = 1,concat(`postulante_id`,'-',`oferta_id`),NULL)"
+                }
+            ]
+        },
+        {
+            "estado": "OK",
+            "control": "Índice único solicitudes_empresa.uq_solicitud_ruc_activa",
+            "detalle": "columnas=ruc_reservado",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Índice único postulaciones.uq_postulacion_activa",
+            "detalle": "columnas=postulacion_unica",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Índice único contrataciones.postulacion_id",
+            "detalle": "columnas=postulacion_id",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Índice único identidades_reservadas.tipo_valor",
+            "detalle": "columnas=tipo,valor",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Índice único cv_activos.PRIMARY",
+            "detalle": "columnas=postulante_id",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Índice único cv_activos.uq_cv_activo_cv",
+            "detalle": "columnas=cv_id",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Tipo JSON auditoria.detalle",
+            "detalle": "tipo=longtext",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "CHECK JSON auditoria.detalle",
+            "detalle": "json_valid presente",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "JSON válido auditoria.detalle",
+            "detalle": "0 registro(s) con JSON inválido",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Tipo JSON identidades_reservadas.referencias",
+            "detalle": "tipo=longtext",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "CHECK JSON identidades_reservadas.referencias",
+            "detalle": "json_valid presente",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "JSON válido identidades_reservadas.referencias",
+            "detalle": "0 registro(s) con JSON inválido",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Valores ruc_reservado",
+            "detalle": "0 inconsistente(s)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Valores postulacion_unica",
+            "detalle": "0 inconsistente(s)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Integridad referencial",
+            "detalle": "33 FK(s), 0 huérfano(s)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Usuarios sin username",
+            "detalle": "0 registro(s) inválido(s)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Empresas sin RUC",
+            "detalle": "0 registro(s) inválido(s)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Documentos de postulante inválidos",
+            "detalle": "0 registro(s) inválido(s)",
+            "muestra": []
+        },
+        {
+            "estado": "OK",
+            "control": "Migrations sin versión",
+            "detalle": "0 registro(s) inválido(s)",
+            "muestra": []
+        }
+    ],
+    "errores": [],
+    "avisos": [],
+    "ok": true
+}

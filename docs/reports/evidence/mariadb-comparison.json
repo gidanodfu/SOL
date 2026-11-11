@@ -1,0 +1,385 @@
+{
+    "origen": {
+        "base": "sistema_empleo",
+        "motor": "8.0.46"
+    },
+    "destino": {
+        "base": "sistema_empleo",
+        "motor": "11.4.13-MariaDB-ubu2404"
+    },
+    "tablas": [
+        {
+            "tabla": "activaciones",
+            "filas_origen": 7,
+            "filas_destino": 7,
+            "identical": 7,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 8
+        },
+        {
+            "tabla": "actividades",
+            "filas_origen": 2,
+            "filas_destino": 2,
+            "identical": 2,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 14
+        },
+        {
+            "tabla": "atenciones",
+            "filas_origen": 0,
+            "filas_destino": 0,
+            "identical": 0,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 12
+        },
+        {
+            "tabla": "auditoria",
+            "filas_origen": 89,
+            "filas_destino": 89,
+            "identical": 89,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 8
+        },
+        {
+            "tabla": "categorias",
+            "filas_origen": 10,
+            "filas_destino": 10,
+            "identical": 10,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 3
+        },
+        {
+            "tabla": "contrataciones",
+            "filas_origen": 1,
+            "filas_destino": 1,
+            "identical": 1,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 14
+        },
+        {
+            "tabla": "cursos_certificaciones",
+            "filas_origen": 0,
+            "filas_destino": 0,
+            "identical": 0,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 8
+        },
+        {
+            "tabla": "cv_activos",
+            "filas_origen": 3,
+            "filas_destino": 3,
+            "identical": 3,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "postulante_id"
+            ],
+            "columnas": 3
+        },
+        {
+            "tabla": "cv_cuotas_mensuales_legado",
+            "filas_origen": 0,
+            "filas_destino": 0,
+            "identical": 0,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 6
+        },
+        {
+            "tabla": "cvs",
+            "filas_origen": 15,
+            "filas_destino": 15,
+            "identical": 15,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 10
+        },
+        {
+            "tabla": "empresas",
+            "filas_origen": 8,
+            "filas_destino": 8,
+            "identical": 8,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 20
+        },
+        {
+            "tabla": "experiencia_laboral",
+            "filas_origen": 0,
+            "filas_destino": 0,
+            "identical": 0,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 9
+        },
+        {
+            "tabla": "formacion_academica",
+            "filas_origen": 0,
+            "filas_destino": 0,
+            "identical": 0,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 9
+        },
+        {
+            "tabla": "habilidades",
+            "filas_origen": 0,
+            "filas_destino": 0,
+            "identical": 0,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 3
+        },
+        {
+            "tabla": "identidades_reservadas",
+            "filas_origen": 48,
+            "filas_destino": 48,
+            "identical": 48,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 9
+        },
+        {
+            "tabla": "migrations",
+            "filas_origen": 27,
+            "filas_destino": 27,
+            "identical": 27,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "version"
+            ],
+            "columnas": 7
+        },
+        {
+            "tabla": "ofertas",
+            "filas_origen": 3,
+            "filas_destino": 3,
+            "identical": 3,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 24
+        },
+        {
+            "tabla": "ofertas_habilidades",
+            "filas_origen": 12,
+            "filas_destino": 12,
+            "identical": 12,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 3
+        },
+        {
+            "tabla": "oportunidades",
+            "filas_origen": 5,
+            "filas_destino": 5,
+            "identical": 5,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 12
+        },
+        {
+            "tabla": "oportunidades_fecha_publicacion_legado",
+            "filas_origen": 2,
+            "filas_destino": 2,
+            "identical": 2,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "oportunidad_id"
+            ],
+            "columnas": 4
+        },
+        {
+            "tabla": "postulacion_historial",
+            "filas_origen": 11,
+            "filas_destino": 11,
+            "identical": 11,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 6
+        },
+        {
+            "tabla": "postulaciones",
+            "filas_origen": 4,
+            "filas_destino": 4,
+            "identical": 4,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 11
+        },
+        {
+            "tabla": "postulantes",
+            "filas_origen": 5,
+            "filas_destino": 5,
+            "identical": 5,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 16
+        },
+        {
+            "tabla": "rate_limit_contadores",
+            "filas_origen": 12,
+            "filas_destino": 12,
+            "identical": 12,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "clave",
+                "ventana_inicio"
+            ],
+            "columnas": 5
+        },
+        {
+            "tabla": "solicitudes_empresa",
+            "filas_origen": 10,
+            "filas_destino": 10,
+            "identical": 10,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 17
+        },
+        {
+            "tabla": "ui_preferences",
+            "filas_origen": 4,
+            "filas_destino": 4,
+            "identical": 4,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "user_id"
+            ],
+            "columnas": 9
+        },
+        {
+            "tabla": "user_refresh_tokens",
+            "filas_origen": 63,
+            "filas_destino": 63,
+            "identical": 63,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 6
+        },
+        {
+            "tabla": "users",
+            "filas_origen": 20,
+            "filas_destino": 20,
+            "identical": 20,
+            "missing": 0,
+            "extra": 0,
+            "modified": 0,
+            "pk": [
+                "id"
+            ],
+            "columnas": 17
+        }
+    ],
+    "diferencias": [],
+    "resumen": {
+        "missing": 0,
+        "extra": 0,
+        "modified": 0,
+        "tablas": 28
+    },
+    "ok": true
+}

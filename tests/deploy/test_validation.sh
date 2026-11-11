@@ -114,7 +114,7 @@ expect_fail_contains 'APP_URL debe ser local' 'APP_URL debe apuntar' \
     "$(variant 's|^APP_URL=.*|APP_URL=http://localhost:9999|')"
 expect_fail_contains 'VITE_API_URL debe ser local' 'VITE_API_URL debe apuntar' \
     "$(variant 's|^VITE_API_URL=.*|VITE_API_URL=http://localhost:9999|')"
-expect_fail_contains 'rechaza contraseña MySQL de ejemplo' 'DB_PASSWORD no puede' \
+expect_fail_contains 'rechaza contraseña MariaDB de ejemplo' 'DB_PASSWORD no puede' \
     "$(variant 's|^DB_PASSWORD=.*|DB_PASSWORD=password|')"
 expect_fail_contains 'rechaza clave de cifrado de ejemplo' 'encryption.key no puede' \
     "$(variant 's|^encryption\.key=.*|encryption.key=changeme|')"

@@ -8,10 +8,20 @@ oficial es la del archivo raíz `VERSION`.
 
 ### Cambiado
 
+- Se añade `test.sh e2e`: Chromium Headless Shell vía Playwright 1.64.0 en una
+  imagen propia externa al repositorio, con recorrido de las pantallas públicas,
+  admin, empresa y postulante en escritorio y móvil.
+- La base operativa pasa de MySQL 8.0 a **MariaDB 11.4.13 LTS** con volumen
+  independiente `mariadb_data`; el volumen histórico de MySQL se conserva.
+- Los scripts de respaldo y restauración usan `mariadb-dump`/`mariadb` y
+  permiten restaurar en una base vacía.
+- La columna generada `solicitudes_empresa.ruc_reservado` usa `RTRIM(ruc)` para
+  ser compatible con MariaDB sin alterar el valor ni el índice único.
+- El smoke runner usa MariaDB y suma `test_mariadb_compat.sh`; la suite completa
+  queda en 29 suites, con flujo mock de APIsPERU.
 - Corregidos los smoke de API, concurrencia e identidad: sus comprobantes
   `dni_token` ahora incluyen la identidad canónica, por lo que el registro ya
   no los rechaza con `422` y las suites vuelven a validar sus reglas.
-
 - El repositorio queda destinado exclusivamente al desarrollo local: se retiran
   el Compose y los scripts de producción, Traefik, Nginx de borde, certificados,
   dominios públicos y los stages `prod` de los Dockerfiles.

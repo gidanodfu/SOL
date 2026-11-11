@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Prueba de concurrencia real: usa dos procesos `spark serve` sobre el mismo
-# MySQL temporal para que las peticiones no estén serializadas por un único
+# MariaDB temporal para que las peticiones no estén serializadas por un único
 # servidor PHP. Verifica duplicados y la carrera selección vs nueva postulación.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1

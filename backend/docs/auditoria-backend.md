@@ -44,6 +44,11 @@
 > (F6/H3), límites del detalle JSON de auditoría (F17), índices adicionales
 > (H1) y la política explícita de re-postulación tras un retiro (F5).
 
+> **Nota 2026-11-11:** este documento describe el estado histórico sobre MySQL
+> 8.0. La base operativa actual es MariaDB 11.4.13 LTS con el driver `MySQLi`;
+> las conclusiones funcionales y de seguridad siguen vigentes salvo las
+> diferencias de motor documentadas en `docs/migracion-mariadb.md`.
+
 ---
 
 ## Actualización post-correcciones (2026-09-10)

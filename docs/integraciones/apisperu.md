@@ -146,12 +146,12 @@ CodeIgniter (controladores delgados)
    ↓ DniService / RucService
 ApisperuClient ── HTTPS + Bearer ──> APIsPERU
    ↓
-MySQL (datos verificados)
+MariaDB (datos verificados)
 ```
 
 - **React**: validaciones preventivas, carga y presentación de errores.
 - **CodeIgniter**: valida, consulta, normaliza y persiste.
-- **MySQL**: fuente de verdad; conserva las restricciones de unicidad.
+- **MariaDB**: fuente de verdad; conserva las restricciones de unicidad.
 
 ### Integridad del registro
 

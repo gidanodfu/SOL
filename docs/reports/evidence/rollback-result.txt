@@ -1,0 +1,25 @@
+== Migraciones iniciales ==
+tablas_iniciales=28
+== Seeds y datos sintéticos ==
+usuarios=5
+== Rollback (último batch) ==
+rollback_exit=0
+	Rolling back: (App) 2026-10-06-100000_App\Database\Migrations\AgregarEnlaceActividades
+	Rolling back: (App) 2026-09-30-100000_App\Database\Migrations\AgregarImagenActividades
+	Rolling back: (App) 2026-09-09-100000_App\Database\Migrations\NormalizarOfertasHeredadas
+	Rolling back: (App) 2026-09-05-100000_App\Database\Migrations\GoogleYPerfilPostulante
+	Rolling back: (App) 2026-09-04-100000_App\Database\Migrations\CrearSolicitudesEmpresaYActivaciones
+	Rolling back: (App) 2026-09-03-100004_App\Database\Migrations\CrearAtencionesActividadesYResultados
+	Rolling back: (App) 2026-09-03-100003_App\Database\Migrations\CrearOfertasYPostulaciones
+	Rolling back: (App) 2026-09-03-100002_App\Database\Migrations\CrearEmpresasYPostulantes
+	Rolling back: (App) 2026-09-03-100001_App\Database\Migrations\CrearUsuariosYAuditoria
+Done rolling back migrations.
+tablas_tras_rollback=1
+migrations
+== Nueva migración ==
+tablas_remigradas=28
+postulacion_unica	VIRTUAL GENERATED
+ruc_reservado	STORED GENERATED
+postulaciones	uq_postulacion_activa
+solicitudes_empresa	uq_solicitud_ruc_activa
+FIN rollback

@@ -11,7 +11,7 @@ case "$TARGET" in
         cat <<'USAGE'
 Uso: deploy/scripts/backup.sh [dev]
 
-Genera un respaldo fechado de MySQL y del volumen writable del backend local.
+Genera un respaldo fechado de MariaDB y del volumen writable del backend local.
 El destino por defecto es $HOME/sol-backups; puede cambiarse con BACKUP_DIR.
 No elimina respaldos anteriores ni volúmenes. Los archivos quedan con permisos
 600 y se verifica que no estén vacíos. No imprime secretos.
@@ -48,10 +48,10 @@ MANIFEST="$BACKUP_DIR/sol-backup-$STAMP.txt"
 [ ! -e "$WRITE_FILE" ] || die "El respaldo $WRITE_FILE ya existe; no se sobrescribe."
 [ ! -e "$MANIFEST" ] || die "El manifiesto $MANIFEST ya existe; no se sobrescribe."
 
-printf 'Creando respaldo de MySQL...\n'
-compose_dev exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --quick --routines --triggers --no-tablespaces --default-character-set=utf8mb4 "$MYSQL_DATABASE"' > "$DB_FILE"
-[ -s "$DB_FILE" ] || die "El respaldo de MySQL quedó vacío."
-grep -q '^CREATE TABLE' "$DB_FILE" || die "El respaldo de MySQL no contiene tablas; no se considera válido."
+printf 'Creando respaldo de MariaDB...\n'
+compose_dev exec -T db sh -c 'MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb-dump -uroot --single-transaction --quick --routines --triggers --no-tablespaces --default-character-set=utf8mb4 "$MARIADB_DATABASE"' > "$DB_FILE"
+[ -s "$DB_FILE" ] || die "El respaldo de MariaDB quedó vacío."
+grep -q '^CREATE TABLE' "$DB_FILE" || die "El respaldo de MariaDB no contiene tablas; no se considera válido."
 chmod 600 "$DB_FILE"
 
 VOL=$(volume_name backend_writable)

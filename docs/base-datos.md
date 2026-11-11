@@ -2,15 +2,15 @@
 
 > Sincronizado con SOL **1.5.4** (2026-11-07).
 
-Documento de referencia del esquema MySQL real de SOL. La fuente de verdad son
+Documento de referencia del esquema MariaDB real de SOL. La fuente de verdad son
 las migraciones de `backend/app/Database/Migrations/`; este documento las
 resume y describe las relaciones vigentes. No se deben editar migraciones
 históricas para “cuadrar” la documentación.
 
 ## 1. Principios
 
-- Motor: MySQL 8.0, tablas InnoDB, `utf8mb4`.
-- CodeIgniter 4 es el único componente que accede a MySQL.
+- Motor: MariaDB 11.4.13, tablas InnoDB, `utf8mb4` y `utf8mb4_general_ci`.
+- CodeIgniter 4 es el único componente que accede a MariaDB mediante el driver `MySQLi`.
 - Los registros de negocio no se eliminan físicamente: se desactivan o se
   conservan con marcas históricas.
 - Las claves foráneas y los índices únicos son parte de las reglas de negocio,
@@ -193,8 +193,25 @@ vez. No se ejecutan seeders desde `dev.sh up` ni `restart`.
 ./deploy/scripts/dev.sh migration-status
 ```
 
-Las migraciones históricas no se modifican; los cambios de esquema se hacen con
-una migración nueva y reversible cuando sea posible.
+Las migraciones históricas no se modifican salvo correcciones de compatibilidad
+imprescindibles y documentadas. El único ajuste de ese tipo es `RTRIM(ruc)` en
+la columna generada `solicitudes_empresa.ruc_reservado`: MariaDB rechaza una
+expresión generada que devuelve directamente una columna `CHAR`. El valor
+resultante es idéntico y el índice único se conserva.
+
+## 7. MariaDB 11.4
+
+- Imagen fijada: `mariadb:11.4.13` (LTS, soporte hasta 2029).
+- Driver: `MySQLi`; MariaDB habla el mismo protocolo y CodeIgniter no requiere
+  un driver distinto.
+- Motor InnoDB, `utf8mb4`, colación `utf8mb4_general_ci`.
+- Columnas `JSON`: MariaDB las representa como `LONGTEXT` con
+  `CHECK (json_valid(...))`; las escrituras y lecturas de la aplicación no
+  cambian.
+- Volumen: `sol_dev_mariadb_data`. El volumen `sol_dev_mysql_data` anterior se
+  conserva intacto y no se monta en MariaDB.
+- Instalación limpia, actualización desde MySQL, respaldo y restauración:
+  [`migracion-mariadb.md`](migracion-mariadb.md).
 
 ## 6. Consultas de diagnóstico
 

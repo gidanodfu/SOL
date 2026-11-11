@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { Globe } from 'lucide-react';
+import { ExternalLink, Globe } from 'lucide-react';
 import { esEnlaceSeguro } from '../utils';
 
 /**
@@ -55,37 +55,68 @@ function etiquetaWeb(url) {
  * Bloque de presencia digital. Muestra el sitio web (arriba) y luego solo las
  * redes configuradas. Si no hay nada, no renderiza nada (sin bloques vacíos).
  */
-export default function PresenciaDigital({ datos }) {
+export default function PresenciaDigital({ datos, variante = 'compacta' }) {
   const web = urlSegura(datos, 'website_url');
   const redes = REDES.map((r) => ({ ...r, url: urlSegura(datos, r.clave) })).filter((r) => r.url);
+  const detallada = variante === 'detallada';
 
   if (!web && redes.length === 0) return null;
 
   return (
-    <div className="presencia-digital">
-      <h3 className="presencia-titulo">Presencia digital</h3>
+    <div className={`presencia-digital${detallada ? ' presencia-digital--detallada' : ''}`}>
+      <div className="presencia-encabezado">
+        <h3 className="presencia-titulo">Presencia digital</h3>
+        {detallada && <p className="presencia-descripcion">Canales oficiales de la empresa</p>}
+      </div>
 
       {web && (
-        <a className="presencia-web" href={web} target="_blank" rel="noopener noreferrer">
-          <Globe size={16} aria-hidden="true" />
-          <span>{etiquetaWeb(web)}</span>
+        <a className={`presencia-web${detallada ? ' presencia-web--detallada' : ''}`} href={web} target="_blank" rel="noopener noreferrer">
+          <Globe size={detallada ? 18 : 16} aria-hidden="true" />
+          {detallada ? (
+            <span className="presencia-web-texto">
+              <span className="presencia-web-etiqueta">Sitio web oficial</span>
+              <span className="presencia-web-dominio">{etiquetaWeb(web)}</span>
+            </span>
+          ) : (
+            <span>{etiquetaWeb(web)}</span>
+          )}
+          {detallada && <ExternalLink size={15} className="presencia-externo" aria-hidden="true" />}
         </a>
       )}
 
       {redes.length > 0 && (
         <div className="presencia-redes">
           {redes.map((r) => (
-            <a
-              key={r.clave}
-              className="presencia-red"
-              href={r.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={r.nombre}
-              title={r.nombre}
-            >
-              <IconoMarca path={r.path} />
-            </a>
+            detallada ? (
+              <a
+                key={r.clave}
+                className="presencia-red presencia-red--detallada"
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={r.nombre}
+                title={r.nombre}
+              >
+                <span className="presencia-red-logo"><IconoMarca path={r.path} /></span>
+                <span className="presencia-red-texto">
+                  <span className="presencia-red-nombre">{r.nombre}</span>
+                  <span className="presencia-red-aux">Ver perfil</span>
+                </span>
+                <ExternalLink size={14} className="presencia-externo" aria-hidden="true" />
+              </a>
+            ) : (
+              <a
+                key={r.clave}
+                className="presencia-red"
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={r.nombre}
+                title={r.nombre}
+              >
+                <IconoMarca path={r.path} />
+              </a>
+            )
           ))}
         </div>
       )}

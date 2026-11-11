@@ -4,7 +4,7 @@
 > entorno local de desarrollo; el despliegue productivo queda fuera del repositorio.
 
 Docker es la única vía oficial. Los comandos de aplicación se ejecutan dentro de
-contenedores; no se requiere PHP, Composer, Node.js, npm ni MySQL en el host.
+contenedores; no se requiere PHP, Composer, Node.js, npm ni MariaDB en el host.
 
 ## 1. Configuración
 
@@ -33,6 +33,14 @@ Variables principales:
 
 No incluya secretos en Git. `deploy/runtime/backend.env` se genera con permisos
 `600` y contiene solo las variables que el backend necesita.
+
+### Base de datos
+
+- Motor: **MariaDB 11.4.13 LTS** (`mariadb:11.4.13`), driver `MySQLi`.
+- Volumen nuevo: `sol_dev_mariadb_data`. El volumen `sol_dev_mysql_data` de la
+  etapa anterior se conserva intacto y no se reutiliza.
+- Procedimiento de instalación limpia, actualización desde MySQL, respaldo y
+  restauración: [`migracion-mariadb.md`](migracion-mariadb.md).
 
 ### APIsPERU (DNI/RUC)
 
@@ -80,7 +88,7 @@ No instale Composer, Node.js ni npm en el host. Para ejecutar herramientas:
 ./deploy/scripts/dev.sh exec backend composer --version
 ./deploy/scripts/dev.sh exec frontend node -v
 ./deploy/scripts/dev.sh exec frontend npm -v
-./deploy/scripts/dev.sh exec db mysql --version
+./deploy/scripts/dev.sh exec db mariadb --version
 ```
 
 Generar secretos locales sin instalar PHP:
@@ -93,7 +101,7 @@ Servicios y puertos:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8080` (`GET /health`)
-- MySQL: `127.0.0.1:3307`
+- MariaDB: `127.0.0.1:3307`
 - Adminer: `127.0.0.1:8082` (`dev.sh tools`)
 
 `dev.sh up` no aplica migraciones ni ejecuta seeders.
@@ -117,7 +125,7 @@ administrador inicial. Se detiene si la base ya contiene usuarios.
 ```
 
 - Las migraciones son la única fuente del esquema.
-- No se modifican migraciones históricas.
+- Las migraciones históricas solo se ajustan por compatibilidad documentada (ver `migracion-mariadb.md`).
 - `SystemSeeder` solo se ejecuta mediante `bootstrap.sh`.
 - Los seeders de prueba requieren `--yes`.
 
@@ -129,17 +137,19 @@ administrador inicial. Se detiene si la base ya contiene usuarios.
 ./deploy/scripts/test.sh frontend
 ./deploy/scripts/test.sh http
 ./deploy/scripts/test.sh smoke
+./deploy/scripts/test.sh e2e
 ./deploy/scripts/test.sh validation
 ```
 
-`smoke` crea un MySQL temporal en `tmpfs`, un esquema aislado por suite y no
+`smoke` crea un MariaDB temporal en `tmpfs`, un esquema aislado por suite y no
 publica puertos. `http` requiere el stack de desarrollo activo.
 
 ## 6. Persistencia
 
 | Volumen | Contenido |
 |---|---|
-| `sol_dev_mysql_data` | Datos de MySQL |
+| `sol_dev_mariadb_data` | Datos de MariaDB |
+| `sol_dev_mysql_data` | Volumen histórico de MySQL; se conserva sin uso |
 | `sol_dev_backend_writable` | Caché, logs y archivos de escritura |
 
 `dev.sh down` conserva los volúmenes. No ejecute `docker compose down -v`,
@@ -159,7 +169,7 @@ Para reiniciar sin perder datos:
 
 Genera:
 
-- `sol-db-<fecha>.sql` — dump lógico de MySQL.
+- `sol-db-<fecha>.sql` — dump lógico de MariaDB.
 - `sol-writable-<fecha>.tar.gz` — volumen `writable`.
 - `sol-backup-<fecha>.txt` — manifiesto con SHA-256.
 
@@ -182,7 +192,7 @@ aplicación, restaura el SQL, verifica tablas y `users`, y reinicia los servicio
 
 - `storage.driver=local` guarda los archivos en el volumen `backend_writable`.
 - `storage.driver=supabase` guarda el binario en Supabase Storage y los metadatos
-  en MySQL. Los CV del proveedor externo no están en el volumen local: respáldelos
+  en MariaDB. Los CV del proveedor externo no están en el volumen local: respáldelos
   desde Supabase.
 - Un postulante mantiene un único CV activo; las versiones anteriores se conservan.
 - La carga usa rate limiting por usuario e IP y una operación simultánea por

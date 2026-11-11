@@ -1,0 +1,35 @@
+OK      público: /inicio carga y no duplica el acceso a ofertas
+OK      público: login, registro y afiliación cargan
+OK      público: responsive sin desbordamiento
+OK      publico: sin errores de consola/API
+OK      admin: inicio de sesión
+OK      admin: /admin/dashboard
+OK      admin: /admin/usuarios
+OK      admin: /admin/empresas
+OK      admin: /admin/solicitudes-empresa
+OK      admin: /admin/ofertas
+OK      admin: /admin/actividades
+OK      admin: /admin/oportunidades
+OK      admin: /admin/contrataciones
+OK      admin: alta de usuario abre y cierra el formulario
+OK      admin: editor de actividad abre y cierra
+OK      admin: editor de oportunidad abre y cierra
+OK      admin: drawer móvil abre y cierra
+OK      admin: sin errores de consola/API
+OK      empresa: inicio de sesión
+OK      empresa: /empresa/dashboard
+OK      empresa: /empresa/perfil
+OK      empresa: /empresa/ofertas
+OK      empresa: /empresa/postulaciones
+OK      empresa: /empresa/contrataciones
+OK      empresa: /empresa/cuenta
+OK      empresa: formulario de oferta abre y cierra
+OK      empresa: edición de perfil persiste en MariaDB
+OK      empresa: sin errores de consola/API
+OK      postulante: inicio de sesión
+OK      postulante: /postulante/perfil
+OK      postulante: /postulante/postulaciones
+OK      postulante: /postulante/cuenta
+OK      postulante: /postulante/buscar
+OK      postulante: /postulante/oportunidades
+OK      postulante: sin errores de consola/API

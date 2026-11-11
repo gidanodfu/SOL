@@ -110,7 +110,7 @@ prepare_backend_env() {
     mkdir -p "$runtime_dir"
     chmod 700 "$runtime_dir"
 
-    # Lista explícita: el backend no recibe credenciales de MySQL root,
+    # Lista explícita: el backend no recibe credenciales de MariaDB root,
     # credenciales iniciales ni variables de Vite.
     grep -E '^(CI_ENVIRONMENT|APP_URL|TZ|app\.|cors\.|DB_HOST|DB_PORT|DB_DATABASE|DB_USER|DB_PASSWORD|DB_DRIVER|DB_PREFIX|encryption\.|jwt\.|storage\.|s3\.|apisperu\.|RESEND_|email\.|google\.clientId|turnstile\.|VITE_TURNSTILE_SITE_KEY|activacion\.|cvRateLimit\.)' "$ENV_FILE" > "$backend_env"
     chmod 600 "$backend_env"
@@ -476,7 +476,7 @@ validate_env_basics() {
     require_env DB_DATABASE "Defina el nombre de la base de datos."
     require_env DB_USER "Defina el usuario de la base de datos."
     require_env DB_PASSWORD "Defina la contraseña de la base de datos."
-    require_env DB_ROOT_PASSWORD "Defina la contraseña root de MySQL."
+    require_env DB_ROOT_PASSWORD "Defina la contraseña root de MariaDB."
     require_env jwt.secret "Defina una clave JWT exclusiva del entorno."
     require_env encryption.key "Defina una clave de cifrado exclusiva del entorno."
 

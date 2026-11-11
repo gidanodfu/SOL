@@ -1,0 +1,9 @@
+{
+  "name": "sol-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas E2E de SOL con Chromium headless (Playwright core).",
+  "dependencies": {
+    "playwright-core": "1.64.0"
+  }
+}

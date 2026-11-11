@@ -59,11 +59,31 @@ class RateLimitCvYRetirarCuotas extends Migration
             $this->forge->dropTable(self::TABLA_RATE_LIMIT, true);
         }
 
-        if ($this->db->tableExists(self::TABLA_LEGADO)
-            && ! $this->db->tableExists(self::TABLA_CUOTAS)) {
+        // Consulta directa a information_schema: tableExists() puede conservar
+        // el estado anterior al RENAME realizado por up().
+        $existe = function (string $tabla): bool {
+            return $this->db->query(
+                'SELECT 1 FROM information_schema.tables '
+                . 'WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1',
+                [$tabla],
+            )->getRow() !== null;
+        };
+
+        // Si cv_activos sigue existiendo, la migración anterior no se revierte:
+        // se restaura el nombre original. Si no existe, ambas se revierten
+        // juntas y la tabla histórica debe eliminarse.
+        if ($existe('cv_activos')) {
+            if ($existe(self::TABLA_LEGADO) && ! $existe(self::TABLA_CUOTAS)) {
+                $this->db->query(
+                    'RENAME TABLE ' . $this->db->escapeIdentifiers(self::TABLA_LEGADO)
+                    . ' TO ' . $this->db->escapeIdentifiers(self::TABLA_CUOTAS),
+                );
+            }
+        } else {
             $this->db->query(
-                'RENAME TABLE ' . $this->db->escapeIdentifiers(self::TABLA_LEGADO)
-                . ' TO ' . $this->db->escapeIdentifiers(self::TABLA_CUOTAS),
+                'DROP TABLE IF EXISTS '
+                . $this->db->escapeIdentifiers(self::TABLA_CUOTAS) . ', '
+                . $this->db->escapeIdentifiers(self::TABLA_LEGADO),
             );
         }
     }

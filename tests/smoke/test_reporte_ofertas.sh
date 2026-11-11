@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Reporte Excel: las siete categorías de oferta, el estado efectivo vencida y
 # los totales deben coincidir con los indicadores del dashboard. Se ejecuta
-# dentro del contenedor de pruebas con un esquema MySQL aislado.
+# dentro del contenedor de pruebas con un esquema MariaDB aislado.
 set -u
 cd "$(dirname "$0")/../../backend" || exit 1
 B=http://127.0.0.1:8080

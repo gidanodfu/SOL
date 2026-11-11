@@ -1,7 +1,7 @@
 # Pruebas
 
 Docker es la vía oficial. Los comandos se ejecutan desde la raíz del repositorio
-y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
+y no requieren PHP, Node.js, Composer, npm, Python ni MariaDB en el host.
 
 ## Pruebas oficiales
 
@@ -11,13 +11,19 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 ./deploy/scripts/test.sh frontend   # npm test + lint + build
 ./deploy/scripts/test.sh http       # smoke HTTP no destructivo
 ./deploy/scripts/test.sh validation # validación de variables y contexto Docker
-./deploy/scripts/test.sh smoke      # integración profunda en MySQL temporal
+./deploy/scripts/test.sh smoke      # integración profunda en MariaDB temporal
+./deploy/scripts/test.sh e2e        # Chromium headless contra el stack activo
+./deploy/scripts/test.sh audit      # integridad de la base MariaDB activa
+./deploy/scripts/test.sh compatibility # MySQL 8.0.46 -> MariaDB 11.4.13
+./deploy/scripts/test.sh php-lint    # sintaxis de todos los archivos PHP
 ```
 
 ### Inventario de suites smoke
 
 | Suite | Cobertura |
 |---|---|
+| `test_apisperu_mock.sh` | Flujo DNI/RUC con proveedor HTTP mock local, token canónico y persistencia MariaDB. |
+| `test_mariadb_compat.sh` | Versión MariaDB 11.4, InnoDB, columnas generadas, índices únicos, JSON y restricciones críticas. |
 | `test_api.sh` | Contrato base de la API, autenticación, ofertas, postulaciones y CV. |
 | `test_ofertas.sh` | CRUD y consulta pública de ofertas. |
 | `test_aprobacion_ofertas.sh` | Aprobación, observación, rechazo y visibilidad municipal. |
@@ -48,7 +54,7 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MySQL en el host.
 | `test_desarrollo_nuevo.sh` | Externo: requiere APIsPERU y un RUC real con token autorizado; se solicita por nombre y corre dentro de Docker. |
 | `test_docker_http.sh` | Se ejecuta con `test.sh http` contra el stack de desarrollo. |
 
-La tabla incluye las **27 suites automáticas** del runner (`test.sh smoke`) y dos
+La tabla incluye las **29 suites automáticas** del runner (`test.sh smoke`) y dos
 procedimientos adicionales: `test_desarrollo_nuevo.sh` (externo, se solicita por
 nombre) y `test_docker_http.sh` (`test.sh http`).
 
@@ -63,14 +69,26 @@ nombre) y `test_docker_http.sh` (`test.sh http`).
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales ni servicios externos.
 
-> `test.sh smoke` ejecuta 27 suites y actualmente termina con código 0.
-> Cada suite usa un **esquema MySQL propio** dentro del contenedor temporal,
+> `test.sh smoke` ejecuta 29 suites y actualmente termina con código 0.
+> Cada suite usa un **esquema MariaDB propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
 > devuelve código distinto de cero si una suite falla, si aparece
 > `Traceback`/`KeyError`/`JSONDecodeError`/`BadZipFile`/`AssertionError`, o si
 > un estado HTTP no coincide con el valor entre paréntesis.
 > No imprime JWT ni refresh tokens; los campos sensibles se redactan.
+
+### E2E con Chromium
+
+`./deploy/scripts/test.sh e2e` levanta Chromium Headless Shell dentro de una
+imagen propia construida desde `deploy/e2e/Dockerfile` (Node 22 + Playwright
+1.64.0), con el stack activo. El navegador y sus dependencias viven en la
+imagen, fuera del repositorio. La
+suite `tests/e2e/e2e.mjs` usa `playwright-core` 1.64.0 (fijado en
+`tests/e2e/package-lock.json`) y recorre las pantallas públicas, de
+administración, empresa y postulante, además de las cuatro resoluciones
+obligatorias. Las evidencias se guardan en `/tmp/sol-e2e-artifacts` por defecto
+(configurable con `E2E_ARTIFACTS`).
 
 `test.sh http` requiere el stack activo (`./deploy/scripts/dev.sh up`). Se ejecuta
 en un contenedor de la red interna y comprueba `/health`, `/`, `/api/ofertas`,
@@ -82,7 +100,7 @@ modifica datos.
 `test.sh smoke` ejecuta `deploy/scripts/smoke.sh`, que:
 
 1. Construye el target `test` del backend con `bash`, `python3`, `curl` y `poppler-utils`.
-2. Crea una red efímera y un MySQL `8.0.46` con `/var/lib/mysql` en `tmpfs`.
+2. Crea una red efímera y un MariaDB `11.4.13` con `/var/lib/mysql` en `tmpfs`.
 3. Crea un esquema distinto por suite y aplica migraciones + `SystemSeeder` +
    `DatosPruebaSeeder` dentro de cada esquema.
 4. Ejecuta cada script de `tests/smoke/` con `php spark serve` **dentro del
@@ -90,7 +108,7 @@ modifica datos.
 5. Agrega el resultado, elimina el contenedor/red temporal y devuelve un código
    distinto de cero si alguna suite falla.
 
-No usa `sol_dev_mysql_data`, no publica puertos y no toca datos reales. El
+No usa `sol_dev_mariadb_data`, no publica puertos y no toca datos reales. El
 script `test_desarrollo_nuevo.sh` se excluye por defecto porque consulta
 APIsPERU y requiere un RUC real y un token externo autorizado; para ejecutarlo:
 
@@ -146,7 +164,7 @@ inmediatamente como `programado` y visible; al alcanzar el inicio pasa a
 desaparece; activo = 0 la oculta sin cambiar su ciclo; cancelado nunca se
 publica. También comprueba la ausencia de `fecha_publicacion`, `empresa_id`,
 `razon_social` y `ruc` en las respuestas, y la inmutabilidad HTTP de
-finalizadas. Cada suite usa un esquema MySQL efímero propio y no toca datos de
+finalizadas. Cada suite usa un esquema MariaDB efímero propio y no toca datos de
 desarrollo.
 
 `tests/smoke/test_actividades_finalizadas.sh` comprueba que una actividad
@@ -176,7 +194,7 @@ un candidato `seleccionado` puede desactivarse y reactivarse. El retiro
 voluntario bloquea ambas operaciones incluso sin efecto, y otra empresa recibe
 `404`.
 
-`test_concurrencia.sh` levanta dos procesos `spark serve` sobre el mismo MySQL
+`test_concurrencia.sh` levanta dos procesos `spark serve` sobre el mismo MariaDB
 para enviar peticiones realmente paralelas: valida que dos altas simultáneas a
 la misma oferta produzcan un único registro activo, que una selección y una
 nueva postulación sigan un orden serial consistente y que un retiro concurrente

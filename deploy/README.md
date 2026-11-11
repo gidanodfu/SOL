@@ -9,13 +9,15 @@ del backend. No incluye infraestructura ni procedimientos de producción.
 ```
 deploy/
 ├── compose.yaml          Stack único de desarrollo (db, backend, frontend, Adminer)
+├── e2e/Dockerfile        Imagen de pruebas con Chromium Headless Shell
 ├── scripts/
 │   ├── dev.sh            Inicio, parada, logs, shell, migraciones y seeds
 │   ├── bootstrap.sh      Instalación inicial con SystemSeeder
-│   ├── test.sh           Pruebas backend, frontend, HTTP, smoke y validación
+│   ├── test.sh           Pruebas backend, frontend, HTTP, smoke, E2E y validación
 │   ├── validate.sh       Validación de .env, Compose y scripts
-│   ├── smoke.sh          Smoke aislado en MySQL temporal
-│   ├── backup.sh         Respaldo local de MySQL y writable
+│   ├── smoke.sh          Smoke aislado en MariaDB temporal
+│   ├── e2e.sh            Chromium Headless Shell (imagen propia, fuera del repo)
+│   ├── backup.sh         Respaldo local de MariaDB y writable
 │   ├── restore.sh        Restauración local con confirmación explícita
 │   └── lib/common.sh     Utilidades compartidas
 └── runtime/              backend.env generado (ignorado por Git)
@@ -27,7 +29,7 @@ deploy/
 - Docker Compose v2 >= 2.24.
 - Git.
 
-No se requiere PHP, Composer, Node.js, npm ni MySQL en el host. En Windows
+No se requiere PHP, Composer, Node.js, npm ni MariaDB en el host. En Windows
 use WSL2 o Git Bash para ejecutar los scripts. No existe Makefile ni flujo
 alternativo que instale herramientas en el sistema operativo.
 
@@ -52,7 +54,7 @@ Complete en `.env`:
 
 | Servicio | Imagen / build | Puerto local | Función |
 |---|---|---|---|
-| `db` | `mysql:8.0.46` | `127.0.0.1:3307` | MySQL con volumen persistente |
+| `db` | `mariadb:11.4.13` | `127.0.0.1:3307` | MariaDB con volumen persistente |
 | `backend` | `backend/Dockerfile` target `dev` | `127.0.0.1:8080` | API CodeIgniter con recarga de código |
 | `frontend` | `frontend/Dockerfile` target `dev` | `127.0.0.1:5173` | Vite con hot reload |
 | `adminer` | `adminer:5.3.0` | `127.0.0.1:8082` | Perfil opcional `tools` |
@@ -105,7 +107,8 @@ Actualización de un entorno existente:
 
 | Volumen | Contenido |
 |---|---|
-| `sol_dev_mysql_data` | Bases y tablas de MySQL |
+| `sol_dev_mariadb_data` | Bases y tablas de MariaDB |
+| `sol_dev_mysql_data` | Volumen histórico de MySQL; se conserva intacto y no se reutiliza |
 | `sol_dev_backend_writable` | Caché, logs y archivos de escritura del backend |
 
 `dev.sh down` y `restore.sh` no eliminan volúmenes. Está prohibido ejecutar
@@ -118,7 +121,7 @@ o `docker volume rm` sobre estos volúmenes.
 ./deploy/scripts/backup.sh dev
 ```
 
-Genera un dump de MySQL y un tar del volumen `writable` en `$HOME/sol-backups`
+Genera un dump de MariaDB y un tar del volumen `writable` en `$HOME/sol-backups`
 (configurable con `BACKUP_DIR`), fuera del repositorio, con permisos `600`,
 manifiesto y SHA-256.
 
@@ -157,6 +160,10 @@ migraciones son la única fuente del esquema; no se editan migraciones históric
 ./deploy/scripts/test.sh frontend
 ./deploy/scripts/test.sh http
 ./deploy/scripts/test.sh smoke
+./deploy/scripts/test.sh e2e
+./deploy/scripts/test.sh audit
+./deploy/scripts/test.sh compatibility
+./deploy/scripts/test.sh php-lint
 ./deploy/scripts/test.sh validation
 ```
 
@@ -193,7 +200,7 @@ versión de SOL vive únicamente en `VERSION` y se inyecta al compilar el fronte
 docker compose -p sol_dev ps
 docker compose -p sol_dev logs --tail=100 backend
 docker network inspect sol_dev_internal
-docker volume inspect sol_dev_mysql_data
+docker volume inspect sol_dev_mariadb_data
 ```
 
 Para problemas frecuentes consulte la sección correspondiente del

@@ -5,7 +5,7 @@ está en el [`README.md`](../README.md) de la raíz.
 
 ## Stack
 
-- CodeIgniter 4.7 · PHP 8.4.27 (imagen fijada `php:8.4.27-fpm-alpine3.23`) · MySQL 8.0.46 (MySQLi, `numberNative=true`)
+- CodeIgniter 4.7 · PHP 8.4.27 (imagen fijada `php:8.4.27-fpm-alpine3.23`) · MariaDB 11.4.13 LTS (driver MySQLi, `numberNative=true`)
 - JWT HS256 (`firebase/php-jwt`) con refresh rotativo · Supabase Storage (S3) para CV
 
 ## Estructura
@@ -52,7 +52,7 @@ Para operar el backend:
 ```
 
 El backend se ejecuta en el contenedor de desarrollo con el servidor integrado
-de CodeIgniter. No ejecute `php spark`, Composer ni MySQL en el host. El bootstrap
+de CodeIgniter. No ejecute `php spark`, Composer ni MariaDB en el host. El bootstrap
 inicial está en `./deploy/scripts/bootstrap.sh` (exige `--authorize`) y las
 operaciones en `docs/operaciones.md`.
 
@@ -72,7 +72,7 @@ operaciones en `docs/operaciones.md`.
   Responde `429` con `Retry-After`. No existe cuota mensual de CV.
 - Validación: `telefono` exige 9 u 11 dígitos (`^(?:\d{9}|\d{11})$`); el backend es la
   validación definitiva.
-- Conexión MySQL: gestión nativa de CI4 (`db_connect()` comparte una conexión por
+- Conexión MariaDB (driver `MySQLi`): gestión nativa de CI4 (`db_connect()` comparte una conexión por
   request); no hay pool personalizado.
 - Capas: los controllers son delgados; el negocio vive en `Services`; el acceso a datos en
   `Repositories`/`Models`.
@@ -94,7 +94,7 @@ operaciones en `docs/operaciones.md`.
 
 ## Base de datos, migraciones y almacenamiento
 
-- Esquema MySQL 8.0, tablas InnoDB y migraciones en `app/Database/Migrations/`.
+- Esquema MariaDB 11.4, tablas InnoDB y migraciones en `app/Database/Migrations/`.
   El catálogo de tablas, relaciones y orden de migraciones está en
   [`../docs/base-datos.md`](../docs/base-datos.md).
 - `spark migrate` aplica migraciones pendientes; `bootstrap.sh` es el único
@@ -136,8 +136,8 @@ No son requisitos del host.
 ./deploy/scripts/dev.sh run backend php vendor/bin/phpunit tests/unit/ValidadorTest.php
 ```
 
-`test.sh smoke` ejecuta los scripts de integración en un MySQL temporal dentro
-de Docker; no usa PHP, Python ni MySQL del host. Consulte `../tests/README.md`.
+`test.sh smoke` ejecuta los scripts de integración en un MariaDB temporal dentro
+de Docker; no usa PHP, Python ni MariaDB del host. Consulte `../tests/README.md`.
 
 Para la carga masiva opcional de CV ficticios (requiere `DatosMasivosSeeder` y el
 backend de desarrollo activo):

@@ -3,7 +3,7 @@
 # Unicidad global de correo/teléfono en el alta municipal, campos obligatorios,
 # normalización telefónica, actualización de reservas y concurrencia.
 #
-# Se ejecuta dentro de un esquema MySQL aislado preparado por deploy/scripts/smoke.sh.
+# Se ejecuta dentro de un esquema MariaDB aislado preparado por deploy/scripts/smoke.sh.
 set -u
 
 cd "$(dirname "$0")/../../backend" || exit 1
