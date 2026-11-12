@@ -2082,6 +2082,20 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+/* Ocultar únicamente la representación visual del scrollbar.
+   El desplazamiento de la navegación y del drawer debe seguir funcionando. */
+.sidebar,
+.sidebar .side-nav {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar::-webkit-scrollbar,
+.sidebar .side-nav::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 .side-group { margin-bottom: 18px; }
 /* La separación entre categorías se resuelve con el espacio y el título. */
 .side-group + .side-group { margin-top: 6px; }
