@@ -341,12 +341,12 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
           </div>
         </fieldset>
 
-        <section className="form-seccion">
-          <h3 className="form-seccion-titulo">04 · Observaciones adicionales</h3>
-          <label className={`campo${errores.observaciones ? ' campo-error' : ''}`} htmlFor="contratacion-observaciones">
-            <span>Observaciones adicionales</span>
+        <section className="form-seccion contratacion-observaciones-seccion">
+          <h3 id="contratacion-observaciones-titulo" className="form-seccion-titulo">04 · Observaciones adicionales</h3>
+          <div className={`campo${errores.observaciones ? ' campo-error' : ''}`}>
             <textarea
               id="contratacion-observaciones"
+              aria-labelledby="contratacion-observaciones-titulo"
               rows="4"
               value={form.observaciones}
               onChange={set('observaciones')}
@@ -361,7 +361,7 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
                 {errores.observaciones}
               </span>
             )}
-          </label>
+          </div>
         </section>
 
         <div className="contratacion-acciones">

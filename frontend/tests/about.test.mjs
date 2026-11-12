@@ -94,20 +94,20 @@ test('la tarjeta de desarrollo enlaza al perfil principal, a los colaboradores y
   );
 });
 
-test('las sidebars no crean scroll interno en escritorio', () => {
+test('la sidebar de escritorio delimita su altura y solo desplaza la navegación', () => {
   const estilos = leer('../src/styles.css');
   const sidebar = leer('../src/components/Sidebar.jsx');
 
   assert.match(sidebar, /<nav className="side-nav">/);
   assert.match(estilos, /\.sidebar\s*\{[^}]*height:\s*auto/s);
-  assert.match(estilos, /\.sidebar\s*\{[^}]*min-height:\s*calc\(100vh - 2 \* var\(--sidebar-gap\)\)/s);
-  assert.match(estilos, /\.sidebar\s*\{[^}]*align-self:\s*flex-start/s);
-  assert.match(estilos, /\.side-nav\s*\{[^}]*flex:\s*0 0 auto/s);
-  assert.match(estilos, /\.side-nav\s*\{[^}]*overflow:\s*visible/s);
-  assert.doesNotMatch(estilos, /\.side-nav\s*\{[^}]*overflow-y:\s*(auto|scroll)/s);
+  assert.match(estilos, /\.sidebar\s*\{[^}]*min-height:\s*0/s);
+  assert.match(estilos, /\.sidebar\s*\{[^}]*align-self:\s*stretch/s);
+  assert.match(estilos, /\.side-nav\s*\{[^}]*flex:\s*1 1 auto/s);
+  assert.match(estilos, /\.side-nav\s*\{[^}]*min-height:\s*0/s);
+  assert.match(estilos, /\.side-nav\s*\{[^}]*overflow-y:\s*auto/s);
   assert.match(
     estilos,
-    /@media \(max-width: 860px\)[\s\S]*?\.sidebar,[\s\S]*?overflow-y:\s*auto/,
+    /@media \(max-width: 860px\)[\s\S]*?\.side-nav\s*\{[^}]*overflow:\s*visible/s,
   );
 });
 

@@ -352,3 +352,8 @@
     flex: 0 0 auto;
   }
 }
+
+/* Sección 04: el encabezado es el único título visible y queda próximo al
+   textarea; no se altera el espaciado global de .campo ni de .form-seccion. */
+.app-empresa .contratacion-observaciones-seccion .form-seccion-titulo { margin-bottom: 4px; }
+.app-empresa .contratacion-observaciones-seccion .campo { margin-bottom: 0; }

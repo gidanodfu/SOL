@@ -120,3 +120,17 @@ test('el formulario de contratación tiene rejillas responsive y foco visible', 
   assert.match(estilos, /\.contratacion-situacion:focus-within\s*\{[^}]*outline:\s*2px solid var\(--accion-foco\)/s);
   assert.match(estilos, /\.contratacion-situacion\.is-seleccionada\s*\{[^}]*var\(--sky\)/s);
 });
+
+test('la sección 04 tiene un solo título y el textarea conserva nombre accesible', () => {
+  const pagina = leer('../src/pages/empresa/Contrataciones.jsx');
+  const estilos = leer('../src/empresa.css');
+
+  assert.equal((pagina.match(/Observaciones adicionales/g) || []).length, 1);
+  assert.match(pagina, /<h3 id="contratacion-observaciones-titulo"[^>]*>04 · Observaciones adicionales<\/h3>/);
+  assert.match(pagina, /<textarea[\s\S]*?id="contratacion-observaciones"[\s\S]*?aria-labelledby="contratacion-observaciones-titulo"/);
+  assert.doesNotMatch(pagina, /<label[^>]*htmlFor="contratacion-observaciones"/);
+  assert.match(pagina, /aria-describedby=\{`contratacion-observaciones-ayuda/);
+  assert.match(pagina, /aria-invalid=\{errores\.observaciones/);
+  assert.match(estilos, /contratacion-observaciones-seccion \.form-seccion-titulo\s*\{[^}]*margin-bottom:\s*4px/s);
+  assert.match(estilos, /contratacion-observaciones-seccion \.campo\s*\{[^}]*margin-bottom:\s*0/s);
+});
