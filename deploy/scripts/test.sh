@@ -2,6 +2,7 @@
 set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
+. "$ROOT/.github/scripts/docker-retry.sh"
 
 TARGET=all
 BUILD=1
@@ -86,6 +87,7 @@ fi
 if [ "$TARGET" = "validation" ]; then
     "$ROOT/tests/deploy/test_validation.sh"
     "$ROOT/tests/deploy/test_docker_context.sh"
+    "$ROOT/tests/deploy/test_docker_retry.sh"
     exit 0
 fi
 
@@ -110,10 +112,10 @@ fi
 
 if [ "$BUILD" = "1" ]; then
     printf 'Construyendo imágenes de desarrollo...\n'
-    compose_dev build backend frontend
+    docker_retry compose_dev build backend frontend
 fi
 
-compose_dev up -d db
+docker_retry compose_dev up -d db
 wait_for_service compose_dev db 60
 
 if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then

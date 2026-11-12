@@ -2,6 +2,7 @@
 set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
+. "$ROOT/.github/scripts/docker-retry.sh"
 
 # Ejecuta la suite E2E con Chromium headless dentro de una imagen propia
 # (Node + Headless Shell). El navegador vive fuera del repositorio.
@@ -20,7 +21,7 @@ chmod 700 "$ARTIFACTS" 2>/dev/null || true
 
 if ! docker image inspect "$E2E_IMAGE" >/dev/null 2>&1; then
     printf 'Construyendo imagen E2E (Node + Chromium Headless Shell)...\n'
-    docker build -t "$E2E_IMAGE" -f "$ROOT/deploy/e2e/Dockerfile" "$ROOT/deploy/e2e" >/dev/null
+    docker_retry docker build -t "$E2E_IMAGE" -f "$ROOT/deploy/e2e/Dockerfile" "$ROOT/deploy/e2e" >/dev/null
 fi
 
 printf 'Ejecutando E2E con Chromium en %s...\n' "$BASE_URL"

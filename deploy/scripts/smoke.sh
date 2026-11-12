@@ -3,6 +3,7 @@ set -eu
 umask 077
 
 . "$(dirname -- "$0")/lib/common.sh"
+. "$ROOT/.github/scripts/docker-retry.sh"
 
 # Ejecuta los smoke tests dentro de Docker, con un MariaDB temporal en tmpfs,
 # un esquema aislado por suite y sin publicar puertos. No usa PHP, Python, curl
@@ -69,7 +70,7 @@ done
 
 BUILD_LOG=$(mktemp "${TMPDIR:-/tmp}/sol-smoke-build.XXXXXX")
 printf 'Construyendo imagen de pruebas (solo Docker)...\n'
-if ! docker build --target test -t "$TEST_IMAGE" -f "$ROOT/backend/Dockerfile" "$ROOT" >"$BUILD_LOG" 2>&1; then
+if ! docker_retry docker build --target test -t "$TEST_IMAGE" -f "$ROOT/backend/Dockerfile" "$ROOT" >"$BUILD_LOG" 2>&1; then
     tail -40 "$BUILD_LOG" >&2 || true
     die "No se pudo construir la imagen de pruebas."
 fi
@@ -82,7 +83,7 @@ JWT_SECRET="smoke-$(date +%s)-$$-0123456789abcdef0123456789abcdef0123456789abcde
 
 printf 'Creando MariaDB temporal aislado (sin volúmenes persistentes)...\n'
 docker network create "$NET" >/dev/null
-docker run -d --rm --name "$DB_CONTAINER" --network "$NET" \
+docker_retry docker run -d --rm --name "$DB_CONTAINER" --network "$NET" \
     --tmpfs /var/lib/mysql:rw \
     -e MARIADB_ROOT_PASSWORD="$ROOT_PW" \
     -e MARIADB_DATABASE=sistema_empleo \

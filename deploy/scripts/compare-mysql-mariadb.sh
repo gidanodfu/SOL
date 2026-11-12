@@ -5,6 +5,7 @@
 set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "$0")/../.." && pwd)
+. "$ROOT/.github/scripts/docker-retry.sh"
 NET="sol_compat_$$"
 MY="sol_compat_mysql_$$"
 MA="sol_compat_mariadb_$$"
@@ -29,13 +30,13 @@ command -v docker >/dev/null 2>&1 || {
 
 if ! docker image inspect "$IMG" >/dev/null 2>&1; then
     echo "Construyendo imagen de pruebas..."
-    docker build --target test -t "$IMG" -f "$ROOT/backend/Dockerfile" "$ROOT" >/dev/null
+    docker_retry docker build --target test -t "$IMG" -f "$ROOT/backend/Dockerfile" "$ROOT" >/dev/null
 fi
 
 docker network create "$NET" >/dev/null
 
 echo "== MySQL 8.0.46 temporal =="
-docker run -d --rm --name "$MY" --network "$NET" \
+docker_retry docker run -d --rm --name "$MY" --network "$NET" \
     -e MYSQL_ROOT_PASSWORD="$ROOTPW" -e MYSQL_DATABASE="$DB" \
     --tmpfs /var/lib/mysql:rw mysql:8.0.46 >/dev/null
 for i in $(seq 1 60); do
@@ -71,7 +72,7 @@ grep -q '^CREATE TABLE' "$DUMP" && {
 }
 
 echo "== MariaDB 11.4.13 temporal =="
-docker run -d --rm --name "$MA" --network "$NET" \
+docker_retry docker run -d --rm --name "$MA" --network "$NET" \
     -e MARIADB_ROOT_PASSWORD="$ROOTPW" -e MARIADB_DATABASE="$DB" \
     --tmpfs /var/lib/mysql:rw mariadb:11.4.13 >/dev/null
 for i in $(seq 1 60); do

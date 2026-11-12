@@ -2,6 +2,7 @@
 set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
+. "$ROOT/.github/scripts/docker-retry.sh"
 
 require_repo
 docker_available
@@ -51,9 +52,9 @@ case "${1:-help}" in
         validate_env_basics
         require_dev_project
         if [ "${2:-}" = "--no-build" ]; then
-            compose_dev up -d
+            docker_retry compose_dev up -d
         else
-            compose_dev up -d --build
+            docker_retry compose_dev up -d --build
         fi
         wait_for_service compose_dev db 60
         wait_for_service compose_dev backend 90
@@ -76,13 +77,13 @@ case "${1:-help}" in
         compose_dev logs -f --tail=200 "$@"
         ;;
     build)
-        compose_dev build
+        docker_retry compose_dev build
         ;;
     deps)
         validate_env_basics
         require_dev_project
         printf 'Reconstruyendo imágenes para reinstalar dependencias desde los lockfiles...\n'
-        compose_dev build backend frontend
+        docker_retry compose_dev build backend frontend
         compose_dev up -d --no-build
         for service in db backend frontend; do
             wait_for_service compose_dev "$service" 90

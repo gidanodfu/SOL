@@ -40,10 +40,16 @@ jobs:
           set -o pipefail
           ./deploy/scripts/test.sh validation 2>&1 | tee artifacts/php/validation.log
 
+      - name: Preconstruir imágenes con reintentos de registry
+        run: |
+          mkdir -p artifacts/php
+          set -o pipefail
+          ./deploy/scripts/dev.sh build 2>&1 | tee artifacts/php/docker-build.log
+
       - name: PHPUnit
         run: |
           set -o pipefail
-          ./deploy/scripts/test.sh backend 2>&1 | tee artifacts/php/phpunit.log
+          ./deploy/scripts/test.sh backend --no-build 2>&1 | tee artifacts/php/phpunit.log
 
       - name: Publicar evidencias PHP
         if: always()
@@ -67,11 +73,17 @@ jobs:
       - name: Preparar entorno sintético
         run: bash .github/scripts/prepare-ci-env.sh
 
+      - name: Preconstruir imágenes con reintentos de registry
+        run: |
+          mkdir -p artifacts/frontend
+          set -o pipefail
+          ./deploy/scripts/dev.sh build 2>&1 | tee artifacts/frontend/docker-build.log
+
       - name: Tests, lint y build
         run: |
           mkdir -p artifacts/frontend
           set -o pipefail
-          ./deploy/scripts/test.sh frontend 2>&1 | tee artifacts/frontend/frontend.log
+          ./deploy/scripts/test.sh frontend --no-build 2>&1 | tee artifacts/frontend/frontend.log
 
       - name: Publicar evidencias frontend
         if: always()
