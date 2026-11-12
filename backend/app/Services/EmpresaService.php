@@ -410,7 +410,7 @@ class EmpresaService
      */
     private function conImagenPublica(array $empresa): array
     {
-        $empresa['logo_url']  = ! empty($empresa['logo_key']) ? '/api/empresas/' . $empresa['id'] . '/logo' : null;
+        $empresa['logo_url']  = StorageService::urlVersionada('/api/empresas/' . $empresa['id'] . '/logo', $empresa['logo_key'] ?? null);
         $empresa['fecha_alta'] = $empresa['created_at'] ?? null;
         $empresa['antiguedad'] = AntiguedadService::texto($empresa['created_at'] ?? null);
         unset($empresa['logo_key']);

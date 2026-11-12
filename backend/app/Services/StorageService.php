@@ -176,12 +176,14 @@ class StorageService
             if ($ruta !== null && is_file($ruta)) {
                 @unlink($ruta);
             }
+            $this->borrarCacheImagen($objectKey);
 
             return;
         }
 
         // DELETE firmado sin cuerpo (sin cabecera content-type).
         $this->solicitudFirmada('DELETE', $this->rutaObjeto($objectKey), '');
+        $this->borrarCacheImagen($objectKey);
     }
 
     /**
@@ -223,10 +225,23 @@ class StorageService
         }
 
         $inicio = PerfDiagnostics::inicioMedicion();
+        $bloqueo = null;
 
         try {
             $ruta = $this->rutaCacheImagen($objectKey);
-            if ($ruta !== null && is_file($ruta) && (time() - (int) filemtime($ruta)) <= self::CACHE_IMAGEN_SEGUNDOS) {
+            if ($ruta !== null && $this->cacheVigente($ruta)) {
+                $contenido = @file_get_contents($ruta);
+                if ($contenido !== false) {
+                    return $contenido;
+                }
+            }
+
+            // Serializa solo esta objectKey. Tras adquirir el bloqueo se vuelve
+            // a comprobar la caché: si otro proceso ya la llenó, no se repite
+            // la descarga externa.
+            $bloqueo = $this->bloquearImagen($objectKey);
+
+            if ($ruta !== null && $this->cacheVigente($ruta)) {
                 $contenido = @file_get_contents($ruta);
                 if ($contenido !== false) {
                     return $contenido;
@@ -240,6 +255,7 @@ class StorageService
 
             return $contenido;
         } finally {
+            $this->liberarBloqueo($bloqueo);
             PerfDiagnostics::finAlmacenamiento($inicio);
         }
     }
@@ -264,7 +280,7 @@ class StorageService
         }
     }
 
-    private function leerContenido(string $objectKey): ?string
+    protected function leerContenido(string $objectKey): ?string
     {
         if (! $this->esSupabase()) {
             $ruta = $this->rutaLocal($objectKey);
@@ -310,7 +326,18 @@ class StorageService
 
     private function escribirCacheImagen(string $ruta, string $contenido): void
     {
-        if (@file_put_contents($ruta, $contenido, LOCK_EX) === false) {
+        $temporal = $ruta . '.tmp.' . bin2hex(random_bytes(6));
+        if (@file_put_contents($temporal, $contenido, LOCK_EX) === false) {
+            @unlink($temporal);
+
+            return;
+        }
+
+        // Renombrado atómico: un lector ve el archivo anterior o el nuevo,
+        // nunca una escritura parcial.
+        if (! @rename($temporal, $ruta)) {
+            @unlink($temporal);
+
             return;
         }
 
@@ -321,11 +348,87 @@ class StorageService
         }
 
         $limite = time() - self::CACHE_IMAGEN_RETENCION_SEGUNDOS;
-        foreach (glob(dirname($ruta) . DIRECTORY_SEPARATOR . '*.bin') ?: [] as $archivo) {
+        $directorio = dirname($ruta);
+        foreach (glob($directorio . DIRECTORY_SEPARATOR . '*.bin') ?: [] as $archivo) {
             if (is_file($archivo) && (int) filemtime($archivo) < $limite) {
                 @unlink($archivo);
             }
         }
+        // Los archivos de bloqueo son pequeños, pero también se limpian si
+        // quedaron huérfanos de procesos antiguos.
+        foreach (glob($directorio . DIRECTORY_SEPARATOR . '.*.lock') ?: [] as $archivo) {
+            if (is_file($archivo) && (int) filemtime($archivo) < $limite) {
+                @unlink($archivo);
+            }
+        }
+    }
+
+    private function cacheVigente(string $ruta): bool
+    {
+        return is_file($ruta) && (time() - (int) @filemtime($ruta)) <= self::CACHE_IMAGEN_SEGUNDOS;
+    }
+
+    /**
+     * @return resource|false
+     */
+    private function bloquearImagen(string $objectKey)
+    {
+        $directorio = $this->raizCacheImagen();
+        if (! is_dir($directorio) && ! @mkdir($directorio, 0775, true) && ! is_dir($directorio)) {
+            return false;
+        }
+
+        $ruta = $directorio . DIRECTORY_SEPARATOR . '.' . hash('sha256', $objectKey) . '.lock';
+        $fh = @fopen($ruta, 'c');
+        if ($fh === false) {
+            return false;
+        }
+        if (! @flock($fh, LOCK_EX)) {
+            fclose($fh);
+
+            return false;
+        }
+
+        return $fh;
+    }
+
+    /**
+     * @param resource|false|null $bloqueo
+     */
+    private function liberarBloqueo($bloqueo): void
+    {
+        if (is_resource($bloqueo)) {
+            @flock($bloqueo, LOCK_UN);
+            fclose($bloqueo);
+        }
+    }
+
+    protected function borrarCacheImagen(string $objectKey): void
+    {
+        if (! $this->esImagenPublica($objectKey)) {
+            return;
+        }
+
+        $ruta = $this->rutaCacheImagen($objectKey);
+        if ($ruta !== null && is_file($ruta)) {
+            @unlink($ruta);
+        }
+    }
+
+    /**
+     * URL pública versionada con una huella opaca de la clave interna. La
+     * clave nunca sale del backend; solo un hash corto que cambia al
+     * reemplazar el objeto.
+     */
+    public static function urlVersionada(string $ruta, ?string $objectKey): ?string
+    {
+        if ($objectKey === null || trim($objectKey) === '') {
+            return null;
+        }
+
+        $separador = str_contains($ruta, '?') ? '&' : '?';
+
+        return $ruta . $separador . 'v=' . substr(sha1($objectKey), 0, 10);
     }
 
     /**

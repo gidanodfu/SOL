@@ -4,6 +4,8 @@
 
 namespace App\Repositories;
 
+use App\Services\StorageService;
+
 use CodeIgniter\Database\BaseConnection;
 
 /**
@@ -44,9 +46,10 @@ class PostulanteRepository
         // El `v` (hash corto de la clave, no la clave) invalida la caché del
         // navegador cuando la foto cambia, sin exponer datos internos: el proxy
         // responde con Cache-Control y la URL sería idéntica si no cambiara.
-        $postulante['foto_url'] = ! empty($postulante['foto_key'])
-            ? '/api/postulantes/' . $postulante['id'] . '/foto?v=' . substr(sha1((string) $postulante['foto_key']), 0, 10)
-            : null;
+        $postulante['foto_url'] = StorageService::urlVersionada(
+            '/api/postulantes/' . $postulante['id'] . '/foto',
+            $postulante['foto_key'] ?? null,
+        );
         unset($postulante['foto_key']);
 
         $postulante['cv'] = $this->db->table('cvs')

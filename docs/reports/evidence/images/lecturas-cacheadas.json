@@ -1,0 +1,54 @@
+{
+  "entorno": "stack sol_dev; storage.driver=supabase; 5 muestras por recurso; solo lectura",
+  "recursos": {
+    "/api/empresas/1/logo": {
+      "p50_ms": 11.12,
+      "p95_ms": 12.81,
+      "bytes": 195499
+    },
+    "/api/empresas/10/logo": {
+      "p50_ms": 11.79,
+      "p95_ms": 12.77,
+      "bytes": 454042
+    },
+    "/api/actividades/1/imagen": {
+      "p50_ms": 10.51,
+      "p95_ms": 11.04,
+      "bytes": 9088
+    },
+    "/api/actividades/2/imagen": {
+      "p50_ms": 10.51,
+      "p95_ms": 10.71,
+      "bytes": 22671
+    },
+    "/api/actividades/3/imagen": {
+      "p50_ms": 10.53,
+      "p95_ms": 10.79,
+      "bytes": 4480
+    },
+    "/api/postulantes/2/foto": {
+      "p50_ms": 10.5,
+      "p95_ms": 11.25,
+      "bytes": 68775
+    },
+    "/api/postulantes/3/foto": {
+      "p50_ms": 10.81,
+      "p95_ms": 14.57,
+      "bytes": 134142
+    },
+    "/api/postulantes/4/foto": {
+      "p50_ms": 10.52,
+      "p95_ms": 11.4,
+      "bytes": 49279
+    }
+  },
+  "cold_logo": {
+    "total_ms": "1138-1283",
+    "storage_ms": "1129-1274",
+    "nota": "antes de la caché"
+  },
+  "warm_logo": {
+    "total_ms": "8.7-12.5",
+    "storage_ms": "0.15-0.21"
+  }
+}

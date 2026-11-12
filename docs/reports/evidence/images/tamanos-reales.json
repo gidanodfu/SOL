@@ -1,0 +1,19 @@
+{
+  "entorno": "stack sol_dev; solo lectura; storage.driver=supabase",
+  "logos_bytes": {
+    "empresa_1": 195499,
+    "empresa_10": 454042
+  },
+  "fotos_bytes": {
+    "postulante_2": 68775,
+    "postulante_3": 134142,
+    "postulante_4": 49279
+  },
+  "actividades_bytes": {
+    "actividad_2": 22671,
+    "actividad_1": 9088,
+    "actividad_3": 4480
+  },
+  "formato": "800x800 PNG para logos, 800x800 JPEG para fotos; actividades conservan el original",
+  "nota": "Los avatares de listado se muestran a 34-72 px, pero el proxy entrega la imagen normalizada completa. Una miniatura reduciría bytes; no se implementó sin benchmark visual/contrato de variantes."
+}

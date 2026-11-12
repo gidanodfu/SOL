@@ -1,0 +1,33 @@
+{
+  "urlA": "/api/empresas/1/logo?v=b8fab4f3a0",
+  "urlB": "/api/empresas/1/logo?v=923f50695e",
+  "versionCambia": true,
+  "hashA": "d18359713d95bc3b",
+  "hashB": "c14e5be47f9db87e",
+  "contenidoCambia": true,
+  "navegadorSrcA": "http://localhost:8081/api/empresas/1/logo?v=b8fab4f3a0",
+  "navegadorSrcB": "http://localhost:8081/api/empresas/1/logo?v=923f50695e",
+  "navegadorVeUrlNueva": true,
+  "naturalA": {
+    "w": 800,
+    "h": 800
+  },
+  "naturalB": {
+    "w": 800,
+    "h": 800
+  },
+  "urlViejaStatus": 200,
+  "pedidosImagen": [
+    {
+      "url": "http://localhost:8081/api/empresas/1/logo?v=b8fab4f3a0",
+      "status": 200,
+      "cache": "public, max-age=3600"
+    },
+    {
+      "url": "http://localhost:8081/api/empresas/1/logo?v=923f50695e",
+      "status": 200,
+      "cache": "public, max-age=3600"
+    }
+  ],
+  "nota": "La URL antigua responde 200 porque el proxy sirve la imagen actual de la empresa e ignora v; el navegador usa la URL nueva. Los bytes y dimensiones confirman el cambio."
+}

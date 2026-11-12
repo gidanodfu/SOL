@@ -110,7 +110,7 @@ class OfertaService
             'nombre_comercial' => $fila['empresa_nombre_comercial'] ?? null,
             'ruc'              => $fila['ruc'] ?? null,
             'direccion'        => $fila['empresa_direccion'] ?? null,
-            'logo_url'         => ! empty($fila['empresa_logo_key']) ? '/api/empresas/' . $empresaId . '/logo' : null,
+            'logo_url'         => StorageService::urlVersionada('/api/empresas/' . $empresaId . '/logo', $fila['empresa_logo_key'] ?? null),
             'fecha_alta'       => $fila['empresa_created_at'] ?? null,
             'antiguedad'       => AntiguedadService::texto($fila['empresa_created_at'] ?? null),
             // Presencia digital pública (el contacto privado no se incluye).

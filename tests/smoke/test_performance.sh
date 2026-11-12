@@ -14,4 +14,11 @@ trap 'kill $SRV 2>/dev/null' EXIT
 for i in $(seq 1 20); do curl -s -o /dev/null "$B/" && break; sleep 0.5; done
 
 php /var/www/sol/tests/tools/perf_benchmark.php --assert --muestras=30
-exit $?
+bench=$?
+
+# Cache stampede: 10 lectores simultáneos de una imagen con caché vacía deben
+# provocar una sola descarga externa.
+php /var/www/sol/tests/tools/image_cache_stampede.php --hijos=10 --expect=1
+cache=$?
+
+[ "$bench" -eq 0 ] && [ "$cache" -eq 0 ]

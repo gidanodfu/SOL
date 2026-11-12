@@ -64,7 +64,7 @@ class PostulacionService
     {
         // Expone la URL pública del logo de la empresa (nunca la clave interna).
         return array_map(static function (array $fila): array {
-            $fila['logo_url'] = ! empty($fila['logo_key']) ? '/api/empresas/' . (int) $fila['empresa_id'] . '/logo' : null;
+            $fila['logo_url'] = StorageService::urlVersionada('/api/empresas/' . (int) $fila['empresa_id'] . '/logo', $fila['logo_key'] ?? null);
             $fila['empresa_antiguedad'] = AntiguedadService::texto($fila['empresa_created_at'] ?? null);
             $fila['retirada_postulante'] = (int) ($fila['retirada_postulante'] ?? 0);
             unset($fila['logo_key'], $fila['empresa_created_at']);
@@ -200,9 +200,10 @@ class PostulacionService
     {
         // Expone la URL de la foto del candidato (proxy público) y oculta la clave.
         return array_map(static function (array $fila): array {
-            $fila['foto_url'] = ! empty($fila['foto_key'])
-                ? '/api/postulantes/' . (int) $fila['postulante_id'] . '/foto'
-                : null;
+            $fila['foto_url'] = StorageService::urlVersionada(
+                '/api/postulantes/' . (int) $fila['postulante_id'] . '/foto',
+                $fila['foto_key'] ?? null,
+            );
             $fila['retirada_postulante'] = (int) ($fila['retirada_postulante'] ?? 0);
             // `oferta_estado` conserva el valor del ENUM; el panel y cualquier
             // integración deben usar además el estado efectivo (vencida).

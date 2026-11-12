@@ -219,6 +219,8 @@ final class StorageServiceTest extends TestCase
     private function servicioSupabase(string $cache): StorageService
     {
         return new class ($cache) extends StorageService {
+            public int $descargas = 0;
+
             public function __construct(private readonly string $cache)
             {
                 parent::__construct();
@@ -232,6 +234,18 @@ final class StorageServiceTest extends TestCase
             protected function raizCacheImagen(): string
             {
                 return $this->cache;
+            }
+
+            protected function leerContenido(string $objectKey): ?string
+            {
+                $this->descargas++;
+
+                return 'contenido-externo';
+            }
+
+            public function borrarCache(string $objectKey): void
+            {
+                $this->borrarCacheImagen($objectKey);
             }
         };
     }
@@ -252,6 +266,73 @@ final class StorageServiceTest extends TestCase
         // La lectura sale de la caché sin tocar el driver externo.
         self::assertSame('imagen pública', $servicio->obtenerImagen('empresas/logo/1/aa11bb22cc33dd44.png'));
         self::assertNull($servicio->obtenerImagen('postulante-1/5714477fc1d9643f.pdf'));
+    }
+
+    public function testUrlVersionadaNoExponeLaClaveYCambiaConElObjeto(): void
+    {
+        $claveA = 'empresas/logo/1/aa11bb22cc33dd44.png';
+        $claveB = 'empresas/logo/1/ff99ee88dd77cc66.png';
+
+        $urlA = StorageService::urlVersionada('/api/empresas/1/logo', $claveA);
+        $urlB = StorageService::urlVersionada('/api/empresas/1/logo', $claveB);
+
+        self::assertNotNull($urlA);
+        self::assertSame($urlA, StorageService::urlVersionada('/api/empresas/1/logo', $claveA));
+        self::assertNotSame($urlA, $urlB);
+        self::assertStringNotContainsString($claveA, $urlA);
+        self::assertStringNotContainsString('aa11bb22cc33dd44', $urlA);
+        self::assertStringContainsString('&v=', StorageService::urlVersionada($urlA, 'x'));
+        self::assertNull(StorageService::urlVersionada('/api/empresas/1/logo', null));
+    }
+
+    public function testObtenerImagenReutilizaLaCacheYBorraLaEntrada(): void
+    {
+        $cache = $this->raiz . '-cache';
+        $servicio = $this->servicioSupabase($cache);
+        $clave = 'empresas/logo/1/aa11bb22cc33dd44.png';
+
+        self::assertSame('contenido-externo', $servicio->obtenerImagen($clave));
+        self::assertSame('contenido-externo', $servicio->obtenerImagen($clave));
+        self::assertSame(1, $servicio->descargas, 'La segunda lectura debe salir de la caché');
+
+        $servicio->borrarCache($clave);
+        self::assertSame([], glob($cache . '/*.bin') ?: []);
+        self::assertSame('contenido-externo', $servicio->obtenerImagen($clave));
+        self::assertSame(2, $servicio->descargas, 'Tras borrar la caché debe volver a descargar');
+    }
+
+    public function testEliminarBorraLaEntradaDeCacheAunqueElDriverSeaLocal(): void
+    {
+        $cache = $this->raiz . '-cache';
+        mkdir($cache, 0775, true);
+        $clave = 'actividades/3/0123456789abcdef.webp';
+        $ruta = $cache . DIRECTORY_SEPARATOR . hash('sha256', $clave) . '.bin';
+        file_put_contents($ruta, 'contenido');
+
+        $servicio = new class ($this->raiz, $cache) extends StorageService {
+            public function __construct(private readonly string $raiz, private readonly string $cache)
+            {
+                parent::__construct();
+            }
+
+            public function esSupabase(): bool
+            {
+                return false;
+            }
+
+            protected function raizLocal(): string
+            {
+                return $this->raiz;
+            }
+
+            protected function raizCacheImagen(): string
+            {
+                return $this->cache;
+            }
+        };
+
+        $servicio->eliminar($clave);
+        self::assertFileDoesNotExist($ruta);
     }
 
     public function testRutaObjetoNoPermiteAlterarBucketNiEndpoint(): void

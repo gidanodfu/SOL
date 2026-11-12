@@ -1,0 +1,37 @@
+{
+    "logo": {
+        "origen_bytes": 6080,
+        "origen_dimensiones": [
+            1600,
+            800
+        ],
+        "normalizado_bytes": 4948,
+        "normalizado_mime": "image/png",
+        "normalizado_dimensiones": [
+            800,
+            800
+        ],
+        "miniatura_128_bytes": 1852,
+        "encode_ms": 183.67
+    },
+    "foto": {
+        "origen_bytes": 48433,
+        "origen_dimensiones": [
+            1200,
+            1600
+        ],
+        "normalizado_bytes": 19036,
+        "normalizado_mime": "image/jpeg",
+        "normalizado_dimensiones": [
+            800,
+            800
+        ],
+        "miniatura_128_bytes": 2161,
+        "encode_ms": 152.47
+    },
+    "actividad": {
+        "original_jpeg_1920x1080_bytes": 52357,
+        "webp_1280x720_bytes": 3956,
+        "nota": "La actividad conserva el original; WebP solo se midi\u00f3 como referencia experimental."
+    }
+}

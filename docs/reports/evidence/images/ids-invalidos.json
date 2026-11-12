@@ -1,0 +1,9 @@
+{
+  "/api/empresas/0/logo": 404,
+  "/api/postulantes/0/foto": 404,
+  "/api/actividades/0/imagen": 404,
+  "/api/empresas/999999/logo": 404,
+  "/api/actividades/999999/imagen": 404,
+  "productor_detectado": false,
+  "consulta": "ofertas, postulaciones y empresas con id 0 o relación huérfana: 0 filas; no hay generador de /api/empresas/0/logo en código."
+}

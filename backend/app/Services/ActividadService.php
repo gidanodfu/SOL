@@ -104,8 +104,7 @@ class ActividadService
      */
     private function conImagenPublica(array $fila): array
     {
-        $tiene = ! empty($fila['imagen_key']);
-        $fila['imagen_url'] = $tiene ? '/api/actividades/' . $fila['id'] . '/imagen' : null;
+        $fila['imagen_url'] = StorageService::urlVersionada('/api/actividades/' . $fila['id'] . '/imagen', $fila['imagen_key'] ?? null);
         $fila['estado_efectivo'] = self::estadoEfectivo($fila);
         unset($fila['imagen_key']);
 

@@ -1,0 +1,9 @@
+{
+  "endpoint": "/api/actividades/1/imagen",
+  "status": 200,
+  "content_type": "image/webp; charset=UTF-8",
+  "cache_control": "public, max-age=3600",
+  "content_disposition": "inline",
+  "x_content_type_options": "nosniff",
+  "nota": "Antes del cambio Cache-Control concatenaba no-store/no-cache con public=3600; ahora se reemplaza y el navegador puede cachear."
+}

@@ -21,10 +21,12 @@ import ActivityImagePlaceholder from './ActivityImagePlaceholder';
  * de error (el estado de error desactiva el `<img>`).
  */
 export default function ActivityImage({ src, alt = '', variante = 'media', expandible = false, className = '' }) {
-  const [error, setError] = useState(false);
+  const [errorSrc, setErrorSrc] = useState(null);
   const [ampliada, setAmpliada] = useState(false);
 
-  const hayImagen = Boolean(src) && !error;
+  // El error se vincula a la src que falló: si llega una imagen nueva, se
+  // muestra de inmediato sin un efecto que reinicie estado.
+  const hayImagen = Boolean(src) && errorSrc !== src;
   const clickable = expandible && hayImagen;
   const frameClase = [
     'activity-image',
@@ -44,7 +46,7 @@ export default function ActivityImage({ src, alt = '', variante = 'media', expan
         onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAmpliada(true); } } : undefined}
       >
         {hayImagen ? (
-          <img src={src} alt={alt || 'Imagen de la actividad'} loading="lazy" onError={() => setError(true)} />
+          <img src={src} alt={alt || 'Imagen de la actividad'} loading="lazy" onError={() => setErrorSrc(src)} />
         ) : (
           <ActivityImagePlaceholder variante={variante} />
         )}

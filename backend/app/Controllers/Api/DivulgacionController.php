@@ -43,6 +43,7 @@ class DivulgacionController extends BaseApiController
         return PerfDiagnostics::aplicar($this->response
             ->setStatusCode(200)
             ->setContentType($imagen['mime'])
+            ->removeHeader('Cache-Control')
             ->setHeader('Cache-Control', 'public, max-age=3600')
             ->setHeader('Content-Disposition', 'inline')
             ->setBody($imagen['contenido']));
@@ -79,6 +80,7 @@ class DivulgacionController extends BaseApiController
         return PerfDiagnostics::aplicar($this->response
             ->setStatusCode(200)
             ->setContentType($imagen['mime'])
+            ->removeHeader('Cache-Control')
             ->setHeader('Cache-Control', 'public, max-age=3600')
             ->setHeader('Content-Disposition', 'inline')
             ->setBody($imagen['contenido']));
