@@ -192,9 +192,11 @@ CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X POST "$B/api/e
 check_code 'renuncio sin motivo' 422 "$CODE"
 check_campo /tmp/opencode/ve_resp.json motivo_situacion
 CONTRATOS_ANTES=$(curl -s "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)["data"]))')
-CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X POST "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"postulacion_id\":$POS,\"fecha_contratacion\":\"$HOY\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"renuncio\",\"fecha_situacion\":\"$HOY\",\"motivo_situacion\":\"Motivo\"}")
-check_code 'renuncio con motivo válido' 201 "$CODE"
+CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X POST "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"postulacion_id\":$POS,\"fecha_contratacion\":\"$AYER\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"renuncio\",\"fecha_situacion\":\"\",\"motivo_situacion\":\"Motivo\"}")
+check_code 'renuncio con motivo y fecha vacía' 201 "$CODE"
 CONTRATO=$(python3 -c 'import json;print(json.load(open("/tmp/opencode/ve_resp.json"))["data"]["id"])')
+FECHA_REG=$(curl -s "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" | python3 -c "import sys,json;d=json.load(sys.stdin)['data'];print(next(c['fecha_situacion'] for c in d if c['id']==int('$CONTRATO')))")
+[ "$FECHA_REG" = "$AYER" ] && echo 'OK   registro sin fecha usa la fecha de contratación' || { echo "FAIL fecha de registro: $FECHA_REG (esperado $AYER)"; fallos=$((fallos + 1)); }
 CONTRATOS_DESPUES=$(curl -s "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)["data"]))')
 [ "$CONTRATOS_DESPUES" = "$((CONTRATOS_ANTES + 1))" ] && echo 'OK   solo la solicitud válida creó contratación' || { echo 'FAIL recuento de contrataciones'; fallos=$((fallos + 1)); }
 CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X PUT "$B/api/empresa/contrataciones/$CONTRATO" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"fecha_contratacion\":\"$HOY\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"finalizado\",\"motivo_situacion\":\"\"}")
@@ -202,8 +204,14 @@ check_code 'finalizado sin motivo permitido' 200 "$CODE"
 CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X PUT "$B/api/empresa/contrataciones/$CONTRATO" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"fecha_contratacion\":\"$HOY\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"despedido\",\"motivo_situacion\":\"\"}")
 check_code 'despedido sin motivo rechazado' 422 "$CODE"
 check_campo /tmp/opencode/ve_resp.json motivo_situacion
-CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X PUT "$B/api/empresa/contrataciones/$CONTRATO" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"fecha_contratacion\":\"$HOY\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"despedido\",\"motivo_situacion\":\"Causa justificada\"}")
+CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X PUT "$B/api/empresa/contrataciones/$CONTRATO" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"fecha_contratacion\":\"$HOY\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"despedido\",\"fecha_situacion\":\"\",\"motivo_situacion\":\"Causa justificada\"}")
 check_code 'despedido con motivo permitido' 200 "$CODE"
+FECHA_EDIT=$(curl -s "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" | python3 -c "import sys,json;d=json.load(sys.stdin)['data'];print(next(c['fecha_situacion'] for c in d if c['id']==int('$CONTRATO')))")
+[ "$FECHA_EDIT" = "$HOY" ] && echo 'OK   cambio de situación sin fecha usa la fecha actual' || { echo "FAIL fecha de edición: $FECHA_EDIT (esperado $HOY)"; fallos=$((fallos + 1)); }
+CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X PUT "$B/api/empresa/contrataciones/$CONTRATO" -H "Authorization: Bearer $TE" -H 'Content-Type: application/json' -d "{\"fecha_contratacion\":\"$HOY\",\"cargo\":\"Cargo\",\"situacion_laboral\":\"despedido\",\"fecha_situacion\":\"\",\"motivo_situacion\":\"Causa justificada\"}")
+check_code 'misma situación sin fecha permitida' 200 "$CODE"
+FECHA_MISMA=$(curl -s "$B/api/empresa/contrataciones" -H "Authorization: Bearer $TE" | python3 -c "import sys,json;d=json.load(sys.stdin)['data'];print(next(c['fecha_situacion'] for c in d if c['id']==int('$CONTRATO')))")
+[ "$FECHA_MISMA" = "$HOY" ] && echo 'OK   misma situación conserva la fecha existente' || { echo "FAIL fecha preservada: $FECHA_MISMA (esperado $HOY)"; fallos=$((fallos + 1)); }
 
 paso "6. tipos anidados y booleanos inválidos no escriben"
 CODE=$(curl -s -o /tmp/opencode/ve_resp.json -w '%{http_code}' -X PUT "$B/api/postulante/perfil" -H "Authorization: Bearer $TP" -H 'Content-Type: application/json' -d '{"nombres":[],"apellidos":"Torres Rojas"}')

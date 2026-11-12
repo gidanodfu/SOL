@@ -177,3 +177,152 @@
   .app-empresa .empresa-perfil { grid-template-columns: 1fr; }
   .app-empresa .empresa-perfil > .imagen-compacta { justify-self: center; }
 }
+
+/* ---------- Formulario de contrataciones ---------- */
+/* Registro y edición comparten las mismas cuatro secciones. */
+.app-empresa .contratacion-form { display: flex; flex-direction: column; }
+.app-empresa .contratacion-form .form-seccion {
+  margin: 0;
+  padding: 0 0 18px;
+}
+.app-empresa .contratacion-form .form-seccion + .form-seccion {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.app-empresa .contratacion-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 1rem;
+  align-items: start;
+}
+.app-empresa .contratacion-grid--dos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app-empresa .contratacion-form .campo-ayuda {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.app-empresa .contratacion-form textarea { resize: vertical; line-height: 1.5; }
+
+/* Ficha contextual del candidato (selector en alta, lectura en edición). */
+.app-empresa .contratacion-candidato {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 4px;
+  padding: 14px 16px;
+  background: var(--sky);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.app-empresa .contratacion-candidato-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--blue-tx);
+  font-size: 15px;
+  font-weight: 700;
+}
+.app-empresa .contratacion-candidato-datos {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.app-empresa .contratacion-candidato-datos strong {
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.app-empresa .contratacion-candidato-datos span {
+  color: var(--text-3);
+  font-size: 12.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.app-empresa .contratacion-candidato .badge { margin-left: auto; }
+
+/* Selector visual de situación laboral: radios nativos dentro de tarjetas. */
+.app-empresa .contratacion-situaciones { min-width: 0; border: 0; }
+.app-empresa .contratacion-situaciones-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.app-empresa .contratacion-situacion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.app-empresa .contratacion-situacion:hover { border-color: var(--blue); }
+.app-empresa .contratacion-situacion.is-seleccionada {
+  background: var(--sky);
+  border-color: var(--blue);
+}
+.app-empresa .contratacion-situacion input[type="radio"] {
+  flex: none;
+  width: auto;
+  margin: 3px 0 0;
+  accent-color: var(--blue);
+}
+.app-empresa .contratacion-situacion input[type="radio"]:focus-visible {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+.app-empresa .contratacion-situacion:focus-within {
+  outline: 2px solid var(--accion-foco);
+  outline-offset: 2px;
+}
+.app-empresa .contratacion-situacion-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.app-empresa .contratacion-situacion-texto strong {
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.app-empresa .contratacion-situacion-texto small {
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.app-empresa .contratacion-situaciones.campo-error .contratacion-situacion { border-color: var(--red-tx); }
+.app-empresa .contratacion-situacion:has(input:disabled) { opacity: 0.65; cursor: not-allowed; }
+.app-empresa .contratacion-situacion-detalle { margin-top: 12px; }
+.app-empresa .contratacion-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  .app-empresa .contratacion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .app-empresa .contratacion-grid,
+  .app-empresa .contratacion-grid--dos,
+  .app-empresa .contratacion-situaciones-grid { grid-template-columns: 1fr; }
+  .app-empresa .contratacion-candidato .badge { margin-left: 0; }
+  .app-empresa .contratacion-acciones .btn { width: 100%; }
+}

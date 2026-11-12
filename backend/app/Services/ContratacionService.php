@@ -102,7 +102,10 @@ class ContratacionService
         }
 
         $datos = $this->validar($datos);
-        $fechaSituacion = $datos['fecha_situacion'] ?? $datos['fecha_contratacion'];
+        $fechaSituacion = self::resolverFechaSituacionRegistro(
+            $datos['fecha_situacion'] ?? null,
+            (string) $datos['fecha_contratacion'],
+        );
         $situacion      = $datos['situacion_laboral'] ?? 'contratado';
         $motivo         = $datos['motivo_situacion'] ?? null;
         $this->validarSituacion($situacion, $motivo, $datos['fecha_contratacion'], $fechaSituacion);
@@ -141,10 +144,12 @@ class ContratacionService
         // Al cambiar la situación laboral se registra cuándo ocurrió (si no se
         // indicó una fecha explícita) y el motivo queda separado para auditoría.
         $situacion = $datos['situacion_laboral'] ?? $contrato['situacion_laboral'];
-        $fechaSituacion = $datos['fecha_situacion'] ?? $contrato['fecha_situacion'];
-        if ($situacion !== $contrato['situacion_laboral'] && empty($datos['fecha_situacion'])) {
-            $fechaSituacion = date('Y-m-d');
-        }
+        $fechaSituacion = self::resolverFechaSituacionEdicion(
+            $datos['fecha_situacion'] ?? null,
+            $contrato['fecha_situacion'] ?? null,
+            $situacion,
+            (string) $contrato['situacion_laboral'],
+        );
         $motivo = $datos['motivo_situacion'] ?? $contrato['motivo_situacion'];
         $this->validarSituacion($situacion, $motivo, $datos['fecha_contratacion'], $fechaSituacion);
 
@@ -158,6 +163,53 @@ class ContratacionService
             'motivo_situacion'   => $datos['motivo_situacion'] ?? $contrato['motivo_situacion'],
             'fecha_situacion'    => $fechaSituacion,
         ]);
+    }
+
+    /**
+     * Fecha efectiva al registrar: una cadena vacía no es una fecha. Si el
+     * formulario no la envía, se usa la fecha de contratación.
+     */
+    public static function resolverFechaSituacionRegistro(?string $fecha, string $fechaContratacion): string
+    {
+        return self::fechaONull($fecha) ?? $fechaContratacion;
+    }
+
+    /**
+     * Fecha efectiva al editar: explícita si llega; si la situación cambió,
+     * hoy (zona horaria de la app); si no cambió, la fecha histórica.
+     * Nunca devuelve una cadena vacía para una columna DATE.
+     */
+    public static function resolverFechaSituacionEdicion(
+        ?string $fecha,
+        ?string $fechaAnterior,
+        string $situacion,
+        string $situacionAnterior,
+        ?string $hoy = null,
+    ): ?string
+    {
+        $fecha = self::fechaONull($fecha);
+        if ($fecha !== null) {
+            return $fecha;
+        }
+
+        if ($situacion !== $situacionAnterior) {
+            return $hoy ?? date('Y-m-d');
+        }
+
+        return self::fechaONull($fechaAnterior);
+    }
+
+    private static function fechaONull(?string $fecha): ?string
+    {
+        $fecha = trim((string) $fecha);
+
+        // MariaDB puede conservar fechas cero de versiones anteriores; no son
+        // una fecha efectiva y no deben volver a escribirse.
+        if ($fecha === '' || str_starts_with($fecha, '0000-00-00')) {
+            return null;
+        }
+
+        return $fecha;
     }
 
     /**
