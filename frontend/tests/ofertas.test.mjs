@@ -64,3 +64,13 @@ test('la empresa solo ofrece activación para postulaciones seleccionadas', () =
   assert.match(fuente, /La activación estará disponible cuando el candidato sea seleccionado\./);
   assert.doesNotMatch(fuente, /No se puede reactivar/);
 });
+
+test('observar una oferta usa un textarea multilínea para las observaciones', () => {
+  const fuente = leer('../src/pages/admin/Ofertas.jsx');
+
+  assert.match(fuente, /titulo: 'Observar oferta'/);
+  assert.match(fuente, /etiqueta: 'Observaciones para la empresa'/);
+  assert.match(fuente, /multilinea: true/);
+  assert.match(fuente, /placeholder: 'Describe qué debe corregir la empresa\.\.\.'/);
+  assert.match(fuente, /observarOfertaAdmin\(oferta\.id, observacion\)/);
+});

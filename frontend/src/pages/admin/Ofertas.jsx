@@ -171,6 +171,8 @@ function DetalleOferta({ oferta, puedeRevisar, alCerrar, alCambio }) {
       titulo: 'Observar oferta',
       mensaje: 'Indica qué debe corregir la empresa. La oferta NO se publica y vuelve a revisión cuando la empresa la corrija.',
       etiqueta: 'Observaciones para la empresa',
+      multilinea: true,
+      placeholder: 'Describe qué debe corregir la empresa...',
       min: 1,
       textoConfirmar: 'Observar',
       variante: 'primario',
