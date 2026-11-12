@@ -14,13 +14,13 @@
  * - Elimina todos los datos sintéticos al terminar.
  *
  * Uso:
- *   php tests/tools/perf_benchmark.php [--assert] [--json=ruta] [--muestras=30]
+ *   php tests/tools/perf_benchmark.php [--assert] [--json=ruta] [--muestras=30] [--max-consultas=6]
  *
  * Variables: DB_*, PERF_BASE_URL, PERF_EMPRESA_USER, PERF_EMPRESA_PASS,
  *            PERF_ADMIN_USER, PERF_ADMIN_PASS.
  */
 
-$opciones = getopt('', ['assert', 'json:', 'muestras:', 'help']);
+$opciones = getopt('', ['assert', 'json:', 'muestras:', 'max-consultas:', 'help']);
 if (isset($opciones['help'])) {
     fwrite(STDOUT, "Uso: php perf_benchmark.php [--assert] [--json=ruta] [--muestras=30]\n");
     exit(0);
@@ -29,6 +29,7 @@ if (isset($opciones['help'])) {
 $assert   = isset($opciones['assert']);
 $jsonRuta = $opciones['json'] ?? null;
 $muestras = max(3, (int) ($opciones['muestras'] ?? 30));
+$maxConsultas = max(1, (int) ($opciones['max-consultas'] ?? (getenv('PERF_MAX_CONSULTAS') ?: 6)));
 $base     = rtrim(getenv('PERF_BASE_URL') ?: 'http://127.0.0.1:8080', '/');
 $escala   = ((int) (getenv('PERF_SCALE') ?: 100)) >= 100 ? [10, 100] : [1, 10];
 
@@ -102,7 +103,9 @@ $resultado['resumen'] = [
     'sql_consultas_escala_baja'      => $sql10,
     'sql_consultas_escala_alta'      => $sql100,
     'crecimiento_consultas'          => $sql100 - $sql10,
+    'presupuesto_consultas'          => $maxConsultas,
     'n_plus_uno_detectado'           => $sql100 > $sql10,
+    'excede_presupuesto'             => $sql100 > $maxConsultas,
 ];
 
 $json = json_encode($resultado, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -114,6 +117,10 @@ fwrite(STDOUT, $json . "\n");
 
 if ($assert && $sql100 > $sql10) {
     fwrite(STDERR, "FAIL: las consultas crecen con el número de ofertas ({$sql10} → {$sql100}).\n");
+    exit(1);
+}
+if ($assert && $sql100 > $maxConsultas) {
+    fwrite(STDERR, "FAIL: el listado usa {$sql100} consultas y excede el presupuesto de {$maxConsultas}.\n");
     exit(1);
 }
 

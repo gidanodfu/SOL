@@ -34,10 +34,10 @@ class DivulgacionController extends BaseApiController
     {
         $imagen = (new ActividadService())->imagenContenido((int) $id);
         if ($imagen === null) {
-            return $this->response
+            return PerfDiagnostics::aplicar($this->response
                 ->setStatusCode(404)
                 ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode(['success' => false, 'message' => 'La actividad no tiene imagen.'], JSON_UNESCAPED_UNICODE));
+                ->setBody(json_encode(['success' => false, 'message' => 'La actividad no tiene imagen.'], JSON_UNESCAPED_UNICODE)));
         }
 
         return PerfDiagnostics::aplicar($this->response
@@ -70,10 +70,10 @@ class DivulgacionController extends BaseApiController
     private function servirImagen(?array $imagen, string $mensaje404)
     {
         if ($imagen === null) {
-            return $this->response
+            return PerfDiagnostics::aplicar($this->response
                 ->setStatusCode(404)
                 ->setContentType('application/json', 'UTF-8')
-                ->setBody(json_encode(['success' => false, 'message' => $mensaje404], JSON_UNESCAPED_UNICODE));
+                ->setBody(json_encode(['success' => false, 'message' => $mensaje404], JSON_UNESCAPED_UNICODE)));
         }
 
         return PerfDiagnostics::aplicar($this->response

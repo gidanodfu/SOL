@@ -7,6 +7,7 @@ namespace App\Controllers\Api\Empresa;
 use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
 use App\Libraries\Descarga;
+use App\Libraries\PerfDiagnostics;
 use App\Repositories\EmpresaRepository;
 use App\Services\PostulacionService;
 
@@ -102,10 +103,10 @@ class PostulacionesController extends BaseApiController
             throw ApiException::noEncontrado('El archivo no existe.');
         }
 
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setContentType($archivo['mime'], 'UTF-8')
             ->setHeader('Content-Disposition', Descarga::contentDisposition((string) $archivo['nombre'], 'cv'))
             ->setHeader('X-Content-Type-Options', 'nosniff')
-            ->setBody($contenido);
+            ->setBody($contenido));
     }
 }

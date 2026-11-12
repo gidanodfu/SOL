@@ -29,6 +29,7 @@ final class StorageServiceTest extends TestCase
     {
         $this->borrar($this->raiz);
         $this->borrar($this->raiz . '-fuera');
+        $this->borrar($this->raiz . '-cache');
 
         parent::tearDown();
     }
@@ -213,6 +214,44 @@ final class StorageServiceTest extends TestCase
         } catch (ApiException) {
             self::assertSame('original', file_get_contents($centinela . '/x.pdf'));
         }
+    }
+
+    private function servicioSupabase(string $cache): StorageService
+    {
+        return new class ($cache) extends StorageService {
+            public function __construct(private readonly string $cache)
+            {
+                parent::__construct();
+            }
+
+            public function esSupabase(): bool
+            {
+                return true;
+            }
+
+            protected function raizCacheImagen(): string
+            {
+                return $this->cache;
+            }
+        };
+    }
+
+    public function testCacheLocalSoloAceptaImagenesPublicas(): void
+    {
+        $cache = $this->raiz . '-cache';
+        $servicio = $this->servicioSupabase($cache);
+
+        // Un CV nunca debe escribirse en la caché de imágenes públicas.
+        $servicio->recordarImagen('postulante-1/5714477fc1d9643f.pdf', 'documento privado');
+        self::assertSame([], glob($cache . '/*.bin') ?: []);
+
+        $servicio->recordarImagen('empresas/logo/1/aa11bb22cc33dd44.png', 'imagen pública');
+        $archivos = glob($cache . '/*.bin') ?: [];
+        self::assertCount(1, $archivos);
+
+        // La lectura sale de la caché sin tocar el driver externo.
+        self::assertSame('imagen pública', $servicio->obtenerImagen('empresas/logo/1/aa11bb22cc33dd44.png'));
+        self::assertNull($servicio->obtenerImagen('postulante-1/5714477fc1d9643f.pdf'));
     }
 
     public function testRutaObjetoNoPermiteAlterarBucketNiEndpoint(): void

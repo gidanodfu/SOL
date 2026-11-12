@@ -11,9 +11,10 @@ import { CAMPOS_PRESENCIA } from '../../components/RedesSociales';
 import { useToast } from '../../components/Feedbacks';
 import { useAccion } from '../../hooks/useAccion';
 import { dominioPermitido, errorApi, esEnlaceSeguro, esTelefonoValido, soloDigitos, urlArchivo } from '../../utils';
+import { STALE } from '../../queryConfig';
 
 export default function Perfil() {
-  const { data, isLoading } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa });
+  const { data, isLoading } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa, staleTime: STALE.perfil });
   const [form, setForm] = useState(null);
   const [presencia, setPresencia] = useState(null);
   const queryClient = useQueryClient();

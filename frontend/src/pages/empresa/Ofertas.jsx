@@ -2,6 +2,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { STALE } from '../../queryConfig';
 import {
   actualizarOferta, cerrarOferta, crearOferta, detalleOfertaEmpresa, enviarOfertaARevision, listarOfertasEmpresa,
 } from '../../services/ofertas';
@@ -35,7 +36,7 @@ export default function Ofertas() {
   const location = useLocation();
   const toast = useToast();
   const { data: ofertas, isLoading } = useQuery({ queryKey: ['ofertas-empresa'], queryFn: listarOfertasEmpresa });
-  const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias });
+  const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias, staleTime: STALE.catalogo });
   const [editor, setEditor] = useState(() => (location.state?.nueva ? {} : null));
   const [seleccionada, setSeleccionada] = useState(null);
 

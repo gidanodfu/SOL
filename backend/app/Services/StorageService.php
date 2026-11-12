@@ -28,6 +28,17 @@ class StorageService
      */
     private const PATRON_CLAVE = '#^(?:postulante-[1-9]\d*|postulantes/foto/[1-9]\d*|empresas/logo/[1-9]\d*|actividades/[1-9]\d*)/[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9_-]$#';
 
+    /**
+     * Solo estas claves son imágenes públicas y pueden cachearse en disco.
+     * Los CV y cualquier documento privado quedan excluidos por completo.
+     */
+    private const PREFIJOS_IMAGEN_PUBLICA = ['empresas/logo/', 'postulantes/foto/', 'actividades/'];
+
+    /** El objeto cambia de clave al reemplazarse, así que la caché no se invalida por contenido. */
+    private const CACHE_IMAGEN_SEGUNDOS = 604800;
+
+    private const CACHE_IMAGEN_RETENCION_SEGUNDOS = 2592000;
+
     private string $driver;
 
     private string $bucket;
@@ -186,19 +197,134 @@ class StorageService
         $inicio = PerfDiagnostics::inicioMedicion();
 
         try {
-            if (! $this->esSupabase()) {
-                $ruta = $this->rutaLocal($objectKey);
-
-                return $ruta === null ? null : (file_get_contents($ruta) ?: null);
-            }
-
-            $url = $this->urlPresignada('GET', $this->rutaObjeto($objectKey), 120);
-            $ctx = stream_context_create(['http' => ['timeout' => 15]]);
-            $contenido = @file_get_contents($url, false, $ctx);
-
-            return $contenido === false ? null : $contenido;
+            return $this->leerContenido($objectKey);
         } finally {
             PerfDiagnostics::finAlmacenamiento($inicio);
+        }
+    }
+
+    /**
+     * Imagen pública con caché local para el driver externo. El bucket es
+     * privado y cada lectura a Supabase cuesta ~1,2 s; la clave incluye un
+     * identificador aleatorio que cambia al reemplazar la imagen, por lo que
+     * una entrada cacheada nunca sirve contenido de una versión anterior.
+     *
+     * Solo acepta prefijos de imagen pública. Los CV nunca pasan por aquí.
+     */
+    public function obtenerImagen(string $objectKey): ?string
+    {
+        if (! self::claveValida($objectKey) || ! $this->esImagenPublica($objectKey)) {
+            return null;
+        }
+
+        // En local el archivo ya está en disco: no hay nada que cachear.
+        if (! $this->esSupabase()) {
+            return $this->obtenerContenido($objectKey);
+        }
+
+        $inicio = PerfDiagnostics::inicioMedicion();
+
+        try {
+            $ruta = $this->rutaCacheImagen($objectKey);
+            if ($ruta !== null && is_file($ruta) && (time() - (int) filemtime($ruta)) <= self::CACHE_IMAGEN_SEGUNDOS) {
+                $contenido = @file_get_contents($ruta);
+                if ($contenido !== false) {
+                    return $contenido;
+                }
+            }
+
+            $contenido = $this->leerContenido($objectKey);
+            if ($contenido !== null && $ruta !== null) {
+                $this->escribirCacheImagen($ruta, $contenido);
+            }
+
+            return $contenido;
+        } finally {
+            PerfDiagnostics::finAlmacenamiento($inicio);
+        }
+    }
+
+    /**
+     * Guarda en caché una imagen recién subida, evitando la primera descarga
+     * externa. No almacena CV ni documentos.
+     */
+    public function recordarImagen(string $objectKey, string $contenido): void
+    {
+        if (! $this->esSupabase()) {
+            return;
+        }
+
+        if ($contenido === '' || ! self::claveValida($objectKey) || ! $this->esImagenPublica($objectKey)) {
+            return;
+        }
+
+        $ruta = $this->rutaCacheImagen($objectKey);
+        if ($ruta !== null) {
+            $this->escribirCacheImagen($ruta, $contenido);
+        }
+    }
+
+    private function leerContenido(string $objectKey): ?string
+    {
+        if (! $this->esSupabase()) {
+            $ruta = $this->rutaLocal($objectKey);
+
+            return $ruta === null ? null : (file_get_contents($ruta) ?: null);
+        }
+
+        $url = $this->urlPresignada('GET', $this->rutaObjeto($objectKey), 120);
+        $ctx = stream_context_create(['http' => ['timeout' => 15]]);
+        $contenido = @file_get_contents($url, false, $ctx);
+
+        return $contenido === false ? null : $contenido;
+    }
+
+    private function esImagenPublica(string $objectKey): bool
+    {
+        foreach (self::PREFIJOS_IMAGEN_PUBLICA as $prefijo) {
+            if (str_starts_with($objectKey, $prefijo)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Directorio de caché de imágenes; aislable en pruebas.
+     */
+    protected function raizCacheImagen(): string
+    {
+        return WRITEPATH . 'cache/media';
+    }
+
+    private function rutaCacheImagen(string $objectKey): ?string
+    {
+        $directorio = $this->raizCacheImagen();
+        if (! is_dir($directorio) && ! @mkdir($directorio, 0775, true) && ! is_dir($directorio)) {
+            return null;
+        }
+
+        return $directorio . DIRECTORY_SEPARATOR . hash('sha256', $objectKey) . '.bin';
+    }
+
+    private function escribirCacheImagen(string $ruta, string $contenido): void
+    {
+        if (@file_put_contents($ruta, $contenido, LOCK_EX) === false) {
+            return;
+        }
+
+        // Limpieza oportunista: las claves antiguas dejan de usarse al
+        // reemplazar la imagen y no deben acumularse indefinidamente.
+        if (random_int(1, 50) !== 1) {
+            return;
+        }
+
+        $limite = time() - self::CACHE_IMAGEN_RETENCION_SEGUNDOS;
+        foreach (glob(dirname($ruta) . DIRECTORY_SEPARATOR . '*.bin') ?: [] as $archivo) {
+            if (is_file($archivo) && (int) filemtime($archivo) < $limite) {
+                @unlink($archivo);
+            }
         }
     }
 

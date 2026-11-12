@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useAccion } from '../../hooks/useAccion';
 import { DONA_ESTADO_POSTULACION } from '../../constants';
 import { esTelefonoValido, errorApi, soloDigitos, urlArchivo } from '../../utils';
+import { STALE } from '../../queryConfig';
 
 /**
  * "Mi perfil y CV" es el centro de gestión del postulante: reúne los datos
@@ -25,7 +26,7 @@ import { esTelefonoValido, errorApi, soloDigitos, urlArchivo } from '../../utils
  * Todo proviene de una única petición GET /postulante/perfil (data.actividad).
  */
 export default function Perfil() {
-  const { data, isLoading, error } = useQuery({ queryKey: ['perfil-postulante'], queryFn: perfilPostulante });
+  const { data, isLoading, error } = useQuery({ queryKey: ['perfil-postulante'], queryFn: perfilPostulante, staleTime: STALE.perfil });
 
   return (
     <div>

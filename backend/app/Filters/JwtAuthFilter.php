@@ -4,6 +4,7 @@
 
 namespace App\Filters;
 
+use App\Libraries\PerfDiagnostics;
 use App\Models\UserModel;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
@@ -50,9 +51,9 @@ class JwtAuthFilter implements FilterInterface
 
     private function error(string $mensaje, int $codigo): ResponseInterface
     {
-        return service('response')
+        return PerfDiagnostics::aplicar(service('response')
             ->setStatusCode($codigo)
             ->setContentType('application/json', 'UTF-8')
-            ->setBody(json_encode(['success' => false, 'message' => $mensaje, 'errors' => []]));
+            ->setBody(json_encode(['success' => false, 'message' => $mensaje, 'errors' => []])));
     }
 }

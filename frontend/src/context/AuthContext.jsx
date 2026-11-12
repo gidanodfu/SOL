@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   cambiarContrasena as apiContrasena,
   login as apiLogin,
@@ -15,6 +16,7 @@ import { useTema } from './ThemeContext';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const { setPreferencias, restablecer } = useTema();
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -84,10 +86,13 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     await apiLogout();
     limpiarSesion();
+    // La caché en memoria es por sesión: no debe sobrevivir a un cambio de
+    // usuario ni reutilizarse entre cuentas.
+    queryClient.clear();
     setUsuario(null);
     restablecer();
     window.location.replace('/login');
-  }, [restablecer]);
+  }, [queryClient, restablecer]);
 
   const refrescarUsuario = useCallback(async () => {
     setUsuario(await sesion());

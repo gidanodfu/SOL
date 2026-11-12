@@ -1,0 +1,49 @@
+{
+  "entorno": "stack sol_dev, build de desarrollo, tokens JWT inyectados para evitar Turnstile; solo lectura",
+  "postulante": [
+    {
+      "link": "/postulante/postulaciones",
+      "api": [
+        "/api/postulante/postulaciones",
+        "/api/empresas/1/logo"
+      ]
+    },
+    {
+      "link": "/postulante/buscar",
+      "api": []
+    },
+    {
+      "link": "/postulante/postulaciones",
+      "api": []
+    },
+    {
+      "link": "/postulante/buscar",
+      "api": []
+    }
+  ],
+  "admin": [
+    {
+      "link": "/admin/ofertas",
+      "api": [
+        "/api/admin/ofertas"
+      ]
+    },
+    {
+      "link": "/admin/empresas",
+      "api": [
+        "/api/admin/empresas",
+        "/api/empresas/10/logo",
+        "/api/empresas/1/logo"
+      ]
+    },
+    {
+      "link": "/admin/dashboard",
+      "api": []
+    },
+    {
+      "link": "/admin/ofertas",
+      "api": []
+    }
+  ],
+  "nota": "Las rutas /api/empresas/{id}/logo son imágenes legítimas de las tarjetas, no datos de lista. Las consultas de datos no se repiten al volver a una pantalla dentro de su ventana de frescura."
+}

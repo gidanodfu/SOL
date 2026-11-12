@@ -13,6 +13,7 @@ import ActivityCard from '../../components/dashboard/ActivityCard';
 import BarChartCard from '../../components/dashboard/BarChartCard';
 import { DONA_ESTADO_POSTULACION } from '../../constants';
 import { descargarBlob, errorApi, errorApiDescarga, fechaHora } from '../../utils';
+import { STALE } from '../../queryConfig';
 
 const OFERTAS_DONA = [
   { estado: 'publicada', etiqueta: 'Publicada', color: 'var(--green)' },
@@ -48,6 +49,7 @@ export default function Dashboard() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard-empresa', filtro.desde, filtro.hasta],
+    staleTime: STALE.dashboard,
     queryFn: () => dashboardEmpresa({
       desde: filtro.desde || undefined,
       hasta: filtro.hasta || undefined,

@@ -14,9 +14,16 @@ test('el contenido enriquecido solo se sanea cuando cambia', () => {
   assert.match(componente, /dangerouslySetInnerHTML=\{\{ __html: html \}\}/);
 });
 
-test('React Query reutiliza datos recientes sin perder invalidaciones', () => {
+test('React Query usa ventanas específicas por tipo de dato', () => {
   const app = leer('../src/App.jsx');
+  const config = leer('../src/queryConfig.js');
+  const auth = leer('../src/context/AuthContext.jsx');
 
-  assert.match(app, /staleTime: 30_000/);
+  assert.match(app, /staleTime: STALE\.operativo/);
   assert.match(app, /refetchOnWindowFocus: false/);
+  assert.match(config, /operativo: 15_000/);
+  assert.match(config, /dashboard: 30_000/);
+  assert.match(config, /perfil: 60_000/);
+  assert.match(config, /catalogo: 30 \* 60_000/);
+  assert.match(auth, /queryClient\.clear\(\)/);
 });

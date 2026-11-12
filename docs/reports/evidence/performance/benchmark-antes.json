@@ -708,5 +708,10 @@
     "sql_consultas_escala_alta": 104,
     "crecimiento_consultas": 90,
     "n_plus_uno_detectado": true
+  },
+  "criterio_regresion": {
+    "presupuesto_consultas": 6,
+    "condicion": "falla si sql(100) > sql(10) o sql(100) > presupuesto",
+    "excede_presupuesto": true
   }
 }

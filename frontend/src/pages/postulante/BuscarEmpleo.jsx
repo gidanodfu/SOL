@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { STALE } from '../../queryConfig';
 import { Briefcase } from 'lucide-react';
 import { detalleOferta, listarOfertas, perfilPostulante, postular } from '../../services/postulante';
 import { listarCategorias } from '../../services/categorias';
@@ -45,10 +46,11 @@ export default function BuscarEmpleo() {
   const [searchParams] = useSearchParams();
   const q = (searchParams.get('q') || '').trim();
   const { usuario } = useAuth();
-  const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias });
+  const { data: categorias } = useQuery({ queryKey: ['categorias'], queryFn: listarCategorias, staleTime: STALE.catalogo });
   const { data: perfil } = useQuery({
     queryKey: ['perfil-postulante'],
     queryFn: perfilPostulante,
+    staleTime: STALE.perfil,
     enabled: usuario?.rol === ROLES.POSTULANTE,
   });
   const completitud = perfil?.completitud;

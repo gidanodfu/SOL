@@ -10,6 +10,7 @@ import { perfilPostulante } from '../services/postulante';
 import { useClickFuera } from '../hooks/useClickFuera';
 import { urlArchivo } from '../utils';
 import { NavbarPostulante } from './NavbarPostulante';
+import { STALE } from '../queryConfig';
 
 const MENU = [
   { to: '/postulante/perfil', icono: IdCard, texto: 'Mi perfil y CV' },
@@ -19,7 +20,7 @@ const MENU = [
 
 export function LayoutPostulante() {
   const { usuario } = useAuth();
-  const { data: perfil } = useQuery({ queryKey: ['perfil-postulante'], queryFn: perfilPostulante });
+  const { data: perfil } = useQuery({ queryKey: ['perfil-postulante'], queryFn: perfilPostulante, staleTime: STALE.perfil });
   const [menuAbierto, setMenuAbierto] = useState(false);
   const bloqueRef = useRef(null);
 

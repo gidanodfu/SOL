@@ -5,6 +5,7 @@
 namespace App\Filters;
 
 use App\Services\AutorizacionMunicipalService;
+use App\Libraries\PerfDiagnostics;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -25,14 +26,14 @@ class PermisoMunicipalFilter implements FilterInterface
         }
 
         if (! (new AutorizacionMunicipalService())->permite($permiso)) {
-            return service('response')
+            return PerfDiagnostics::aplicar(service('response')
                 ->setStatusCode(403)
                 ->setContentType('application/json', 'UTF-8')
                 ->setBody(json_encode([
                     'success' => false,
                     'message' => 'Su perfil municipal no permite realizar esta operación.',
                     'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+                ], JSON_UNESCAPED_UNICODE)));
         }
 
         return null;

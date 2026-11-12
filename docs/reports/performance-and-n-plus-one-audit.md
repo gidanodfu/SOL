@@ -1,7 +1,7 @@
 # Auditoría integral de rendimiento y N+1 — SOL
 
 **Fecha:** 2026-11-11
-**Rama de trabajo:** `main` (integración directa solicitada)
+**Rama de trabajo:** `main` (rama real; cambios locales sin commit)
 **Alcance:** frontend React, API CodeIgniter, MariaDB 11.4.13 y almacenamiento de imágenes/CV.
 **Dictamen:** **APROBADO CON OBSERVACIONES** (ver sección I).
 
@@ -11,14 +11,16 @@
 
 Se auditó la ruta completa navegador → React Query → API → servicios/repositorios → MariaDB → serialización → navegador. Se encontró y corrigió **un N+1 SQL crítico** en la bandeja de ofertas de la empresa y **dos consultas redundantes** en detalle y dashboard. Además se eliminaron revalidaciones HTTP innecesarias al remontar pantallas y se evitó el saneamiento HTML repetido en cada render.
 
-Resultado principal, con 30 muestras por escala y datos sintéticos en MariaDB temporal:
+Resultado principal, con 30 muestras para el listado de empresa y 5 para el resto de endpoints, en MariaDB temporal:
 
 | Escala | Antes (consultas) | Después (consultas) | Antes (mediana) | Después (mediana) | Mejora |
 |---|---:|---:|---:|---:|---:|
 | 10 ofertas | 14 | 4 | 15,55 ms | 11,85 ms | −23,8 % |
 | 100 ofertas | 104 | 4 | 53,03 ms | 13,37 ms | **−74,8 % de latencia** |
 
-El número de consultas del listado de la empresa pasó de crecer linealmente con las ofertas a ser constante. El detalle de oferta pasó de 3 a 2 consultas y el dashboard municipal de 10 a 9. No se añadieron índices, dependencias ni cachés de datos sensibles. La instrumentación `PERF_DIAGNOSTICS` quedó desactivada por defecto.
+El número de consultas del listado de la empresa pasó de crecer linealmente con las ofertas a ser constante. El detalle de oferta pasó de 3 a 2 consultas y el dashboard municipal de 10 a 9. No se añadieron índices ni dependencias; la única caché nueva es local y solo para imágenes públicas, nunca para CV ni datos privados. La instrumentación `PERF_DIAGNOSTICS` quedó desactivada por defecto.
+
+La verificación en el stack real de desarrollo confirmó que `storage.driver=supabase` y que el detalle de oferta **no** reproduce los 1,072 s observados: responde en 9,3–17,3 ms (SQL 0,85–1,65 ms, 2 consultas). El logo sí reproducía la regresión: 1,14–1,28 s por lectura externa a Supabase (sin llegar a 3,085 s). Se añadió una caché local solo para imágenes públicas, con lo que la primera lectura sigue siendo fría (~1,28 s) y las siguientes bajan a **8,7–10,1 ms**. Los CV y documentos privados quedan excluidos de esa caché por prefijo.
 
 ---
 
@@ -59,9 +61,10 @@ El número de consultas del listado de la empresa pasó de crecer linealmente co
 | PF-03 | P1 | `backend/app/Repositories/DashboardRepository.php:147` | `GET /api/admin/dashboard` | Agregación duplicada | 10 consultas → 9 | Dos `AVG` sobre la misma tabla de historial en consultas independientes |
 | PF-04 | P2 | `frontend/src/App.jsx:17` | Navegación cliente (postulante/admin) | Solicitudes HTTP redundantes | Volver a Buscar: 4 solicitudes → 0; volver a Dashboard: 2 → 0; postulaciones: 2 → 0 | `staleTime` por defecto 0: cada remontaje de layout/página volvía a pedir datos ya cargados |
 | PF-05 | P2 | `frontend/src/components/ContenidoEnriquecido.jsx:93` | Listas y detalles con RTE | Procesamiento repetido | 0,155 ms por elemento de ~0,9 KB; 100 tarjetas ≈ 15,5 ms por render redundante | DOMPurify + DOMParser + TreeWalker se ejecutaban en cada render, no solo al cambiar el contenido |
-| PF-06 | P3 | `backend/app/Controllers/Api/DivulgacionController.php`; `StorageService.php` | Imágenes de empresa, postulante y actividad | Acceso a almacenamiento | 1 consulta + 1 lectura por imagen; `Cache-Control: public, max-age=3600` | Cada imagen es una petición independiente legítima; el navegador ya las cachea y `ProfileImage` usa `loading="lazy"` |
+| PF-06 | P1 | `backend/app/Services/StorageService.php`; `EmpresaService`, `PostulanteService`, `ActividadService` | Logos, fotos e imágenes de actividad | Lectura externa sin caché | Logo: 1,14–1,28 s; storage 1,13–1,27 s por petición | Cada lectura bajaba el objeto completo desde Supabase; no había caché de servidor |
 | PF-07 | P3 | Consultas de `OfertaRepository`, `DashboardRepository`, `PostulacionRepository` | Listados y dashboards | Planes de ejecución | 501 filas sintéticas; plan público 0,38 ms, empresa 0,47 ms; `ofertas_habilidades` usa índice de cobertura | Tablas pequeñas; `ALL`/`filesort` no representa un cuello de botella demostrable |
 | PF-08 | P3 | `BaseApiController::ok`; `PerfDiagnostics` | Todos los endpoints JSON | Serialización no medida | Se añadió medición; ~0,01–0,2 ms en las muestras | No existía instrumentación por solicitud |
+| PF-09 | P2 | Controladores y filtros con respuestas directas | 404, 401, 403, 429, descargas y exportaciones | Respuestas sin Server-Timing | 404 de logo pasó de 0 a `Server-Timing` en 9–10 ms | Solo `ok()` y el handler de errores aplicaban la instrumentación |
 
 ### Evidencia de los planes MariaDB
 
@@ -100,8 +103,13 @@ No se creó ningún índice: el coste medido no justifica el coste de escritura 
 
 ### D.4 React Query (PF-04)
 
-- `staleTime: 30_000` global en `frontend/src/App.jsx`.
-- Las mutaciones siguen invalidando sus claves (`invalidateQueries`) y los datos críticos se refrescan al vencer la ventana.
+- Nuevo `frontend/src/queryConfig.js` con ventanas por tipo de dato:
+  - `operativo` (15 s): ofertas, postulaciones, contrataciones, solicitudes, usuarios, empresas, actividades, oportunidades e indicadores pendientes.
+  - `dashboard` (30 s): agregados de dashboard y empleabilidad.
+  - `perfil` (60 s): perfil de empresa y de postulante; solo cambian por mutación.
+  - `catalogo` (30 min): categorías.
+- Las mutaciones siguen invalidando sus claves (`invalidateQueries`) y los datos operativos se refrescan al vencer la ventana.
+- El cierre de sesión ejecuta `queryClient.clear()` antes de redirigir; la caché es en memoria y no se comparte entre cuentas.
 - No se cachean permisos: `AuthContext` mantiene su flujo de `/auth/me` y preferencias.
 
 ### D.5 Contenido enriquecido (PF-05)
@@ -119,12 +127,23 @@ Nuevo `backend/app/Libraries/PerfDiagnostics.php`:
 - Escribe JSONL en `writable/logs/perf-AAAA-MM-DD.jsonl` solo cuando está activo.
 - Normaliza literales y números; no registra bindings, cuerpos, tokens, JWT, CV ni datos personales.
 - Integrada en `BaseApiController`, `ApiExceptionHandler`, respuestas de imagen, `StorageService`, APIsPERU, Turnstile y certificados de Google.
+- Cubre respuestas directas que no pasan por `ok()`: 404 de imágenes, 401/403/429 de filtros, CV local y exportaciones Excel/CSV. `Server-Timing` se comprobó en 200, 401, 403 y 404.
+- `X-Perf-Diagnostics` **no** se añadió a `allowedHeaders`: los benchmarks lo envían desde curl, no desde el navegador. La activación por cabecera sigue limitada a entornos distintos de producción.
+
+### D.7 Caché de imágenes públicas (PF-06)
+
+- `StorageService::obtenerImagen()` cachea en `writable/cache/media` solo claves con prefijo `empresas/logo/`, `postulantes/foto/` o `actividades/`.
+- La clave del objeto cambia aleatoriamente al reemplazar la imagen, por lo que una entrada cacheada nunca sirve una versión anterior.
+- Los CV y documentos privados no pasan por esta ruta y se rechazan explícitamente por prefijo.
+- TTL de 7 días y limpieza oportunista de archivos con más de 30 días.
+- Las subidas nuevas precargan la caché (`recordarImagen`), evitando incluso la primera descarga externa.
+- Resultado en el stack real: primera lectura fría 1,28 s; lecturas posteriores 8,7–10,1 ms.
 
 ---
 
 ## E. Resultados de benchmarks
 
-### E.1 Backend (30 muestras, MariaDB temporal en tmpfs)
+### E.1 Backend (30 muestras para empresa/ofertas; 5 para el resto; MariaDB temporal en tmpfs)
 
 | Endpoint (100 ofertas) | Consultas antes | Consultas después | Mediana antes | Mediana después | P95 después |
 |---|---:|---:|---:|---:|---:|
@@ -143,22 +162,22 @@ Nuevo `backend/app/Libraries/PerfDiagnostics.php`:
 | `GET /api/oportunidades` | 1 | 1 | 9,63 ms | 8,68 ms | 9,29 ms |
 | `GET /api/categorias` | 1 | 1 | 8,30 ms | 8,53 ms | 8,75 ms |
 
-El crecimiento de consultas del listado de empresa quedó en **0** (14→4 con 10 ofertas; 104→4 con 100). Las diferencias de latencia menores a 1 ms no se consideran concluyentes.
+El crecimiento de consultas del listado de empresa quedó en **0** (14→4 con 10 ofertas; 104→4 con 100) y por debajo del presupuesto de 6 consultas. Las diferencias de latencia menores a 1 ms no se consideran concluyentes.
 
-### E.2 Navegación frontend (build de producción, Chromium headless)
+### E.2 Navegación frontend (Chromium headless)
 
-Se comparó el mismo backend y datos con dos builds: antes (HEAD) y después.
+Se comparó el recuento de solicitudes de datos con el mismo backend y datos, antes y después. La medición final se hizo sobre el stack de desarrollo con tokens inyectados para evitar Turnstile; los tiempos entre builds no se comparan, solo las solicitudes.
 
-| Acción cliente | Solicitudes antes | Solicitudes después |
-|---|---:|---:|
-| Buscar → Mis postulaciones | 2 | **1** |
-| Mis postulaciones → Buscar | 4 | **0** |
-| Buscar → Mis postulaciones (repetido) | 2 | **0** |
-| Admin: Ofertas → Empresas | 1 | 1 |
-| Admin: Empresas → Dashboard | 2 | **0** |
-| Admin: Dashboard → Ofertas | 1 | **0** |
+| Acción cliente | Solicitudes antes | Datos después | Imágenes después |
+|---|---:|---:|---:|
+| Buscar → Mis postulaciones | 2 | **1** | 1 logo |
+| Mis postulaciones → Buscar | 4 | **0** | 0 |
+| Buscar → Mis postulaciones (repetido) | 2 | **0** | 0 |
+| Admin: Ofertas → Empresas | 1 | 1 | 2 logos |
+| Admin: Empresas → Dashboard | 2 | **0** | 0 |
+| Admin: Dashboard → Ofertas | 1 | **0** | 0 |
 
-No cambian las solicitudes de una carga fría completa: el ahorro se produce al remontar pantallas dentro de la sesión. No se observaron bucles de peticiones ni consultas dentro de `map` en el frontend.
+Las imágenes de logo son peticiones legítimas de las tarjetas y se sirven desde la caché del navegador/servidor; no son consultas de datos repetidas. No cambian las solicitudes de una carga fría completa: el ahorro se produce al remontar pantallas dentro de la sesión. No se observaron bucles de peticiones ni consultas dentro de `map`. Firefox no se midió; no se afirma nada sobre ese navegador.
 
 ### E.3 Saneamiento HTML
 
@@ -173,8 +192,24 @@ No cambian las solicitudes de una carga fría completa: el ahorro se produce al 
 | Docker | 6 CPU, ~5,79 GiB RAM |
 | PHP | 8.4.27 CLI (imagen de pruebas) |
 | MariaDB | 11.4.13-MariaDB-ubu2404 |
-| Aislamiento | MariaDB efímero en tmpfs, red Docker temporal, sin volúmenes persistentes |
+| Almacenamiento real | `storage.driver=supabase`, endpoint y bucket configurados (sin exponer credenciales) |
+| Medición real | stack `sol_dev`, solo lectura de ofertas/empresas; sin datos de producción |
+| Aislamiento benchmarks | MariaDB efímero en tmpfs, red Docker temporal, sin volúmenes persistentes |
 | Servidor | `php spark serve` (no equivale a FPM productivo) |
+
+### E.5 Latencia en el stack real de desarrollo
+
+Medición con `X-Perf-Diagnostics: 1`, sin modificar el `.env` ni usar datos de producción.
+
+| Endpoint | Muestras | SQL | Storage | PHP | Total | Consultas |
+|---|---:|---:|---:|---:|---:|---:|
+| `GET /api/ofertas/4` | 5 | 0,85–1,65 ms | 0 ms | 8,4–15,7 ms | **9,3–17,3 ms** | 2 |
+| `GET /api/empresas/1/logo` (antes) | 5 | 0,33–0,47 ms | 1.129–1.274 ms | 8,2–9,8 ms | **1.138–1.283 ms** | 1 |
+| `GET /api/empresas/1/logo` (después, warm) | 4 | 0,33–0,41 ms | 0,15–0,16 ms | 8,2–9,6 ms | **8,7–10,1 ms** | 1 |
+| `GET /api/empresas/0/logo` | 5 | 0,34 ms | 0 ms | 9,7 ms | **~10 ms (404)** | 1 |
+| `GET /api/admin/solicitudes-empresa` | 5 | 1,3–2,0 ms | 0 ms | 8,8–9,7 ms | **10,1–11,7 ms** | 3 |
+
+Conclusión: los 1,072 s del detalle **no se reproducen** (2 consultas, ~10 ms). Los 3,085 s del logo tampoco se reproducen literalmente, pero sí la causa: cada lectura externa costaba ~1,2 s. La caché de imágenes reduce el coste a ~0,16 ms de almacenamiento tras la primera lectura. La primera lectura de un objeto nuevo seguirá siendo fría hasta que se descargue o se suba desde SOL.
 
 Evidencia estructurada:
 
@@ -183,7 +218,9 @@ Evidencia estructurada:
 - `docs/reports/evidence/performance/benchmark-despues.json`
 - `docs/reports/evidence/performance/navegacion-antes.json`
 - `docs/reports/evidence/performance/navegacion-despues.json`
+- `docs/reports/evidence/performance/navegacion-queryconfig.json`
 - `docs/reports/evidence/performance/sanitizacion.json`
+- `docs/reports/evidence/performance/latencia-stack-real.json`
 
 Reproducción:
 
@@ -191,7 +228,7 @@ Reproducción:
 ./deploy/scripts/smoke.sh test_performance.sh
 ```
 
-La suite crea su propio MariaDB temporal, siembra 10 y 100 ofertas, mide 30 muestras y falla si las consultas crecen con el número de ofertas.
+La suite crea su propio MariaDB temporal, siembra 10 y 100 ofertas, mide 30 muestras para `GET /api/empresa/ofertas` y 5 para el resto. Falla si las consultas crecen con el número de ofertas o si el listado excede el presupuesto de **6 consultas** (`--max-consultas`, configurable con `PERF_MAX_CONSULTAS`).
 
 ---
 
@@ -216,31 +253,31 @@ No se modificaron permisos, reglas de negocio, contratos de respuesta ni validac
 | Suite | Resultado | Detalle |
 |---|---|---|
 | `php-lint` | **PASS** | Sin errores de sintaxis |
-| `backend` (PHPUnit) | **PASS** | 255 tests, 1353 assertions |
+| `backend` (PHPUnit) | **PASS** | 256 tests, 1358 assertions |
 | `frontend` | **PASS** | 109/109 tests, lint 0 errores (19 warnings preexistentes), build correcto |
 | `audit` | **PASS** | 26 controles, 0 errores, 0 avisos |
 | `smoke` | **PASS** | 30 suites, 0 fallos, 0 marcadores |
-| `e2e` lectura | **PASS** | 34 OK, 0 fallos, 0 bloqueados (stack aislado) |
-| `e2e` escritura | **PASS** | 35 OK, 0 fallos, 0 bloqueados |
+| `e2e` lectura + escritura | **PASS** | 35 OK, 0 fallos, 0 bloqueados (stack aislado, `E2E_WRITES=1`) |
 | `validation` | **PASS** | 18 correctas, 0 fallidas |
-| `compatibility` MySQL→MariaDB | **PASS** | MySQL 8.0.46 → MariaDB 11.4.13, 26 controles, 0 errores, 0 avisos; evidencia en `/tmp/opencode/compat-perf` |
+| `compatibility` MySQL→MariaDB | **PASS** | Ejecutado antes de la caché de imágenes: MySQL 8.0.46 → MariaDB 11.4.13, 26 controles, 0 errores. No se repitió porque no cambió el esquema. |
 
 ### Incidencia de entorno E2E
 
-El stack de desarrollo tiene `turnstile.enabled=true` en el `.env` privado. Por la restricción de no modificar `.env`, el E2E contra `localhost:5173` quedó **BLOCKED** en el login. Se ejecutó con el mismo código contra un stack aislado (MariaDB temporal, `turnstile.enabled=false`) y pasó 34/34 y 35/35. No es una regresión de la aplicación.
+El stack de desarrollo tiene `turnstile.enabled=true` en el `.env` privado. Por la restricción de no modificar `.env`, el E2E contra `localhost:5173` quedó **BLOCKED** en el login. Se ejecutó con el mismo código contra un stack aislado (MariaDB temporal, `turnstile.enabled=false`): **35/35** con escritura. No es una regresión de la aplicación.
 
 ---
 
 ## H. Pendientes y limitaciones
 
 1. **Métricas de producción**: LCP, INP, CLS y TTFB reales dependen de FPM, CDN, red y hardware productivo. Aquí se midió en Docker con `spark serve`.
-2. **Imágenes**: no se generaron miniaturas ni se cambió el almacenamiento. Las imágenes ya usan `loading="lazy"` y `Cache-Control: public, max-age=3600`; un pipeline de miniaturas requeriría cambios de producto y almacenamiento.
+2. **Imágenes**: se añadió caché local de imágenes públicas, pero la primera lectura de un objeto nuevo sigue siendo fría (~1,28 s con Supabase). No se generaron miniaturas ni se migró el almacenamiento; eso requeriría cambios de producto. `ProfileImage` mantiene `loading="lazy"` y el proxy `Cache-Control: public, max-age=3600`.
 3. **Paginación**: los listados mantienen sus límites actuales (100/200/300). No se cambió el contrato para introducir paginación por cursor.
 4. **Índices**: no se añadieron. Los planes actuales muestran scans sobre tablas pequeñas con tiempos sub-milisegundo. Si el volumen crece de forma sostenida, candidatos a revisar son `ofertas(estado, fecha_publicacion)` y `ofertas(empresa_id, updated_at)`.
 5. **Contenido enriquecido**: la medición es un microbenchmark del trabajo evitado; no se instrumentó un render completo de 100 tarjetas en el navegador.
-6. **Caché HTTP de imágenes**: no se añadió `ETag`/`304`; la política actual de una hora ya evita descargas repetidas y no se demostró un problema.
-7. **Base de desarrollo**: no se usó para benchmarks; todo dato sintético se creó en MariaDB temporal y se eliminó al terminar. Los volúmenes persistentes no se tocaron.
+6. **Caché HTTP de imágenes**: no se añadió `ETag`/`304`; la caché de servidor y la política de una hora evitan la descarga repetida. Un CDN/proxy inverso resolvería la primera lectura fría, pero no forma parte del repositorio.
+7. **Datos y entorno**: los benchmarks N+1 usaron MariaDB temporal; la comprobación de latencia real fue de solo lectura sobre ofertas/empresas del entorno de desarrollo, sin datos de producción. El `.env` no se modificó y los volúmenes persistentes no se tocaron.
 8. **E2E contra el stack de desarrollo**: queda BLOCKED por Turnstile activo en el `.env` privado; la misma suite pasó en el stack aislado.
+9. **Navegadores**: todas las mediciones de navegación y saneamiento usan Chromium headless. Firefox no se midió en esta ronda.
 
 ---
 

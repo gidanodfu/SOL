@@ -247,6 +247,7 @@ class ActividadService
 
             $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $imagen['extension'];
             $this->storage->almacenarContenido($objectKey, $imagen['contenido'], $imagen['mime']);
+            $this->storage->recordarImagen($objectKey, $imagen['contenido']);
 
             $anterior = $actividad['imagen_key'] ?? null;
             $this->actividades->update($id, ['imagen_key' => $objectKey]);
@@ -324,7 +325,7 @@ class ActividadService
             return null;
         }
 
-        $contenido = $this->storage->obtenerContenido($key);
+        $contenido = $this->storage->obtenerImagen($key);
         if ($contenido === null) {
             return null;
         }
@@ -461,6 +462,7 @@ class ActividadService
 
             $objectKey = 'actividades/' . $id . '/' . bin2hex(random_bytes(8)) . '.' . $archivo['extension'];
             $this->storage->almacenarContenido($objectKey, $archivo['contenido'], $archivo['mime']);
+            $this->storage->recordarImagen($objectKey, $archivo['contenido']);
 
             $this->actividades->update($id, ['imagen_key' => $objectKey]);
             if (! $db->transStatus()) {

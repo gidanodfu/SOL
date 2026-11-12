@@ -6,15 +6,16 @@ import { ThemeProvider } from './context/ThemeContext';
 import { FeedbacksProvider } from './components/Feedbacks';
 import SeoMeta from './components/SeoMeta';
 import { Rutas } from './routes';
+import { STALE } from './queryConfig';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      // Evita repeticiones al remontar layouts/páginas (perfil, categorías,
-      // pendientes). Las mutaciones siguen invalidando sus claves al instante.
-      staleTime: 30_000,
+      // Ventana base para datos operativos. Las consultas estáticas o de
+      // perfil definen ventanas mayores en queryConfig.
+      staleTime: STALE.operativo,
     },
   },
 });

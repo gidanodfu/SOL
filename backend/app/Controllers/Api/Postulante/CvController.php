@@ -4,6 +4,8 @@
 
 namespace App\Controllers\Api\Postulante;
 
+use App\Libraries\PerfDiagnostics;
+
 use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
 use App\Libraries\Descarga;
@@ -52,14 +54,14 @@ class CvController extends BaseApiController
     {
         $archivo = $this->request->getFile('cv');
         if ($archivo === null || ! $archivo->isValid()) {
-            return $this->response
+            return PerfDiagnostics::aplicar($this->response
                 ->setStatusCode(422)
                 ->setContentType('application/json', 'UTF-8')
                 ->setBody(json_encode([
                     'success' => false,
                     'message' => 'Debe enviar un archivo en el campo "cv".',
                     'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+                ], JSON_UNESCAPED_UNICODE)));
         }
 
         $yaTenia = $this->cv->activo($this->postulanteId) !== null;
@@ -103,10 +105,10 @@ class CvController extends BaseApiController
 
         // El nombre proviene del cliente: se sanea para evitar inyección de
         // cabeceras (CRLF), rutas y nombres ambiguos en Content-Disposition.
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setContentType($archivo['mime'], 'UTF-8')
             ->setHeader('Content-Disposition', Descarga::contentDisposition((string) $archivo['nombre'], 'cv'))
             ->setHeader('X-Content-Type-Options', 'nosniff')
-            ->setBody($contenido);
+            ->setBody($contenido));
     }
 }

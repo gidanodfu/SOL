@@ -26,6 +26,7 @@ import BarChartCard from '../../components/dashboard/BarChartCard';
 import MetricListCard from '../../components/dashboard/MetricListCard';
 import { ETIQUETA_ESTADO_OFERTA, ETIQUETA_ESTADO_POSTULACION, ETIQUETA_SITUACION_CONTRATACION } from '../../constants';
 import { descargarBlob, errorApi, errorApiDescarga } from '../../utils';
+import { STALE } from '../../queryConfig';
 
 const ORDEN_POSTULACIONES = ['pendiente', 'en_revision', 'seleccionado', 'no_seleccionado'];
 const ORDEN_OFERTAS = ['pendiente', 'observada', 'publicada', 'vencida', 'rechazada', 'borrador', 'cerrada'];
@@ -62,11 +63,13 @@ export default function Dashboard() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard-admin', filtro.desde, filtro.hasta],
+    staleTime: STALE.dashboard,
     queryFn: () => dashboardAdmin({ desde: filtro.desde || undefined, hasta: filtro.hasta || undefined }),
   });
 
   const { data: empleabilidad } = useQuery({
     queryKey: ['empleabilidad-admin'],
+    staleTime: STALE.dashboard,
     queryFn: empleabilidadAdmin,
   });
 

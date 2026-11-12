@@ -4,6 +4,7 @@
 
 namespace App\Filters;
 
+use App\Libraries\PerfDiagnostics;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -31,7 +32,7 @@ class ThrottleFilter implements FilterInterface
 
         $espera = max(1, $throttler->getTokenTime());
 
-        return service('response')
+        return PerfDiagnostics::aplicar(service('response')
             ->setStatusCode(429)
             ->setContentType('application/json', 'UTF-8')
             ->setHeader('Retry-After', (string) $espera)
@@ -39,7 +40,7 @@ class ThrottleFilter implements FilterInterface
                 'success' => false,
                 'message' => 'Demasiadas solicitudes. Intente nuevamente en ' . $espera . ' segundos.',
                 'errors'  => [],
-            ], JSON_UNESCAPED_UNICODE));
+            ], JSON_UNESCAPED_UNICODE)));
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)

@@ -10,6 +10,7 @@ import { ROLES } from '../../constants';
 import { errorApi } from '../../utils';
 import PasswordRequirements from '../../components/PasswordRequirements';
 import { passwordCumple } from '../../utils/password';
+import { STALE } from '../../queryConfig';
 
 export default function Cuenta() {
   const { usuario, cambiarContrasena } = useAuth();
@@ -28,6 +29,7 @@ export default function Cuenta() {
   const { data: empresa } = useQuery({
     queryKey: ['perfil-empresa'],
     queryFn: perfilEmpresa,
+    staleTime: STALE.perfil,
     enabled: esEmpresa,
   });
 

@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import { useSidebarColapsado } from '../hooks/useSidebarColapsado';
 import { perfilEmpresa, pendientesEmpresa } from '../services/empresas';
+import { STALE } from '../queryConfig';
 
 const GRUPOS = [
   {
@@ -51,7 +52,7 @@ const MARCA = {
 
 export function LayoutEmpresa() {
   const { usuario } = useAuth();
-  const { data: perfil } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa });
+  const { data: perfil } = useQuery({ queryKey: ['perfil-empresa'], queryFn: perfilEmpresa, staleTime: STALE.perfil });
   const { colapsado, alternar } = useSidebarColapsado();
   const nombre = perfil?.nombre_comercial || perfil?.razon_social || usuario?.nombres || 'Empresa';
 

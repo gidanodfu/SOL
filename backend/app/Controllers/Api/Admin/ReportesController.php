@@ -5,6 +5,7 @@
 namespace App\Controllers\Api\Admin;
 
 use App\Controllers\Api\BaseApiController;
+use App\Libraries\PerfDiagnostics;
 use App\Services\ContratacionService;
 use App\Services\DashboardService;
 use App\Services\ReporteExcelService;
@@ -52,10 +53,10 @@ class ReportesController extends BaseApiController
         }
         $nombre .= '.xlsx';
 
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setContentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
-            ->setBody($bytes);
+            ->setBody($bytes));
     }
 
     /**
@@ -133,10 +134,10 @@ class ReportesController extends BaseApiController
             $csv .= implode(';', array_map(static fn ($v) => '"' . str_replace('"', '""', (string) $v) . '"', $fila)) . "\r\n";
         }
 
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setContentType('text/csv; charset=UTF-8')
             ->setHeader('Content-Disposition', 'attachment; filename="reporte-empleo.csv"')
             // BOM para compatibilidad con Excel.
-            ->setBody("\xEF\xBB\xBF" . $csv);
+            ->setBody("\xEF\xBB\xBF" . $csv));
     }
 }

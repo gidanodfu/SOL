@@ -6,6 +6,7 @@ namespace App\Controllers\Api\Empresa;
 
 use App\Controllers\Api\BaseApiController;
 use App\Exceptions\ApiException;
+use App\Libraries\PerfDiagnostics;
 use App\Repositories\EmpresaRepository;
 use App\Services\ReporteExcelService;
 use App\Services\ReportePdfService;
@@ -33,10 +34,10 @@ class ReportesController extends BaseApiController
 
         $bytes = (new ReporteExcelService())->generarEmpresa($empresa, $desde, $hasta);
 
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setContentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             ->setHeader('Content-Disposition', 'attachment; filename="reporte-empresa-' . date('Y-m-d') . '.xlsx"')
-            ->setBody($bytes);
+            ->setBody($bytes));
     }
 
     /**

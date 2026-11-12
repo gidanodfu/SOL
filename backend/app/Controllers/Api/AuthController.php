@@ -4,6 +4,8 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\PerfDiagnostics;
+
 use App\Exceptions\ApiException;
 use App\Services\AuthService;
 use App\Services\DniService;
@@ -101,14 +103,14 @@ class AuthController extends BaseApiController
         $dni = $this->cuerpo()['dni'] ?? null;
 
         if (! is_string($dni) || ! preg_match('/^\d{8}$/', $dni)) {
-            return $this->response
+            return PerfDiagnostics::aplicar($this->response
                 ->setStatusCode(422)
                 ->setContentType('application/json', 'UTF-8')
                 ->setBody(json_encode([
                     'success' => false,
                     'message' => 'Ingrese un DNI válido (8 dígitos).',
                     'errors'  => [],
-                ], JSON_UNESCAPED_UNICODE));
+                ], JSON_UNESCAPED_UNICODE)));
         }
 
         $datos = (new DniService())->consultar($dni);

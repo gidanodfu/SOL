@@ -87,6 +87,7 @@ class PostulanteService
 
         $objectKey = 'postulantes/foto/' . $postulante->id . '/' . bin2hex(random_bytes(8)) . '.' . $normalizada['extension'];
         $this->storage->almacenarContenido($objectKey, $normalizada['bytes'], $normalizada['mime']);
+        $this->storage->recordarImagen($objectKey, $normalizada['bytes']);
 
         $anterior = $postulante->foto_key;
         $this->postulantes->update((int) $postulante->id, ['foto_key' => $objectKey]);
@@ -122,7 +123,7 @@ class PostulanteService
             return null;
         }
 
-        $contenido = $this->storage->obtenerContenido($postulante->foto_key);
+        $contenido = $this->storage->obtenerImagen($postulante->foto_key);
         if ($contenido === null) {
             return null;
         }

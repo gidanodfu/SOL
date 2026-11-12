@@ -354,7 +354,7 @@ class EmpresaService
             return null;
         }
 
-        $contenido = $this->storage->obtenerContenido($key);
+        $contenido = $this->storage->obtenerImagen($key);
         if ($contenido === null) {
             return null;
         }
@@ -373,6 +373,7 @@ class EmpresaService
 
         $objectKey = 'empresas/logo/' . $empresaId . '/' . bin2hex(random_bytes(8)) . '.' . $normalizada['extension'];
         $this->storage->almacenarContenido($objectKey, $normalizada['bytes'], $normalizada['mime']);
+        $this->storage->recordarImagen($objectKey, $normalizada['bytes']);
 
         $anterior = $this->claveImagen($empresaId, 'logo_key');
         $this->empresas->update($empresaId, ['logo_key' => $objectKey]);
