@@ -1,0 +1,619 @@
+{
+  "postulanteCarga": [
+    {
+      "ruta": "/postulante/buscar",
+      "ms": 1655,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/categorias",
+        "/api/postulante/perfil",
+        "/api/ofertas",
+        "/api/ofertas/256"
+      ],
+      "domContentLoaded": 46,
+      "load": 63,
+      "apiBytes": 0
+    },
+    {
+      "ruta": "/postulante/postulaciones",
+      "ms": 1653,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/postulante/postulaciones",
+        "/api/postulante/perfil"
+      ],
+      "domContentLoaded": 45,
+      "load": 52,
+      "apiBytes": 0
+    },
+    {
+      "ruta": "/postulante/perfil",
+      "ms": 1690,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/postulante/perfil",
+        "/api/postulante/cv"
+      ],
+      "domContentLoaded": 83,
+      "load": 83,
+      "apiBytes": 0
+    },
+    {
+      "ruta": "/postulante/oportunidades",
+      "ms": 1635,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/actividades",
+        "/api/oportunidades",
+        "/api/postulante/perfil"
+      ],
+      "domContentLoaded": 27,
+      "load": 43,
+      "apiBytes": 0
+    }
+  ],
+  "postulanteNav": [
+    {
+      "accion": "/postulante/postulaciones",
+      "ms": 1260,
+      "peticiones": [
+        "/api/postulante/postulaciones",
+        "/api/postulante/perfil"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 25,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 39,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 19,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/postulaciones",
+          "ms": 24,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 37,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "accion": "/postulante/buscar",
+      "ms": 1232,
+      "peticiones": [
+        "/api/categorias",
+        "/api/postulante/perfil",
+        "/api/ofertas",
+        "/api/ofertas/256"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 25,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 39,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 19,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/postulaciones",
+          "ms": 24,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 37,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 14,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 29,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 43,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 46,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "accion": "/postulante/postulaciones",
+      "ms": 1232,
+      "peticiones": [
+        "/api/postulante/postulaciones",
+        "/api/postulante/perfil"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 25,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 39,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 19,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/postulaciones",
+          "ms": 24,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 37,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 14,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 29,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 43,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 46,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/postulaciones",
+          "ms": 22,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 36,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "accion": "/postulante/buscar",
+      "ms": 1232,
+      "peticiones": [
+        "/api/categorias",
+        "/api/postulante/perfil",
+        "/api/ofertas",
+        "/api/ofertas/256"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 11,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 25,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 39,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 19,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/postulaciones",
+          "ms": 24,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 37,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 14,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 29,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 43,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 46,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/postulaciones",
+          "ms": 22,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 36,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/categorias",
+          "ms": 14,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/postulante/perfil",
+          "ms": 28,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas",
+          "ms": 42,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/ofertas/256",
+          "ms": 46,
+          "bytes": 0
+        }
+      ]
+    }
+  ],
+  "adminCarga": [
+    {
+      "ruta": "/admin/dashboard",
+      "ms": 1636,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/admin/dashboard",
+        "/api/admin/empleabilidad",
+        "/api/admin/pendientes"
+      ],
+      "domContentLoaded": 26,
+      "load": 43,
+      "apiBytes": 0
+    },
+    {
+      "ruta": "/admin/ofertas",
+      "ms": 1634,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/admin/ofertas",
+        "/api/admin/pendientes"
+      ],
+      "domContentLoaded": 26,
+      "load": 33,
+      "apiBytes": 0
+    },
+    {
+      "ruta": "/admin/empresas",
+      "ms": 1677,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/admin/empresas",
+        "/api/admin/pendientes"
+      ],
+      "domContentLoaded": 69,
+      "load": 76,
+      "apiBytes": 0
+    },
+    {
+      "ruta": "/admin/usuarios",
+      "ms": 1659,
+      "peticiones": [
+        "/api/auth/me",
+        "/api/cuenta/preferencias",
+        "/api/admin/usuarios",
+        "/api/admin/pendientes"
+      ],
+      "domContentLoaded": 50,
+      "load": 50,
+      "apiBytes": 0
+    }
+  ],
+  "adminNav": [
+    {
+      "accion": "/admin/ofertas",
+      "ms": 1267,
+      "peticiones": [
+        "/api/admin/ofertas"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 13,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/dashboard",
+          "ms": 20,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empleabilidad",
+          "ms": 30,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/pendientes",
+          "ms": 42,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/ofertas",
+          "ms": 23,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "accion": "/admin/empresas",
+      "ms": 1245,
+      "peticiones": [
+        "/api/admin/empresas"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 13,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/dashboard",
+          "ms": 20,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empleabilidad",
+          "ms": 30,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/pendientes",
+          "ms": 42,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/ofertas",
+          "ms": 23,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empresas",
+          "ms": 15,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "accion": "/admin/dashboard",
+      "ms": 1233,
+      "peticiones": [
+        "/api/admin/dashboard",
+        "/api/admin/empleabilidad"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 13,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/dashboard",
+          "ms": 20,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empleabilidad",
+          "ms": 30,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/pendientes",
+          "ms": 42,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/ofertas",
+          "ms": 23,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empresas",
+          "ms": 15,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/dashboard",
+          "ms": 17,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empleabilidad",
+          "ms": 29,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "accion": "/admin/ofertas",
+      "ms": 1233,
+      "peticiones": [
+        "/api/admin/ofertas"
+      ],
+      "recursos": [
+        {
+          "ruta": "/api/auth/me",
+          "ms": 13,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/cuenta/preferencias",
+          "ms": 12,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/dashboard",
+          "ms": 20,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empleabilidad",
+          "ms": 30,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/pendientes",
+          "ms": 42,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/ofertas",
+          "ms": 23,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empresas",
+          "ms": 15,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/dashboard",
+          "ms": 17,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/empleabilidad",
+          "ms": 29,
+          "bytes": 0
+        },
+        {
+          "ruta": "/api/admin/ofertas",
+          "ms": 23,
+          "bytes": 0
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Libraries\PerfDiagnostics;
 
 /**
  * Verificación server-side de Cloudflare Turnstile (Siteverify). El widget del
@@ -211,7 +212,9 @@ class TurnstileService
             CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
+        $inicio    = PerfDiagnostics::inicioMedicion();
         $respuesta = curl_exec($ch);
+        PerfDiagnostics::finExterno($inicio);
         $codigo    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error     = curl_error($ch);
         curl_close($ch);

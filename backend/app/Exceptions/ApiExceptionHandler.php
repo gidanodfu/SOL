@@ -9,6 +9,7 @@ use CodeIgniter\HTTP\CLIRequest;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use App\Libraries\PerfDiagnostics;
 use App\Services\IdentidadService;
 use Throwable;
 
@@ -67,6 +68,7 @@ class ApiExceptionHandler implements ExceptionHandlerInterface
         }
 
         $response->setBody(json_encode($cuerpo, JSON_UNESCAPED_UNICODE));
+        PerfDiagnostics::aplicar($response);
         $response->send();
 
         if (ENVIRONMENT !== 'testing') {

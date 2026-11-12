@@ -1,0 +1,712 @@
+{
+  "generado_en": "2026-11-12T04:24:51+00:00",
+  "base_url": "http://127.0.0.1:8080",
+  "escalas": [
+    10,
+    100
+  ],
+  "endpoints": {
+    "GET /api/empresa/ofertas": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 15.55,
+          "p95": 16.81,
+          "minimo": 14.43,
+          "maximo": 16.85
+        },
+        "sql_consultas": {
+          "mediana": 14,
+          "p95": 14,
+          "minimo": 14,
+          "maximo": 14
+        },
+        "muestras": 30,
+        "server_timing": [
+          "total;dur=13.50, php;dur=9.24, sql;dur=4.23, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.89, php;dur=10.08, sql;dur=4.76, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=14.20, php;dur=9.65, sql;dur=4.51, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=14.59, php;dur=10.01, sql;dur=4.52, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.06",
+          "total;dur=13.37, php;dur=9.35, sql;dur=3.99, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=14.03, php;dur=9.43, sql;dur=4.57, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.41, php;dur=9.43, sql;dur=4.95, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=13.52, php;dur=9.47, sql;dur=4.01, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=15.21, php;dur=10.90, sql;dur=4.27, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.29, php;dur=9.93, sql;dur=4.32, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=13.97, php;dur=9.10, sql;dur=4.81, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.07",
+          "total;dur=15.35, php;dur=10.59, sql;dur=4.70, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=14.55, php;dur=9.86, sql;dur=4.67, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=14.35, php;dur=9.56, sql;dur=4.76, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.57, php;dur=10.15, sql;dur=4.39, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=14.16, php;dur=9.82, sql;dur=4.31, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=13.98, php;dur=9.68, sql;dur=4.25, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=13.60, php;dur=9.32, sql;dur=4.24, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=15.16, php;dur=10.14, sql;dur=4.97, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=14.61, php;dur=9.87, sql;dur=4.70, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.20, php;dur=9.69, sql;dur=4.46, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=15.29, php;dur=10.69, sql;dur=4.55, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=13.32, php;dur=9.23, sql;dur=4.04, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.05",
+          "total;dur=14.31, php;dur=9.27, sql;dur=5.01, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.53, php;dur=9.80, sql;dur=4.70, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=15.25, php;dur=10.29, sql;dur=4.89, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.07",
+          "total;dur=14.28, php;dur=9.72, sql;dur=4.52, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.27, php;dur=10.03, sql;dur=4.21, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=13.94, php;dur=9.30, sql;dur=4.60, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=14.36, php;dur=9.99, sql;dur=4.31, sql-count;desc=\"14\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.07"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 53.03,
+          "p95": 56.4,
+          "minimo": 50.91,
+          "maximo": 56.96
+        },
+        "sql_consultas": {
+          "mediana": 104,
+          "p95": 104,
+          "minimo": 104,
+          "maximo": 104
+        },
+        "muestras": 30,
+        "server_timing": [
+          "total;dur=52.10, php;dur=19.91, sql;dur=31.85, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.34",
+          "total;dur=51.40, php;dur=18.94, sql;dur=32.12, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.34",
+          "total;dur=50.72, php;dur=19.05, sql;dur=31.45, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=51.03, php;dur=19.04, sql;dur=31.75, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=49.94, php;dur=18.84, sql;dur=30.86, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=52.05, php;dur=19.63, sql;dur=32.19, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=55.23, php;dur=20.04, sql;dur=34.85, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.34",
+          "total;dur=52.90, php;dur=19.57, sql;dur=33.09, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=52.98, php;dur=19.08, sql;dur=33.65, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=49.62, php;dur=19.37, sql;dur=29.90, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.35",
+          "total;dur=51.57, php;dur=19.94, sql;dur=31.39, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=51.80, php;dur=19.30, sql;dur=32.26, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=50.67, php;dur=19.56, sql;dur=30.88, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=51.78, php;dur=19.22, sql;dur=32.29, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.28",
+          "total;dur=54.87, php;dur=19.27, sql;dur=35.31, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.29",
+          "total;dur=53.93, php;dur=20.41, sql;dur=33.28, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.24",
+          "total;dur=52.58, php;dur=20.23, sql;dur=32.00, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.34",
+          "total;dur=52.24, php;dur=19.32, sql;dur=32.64, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.28",
+          "total;dur=52.87, php;dur=19.72, sql;dur=32.72, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.44",
+          "total;dur=51.58, php;dur=19.52, sql;dur=31.80, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.25",
+          "total;dur=51.64, php;dur=19.07, sql;dur=32.32, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.25",
+          "total;dur=50.34, php;dur=19.22, sql;dur=30.88, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=50.96, php;dur=19.56, sql;dur=31.17, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=49.91, php;dur=18.75, sql;dur=30.83, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.33",
+          "total;dur=51.81, php;dur=19.57, sql;dur=32.00, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=52.34, php;dur=20.14, sql;dur=31.96, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=51.15, php;dur=19.24, sql;dur=31.69, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23",
+          "total;dur=51.31, php;dur=20.66, sql;dur=30.38, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.27",
+          "total;dur=51.30, php;dur=19.76, sql;dur=31.23, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.31",
+          "total;dur=49.50, php;dur=18.65, sql;dur=30.63, sql-count;desc=\"104\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.23"
+        ]
+      }
+    },
+    "GET /api/empresa/postulaciones": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 11.34,
+          "p95": 11.5,
+          "minimo": 10.41,
+          "maximo": 11.5
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=10.03, php;dur=8.85, sql;dur=1.17, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.29, php;dur=8.19, sql;dur=1.10, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.94, php;dur=8.75, sql;dur=1.19, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.29, php;dur=8.90, sql;dur=1.38, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.22, php;dur=8.96, sql;dur=1.25, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 10.84,
+          "p95": 11.45,
+          "minimo": 10.24,
+          "maximo": 11.45
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.76, php;dur=8.57, sql;dur=1.19, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.25, php;dur=7.91, sql;dur=1.33, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.15, php;dur=8.78, sql;dur=1.36, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.69, php;dur=8.50, sql;dur=1.18, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.97, php;dur=8.74, sql;dur=1.22, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/empresa/contrataciones": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 11.26,
+          "p95": 11.69,
+          "minimo": 10.11,
+          "maximo": 11.69
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=10.08, php;dur=8.95, sql;dur=1.12, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.07, php;dur=7.88, sql;dur=1.18, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=9.06, php;dur=8.08, sql;dur=0.98, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.39, php;dur=9.00, sql;dur=1.39, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.12, php;dur=8.63, sql;dur=1.49, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 11,
+          "p95": 11.27,
+          "minimo": 10.5,
+          "maximo": 11.27
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.92, php;dur=8.67, sql;dur=1.24, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.46, php;dur=8.33, sql;dur=1.13, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=9.81, php;dur=8.66, sql;dur=1.14, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.09, php;dur=8.90, sql;dur=1.19, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.39, php;dur=8.35, sql;dur=1.03, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/admin/ofertas": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 10.53,
+          "p95": 11.67,
+          "minimo": 10.01,
+          "maximo": 11.67
+        },
+        "sql_consultas": {
+          "mediana": 2,
+          "p95": 2,
+          "minimo": 2,
+          "maximo": 2
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.31, php;dur=8.25, sql;dur=1.01, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=9.44, php;dur=8.45, sql;dur=0.95, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=8.84, php;dur=8.03, sql;dur=0.77, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=10.39, php;dur=9.29, sql;dur=1.07, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03",
+          "total;dur=9.69, php;dur=8.64, sql;dur=1.01, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.03"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 11.74,
+          "p95": 12.24,
+          "minimo": 11.6,
+          "maximo": 12.24
+        },
+        "sql_consultas": {
+          "mediana": 2,
+          "p95": 2,
+          "minimo": 2,
+          "maximo": 2
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=10.27, php;dur=8.88, sql;dur=1.20, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.19",
+          "total;dur=10.36, php;dur=8.94, sql;dur=1.23, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.19",
+          "total;dur=10.26, php;dur=8.84, sql;dur=1.22, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.19",
+          "total;dur=10.79, php;dur=9.27, sql;dur=1.31, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.22",
+          "total;dur=10.65, php;dur=9.20, sql;dur=1.26, sql-count;desc=\"2\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.19"
+        ]
+      }
+    },
+    "GET /api/admin/empresas": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 10.49,
+          "p95": 11.43,
+          "minimo": 10.01,
+          "maximo": 11.43
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.97, php;dur=8.91, sql;dur=1.06, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.90, php;dur=8.02, sql;dur=0.87, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.87, php;dur=7.82, sql;dur=1.05, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.33, php;dur=8.11, sql;dur=1.21, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.09, php;dur=8.93, sql;dur=1.15, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 10.91,
+          "p95": 11.07,
+          "minimo": 10.25,
+          "maximo": 11.07
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.72, php;dur=8.65, sql;dur=1.06, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.25, php;dur=8.26, sql;dur=0.99, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.71, php;dur=8.55, sql;dur=1.15, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.64, php;dur=8.63, sql;dur=1.00, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.44, php;dur=8.52, sql;dur=0.91, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/admin/dashboard": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 13.64,
+          "p95": 14.04,
+          "minimo": 13.28,
+          "maximo": 14.04
+        },
+        "sql_consultas": {
+          "mediana": 10,
+          "p95": 10,
+          "minimo": 10,
+          "maximo": 10
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=12.39, php;dur=9.01, sql;dur=3.36, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.15, php;dur=8.89, sql;dur=3.25, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.61, php;dur=8.75, sql;dur=3.84, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.02",
+          "total;dur=12.78, php;dur=9.02, sql;dur=3.75, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.29, php;dur=8.92, sql;dur=3.37, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 13.96,
+          "p95": 14.48,
+          "minimo": 12.97,
+          "maximo": 14.48
+        },
+        "sql_consultas": {
+          "mediana": 10,
+          "p95": 10,
+          "minimo": 10,
+          "maximo": 10
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=13.22, php;dur=9.32, sql;dur=3.88, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=11.90, php;dur=8.67, sql;dur=3.22, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=13.31, php;dur=9.62, sql;dur=3.68, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.18, php;dur=8.81, sql;dur=3.36, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.79, php;dur=9.26, sql;dur=3.52, sql-count;desc=\"10\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/admin/empleabilidad": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 12.06,
+          "p95": 12.5,
+          "minimo": 10.37,
+          "maximo": 12.5
+        },
+        "sql_consultas": {
+          "mediana": 5,
+          "p95": 5,
+          "minimo": 5,
+          "maximo": 5
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=11.32, php;dur=9.56, sql;dur=1.75, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.00, php;dur=8.36, sql;dur=1.63, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=11.02, php;dur=8.90, sql;dur=2.11, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.87, php;dur=8.80, sql;dur=2.06, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.31, php;dur=7.81, sql;dur=1.50, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 11.56,
+          "p95": 12.41,
+          "minimo": 10.87,
+          "maximo": 12.41
+        },
+        "sql_consultas": {
+          "mediana": 5,
+          "p95": 5,
+          "minimo": 5,
+          "maximo": 5
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.77, php;dur=7.91, sql;dur=1.85, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.25, php;dur=8.19, sql;dur=2.05, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.95, php;dur=8.79, sql;dur=2.15, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.74, php;dur=8.63, sql;dur=2.11, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.92, php;dur=8.08, sql;dur=1.83, sql-count;desc=\"5\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/postulante/postulaciones": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 11.17,
+          "p95": 11.22,
+          "minimo": 10.46,
+          "maximo": 11.22
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.36, php;dur=8.18, sql;dur=1.18, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.91, php;dur=8.52, sql;dur=1.38, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.12, php;dur=8.84, sql;dur=1.27, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.06, php;dur=8.77, sql;dur=1.28, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.42, php;dur=8.18, sql;dur=1.24, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 11.15,
+          "p95": 11.35,
+          "minimo": 10.06,
+          "maximo": 11.35
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=8.87, php;dur=7.84, sql;dur=1.01, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.80, php;dur=8.50, sql;dur=1.29, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.12, php;dur=8.80, sql;dur=1.31, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.87, php;dur=8.65, sql;dur=1.21, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.28, php;dur=9.05, sql;dur=1.23, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/postulante/perfil": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 13.32,
+          "p95": 13.72,
+          "minimo": 12.01,
+          "maximo": 13.72
+        },
+        "sql_consultas": {
+          "mediana": 9,
+          "p95": 9,
+          "minimo": 9,
+          "maximo": 9
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=11.19, php;dur=8.34, sql;dur=2.84, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.38, php;dur=9.26, sql;dur=3.10, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.07, php;dur=9.36, sql;dur=2.69, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=10.92, php;dur=8.35, sql;dur=2.56, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.59, php;dur=9.36, sql;dur=3.22, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 14.12,
+          "p95": 16.29,
+          "minimo": 13.02,
+          "maximo": 16.29
+        },
+        "sql_consultas": {
+          "mediana": 9,
+          "p95": 9,
+          "minimo": 9,
+          "maximo": 9
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=12.84, php;dur=9.03, sql;dur=3.80, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=12.56, php;dur=9.48, sql;dur=3.07, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=11.48, php;dur=8.83, sql;dur=2.64, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=13.28, php;dur=9.71, sql;dur=3.55, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.02",
+          "total;dur=14.82, php;dur=11.42, sql;dur=3.38, sql-count;desc=\"9\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/ofertas": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 10.38,
+          "p95": 12.45,
+          "minimo": 9.47,
+          "maximo": 12.45
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=8.35, php;dur=7.73, sql;dur=0.59, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=8.63, php;dur=7.87, sql;dur=0.73, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=11.29, php;dur=10.42, sql;dur=0.84, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=9.19, php;dur=8.55, sql;dur=0.61, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04",
+          "total;dur=9.07, php;dur=8.31, sql;dur=0.73, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.04"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 13.97,
+          "p95": 15.18,
+          "minimo": 11.31,
+          "maximo": 15.18
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=13.74, php;dur=12.20, sql;dur=1.33, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.21",
+          "total;dur=12.34, php;dur=10.85, sql;dur=1.29, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.21",
+          "total;dur=13.30, php;dur=12.14, sql;dur=0.95, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.21",
+          "total;dur=10.45, php;dur=9.15, sql;dur=1.07, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.22",
+          "total;dur=10.10, php;dur=8.91, sql;dur=0.97, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.22"
+        ]
+      }
+    },
+    "GET /api/actividades": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 9.14,
+          "p95": 9.61,
+          "minimo": 8.64,
+          "maximo": 9.61
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=7.64, php;dur=7.27, sql;dur=0.37, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.03, php;dur=7.59, sql;dur=0.44, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.54, php;dur=8.04, sql;dur=0.50, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.49, php;dur=8.07, sql;dur=0.42, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.06, php;dur=7.69, sql;dur=0.37, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 9.3,
+          "p95": 10,
+          "minimo": 8.56,
+          "maximo": 10
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=8.45, php;dur=7.93, sql;dur=0.52, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.19, php;dur=7.77, sql;dur=0.42, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.45, php;dur=7.09, sql;dur=0.36, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.79, php;dur=8.22, sql;dur=0.57, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.25, php;dur=7.81, sql;dur=0.44, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00"
+        ]
+      }
+    },
+    "GET /api/oportunidades": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 9.62,
+          "p95": 9.82,
+          "minimo": 9,
+          "maximo": 9.82
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=8.45, php;dur=7.99, sql;dur=0.46, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.16, php;dur=7.72, sql;dur=0.43, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=7.84, php;dur=7.42, sql;dur=0.42, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.49, php;dur=7.94, sql;dur=0.54, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.50, php;dur=7.99, sql;dur=0.50, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 9.63,
+          "p95": 9.84,
+          "minimo": 8.49,
+          "maximo": 9.84
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=8.38, php;dur=7.90, sql;dur=0.48, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=8.75, php;dur=8.29, sql;dur=0.46, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.57, php;dur=8.02, sql;dur=0.55, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.89, php;dur=7.53, sql;dur=0.36, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00",
+          "total;dur=7.42, php;dur=7.00, sql;dur=0.42, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.00"
+        ]
+      }
+    },
+    "GET /api/categorias": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 8.11,
+          "p95": 9.09,
+          "minimo": 7.45,
+          "maximo": 9.09
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=7.07, php;dur=6.50, sql;dur=0.57, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.80, php;dur=7.38, sql;dur=0.40, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.59, php;dur=7.20, sql;dur=0.38, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=6.81, php;dur=6.47, sql;dur=0.33, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=6.46, php;dur=6.15, sql;dur=0.31, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 8.3,
+          "p95": 9.09,
+          "minimo": 8.14,
+          "maximo": 9.09
+        },
+        "sql_consultas": {
+          "mediana": 1,
+          "p95": 1,
+          "minimo": 1,
+          "maximo": 1
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=7.29, php;dur=6.91, sql;dur=0.38, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.06, php;dur=6.68, sql;dur=0.37, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.73, php;dur=7.33, sql;dur=0.39, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.80, php;dur=7.39, sql;dur=0.40, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=7.33, php;dur=6.93, sql;dur=0.40, sql-count;desc=\"1\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    },
+    "GET /api/ofertas/{id}": {
+      "10": {
+        "latencia_ms": {
+          "mediana": 10.55,
+          "p95": 10.82,
+          "minimo": 9.45,
+          "maximo": 10.82
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.58, php;dur=8.45, sql;dur=1.12, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.34, php;dur=7.33, sql;dur=1.00, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.74, php;dur=8.53, sql;dur=1.20, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.61, php;dur=8.41, sql;dur=1.19, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.42, php;dur=8.40, sql;dur=1.02, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      },
+      "100": {
+        "latencia_ms": {
+          "mediana": 10.3,
+          "p95": 10.89,
+          "minimo": 9.5,
+          "maximo": 10.89
+        },
+        "sql_consultas": {
+          "mediana": 3,
+          "p95": 3,
+          "minimo": 3,
+          "maximo": 3
+        },
+        "muestras": 5,
+        "server_timing": [
+          "total;dur=9.51, php;dur=8.35, sql;dur=1.15, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.02",
+          "total;dur=9.14, php;dur=8.03, sql;dur=1.10, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=8.55, php;dur=7.60, sql;dur=0.94, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.18, php;dur=7.98, sql;dur=1.19, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01",
+          "total;dur=9.57, php;dur=8.42, sql;dur=1.15, sql-count;desc=\"3\", storage;dur=0.00, external;dur=0.00, serialize;dur=0.01"
+        ]
+      }
+    }
+  },
+  "resumen": {
+    "ofertas_escala_baja": 10,
+    "ofertas_escala_alta": 100,
+    "sql_consultas_escala_baja": 14,
+    "sql_consultas_escala_alta": 104,
+    "crecimiento_consultas": 90,
+    "n_plus_uno_detectado": true
+  }
+}

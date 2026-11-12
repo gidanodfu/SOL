@@ -165,8 +165,13 @@ class OfertaService
     {
         $filas = $this->repository->porEmpresa($empresaId);
 
+        // Una sola consulta por lote: antes era una por oferta (N+1).
+        $habilidades = $this->habilidades->deVariasOfertas(
+            array_map(static fn ($f) => (int) $f['id'], $filas),
+        );
+
         return array_map(
-            fn ($f) => $this->conEstadoEfectivo($f) + ['habilidades' => $this->habilidades->deOferta((int) $f['id'])],
+            fn ($f) => $this->conEstadoEfectivo($f) + ['habilidades' => $habilidades[(int) $f['id']] ?? []],
             $filas,
         );
     }

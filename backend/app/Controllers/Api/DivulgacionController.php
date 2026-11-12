@@ -4,6 +4,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\PerfDiagnostics;
 use App\Services\ActividadService;
 use App\Services\EmpresaService;
 use App\Services\OportunidadService;
@@ -39,12 +40,12 @@ class DivulgacionController extends BaseApiController
                 ->setBody(json_encode(['success' => false, 'message' => 'La actividad no tiene imagen.'], JSON_UNESCAPED_UNICODE));
         }
 
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setStatusCode(200)
             ->setContentType($imagen['mime'])
             ->setHeader('Cache-Control', 'public, max-age=3600')
             ->setHeader('Content-Disposition', 'inline')
-            ->setBody($imagen['contenido']);
+            ->setBody($imagen['contenido']));
     }
 
     /**
@@ -75,11 +76,11 @@ class DivulgacionController extends BaseApiController
                 ->setBody(json_encode(['success' => false, 'message' => $mensaje404], JSON_UNESCAPED_UNICODE));
         }
 
-        return $this->response
+        return PerfDiagnostics::aplicar($this->response
             ->setStatusCode(200)
             ->setContentType($imagen['mime'])
             ->setHeader('Cache-Control', 'public, max-age=3600')
             ->setHeader('Content-Disposition', 'inline')
-            ->setBody($imagen['contenido']);
+            ->setBody($imagen['contenido']));
     }
 }

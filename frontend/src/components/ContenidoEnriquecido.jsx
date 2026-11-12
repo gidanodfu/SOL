@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { enlacesEnTexto } from '../utils';
 
@@ -86,17 +87,24 @@ function limpiar(html) {
 
 export default function ContenidoEnriquecido({ children, className = '' }) {
   const contenido = children ?? '';
-  if (contenido === '') return null;
 
-  const esHtml = TIENE_HTML.test(contenido);
-  const html = esHtml
-    ? contenido
-    : `<p>${escapar(contenido).replace(/\n/g, '<br>')}</p>`;
+  // DOMPurify + DOMParser + TreeWalker solo se ejecutan cuando cambia el
+  // contenido, no en cada render del componente.
+  const { esHtml, html } = useMemo(() => {
+    if (contenido === '') return { esHtml: false, html: '' };
+    const tieneHtml = TIENE_HTML.test(contenido);
+    return {
+      esHtml: tieneHtml,
+      html: limpiar(tieneHtml ? contenido : `<p>${escapar(contenido).replace(/\n/g, '<br>')}</p>`),
+    };
+  }, [contenido]);
+
+  if (contenido === '') return null;
 
   return (
     <div
       className={`contenido-enriquecido ${esHtml ? '' : 'texto-plano'} ${className}`.trim()}
-      dangerouslySetInnerHTML={{ __html: limpiar(html) }}
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }

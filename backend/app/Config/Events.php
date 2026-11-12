@@ -24,6 +24,10 @@ use CodeIgniter\HotReloader\HotReloader;
  */
 
 Events::on('pre_system', static function (): void {
+    // Instrumentación opt-in (PERF_DIAGNOSTICS=1). Se registra antes de los
+    // filtros para incluir también las consultas de autenticación.
+    \App\Libraries\PerfDiagnostics::iniciar();
+
     if (ENVIRONMENT !== 'testing') {
         $value = ini_get('zlib.output_compression');
 

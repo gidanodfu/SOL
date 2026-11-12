@@ -5,6 +5,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Libraries\PerfDiagnostics;
 use CodeIgniter\HTTP\Files\UploadedFile;
 
 /**
@@ -182,17 +183,23 @@ class StorageService
             return null;
         }
 
-        if (! $this->esSupabase()) {
-            $ruta = $this->rutaLocal($objectKey);
+        $inicio = PerfDiagnostics::inicioMedicion();
 
-            return $ruta === null ? null : (file_get_contents($ruta) ?: null);
+        try {
+            if (! $this->esSupabase()) {
+                $ruta = $this->rutaLocal($objectKey);
+
+                return $ruta === null ? null : (file_get_contents($ruta) ?: null);
+            }
+
+            $url = $this->urlPresignada('GET', $this->rutaObjeto($objectKey), 120);
+            $ctx = stream_context_create(['http' => ['timeout' => 15]]);
+            $contenido = @file_get_contents($url, false, $ctx);
+
+            return $contenido === false ? null : $contenido;
+        } finally {
+            PerfDiagnostics::finAlmacenamiento($inicio);
         }
-
-        $url = $this->urlPresignada('GET', $this->rutaObjeto($objectKey), 120);
-        $ctx = stream_context_create(['http' => ['timeout' => 15]]);
-        $contenido = @file_get_contents($url, false, $ctx);
-
-        return $contenido === false ? null : $contenido;
     }
 
     /**
@@ -441,7 +448,9 @@ class StorageService
             CURLOPT_HTTPHEADER     => $cabecerasHttp,
         ]);
 
+        $inicio    = PerfDiagnostics::inicioMedicion();
         $respuesta = curl_exec($ch);
+        PerfDiagnostics::finAlmacenamiento($inicio);
         $codigo    = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error     = curl_error($ch);
         curl_close($ch);

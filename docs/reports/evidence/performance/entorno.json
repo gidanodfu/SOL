@@ -1,0 +1,13 @@
+{
+  "host": {
+    "kernel": "Linux 6.18.58.1-microsoft-standard-WSL2",
+    "docker_cpus": 6,
+    "docker_memory_bytes": 6216069120
+  },
+  "php": "PHP 8.4.27 (cli) (built: Nov  5 2026 19:02:58) (NTS)",
+  "mariaDB": "11.4.13-MariaDB-ubu2404",
+  "imagen_backend_test_bytes": 306824692,
+  "imagen_frontend_dev_bytes": 712729194,
+  "aislamiento": "MariaDB efímero en tmpfs, red Docker temporal, sin volúmenes persistentes",
+  "nota": "PHP built-in server (spark serve) en imagen de pruebas; no representa un servidor FPM productivo. Comparaciones antes/después en el mismo tipo de entorno."
+}

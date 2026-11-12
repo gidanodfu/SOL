@@ -1,0 +1,8 @@
+{
+  "html_bytes": 932,
+  "iteraciones": 300,
+  "total_ms": 46.4,
+  "por_iteracion_ms": 0.1547,
+  "metodo": "DOMPurify + DOMParser + TreeWalker en Chromium headless",
+  "nota": "Costo evitado por useMemo en renders repetidos; una lista de 100 elementos evita ~15,5 ms por render."
+}

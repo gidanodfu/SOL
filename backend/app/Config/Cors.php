@@ -100,7 +100,7 @@ class Cors extends BaseConfig
          *
          * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Expose-Headers
          */
-        'exposedHeaders' => ['Content-Disposition'],
+        'exposedHeaders' => ['Content-Disposition', 'Server-Timing', 'X-Request-ID'],
 
         /**
          * Set methods to allow.

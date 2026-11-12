@@ -5,6 +5,7 @@
 namespace App\Services;
 
 use App\Exceptions\ApiException;
+use App\Libraries\PerfDiagnostics;
 use RuntimeException;
 
 /**
@@ -167,7 +168,9 @@ class ApisperuClient
             CURLOPT_FOLLOWLOCATION => false,
         ]);
 
+        $inicio = PerfDiagnostics::inicioMedicion();
         $cuerpo = curl_exec($ch);
+        PerfDiagnostics::finExterno($inicio);
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error  = curl_error($ch);
         curl_close($ch);

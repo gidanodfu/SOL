@@ -7,6 +7,7 @@ namespace App\Controllers\Api;
 use App\Controllers\BaseController;
 use App\Exceptions\ApiException;
 use App\Libraries\Descarga;
+use App\Libraries\PerfDiagnostics;
 use App\Validation\Validador;
 
 /**
@@ -21,14 +22,20 @@ abstract class BaseApiController extends BaseController
      */
     protected function ok($data = null, string $mensaje = 'Operación exitosa.', int $codigo = 200)
     {
-        return $this->response
+        $inicio = microtime(true);
+        $cuerpo = json_encode([
+            'success' => true,
+            'message' => $mensaje,
+            'data'    => $data,
+        ], JSON_UNESCAPED_UNICODE);
+        PerfDiagnostics::serializacion((microtime(true) - $inicio) * 1000);
+
+        $respuesta = $this->response
             ->setStatusCode($codigo)
             ->setContentType('application/json', 'UTF-8')
-            ->setBody(json_encode([
-                'success' => true,
-                'message' => $mensaje,
-                'data'    => $data,
-            ], JSON_UNESCAPED_UNICODE));
+            ->setBody($cuerpo);
+
+        return PerfDiagnostics::aplicar($respuesta);
     }
 
     protected function creado($data = null, string $mensaje = 'Registro creado correctamente.')
@@ -48,7 +55,7 @@ abstract class BaseApiController extends BaseController
      */
     protected function respuestaPdf(string $bytes, string $nombre)
     {
-        return $this->response
+        $respuesta = $this->response
             ->setContentType('application/pdf')
             ->setHeader('Content-Disposition', Descarga::contentDisposition($nombre, 'reporte.pdf'))
             ->removeHeader('Cache-Control')
@@ -58,6 +65,8 @@ abstract class BaseApiController extends BaseController
             ->setHeader('X-Content-Type-Options', 'nosniff')
             ->setHeader('Content-Length', (string) strlen($bytes))
             ->setBody($bytes);
+
+        return PerfDiagnostics::aplicar($respuesta);
     }
 
     /**

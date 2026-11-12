@@ -8,7 +8,15 @@ import SeoMeta from './components/SeoMeta';
 import { Rutas } from './routes';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      // Evita repeticiones al remontar layouts/páginas (perfil, categorías,
+      // pendientes). Las mutaciones siguen invalidando sus claves al instante.
+      staleTime: 30_000,
+    },
+  },
 });
 
 export default function App() {

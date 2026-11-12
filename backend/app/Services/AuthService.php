@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Entities\Usuario;
 use App\Exceptions\ApiException;
 use App\Libraries\Identidad;
+use App\Libraries\PerfDiagnostics;
 use App\Libraries\Terminos;
 use App\Models\PostulanteModel;
 use App\Models\RefreshTokenModel;
@@ -580,7 +581,9 @@ class AuthService
     private function clavesGoogle(): array
     {
         $ctx = stream_context_create(['http' => ['timeout' => 10]]);
+        $inicio = PerfDiagnostics::inicioMedicion();
         $contenido = @file_get_contents('https://www.googleapis.com/oauth2/v1/certs', false, $ctx);
+        PerfDiagnostics::finExterno($inicio);
         if ($contenido === false) {
             throw ApiException::badRequest('No se pudo conectar con Google. Intente nuevamente.');
         }

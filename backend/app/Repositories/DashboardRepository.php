@@ -77,8 +77,7 @@ class DashboardRepository
             'seleccionados' => $seleccionados,
             'tasa_seleccion'      => $totalPostulaciones > 0 ? round($seleccionados / $totalPostulaciones * 100, 1) : 0,
             'tasa_contratacion'   => $seleccionados > 0 ? round($totalContrataciones / $seleccionados * 100, 1) : 0,
-            'tiempo_promedio_revision_dias'  => $this->tiempoPromedio('en_revision', $desde, $hasta),
-            'tiempo_promedio_seleccion_dias' => $this->tiempoPromedio('seleccionado', $desde, $hasta),
+            ...$this->tiemposPromedio($desde, $hasta),
             // Serie mensual para el gráfico de actividad (últimos 6 meses o el rango).
             'actividad_mensual' => $this->postulacionesPorMes($desde, $hasta),
         ];
@@ -139,15 +138,22 @@ class DashboardRepository
     }
 
     /**
-     * Días promedio entre la postulación y la primera vez que la postulación
-     * alcanzó el estado indicado (RF-59), dentro del rango opcional.
+     * Días promedio hasta la primera revisión y hasta la primera selección
+     * (RF-59), en una sola consulta. El AVG ignora los NULL de cada estado, por
+     * lo que el resultado es idéntico al de dos agregaciones independientes.
+     *
+     * @return array{tiempo_promedio_revision_dias: ?float, tiempo_promedio_seleccion_dias: ?float}
      */
-    private function tiempoPromedio(string $estado, ?string $desde, ?string $hasta): ?float
+    private function tiemposPromedio(?string $desde, ?string $hasta): array
     {
         $builder = $this->db->table('postulaciones p')
-            ->select('AVG(TIMESTAMPDIFF(DAY, p.fecha_postulacion, h.primer_evento)) AS dias')
-            ->join('(SELECT postulacion_id, MIN(created_at) primer_evento
-                     FROM postulacion_historial WHERE estado_nuevo = "' . $estado . '"
+            ->select('AVG(TIMESTAMPDIFF(DAY, p.fecha_postulacion, h.primer_revision)) AS revision')
+            ->select('AVG(TIMESTAMPDIFF(DAY, p.fecha_postulacion, h.primera_seleccion)) AS seleccion')
+            ->join('(SELECT postulacion_id,
+                       MIN(CASE WHEN estado_nuevo = "en_revision" THEN created_at END) AS primer_revision,
+                       MIN(CASE WHEN estado_nuevo = "seleccionado" THEN created_at END) AS primera_seleccion
+                     FROM postulacion_historial
+                     WHERE estado_nuevo IN ("en_revision", "seleccionado")
                      GROUP BY postulacion_id) h', 'h.postulacion_id = p.id', 'INNER');
 
         if ($desde) {
@@ -159,7 +165,10 @@ class DashboardRepository
 
         $fila = $builder->get()->getRowArray();
 
-        return $fila['dias'] !== null ? round((float) $fila['dias'], 1) : null;
+        return [
+            'tiempo_promedio_revision_dias'  => $fila['revision'] !== null ? round((float) $fila['revision'], 1) : null,
+            'tiempo_promedio_seleccion_dias' => $fila['seleccion'] !== null ? round((float) $fila['seleccion'], 1) : null,
+        ];
     }
 
     /**

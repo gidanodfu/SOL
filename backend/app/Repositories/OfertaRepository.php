@@ -134,16 +134,22 @@ class OfertaRepository
      */
     public function detalle(int $id): ?array
     {
-        $fila = $this->base()->where('ofertas.id', $id)->get()->getRowArray();
+        // El conteo va como subconsulta escalar: antes era una consulta extra
+        // por cada detalle. Las habilidades siguen en una consulta propia.
+        $fila = $this->base()
+            ->select(
+                '(SELECT COUNT(*) FROM postulaciones WHERE postulaciones.oferta_id = ofertas.id AND postulaciones.activo = 1) AS cantidad_postulaciones',
+                false,
+            )
+            ->where('ofertas.id', $id)
+            ->get()
+            ->getRowArray();
         if ($fila === null) {
             return null;
         }
 
         $fila['habilidades'] = (new OfertaHabilidadModel())->deOferta($id);
-        $fila['cantidad_postulaciones'] = (int) $this->db->table('postulaciones')
-            ->where('oferta_id', $id)
-            ->where('activo', 1)
-            ->countAllResults();
+        $fila['cantidad_postulaciones'] = (int) $fila['cantidad_postulaciones'];
 
         return $fila;
     }
