@@ -668,6 +668,9 @@ tbody tr:last-child td { border-bottom: 0; }
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: fit-content;
   background: var(--gray-bg);
   color: var(--gray-tx);
 }

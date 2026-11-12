@@ -222,6 +222,83 @@ try {
     if (!sesion) {
       bloqueado('admin: interacciones', 'sesión de administración no iniciada');
     } else {
+      await ejecutar('admin: badges en una línea y sin compresión', async () => {
+        await visitar(page, '/admin/ofertas', 'Ofertas');
+        const m = await page.evaluate(() => {
+          const flex = document.createElement('div');
+          flex.style.cssText = 'display:flex;width:120px;gap:4px';
+          const badge = document.createElement('span');
+          badge.className = 'badge badge-amber';
+          badge.textContent = 'Pendiente de revisión';
+          const otro = document.createElement('span');
+          otro.textContent = 'otro';
+          otro.style.cssText = 'flex:1 1 auto;min-width:0';
+          flex.append(badge, otro);
+          document.body.append(flex);
+
+          const card = document.createElement('div');
+          card.className = 'content-card-badge';
+          card.style.cssText = 'width:100px';
+          const cardBadge = document.createElement('span');
+          cardBadge.className = 'badge badge-green';
+          cardBadge.textContent = 'Pendiente de aprobación y publicación extraordinaria';
+          card.append(cardBadge);
+          document.body.append(card);
+
+          const rects = (el) => {
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            return r.getClientRects().length;
+          };
+          const natural = document.createElement('span');
+          natural.className = 'badge badge-blue';
+          natural.textContent = 'Pendiente de aprobación';
+          document.body.append(natural);
+
+          const br = badge.getBoundingClientRect();
+          const cbr = cardBadge.getBoundingClientRect();
+          const nr = natural.getBoundingClientRect();
+          const salida = {
+            flex: {
+              width: br.width,
+              whiteSpace: getComputedStyle(badge).whiteSpace,
+              flexShrink: getComputedStyle(badge).flexShrink,
+              rects: rects(badge),
+            },
+            natural: {
+              width: nr.width,
+              whiteSpace: getComputedStyle(natural).whiteSpace,
+              rects: rects(natural),
+            },
+            card: {
+              width: cbr.width,
+              whiteSpace: getComputedStyle(cardBadge).whiteSpace,
+              rects: rects(cardBadge),
+            },
+            colores: {
+              amber: getComputedStyle(badge).backgroundColor,
+              green: getComputedStyle(cardBadge).backgroundColor,
+            },
+          };
+          flex.remove();
+          natural.remove();
+          card.remove();
+          return salida;
+        });
+
+        assert.equal(m.flex.whiteSpace, 'nowrap');
+        assert.equal(m.flex.flexShrink, '0');
+        assert.equal(m.flex.rects, 1, 'el badge no debe partir el texto en varias líneas');
+        assert.ok(m.flex.width > 120, 'el badge no debe comprimirse dentro del flex');
+        assert.equal(m.natural.whiteSpace, 'nowrap');
+        assert.equal(m.natural.rects, 1);
+        assert.ok(m.natural.width > 120, 'el badge debe conservar su ancho natural');
+        assert.equal(m.card.whiteSpace, 'normal');
+        assert.ok(m.card.width <= 100, 'la tarjeta no debe desbordarse');
+        assert.ok(m.card.rects > 1, 'las tarjetas deben conservar el ajuste de texto');
+        assert.notEqual(m.colores.amber, m.colores.green, 'las variantes deben conservar colores distintos');
+      });
+
       await ejecutar('admin: alta de usuario abre y cierra el formulario', async () => {
         await visitar(page, '/admin/usuarios', 'Usuarios');
         await page.getByRole('button', { name: /Nuevo usuario municipal/ }).click();
