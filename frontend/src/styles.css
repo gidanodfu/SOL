@@ -1990,15 +1990,15 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   border-radius: var(--sidebar-radius);
   box-shadow: var(--sombra-tarjeta);
   transition: width 0.18s ease;
-  /* Pieza vertical independiente e integrada al shell. Crece con su contenido:
-     si no cabe en el viewport, la página completa se desplaza y la navegación
-     nunca crea una segunda zona de scroll. */
-  position: sticky;
-  top: var(--sidebar-gap);
-  align-self: flex-start;
+  /* Parte del shell delimitado por el viewport. La navegación y el pie son
+     zonas independientes: solo la navegación se desplaza si no cabe. */
+  position: relative;
+  align-self: stretch;
   height: auto;
-  min-height: calc(100vh - 2 * var(--sidebar-gap));
+  min-height: 0;
   margin: var(--sidebar-gap);
+  overflow: visible;
+  box-sizing: border-box;
 }
 
 /* ---------------------------------------------------------------------
@@ -2016,10 +2016,10 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   border: 1px solid var(--line);
   border-radius: var(--radius-2xl);
   margin: var(--sidebar-gap) var(--sidebar-gap) var(--sidebar-gap) 0;
-  /* Crece con el contenido: el desplazamiento es el de la página (un solo
-     scroll). `overflow: hidden` solo recorta a las esquinas redondeadas y
-     contiene los márgenes negativos del header, sin crear scroll interno. */
-  min-height: calc(100vh - 2 * var(--sidebar-gap));
+  /* El workspace ocupa la altura restante del shell y contiene el scroll
+     vertical de su área interna; no desplaza la sidebar ni la página. */
+  flex: 1 1 0;
+  min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -2075,9 +2075,12 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 .side-cerrar-movil { display: none; }
 
 .side-nav {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 18px 12px;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .side-group { margin-bottom: 18px; }
 /* La separación entre categorías se resuelve con el espacio y el título. */
@@ -2238,8 +2241,11 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
 }
 .sidebar.colapsado .logout span { display: none; }
 
-/* Tooltip propio del carril contraído (escritorio): identifica cada opción. */
+/* Tooltip propio del carril contraído (escritorio): identifica cada opción.
+   En este estado la nav no se recorta para que el tooltip pueda salir del
+   carril; el contenido cabe en las alturas de escritorio soportadas. */
 @media (min-width: 861px) {
+  .sidebar.colapsado .side-nav { overflow: visible; }
   .sidebar.colapsado .side-link { position: relative; }
   .sidebar.colapsado .side-link::after {
     content: attr(data-tooltip);
@@ -2391,6 +2397,7 @@ input::placeholder, textarea::placeholder { color: var(--text-3); opacity: 1; }
   /* El Workspace respira, se ajusta al contenido (sin área vacía al fondo)
      y conserva márgenes laterales equivalentes al shell del postulante. */
   .app-workspace { margin: 10px 16px 16px; min-height: auto; }
+  .side-nav { flex: 0 0 auto; min-height: 0; overflow: visible; }
 
   .sidebar,
   .sidebar.colapsado {

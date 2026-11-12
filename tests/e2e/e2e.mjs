@@ -135,6 +135,79 @@ async function guardarErrores(nombre, errores) {
   });
 }
 
+
+async function verificarShell(page, etiqueta) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => {
+    const contenido = document.querySelector('.content');
+    const relleno = document.createElement('div');
+    relleno.id = 'e2e-shell-spacer';
+    relleno.style.height = '1400px';
+    contenido.append(relleno);
+  });
+  const antes = await page.evaluate(() => {
+    const contenido = document.querySelector('.content');
+    const sidebar = document.querySelector('.sidebar').getBoundingClientRect();
+    const workspace = document.querySelector('.app-workspace').getBoundingClientRect();
+    return {
+      winY: window.scrollY,
+      sidebar: { top: Math.round(sidebar.top), bottom: Math.round(sidebar.bottom) },
+      workspace: { top: Math.round(workspace.top), bottom: Math.round(workspace.bottom) },
+      content: {
+        client: contenido.clientHeight,
+        scroll: contenido.scrollHeight,
+        overflow: getComputedStyle(contenido).overflowY,
+      },
+      docW: document.documentElement.scrollWidth,
+      winW: window.innerWidth,
+    };
+  });
+
+  assert.ok(
+    Math.abs(antes.sidebar.top - antes.workspace.top) <= 1
+      && Math.abs(antes.sidebar.bottom - antes.workspace.bottom) <= 1,
+    `${etiqueta}: sidebar y workspace desalineados`,
+  );
+  assert.equal(antes.content.overflow, 'auto', `${etiqueta}: el contenido no tiene scroll propio`);
+  assert.ok(antes.content.scroll > antes.content.client, `${etiqueta}: el contenido de prueba no desborda`);
+  assert.ok(antes.docW <= antes.winW + 1, `${etiqueta}: desbordamiento horizontal del documento`);
+
+  await page.evaluate(() => {
+    const contenido = document.querySelector('.content');
+    contenido.scrollTop = contenido.scrollHeight;
+  });
+  await page.waitForTimeout(200);
+  const despues = await page.evaluate(() => {
+    const contenido = document.querySelector('.content');
+    const sidebar = document.querySelector('.sidebar').getBoundingClientRect();
+    return {
+      winY: window.scrollY,
+      contentTop: contenido.scrollTop,
+      sidebarTop: Math.round(sidebar.top),
+      sidebarBottom: Math.round(sidebar.bottom),
+    };
+  });
+
+  assert.equal(despues.winY, 0, `${etiqueta}: el documento se desplazó en vez del contenido`);
+  assert.ok(despues.contentTop > 0, `${etiqueta}: el contenido no se desplazó`);
+  assert.equal(despues.sidebarTop, antes.sidebar.top, `${etiqueta}: la sidebar se movió al hacer scroll`);
+  assert.equal(despues.sidebarBottom, antes.sidebar.bottom, `${etiqueta}: la sidebar cambió de altura`);
+
+  const anchoExpandido = await page.locator('.app-workspace').evaluate((el) => el.getBoundingClientRect().width);
+  await page.locator('.side-colapsar').click();
+  await page.waitForTimeout(250);
+  const anchoColapsado = await page.locator('.app-workspace').evaluate((el) => el.getBoundingClientRect().width);
+  assert.ok(anchoColapsado > anchoExpandido + 100, `${etiqueta}: el workspace no recupera ancho al colapsar`);
+  await page.locator('.side-colapsar').click();
+  await page.waitForTimeout(250);
+
+  await page.evaluate(() => {
+    document.getElementById('e2e-shell-spacer')?.remove();
+    const contenido = document.querySelector('.content');
+    contenido.scrollTop = 0;
+  });
+}
+
 function escribirInformes() {
   const resumen = {
     base: BASE,
@@ -222,6 +295,11 @@ try {
     if (!sesion) {
       bloqueado('admin: interacciones', 'sesión de administración no iniciada');
     } else {
+      await ejecutar('admin: shell estable con scroll interno', async () => {
+        await visitar(page, '/admin/usuarios', 'Usuarios');
+        await verificarShell(page, 'admin');
+      });
+
       await ejecutar('admin: badges en una línea y sin compresión', async () => {
         await visitar(page, '/admin/ofertas', 'Ofertas');
         const m = await page.evaluate(() => {
@@ -362,6 +440,11 @@ try {
     if (!sesion) {
       bloqueado('empresa: formulario de oferta', 'sesión de empresa no iniciada');
     } else {
+      await ejecutar('empresa: shell estable con scroll interno', async () => {
+        await visitar(page, '/empresa/contrataciones', 'Contrataciones');
+        await verificarShell(page, 'empresa');
+      });
+
       await ejecutar('empresa: formulario de oferta abre y cierra', async () => {
         await visitar(page, '/empresa/ofertas', 'Ofertas laborales');
         await page.getByRole('button', { name: /Nueva oferta/ }).click();

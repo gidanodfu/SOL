@@ -7,8 +7,11 @@
 
 .app-empresa {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   width: 100%;
+  overflow: hidden;
   background: var(--fondo);
   color: var(--text-1);
 }
@@ -26,6 +29,9 @@
   width: 100%;
   box-sizing: border-box;
   margin-inline: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Banda de header alineada con la cabecera del Sidebar: misma referencia
@@ -325,4 +331,24 @@
   .app-empresa .contratacion-situaciones-grid { grid-template-columns: 1fr; }
   .app-empresa .contratacion-candidato .badge { margin-left: 0; }
   .app-empresa .contratacion-acciones .btn { width: 100%; }
+}
+
+/* En móvil el shell vuelve al flujo normal del documento: la barra superior,
+   el workspace y el formulario se desplazan juntos; el drawer conserva su
+   propio comportamiento superpuesto. */
+@media (max-width: 860px) {
+  .app-empresa {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .app-empresa .content {
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+}
+@media (max-width: 860px) {
+  .app-empresa .app-workspace {
+    flex: 0 0 auto;
+  }
 }

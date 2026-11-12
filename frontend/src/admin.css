@@ -7,7 +7,11 @@
 
 .app-admin {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
   background: var(--fondo);
   color: var(--ink);
 }
@@ -22,8 +26,9 @@
 
 /* ---------------- CONTENIDO / BARRA SUPERIOR ---------------- */
 .app-admin .main {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -63,11 +68,15 @@
 .app-admin .content {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   padding: 32px 35px 50px;
   max-width: 1600px;
   width: 100%;
   box-sizing: border-box;
   margin-inline: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* Tablas anchas: el scroll vive en styles.css (regla compartida .tarjeta/.list-card) */
@@ -121,4 +130,27 @@
   /* Los KPI conservan densidad: dos columnas; el impar ocupa la fila. */
   .app-admin .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .app-admin .kpi-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* En móvil el shell vuelve al flujo normal del documento; el drawer y la
+   topbar mantienen su comportamiento existente. */
+@media (max-width: 860px) {
+  .app-admin {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .app-admin .content {
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+}
+@media (max-width: 860px) {
+  .app-admin .main {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+  .app-admin .content {
+    flex: 0 0 auto;
+  }
 }
