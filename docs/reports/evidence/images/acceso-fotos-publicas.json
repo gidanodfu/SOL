@@ -1,0 +1,58 @@
+{
+  "fecha": "2026-11-12",
+  "entorno": "stack sol_dev; solo lectura",
+  "ruta": "GET /api/postulantes/{id}/foto",
+  "grupo": "fuera del grupo jwt (público)",
+  "resultados_anonimos": {
+    "1": 404,
+    "2": 200,
+    "3": 200,
+    "4": 200,
+    "5": 404,
+    "6": 404
+  },
+  "token_invalido": {
+    "id": 2,
+    "status": 200,
+    "nota": "La ruta no procesa Authorization; el token no cambia el acceso."
+  },
+  "cabeceras": {
+    "content_type": "image/jpeg; charset=UTF-8",
+    "cache_control": "public, max-age=3600",
+    "content_disposition": "inline",
+    "x_content_type_options": "nosniff"
+  },
+  "consumidores": [
+    {
+      "donde": "GET /api/postulante/perfil",
+      "campo": "foto_url",
+      "uso": "postulante propietario y LayoutPostulante"
+    },
+    {
+      "donde": "GET /api/empresa/postulaciones",
+      "campo": "foto_url",
+      "uso": "bandeja de la empresa"
+    },
+    {
+      "donde": "GET /api/empresa/postulaciones/{id}",
+      "campo": "postulante.foto_url",
+      "uso": "detalle de postulación"
+    },
+    {
+      "donde": "cualquier visitante",
+      "campo": "URL directa",
+      "uso": "no requiere JWT ni relación"
+    }
+  ],
+  "consecuencias": [
+    "Acceso anónimo a fotos de cualquier postulante por id secuencial.",
+    "Enumeración automatizable de identificadores y hotlinking.",
+    "Cache-Control público: proxies/CDN/navegadores pueden conservar la imagen 1 hora.",
+    "La versión ?v evita mostrar una foto vieja, no restringe el acceso.",
+    "El endpoint solo devuelve la imagen; no expone correo, teléfono, DNI ni CV."
+  ],
+  "productor_id_cero": {
+    "detectado": false,
+    "nota": "No hay generador de /api/postulantes/0/foto; el 404 es correcto."
+  }
+}

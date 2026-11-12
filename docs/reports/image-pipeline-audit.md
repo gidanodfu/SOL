@@ -8,7 +8,7 @@
 
 ## A. Resumen ejecutivo
 
-Se auditaron los tres flujos de escritura (logos, fotografías y actividades), la lectura pública, la caché local, el versionado de URLs y los componentes de imagen del frontend. Se reprodujeron cinco problemas reales y se corrigieron de forma conservadora:
+Se auditaron los tres flujos de escritura (logos, fotografías y actividades), la lectura pública, la caché local, el versionado de URLs y los componentes de imagen del frontend. Se reprodujeron seis problemas reales y se corrigieron los seis; además se auditó el acceso público a fotografías sin cambiar la política:
 
 | ID | Hallazgo | Estado |
 |---|---|---|
@@ -21,6 +21,8 @@ Se auditaron los tres flujos de escritura (logos, fotografías y actividades), l
 | IMG-07 | Miniaturas/variantes para avatares pequeños | **NO CAMBIADO**: los bytes lo justifican, pero falta benchmark visual y contrato de variantes |
 | IMG-08 | Actividades conservan el archivo original | **PASS**: los originales reales observados pesan 4–22 KB |
 | IMG-09 | CV/documentos privados en caché pública | **PASS**: la caché solo acepta tres prefijos de imagen pública |
+| IMG-11 | Limpieza de `.lock` desde el flujo normal de escritura | **FAIL → corregido**: unlink de un lock activo permite un segundo inodo/bloqueo |
+| IMG-12 | Acceso a fotografías de postulantes | **PASS (auditoría)**; cambio de política **no aplicado** |
 
 No se sustituyó Supabase, no se cambió el bucket ni las credenciales, no se modificó el `.env`, no se tocaron datos persistentes y no se añadieron dependencias.
 
@@ -205,6 +207,80 @@ Un CV (`postulante-1/...`) devuelve `null` y no se escribe en la caché. La prue
 
 Las imágenes responden con MIME correcto y `Content-Disposition: inline`. CI4 añade `; charset=UTF-8` al `Content-Type` de imágenes (`image/png; charset=UTF-8`). Es válido como parámetro, aunque innecesario; no se cambió para no alterar el comportamiento ni las expectativas existentes.
 
+### IMG-11 — Limpieza de archivos de bloqueo (FAIL → corregido)
+
+`escribirCacheImagen()` limpiaba archivos `.bin` **y** `.*.lock` antiguos. Borrar un lock mientras otro worker lo tiene abierto es peligroso: el `unlink` desvincula el inodo, el siguiente worker crea un archivo nuevo y puede adquirir un `flock` independiente. La exclusión mutua se rompe y dos procesos pueden descargar el mismo objeto.
+
+Se eliminó exclusivamente la limpieza de `.lock` del flujo normal. Se conservan:
+
+- limpieza de `.bin`;
+- bloqueo por `objectKey`;
+- doble comprobación de caché;
+- `flock(LOCK_EX)`;
+- archivo temporal y `rename()` atómico;
+- liberación en `finally`.
+
+No se implementó una limpieza administrativa automática: los `.lock` son archivos vacíos, uno por objeto, y no se eliminan mientras exista la posibilidad de que un worker los tenga abiertos. Si en el futuro se necesita, debe ser una tarea administrativa ejecutada con los workers detenidos.
+
+Regresión:
+
+- `image_cache_lock_regression.php` demuestra que dos descriptores sobre la misma ruta comparten el bloqueo, pero tras `unlink` el segundo obtiene un bloqueo independiente.
+- `image_cache_stampede.php` mantiene 10 lectores concurrentes con **una sola** descarga externa.
+- `StorageServiceTest::testEscrituraDeCacheNoBorraArchivosDeBloqueo()` impide reintroducir el borrado de locks en `escribirCacheImagen()`.
+
+### IMG-12 — Acceso a fotografías de postulantes (auditoría)
+
+**Estado actual:** `GET /api/postulantes/{id}/foto` está **fuera del grupo JWT** (`Routes.php:69`). `DivulgacionController::fotoPostulante()` llama a `PostulanteService::fotoContenido($id)`, que hace `find($id)` y lee el objeto de Storage. No comprueba propietario, relación de postulación, rol ni permiso municipal.
+
+Prueba anónima en el stack real:
+
+| ID | Sin Authorization |
+|---|---:|
+| 1 | 404 |
+| 2 | 200 — 68.775 bytes |
+| 3 | 200 — 134.142 bytes |
+| 4 | 200 — 49.279 bytes |
+| 5 | 404 |
+
+Un `Authorization: Bearer token-invalido` sobre el ID 2 también devuelve 200: la ruta ni siquiera procesa el token. Los IDs son secuenciales y enumerables.
+
+Consumidores de `foto_url`:
+
+- `GET /api/postulante/perfil` → propietario; `LayoutPostulante` y `Perfil` lo usan para el avatar propio.
+- `GET /api/empresa/postulaciones` → empresa con postulaciones; `Postulaciones.jsx` muestra la foto de cada candidato.
+- `GET /api/empresa/postulaciones/{id}` → `postulante.foto_url` en el detalle.
+- Cualquier visitante que conozca o enumere la URL; no hay otro consumidor en el frontend administrativo.
+
+Consecuencias:
+
+- Acceso anónimo a la fotografía de cualquier postulante por ID.
+- Enumeración automatizable y hotlinking.
+- `Cache-Control: public, max-age=3600`: navegadores, proxies y CDN pueden conservar la imagen una hora.
+- El parámetro `v` solo evita una versión vieja; no autoriza ni restringe.
+- El endpoint devuelve solo la imagen: no expone correo, teléfono, DNI, CV ni otros datos. Aun así, la fotografía es un dato personal.
+
+#### Alternativa A — conservar fotos públicas
+
+- Documentar expresamente que la foto de perfil es pública y puede consultarla cualquier visitante.
+- Mantener `Cache-Control` público y URL versionada.
+- No exponer otros datos personales.
+- Riesgo residual: enumeración y hotlinking. Requiere consentimiento informado y una decisión de producto.
+
+#### Alternativa B — fotografías privadas (recomendada)
+
+- Mover la ruta dentro del grupo `jwt` y autorizar por recurso:
+  - propietario: `postulante.user_id === guard.id()`;
+  - empresa: existe una postulación válida entre su `empresa_id` y el `postulante_id` (definir si basta una relación activa o también histórica);
+  - personal municipal: rol `admin` y permiso municipal definido (mínimo `municipal.lectura`; evaluar si se exige `usuarios`);
+  - cualquier otro rol: 404/403 sin revelar si la foto existe.
+- Frontend: descargar con Axios autenticado (`responseType: 'blob'`) y mostrar un object URL; revocarlo al desmontar o cambiar de foto. Alternativa: endpoint batch para evitar N peticiones en la bandeja de la empresa.
+- No usar tokens en parámetros de URL.
+- `Cache-Control: private` o sin caché compartida; React Query puede cachear el blob en memoria por sesión.
+- Mantener CV y documentos privados con su política actual; no tocarlos.
+- Impacto: cambia el contrato de acceso de la foto, requiere un hook/componente de imagen autenticada, manejo de 401/403/404, placeholders y más control de memoria. Aumenta la complejidad y puede reducir el ahorro de caché del navegador.
+
+**Recomendación:** Alternativa B si las fotografías se consideran datos personales y no existe consentimiento explícito para publicación. La decisión de política debe tomarla el equipo responsable; este cambio no se aplicó.
+
 ---
 
 ## E. Benchmarks
@@ -250,12 +326,12 @@ Los patrones sintéticos comprimen mejor que una foto real; los valores son orie
 
 | Suite | Resultado |
 |---|---|
-| PHPUnit | **PASS** — 262 tests, 1.386 assertions |
+| PHPUnit | **PASS** — 263 tests, 1.391 assertions |
 | Frontend | **PASS** — 111/111 |
 | Lint | **PASS** — 0 errores, 19 warnings preexistentes |
 | Build | **PASS** |
 | Smoke | **PASS** — 30 suites, 0 fallos |
-| E2E con escritura | **PASS** — 35/35 en stack aislado |
+| E2E con escritura | **PASS** — 35/35 en stack aislado (ejecutado antes de IMG-11; el cambio de locks no afecta la UI) |
 | Auditoría de integridad | **PASS** — 26 controles, 0 errores |
 | Validación de configuración | **PASS** — 18/18 |
 | Compatibilidad MySQL/MariaDB | **NOT RUN** — sin cambios de esquema ni de SQL de datos |
@@ -266,7 +342,8 @@ Pruebas nuevas:
 - `StorageServiceTest`: versionado opaco, cache hit, borrado de caché, exclusión de CV.
 - `image-pipeline.test.mjs`: reset de `ActivityImage`, `loading="lazy"` y reset de `ProfileImage`.
 - `image_cache_stampede.php`: 10 procesos, una sola descarga externa.
-- `test_performance.sh`: ejecuta el benchmark y la prueba de stampede dentro del smoke.
+- `image_cache_lock_regression.php`: bloqueo compartido y separación de inodos tras unlink.
+- `test_performance.sh`: ejecuta el benchmark, el stampede y la regresión de locks dentro del smoke.
 
 ---
 
@@ -286,12 +363,13 @@ Pruebas nuevas:
 ## H. Riesgos y limitaciones
 
 1. **Primera lectura fría** de una imagen nueva sigue costando ~1,2 s con Supabase. Un CDN/proxy inverso lo resolvería, pero no forma parte del repositorio.
-2. **Caché en disco**: crece con las imágenes vistas. TTL 7 días y limpieza oportunista de 30 días; los bloqueos se limpian con la misma política.
+2. **Caché en disco**: crece con las imágenes vistas. Los `.bin` tienen TTL de 7 días y limpieza oportunista de 30 días. Los `.lock` **no** se limpian en el flujo normal: son archivos vacíos y borrarlos con workers activos rompería el bloqueo. Si se requiere limpieza, debe ser una tarea administrativa con workers detenidos.
 3. **Supabase writes**: la prueba de reemplazo/borrado con Supabase real no se ejecutó para no modificar el bucket; se validó con mock/unit tests y con driver local en el flujo HTTP.
 4. **Miniaturas**: no implementadas; los bytes las justifican, pero requieren decisión de producto y benchmark visual.
 5. **Navegadores**: la prueba de reemplazo se hizo en Chromium headless. No se midió Firefox.
 6. **Producción**: las cifras de lectura real son del entorno de desarrollo (`sol_dev`), no de un FPM/CDN productivo.
 7. **`Content-Type`**: conserva `charset=UTF-8` añadido por CI4; no se alteró.
+8. **Fotografías públicas**: el acceso anónimo y la política recomendada se documentan en IMG-12. No se cambió la exposición pública.
 
 ---
 
@@ -305,9 +383,11 @@ Pruebas nuevas:
 - `docs/reports/evidence/images/lecturas-cacheadas.json`
 - `docs/reports/evidence/images/ids-invalidos.json`
 - `docs/reports/evidence/images/cabeceras-imagen.json`
+- `docs/reports/evidence/images/lock-regression.json`
+- `docs/reports/evidence/images/acceso-fotos-publicas.json`
 
 ## J. Dictamen
 
 **APROBADO CON OBSERVACIONES.**
 
-Se corrigieron los defectos reproducibles de caché, versionado, borrado y concurrencia, y se conservó la arquitectura, la privacidad y el contrato de datos. Las observaciones restantes son de producto/entorno: primera lectura fría, miniaturas y métricas productivas.
+Se corrigieron los defectos reproducibles de caché, versionado, borrado, concurrencia y limpieza de locks, y se conservó la arquitectura, la privacidad y el contrato de datos. Las observaciones restantes son de producto/entorno: primera lectura fría, miniaturas, métricas productivas y la decisión pendiente sobre privacidad de fotografías (IMG-12).

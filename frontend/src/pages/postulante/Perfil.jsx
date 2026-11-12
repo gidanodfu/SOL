@@ -76,9 +76,10 @@ export default function Perfil() {
 }
 
 /**
- * Foto de perfil. El binario se solicita autenticado (blob) para no exponerlo en
- * una URL pública; el backend la entrega normalizada a 800x800 (cover, sin
- * deformar). Placeholder con la inicial si no hay foto.
+ * Foto de perfil. El binario se sirve por el proxy público versionado
+ * /api/postulantes/:id/foto (ruta fuera de JWT); el backend la entrega
+ * normalizada a 800x800 (cover, sin deformar). Placeholder con la inicial si
+ * no hay foto. El acceso público se audita en IMG-12 del informe de imágenes.
  */
 function FotoPerfil({ fotoUrl, inicial }) {
   const queryClient = useQueryClient();

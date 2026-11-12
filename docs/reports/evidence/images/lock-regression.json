@@ -1,0 +1,5 @@
+{
+    "bloqueo_compartido_misma_ruta": true,
+    "separacion_tras_unlink": true,
+    "conclusion": "Unlink durante el bloqueo permite un segundo bloqueo independiente; no debe hacerse en el flujo normal."
+}

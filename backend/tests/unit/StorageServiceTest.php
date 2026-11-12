@@ -335,6 +335,20 @@ final class StorageServiceTest extends TestCase
         self::assertFileDoesNotExist($ruta);
     }
 
+    public function testEscrituraDeCacheNoBorraArchivosDeBloqueo(): void
+    {
+        $archivo = (new \ReflectionClass(StorageService::class))->getFileName();
+        self::assertIsString($archivo);
+        $codigo = (string) file_get_contents($archivo);
+        $inicio = strpos($codigo, 'private function escribirCacheImagen');
+        self::assertNotFalse($inicio);
+        $fin = strpos($codigo, 'private function', $inicio + 10);
+        $metodo = substr($codigo, $inicio, $fin === false ? null : $fin - $inicio);
+
+        self::assertStringNotContainsString(".*.lock", $metodo, 'No se deben borrar locks desde la escritura de caché');
+        self::assertStringContainsString('rename(', $metodo);
+    }
+
     public function testRutaObjetoNoPermiteAlterarBucketNiEndpoint(): void
     {
         $servicio = $this->servicio();

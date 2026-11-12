@@ -21,4 +21,9 @@ bench=$?
 php /var/www/sol/tests/tools/image_cache_stampede.php --hijos=10 --expect=1
 cache=$?
 
-[ "$bench" -eq 0 ] && [ "$cache" -eq 0 ]
+# Regresión de IMG-11: unlink de un lock activo separa inodos. El flujo normal
+# no debe borrar .lock; esta prueba documenta el peligro.
+php /var/www/sol/tests/tools/image_cache_lock_regression.php
+locks=$?
+
+[ "$bench" -eq 0 ] && [ "$cache" -eq 0 ] && [ "$locks" -eq 0 ]

@@ -354,13 +354,9 @@ class StorageService
                 @unlink($archivo);
             }
         }
-        // Los archivos de bloqueo son pequeños, pero también se limpian si
-        // quedaron huérfanos de procesos antiguos.
-        foreach (glob($directorio . DIRECTORY_SEPARATOR . '.*.lock') ?: [] as $archivo) {
-            if (is_file($archivo) && (int) filemtime($archivo) < $limite) {
-                @unlink($archivo);
-            }
-        }
+        // Los archivos .lock NO se eliminan aquí: otro worker puede tener el
+        // archivo abierto y flock. Borrarlo permitiría crear un segundo inodo
+        // y romper la exclusión mutua.
     }
 
     private function cacheVigente(string $ruta): bool
