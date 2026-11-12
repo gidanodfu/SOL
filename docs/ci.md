@@ -52,7 +52,7 @@ curso ni la pendiente anterior.
 | `frontend` | Frontend (tests, lint y build) | `npm test`, `npm run lint`, `npm run build` |
 | `mariadb` | MariaDB (migraciones, seeds y auditoría) | MariaDB 11.4.13, migraciones, `DatosPruebaSeeder`, auditoría, smoke HTTP, compatibilidad |
 | `compatibility` | Compatibilidad MySQL 8.0 -> MariaDB 11.4 | MySQL 8.0.46 y MariaDB 11.4.13 temporales, dump/import, comparación SHA-256 de 28 tablas, auditoría |
-| `smoke` | Smoke (29 suites) | `test.sh smoke` contra MariaDB temporal |
+| `smoke` | Smoke (29 suites) | `test.sh smoke` contra MariaDB temporal. El nombre del check se conserva por compatibilidad con branch protection; ejecuta 30 suites |
 | `e2e` | E2E (Chromium Headless) | stack con MariaDB temporal, 34 comprobaciones de lectura y edición de perfil con `E2E_WRITES=1` |
 | `gate` | CI Validación global | Consolida y falla si un job obligatorio no terminó en `success` |
 
@@ -94,7 +94,7 @@ fijada por SHA a `actions/upload-artifact` **v7.0.2** (Node 24).
 | `frontend-logs` | tests, lint y build |
 | `mariadb-logs` | up, migrate, seed, audit, HTTP y compatibilidad |
 | `compatibility-evidence` | `comparison.json`, `comparison.md`, `audit.json`, dump sintético |
-| `smoke-logs` | salida completa de las 29 suites |
+| `smoke-logs` | salida completa de las 30 suites |
 | `e2e-evidence` | `resultado.txt`, `resultado.json`, capturas de fallo |
 
 La ausencia de artifacts no convierte un job fallido en exitoso.

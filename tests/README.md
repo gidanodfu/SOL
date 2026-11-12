@@ -51,10 +51,11 @@ y no requieren PHP, Node.js, Composer, npm, Python ni MariaDB en el host.
 | `test_cv_concurrencia.sh` | Bloqueo simultáneo, seis cargas y contadores. |
 | `test_cv_rate_limit.sh` | Ventanas configurables, reinicio y `Retry-After`. |
 | `test_validaciones_estrictas.sh` | Tipos, IDs, booleanos, fechas y contacto. |
+| `test_performance.sh` | 10 vs 100 ofertas en MariaDB temporal; falla si las consultas crecen con los registros. |
 | `test_desarrollo_nuevo.sh` | Externo: requiere APIsPERU y un RUC real con token autorizado; se solicita por nombre y corre dentro de Docker. |
 | `test_docker_http.sh` | Se ejecuta con `test.sh http` contra el stack de desarrollo. |
 
-La tabla incluye las **29 suites automáticas** del runner (`test.sh smoke`) y dos
+La tabla incluye las **30 suites automáticas** del runner (`test.sh smoke`) y dos
 procedimientos adicionales: `test_desarrollo_nuevo.sh` (externo, se solicita por
 nombre) y `test_docker_http.sh` (`test.sh http`).
 
@@ -69,7 +70,7 @@ nombre) y `test_docker_http.sh` (`test.sh http`).
 La CI de `.github/workflows/ci.yml` usa un `.env` sintético y no requiere
 secretos reales ni servicios externos.
 
-> `test.sh smoke` ejecuta 29 suites y actualmente termina con código 0.
+> `test.sh smoke` ejecuta 30 suites y actualmente termina con código 0.
 > Cada suite usa un **esquema MariaDB propio** dentro del contenedor temporal,
 > con `SystemSeeder` + `DatosPruebaSeeder`, por lo que no depende de IDs,
 > empresas o usuarios de otra suite. El runner agrega fallos por suite y
