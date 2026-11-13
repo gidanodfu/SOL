@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarContratacion, listarContratacionesEmpresa, opcionesContratacionEmpresa, registrarContratacion } from '../../services/contrataciones';
-import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
+import { EstadoCarga, Boton, Campo, Estado, FechaHoraCampo, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import { useToast } from '../../components/Feedbacks';
 import { ETIQUETA_ESTADO_POSTULACION, ETIQUETA_SITUACION_CONTRATACION, SITUACIONES_CONTRATACION } from '../../constants';
@@ -262,7 +262,7 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
         <section className="form-seccion">
           <h3 className="form-seccion-titulo">02 · Condiciones de contratación</h3>
           <div className="contratacion-grid">
-            <Campo etiqueta="Fecha de contratación *" id="contratacion-fecha_contratacion" type="date" value={form.fecha_contratacion} onChange={set('fecha_contratacion')} error={errores.fecha_contratacion} disabled={enviando} />
+            <FechaHoraCampo etiqueta="Fecha de contratación *" id="contratacion-fecha_contratacion" modo="fecha" value={form.fecha_contratacion} onChange={setSelect('fecha_contratacion')} error={errores.fecha_contratacion} disabled={enviando} />
             <Campo etiqueta="Cargo contratado *" id="contratacion-cargo" value={form.cargo} onChange={set('cargo')} error={errores.cargo} disabled={enviando} />
             <Campo etiqueta="Modalidad" id="contratacion-modalidad" value={form.modalidad} onChange={set('modalidad')} error={errores.modalidad} disabled={enviando} />
             <Campo etiqueta="Remuneración (S/)" id="contratacion-remuneracion" value={form.remuneracion} onChange={set('remuneracion')} error={errores.remuneracion} disabled={enviando} />
@@ -301,24 +301,16 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
           )}
 
           <div className="contratacion-grid contratacion-grid--dos contratacion-situacion-detalle">
-            <label className={`campo${errores.fecha_situacion ? ' campo-error' : ''}`} htmlFor="contratacion-fecha_situacion">
-              <span>Fecha efectiva de la situación</span>
-              <input
-                id="contratacion-fecha_situacion"
-                type="date"
-                value={form.fecha_situacion}
-                onChange={set('fecha_situacion')}
-                disabled={enviando}
-                aria-invalid={errores.fecha_situacion ? true : undefined}
-                aria-describedby={`contratacion-fecha_situacion-ayuda${errores.fecha_situacion ? ' contratacion-fecha_situacion-error' : ''}`}
-              />
-              <span id="contratacion-fecha_situacion-ayuda" className="campo-ayuda">{notaFechaSituacion}</span>
-              {errores.fecha_situacion && (
-                <span id="contratacion-fecha_situacion-error" className="campo-mensaje" role="alert">
-                  {errores.fecha_situacion}
-                </span>
-              )}
-            </label>
+            <FechaHoraCampo
+              etiqueta="Fecha efectiva de la situación"
+              id="contratacion-fecha_situacion"
+              modo="fecha"
+              value={form.fecha_situacion}
+              onChange={setSelect('fecha_situacion')}
+              error={errores.fecha_situacion}
+              ayuda={notaFechaSituacion}
+              disabled={enviando}
+            />
 
             <label className={`campo${errores.motivo_situacion ? ' campo-error' : ''}`} htmlFor="contratacion-motivo_situacion">
               <span>Motivo / razón{motivoObligatorio ? ' *' : ' (opcional)'}</span>

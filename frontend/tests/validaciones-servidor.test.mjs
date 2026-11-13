@@ -31,7 +31,8 @@ test('contrataciones muestra los errores de fecha y motivo por campo', () => {
   const pagina = leer('../src/pages/empresa/Contrataciones.jsx');
 
   assert.match(pagina, /errores\.fecha_situacion/);
-  assert.match(pagina, /aria-invalid=\{errores\.fecha_situacion/);
+  assert.match(pagina, /<FechaHoraCampo[\s\S]*errores\.fecha_situacion/);
+  assert.match(pagina, /ayuda=\{notaFechaSituacion\}/);
   assert.match(pagina, /id="contratacion-motivo_situacion"/);
   assert.match(pagina, /errores\.motivo_situacion/);
   assert.match(pagina, /contratacion-motivo_situacion-error/);

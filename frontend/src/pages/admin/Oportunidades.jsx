@@ -5,7 +5,7 @@ import {
   actualizarOportunidad, cambiarActivacionOportunidad, cambiarEstadoOportunidad,
   crearOportunidad, listarOportunidadesAdmin,
 } from '../../services/divulgacion';
-import { Boton, Campo, Estado, EstadoCarga, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
+import { Boton, Campo, Estado, EstadoCarga, FechaHoraCampo, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import FichaDatos from '../../components/FichaDatos';
@@ -527,21 +527,21 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
         )}
         <div className="form-actividad-programacion">
           <div className="form-actividad-fila form-actividad-fila-3">
-            <Campo
+            <FechaHoraCampo
               etiqueta="Inicio *"
               id="oportunidad-fecha_inicio"
-              type="datetime-local"
+              modo="fecha-hora"
               value={form.fecha_inicio}
-              onChange={set('fecha_inicio')}
+              onChange={setSelect('fecha_inicio')}
               error={errores.fecha_inicio}
               required={esNueva || hayProgramacion}
             />
-            <Campo
+            <FechaHoraCampo
               etiqueta="Fin *"
               id="oportunidad-fecha_fin"
-              type="datetime-local"
+              modo="fecha-hora"
               value={form.fecha_fin}
-              onChange={set('fecha_fin')}
+              onChange={setSelect('fecha_fin')}
               error={errores.fecha_fin}
               required={esNueva || hayProgramacion}
             />

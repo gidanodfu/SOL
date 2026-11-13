@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { Download, FileText, Filter } from 'lucide-react';
-import { Mensaje } from './UI';
+import { FechaHoraCampo, Mensaje } from './UI';
 
 /**
  * Barra de filtros por periodo compartida por los dashboards admin y empresa.
@@ -30,24 +30,22 @@ export default function FiltroPeriodo({
             <Filter size={15} aria-hidden="true" />
             Periodo
           </span>
-          <div className="date-field">
-            <label htmlFor="periodo-desde">Desde</label>
-            <input
-              id="periodo-desde"
-              type="date"
-              value={form.desde}
-              onChange={(e) => onCambiar({ ...form, desde: e.target.value })}
-            />
-          </div>
-          <div className="date-field">
-            <label htmlFor="periodo-hasta">Hasta</label>
-            <input
-              id="periodo-hasta"
-              type="date"
-              value={form.hasta}
-              onChange={(e) => onCambiar({ ...form, hasta: e.target.value })}
-            />
-          </div>
+          <FechaHoraCampo
+            id="periodo-desde"
+            etiqueta="Desde"
+            modo="fecha"
+            value={form.desde}
+            onChange={(valor) => onCambiar({ ...form, desde: valor })}
+            className="date-field"
+          />
+          <FechaHoraCampo
+            id="periodo-hasta"
+            etiqueta="Hasta"
+            modo="fecha"
+            value={form.hasta}
+            onChange={(valor) => onCambiar({ ...form, hasta: valor })}
+            className="date-field"
+          />
         </div>
 
         <div className="filters-acciones">

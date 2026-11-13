@@ -2,7 +2,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { actualizarActividad, cambiarEstadoActividad, crearActividad, eliminarImagenActividad, listarActividadesAdmin, subirImagenActividad } from '../../services/divulgacion';
-import { EstadoCarga, Boton, Campo, Estado, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
+import { EstadoCarga, Boton, Campo, Estado, FechaHoraCampo, ListaVacia, Mensaje, Selecto, Tarjeta } from '../../components/UI';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
@@ -493,8 +493,8 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
         <span className="form-seccion-titulo">Programación y ubicación</span>
         <div className="form-actividad-programacion">
           <div className="form-actividad-fila form-actividad-fila-3">
-            <Campo etiqueta="Inicio *" id="actividad-fecha_inicio" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} error={errores.fecha_inicio} required />
-            <Campo etiqueta="Fin *" id="actividad-fecha_fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} error={errores.fecha_fin} required />
+            <FechaHoraCampo etiqueta="Inicio *" id="actividad-fecha_inicio" modo="fecha-hora" value={form.fecha_inicio} onChange={setSelect('fecha_inicio')} error={errores.fecha_inicio} required />
+            <FechaHoraCampo etiqueta="Fin *" id="actividad-fecha_fin" modo="fecha-hora" value={form.fecha_fin} onChange={setSelect('fecha_fin')} error={errores.fecha_fin} required />
             <Selecto etiqueta="Modalidad *" id="actividad-modalidad" value={form.modalidad} onChange={setSelect('modalidad')} error={errores.modalidad} required>
               <option value="">Seleccionar modalidad</option>
               {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}

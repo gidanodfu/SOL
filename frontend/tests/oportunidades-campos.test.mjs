@@ -14,7 +14,9 @@ test('la creación de oportunidades exige datos básicos y programación complet
   assert.match(pagina, /<option value="">Seleccionar fuente<\/option>/);
   assert.match(pagina, /<option value="">Seleccionar modalidad<\/option>/);
   assert.match(pagina, /MODALIDADES_ACTIVIDAD\.map/);
-  assert.match(pagina, /type="datetime-local"/);
+  assert.equal((pagina.match(/modo="fecha-hora"/g) || []).length, 2);
+  assert.match(pagina, /onChange=\{setSelect\('fecha_inicio'\)\}/);
+  assert.match(pagina, /onChange=\{setSelect\('fecha_fin'\)\}/);
 
   for (const mensaje of [
     'Selecciona una fuente válida.',

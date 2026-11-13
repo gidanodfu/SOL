@@ -6,7 +6,7 @@ import {
   actualizarPerfilPostulante, eliminarFotoPostulante, perfilPostulante, subirFotoPostulante,
 } from '../../services/postulante';
 import ProfileImage from '../../components/ProfileImage';
-import { Boton, Campo, Mensaje, Selecto, Tarjeta, EstadoCarga } from '../../components/UI';
+import { Boton, Campo, FechaHoraCampo, Mensaje, Selecto, Tarjeta, EstadoCarga } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import CvUploader from '../../components/CvUploader';
 import StatCard from '../../components/StatCard';
@@ -181,6 +181,7 @@ function EdicionBasica({ perfil }) {
   // edita. Las cuentas Google pueden completar o corregir su documento.
   const documentoBloqueado = Boolean(perfil.dni) && perfil.proveedor !== 'google';
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const setSelect = (k) => (valor) => setForm({ ...form, [k]: valor });
 
   const cambiarDocumento = (tipo) => {
     setForm({
@@ -235,7 +236,7 @@ function EdicionBasica({ perfil }) {
         <Campo etiqueta="Teléfono" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: soloDigitos(e.target.value) })} inputMode="numeric" maxLength={11} error={campos.telefono} />
         <Campo etiqueta="Dirección" value={form.direccion} onChange={set('direccion')} />
         <Campo etiqueta="Distrito" value={form.distrito} onChange={set('distrito')} />
-        <Campo etiqueta="Fecha de nacimiento" type="date" value={form.fecha_nacimiento} onChange={set('fecha_nacimiento')} error={campos.fecha_nacimiento} />
+        <FechaHoraCampo etiqueta="Fecha de nacimiento" modo="fecha" value={form.fecha_nacimiento} onChange={setSelect('fecha_nacimiento')} error={campos.fecha_nacimiento} />
         <Campo etiqueta="Ocupación" value={form.ocupacion} onChange={set('ocupacion')} maxLength={150} />
         <Campo etiqueta="" style={{ display: 'none' }} type="email" value={form.email} onChange={set('email')} />
       </div>

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listarContratacionesAdmin } from '../../services/contrataciones';
-import { EstadoCarga, Campo, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
+import { EstadoCarga, FechaHoraCampo, ListaVacia, Mensaje, Tarjeta } from '../../components/UI';
 import { errorApi, fechaCalendario } from '../../utils';
 
 export default function Contrataciones() {
@@ -18,8 +18,8 @@ export default function Contrataciones() {
       titulo="Contrataciones registradas (RF-58)"
       acciones={
         <div className="form-fila">
-          <Campo etiqueta="Desde" type="date" value={rango.desde} onChange={(e) => setRango({ ...rango, desde: e.target.value })} />
-          <Campo etiqueta="Hasta" type="date" value={rango.hasta} onChange={(e) => setRango({ ...rango, hasta: e.target.value })} />
+          <FechaHoraCampo etiqueta="Desde" modo="fecha" value={rango.desde} onChange={(valor) => setRango({ ...rango, desde: valor })} />
+          <FechaHoraCampo etiqueta="Hasta" modo="fecha" value={rango.hasta} onChange={(valor) => setRango({ ...rango, hasta: valor })} />
         </div>
       }
     >

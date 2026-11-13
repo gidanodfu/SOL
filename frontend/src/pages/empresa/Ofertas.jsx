@@ -7,7 +7,7 @@ import {
   actualizarOferta, cerrarOferta, crearOferta, detalleOfertaEmpresa, enviarOfertaARevision, listarOfertasEmpresa,
 } from '../../services/ofertas';
 import { listarCategorias } from '../../services/categorias';
-import { EstadoCarga, Boton, Campo, Estado, Mensaje, Selecto } from '../../components/UI';
+import { EstadoCarga, Boton, Campo, Estado, FechaHoraCampo, Mensaje, Selecto } from '../../components/UI';
 import PageHeader from '../../components/PageHeader';
 import TarjetaRegistro from '../../components/TarjetaRegistro';
 import Modal from '../../components/Modal';
@@ -433,7 +433,7 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
           <option value="">Selecciona…</option>
           {experiencias.map((v) => <option key={v} value={v}>{v}</option>)}
         </Selecto>
-        <Campo etiqueta="Fecha de cierre *" required type="date" min={fechaHoyLima()} value={form.fecha_cierre} onChange={set('fecha_cierre')} error={errores.fecha_cierre} />
+        <FechaHoraCampo etiqueta="Fecha de cierre *" required modo="fecha" min={fechaHoyLima()} value={form.fecha_cierre} onChange={setSelect('fecha_cierre')} error={errores.fecha_cierre} />
         <Campo etiqueta="Habilidades (separadas por coma) *" required value={form.habilidades} onChange={set('habilidades')} error={errores.habilidades} />
       </div>
       <Suspense fallback={<p className="vacio">Cargando editor…</p>}>
