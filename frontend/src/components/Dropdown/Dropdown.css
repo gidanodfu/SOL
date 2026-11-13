@@ -15,8 +15,15 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--sombra-hover);
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   animation: dropdown-panel-in 150ms ease-out;
+}
+
+.dropdown-panel::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .dropdown-panel::before {

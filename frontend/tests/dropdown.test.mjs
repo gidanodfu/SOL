@@ -40,6 +40,17 @@ test('Selecto entrega el valor y conserva accesibilidad y opciones declarativas'
   assert.doesNotMatch(fuente, /target:\s*\{\s*value/);
 });
 
+test('los paneles ocultan la barra de scroll sin desactivar el desplazamiento', () => {
+  const css = leer('../src/components/Dropdown/Dropdown.css');
+
+  assert.match(css, /overflow-y:\s*auto/);
+  assert.match(css, /scrollbar-width:\s*none/);
+  assert.match(css, /-ms-overflow-style:\s*none/);
+  assert.match(css, /\.dropdown-panel::-webkit-scrollbar\s*\{[^}]*display:\s*none/);
+  assert.doesNotMatch(css, /scrollbar-width:\s*thin/);
+  assert.doesNotMatch(css, /overflow-y:\s*hidden/);
+});
+
 test('el panel flotante usa portal, alineación central y separación de 10 px', () => {
   const panel = leer('../src/components/Dropdown/DropdownPanel.jsx');
   const posicion = leer('../src/components/Dropdown/useDropdownPosition.js');
