@@ -23,8 +23,11 @@ docker_retry() {
     retry_log="$(mktemp "${TMPDIR:-/tmp}/sol-docker-retry.XXXXXX")"
 
     while [ "$retry_n" -le "$retry_intentos" ]; do
-        "$@" >"$retry_log" 2>&1
-        retry_codigo=$?
+        if "$@" >"$retry_log" 2>&1; then
+            retry_codigo=0
+        else
+            retry_codigo=$?
+        fi
         if [ "$retry_codigo" -eq 0 ]; then
             cat "$retry_log"
             rm -f "$retry_log"
