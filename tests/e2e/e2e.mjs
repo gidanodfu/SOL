@@ -10,6 +10,11 @@ const API = (process.env.E2E_API_URL || BASE).replace(/\/+$/, '');
 const ART = process.env.E2E_ARTIFACTS || '/tmp/sol-e2e';
 mkdirSync(ART, { recursive: true });
 
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
+
 const CREDENCIALES = {
   admin: {
     usuario: process.env.E2E_ADMIN_USER || 'admin',
@@ -286,6 +291,33 @@ async function abrirCalendario(page, input) {
   return esperarPanel(page, '.fecha-hora__calendario');
 }
 
+async function elegirDiaMesSiguiente(page, input, dia) {
+  await abrirCalendario(page, input);
+  await page.getByRole('button', { name: 'Mes siguiente' }).click();
+  const celda = page.locator('.fecha-hora__calendario .react-datepicker__day:not(.react-datepicker__day--outside-month)')
+    .filter({ hasText: new RegExp(`^${dia}$`) });
+  await celda.click();
+  await page.waitForFunction(() => !document.querySelector('.fecha-hora__calendario'));
+  return input.inputValue();
+}
+
+function fechaDMAaISO(valor) {
+  return valor.split('/').reverse().join('-');
+}
+
+async function capturarExportacion(page, patron, nombreBoton, mensaje) {
+  let solicitada = null;
+  await page.route(patron, async (route) => {
+    solicitada = route.request().url();
+    await route.fulfill({ status: 200, contentType: 'application/octet-stream', body: 'archivo' });
+  });
+  await page.getByRole('button', { name: nombreBoton }).click();
+  await page.getByText(mensaje).waitFor();
+  await page.unroute(patron);
+  assert.ok(solicitada, `No se solicitó ${patron}`);
+  return new URL(solicitada);
+}
+
 function escribirInformes() {
   const resumen = {
     base: BASE,
@@ -433,14 +465,38 @@ try {
         await page.keyboard.press('Escape');
       });
 
-      await ejecutar('admin: dashboard usa el calendario compartido del periodo', async () => {
+      await ejecutar('admin: dashboard aplica periodo, exporta y limpia', async () => {
         await visitar(page, '/admin/dashboard', 'Dashboard');
         assert.equal(await page.locator('.fecha-hora-campo.date-field').count(), 2);
-        const desde = page.locator('input.fecha-hora__input').first();
-        const panel = await abrirCalendario(page, desde);
-        assert.ok(await panel.evaluate((el) => el.closest('.content') === null));
-        await page.getByRole('button', { name: 'Hoy' }).click();
-        assert.equal(await desde.inputValue(), fechaDMA(fechaHoyLima()));
+        const desde = page.locator('input.fecha-hora__input').nth(0);
+        const hasta = page.locator('input.fecha-hora__input').nth(1);
+        const d1 = await elegirDiaMesSiguiente(page, desde, 10);
+        const d2 = await elegirDiaMesSiguiente(page, hasta, 12);
+        const iso1 = fechaDMAaISO(d1);
+        const iso2 = fechaDMAaISO(d2);
+        assert.equal(await desde.inputValue(), d1);
+        assert.equal(await hasta.inputValue(), d2);
+
+        const espera = page.waitForResponse((r) => {
+          if (r.request().method() !== 'GET' || !r.url().includes('/api/admin/dashboard')) return false;
+          const params = new URL(r.url()).searchParams;
+          return params.get('desde') === iso1 && params.get('hasta') === iso2;
+        });
+        await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+        assert.equal((await espera).status(), 200);
+        await page.getByText('Sin postulaciones en el periodo.').waitFor();
+
+        const excel = await capturarExportacion(page, '**/api/admin/reportes/excel*', /Exportar Excel/, 'Reporte Excel generado. Revise su descarga.');
+        assert.equal(excel.searchParams.get('desde'), iso1);
+        assert.equal(excel.searchParams.get('hasta'), iso2);
+        const pdf = await capturarExportacion(page, '**/api/admin/reportes/pdf*', /Exportar PDF/, 'Reporte PDF generado. Revise su descarga.');
+        assert.equal(pdf.searchParams.get('desde'), iso1);
+        assert.equal(pdf.searchParams.get('hasta'), iso2);
+
+        await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+        await page.getByText('Sin postulaciones en el periodo.').waitFor({ state: 'detached' });
+        assert.equal(await desde.inputValue(), '');
+        assert.equal(await hasta.inputValue(), '');
       });
 
       await ejecutar('admin: calendario de fecha filtra el periodo y limpia', async () => {
@@ -466,6 +522,40 @@ try {
         assert.ok(geometria.top >= 0 && geometria.bottom <= geometria.vh, 'calendario fuera del viewport');
         assert.ok(geometria.desborde <= 1, `desbordamiento horizontal: ${geometria.desborde}`);
 
+        const jerarquia = await page.evaluate(() => {
+          const panel = document.querySelector('.fecha-hora__calendario').getBoundingClientRect();
+          const input = document.querySelector('input.fecha-hora__input').getBoundingClientRect();
+          const dia = document.querySelector('.react-datepicker__day:not(.react-datepicker__day--outside-month)').getBoundingClientRect();
+          const titulo = document.querySelector('.fecha-hora__mes')?.textContent || '';
+          return {
+            anchoPanel: panel.width,
+            altoDia: dia.height,
+            anchoDia: dia.width,
+            centrado: Math.abs((panel.left + panel.width / 2) - (input.left + input.width / 2)),
+            selects: document.querySelectorAll('.react-datepicker__month-select, .react-datepicker__year-select').length,
+            titulo,
+            mes: document.querySelector('.fecha-hora__mes')?.textContent,
+            navs: [...document.querySelectorAll('.fecha-hora__nav')].map((b) => b.getAttribute('aria-label')),
+            weekdays: [...document.querySelectorAll('.react-datepicker__day-name span[aria-hidden]')].map((s) => s.textContent),
+            headerBg: getComputedStyle(document.querySelector('.react-datepicker__header')).backgroundColor,
+            panelBg: getComputedStyle(document.querySelector('.fecha-hora__calendario')).backgroundColor,
+          };
+        });
+        assert.ok(jerarquia.anchoPanel >= 300 && jerarquia.anchoPanel <= 306, `ancho inesperado: ${jerarquia.anchoPanel}`);
+        assert.ok(jerarquia.anchoDia === 36 && jerarquia.altoDia === 36, `celda inesperada: ${jerarquia.anchoDia}x${jerarquia.altoDia}`);
+        assert.ok(jerarquia.centrado <= 2, `panel no centrado: ${jerarquia.centrado}`);
+        assert.equal(jerarquia.selects, 0, 'quedan selectores de mes o año');
+        assert.match(jerarquia.titulo, /^[A-ZÁÉÍÓÚ][a-záéíóú]+ de \d{4}$/);
+        assert.deepEqual(jerarquia.navs, ['Mes anterior', 'Mes siguiente']);
+        assert.deepEqual(jerarquia.weekdays, ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']);
+        assert.equal(jerarquia.headerBg, jerarquia.panelBg, 'la cabecera no comparte el fondo del panel');
+
+        const mesInicial = await page.locator('.fecha-hora__mes').innerText();
+        await page.getByRole('button', { name: 'Mes siguiente' }).click();
+        assert.notEqual(await page.locator('.fecha-hora__mes').innerText(), mesInicial);
+        await page.getByRole('button', { name: 'Mes anterior' }).click();
+        assert.equal(await page.locator('.fecha-hora__mes').innerText(), mesInicial);
+
         const esperaDesde = page.waitForResponse((r) => {
           if (r.request().method() !== 'GET' || !r.url().includes('/api/admin/contrataciones')) return false;
           return new URL(r.url()).searchParams.get('desde') === hoy;
@@ -484,6 +574,7 @@ try {
         await page.getByRole('button', { name: 'Hoy' }).click();
         assert.equal((await esperaHasta).status(), 200);
         assert.equal(await hasta.inputValue(), fechaDMA(hoy));
+        await page.getByText('Sin contrataciones registradas en el periodo.').waitFor();
 
         const esperaLimpiar = page.waitForResponse((r) => {
           if (r.request().method() !== 'GET' || !r.url().includes('/api/admin/contrataciones')) return false;
@@ -532,6 +623,63 @@ try {
         await page.keyboard.press('Escape');
       });
 
+      await ejecutar('admin: calendario distingue hoy, hover y días externos', async () => {
+        await visitar(page, '/admin/contrataciones', 'Contrataciones registradas');
+        const panel = await abrirCalendario(page, page.locator('input.fecha-hora__input').first());
+        const esperados = await panel.evaluate((el) => {
+          const sonda = document.createElement('div');
+          sonda.style.cssText = 'position:absolute;visibility:hidden;border:2px solid var(--primario);background:var(--sky-2);color:var(--text-3);';
+          document.body.append(sonda);
+          const estilo = getComputedStyle(sonda);
+          const valores = { primario: estilo.borderTopColor, sky2: estilo.backgroundColor, text3: estilo.color };
+          sonda.remove();
+          return valores;
+        });
+        const hoy = panel.locator('.react-datepicker__day--today').first();
+        assert.equal(await hoy.evaluate((el) => getComputedStyle(el).borderTopColor), esperados.primario);
+        const externo = panel.locator('.react-datepicker__day--outside-month').first();
+        assert.ok(parseFloat(await externo.evaluate((el) => getComputedStyle(el).opacity)) < 1);
+        assert.equal(await externo.evaluate((el) => getComputedStyle(el).color), esperados.text3);
+        const hover = panel.locator('.react-datepicker__day:not(.react-datepicker__day--outside-month):not(.react-datepicker__day--today)').first();
+        await hover.hover();
+        await hover.evaluate((el) => Promise.all(el.getAnimations().map((animacion) => animacion.finished)));
+        assert.equal(await hover.evaluate((el) => getComputedStyle(el).backgroundColor), esperados.sky2);
+        await page.keyboard.press('Escape');
+      });
+
+      await ejecutar('admin: calendario responde en seis resoluciones', async () => {
+        await visitar(page, '/admin/contrataciones', 'Contrataciones registradas');
+        for (const [ancho, alto] of [[1440, 900], [1366, 768], [1024, 768], [768, 1024], [390, 844], [320, 640]]) {
+          await page.setViewportSize({ width: ancho, height: alto });
+          const input = page.locator('input.fecha-hora__input').first();
+          await input.scrollIntoViewIfNeeded();
+          await abrirCalendario(page, input);
+          const medida = await page.evaluate(() => {
+            const panel = document.querySelector('.fecha-hora__calendario').getBoundingClientRect();
+            const dia = document.querySelector('.react-datepicker__day:not(.react-datepicker__day--outside-month)').getBoundingClientRect();
+            return {
+              left: panel.left,
+              right: panel.right,
+              top: panel.top,
+              bottom: panel.bottom,
+              width: panel.width,
+              dia: dia.width,
+              docW: document.documentElement.scrollWidth,
+              vw: innerWidth,
+              vh: innerHeight,
+            };
+          });
+          assert.ok(medida.left >= 0 && medida.right <= medida.vw + 0.5, `${ancho}x${alto}: panel fuera del viewport horizontal`);
+          assert.ok(medida.top >= 0 && medida.bottom <= medida.vh + 0.5, `${ancho}x${alto}: panel fuera del viewport vertical`);
+          assert.ok(medida.docW <= medida.vw + 1, `${ancho}x${alto}: desbordamiento horizontal`);
+          assert.ok(medida.width >= 296 && medida.width <= 304, `${ancho}x${alto}: ancho inesperado ${medida.width}`);
+          assert.ok(medida.dia >= 34, `${ancho}x${alto}: celda táctil demasiado pequeña ${medida.dia}`);
+          await page.keyboard.press('Escape');
+          await page.waitForFunction(() => !document.querySelector('.fecha-hora__calendario'));
+        }
+        await page.setViewportSize({ width: 1440, height: 900 });
+      });
+
       await ejecutar('admin: calendario de fecha-hora conserva minutos y teclado', async () => {
         await visitar(page, '/admin/actividades', 'Actividades');
         await page.getByRole('button', { name: /Nueva actividad/ }).click();
@@ -550,11 +698,11 @@ try {
         await esperarPanel(page, '.fecha-hora__calendario');
         await page.getByRole('button', { name: 'Hoy' }).click();
         assert.equal(await page.locator('.fecha-hora__calendario').count(), 1, 'el panel cerró antes de elegir la hora');
-        const hora = page.locator('.fecha-hora__hora input').nth(0);
-        const minuto = page.locator('.fecha-hora__hora input').nth(1);
+        const hora = page.locator('.fecha-hora__hora-input');
+        assert.equal(await hora.getAttribute('type'), 'time');
+        assert.equal(await hora.getAttribute('step'), '60');
         assert.equal(await hora.isDisabled(), false);
-        await hora.fill('15');
-        await minuto.fill('07');
+        await hora.fill('15:07');
         assert.equal(await inicio.inputValue(), `${fechaDMA(fechaHoyLima())} 15:07`);
 
         await page.keyboard.press('Escape');
@@ -584,6 +732,7 @@ try {
                 document.documentElement.dataset.tema = t;
                 document.documentElement.dataset.theme = m;
               }, [tema, modo]);
+              await seleccion.evaluate((el) => Promise.all(el.getAnimations().map((animacion) => animacion.finished)));
               const medida = await panel.evaluate((el) => {
                 const sonda = document.createElement('div');
                 sonda.style.cssText = 'position:absolute;visibility:hidden;background:var(--white);color:var(--text-1);';
@@ -607,9 +756,10 @@ try {
                 document.body.append(sonda);
                 const esperado = getComputedStyle(sonda).backgroundColor;
                 sonda.remove();
-                return { actual: getComputedStyle(el).backgroundColor, esperado };
+                return { actual: getComputedStyle(el).backgroundColor, esperado, radio: getComputedStyle(el).borderRadius };
               });
               assert.equal(seleccionada.actual, seleccionada.esperado, `${tema}-${modo}: selección fuera de tokens`);
+              assert.equal(seleccionada.radio, '50%', `${tema}-${modo}: la selección no es circular`);
               fondos.add(medida.fondo);
             }
           }
@@ -644,58 +794,119 @@ try {
         await page.keyboard.press('Escape');
       });
 
-      await ejecutar('admin: oportunidad conserva fecha y hora en el payload', async () => {
-        await visitar(page, '/admin/oportunidades', 'Difusión');
-        await page.getByRole('button', { name: /Nueva oportunidad/ }).click();
-        await page.getByRole('heading', { name: 'Nueva oportunidad' }).first().waitFor();
-        const hoy = fechaHoyLima();
+      if (process.env.E2E_WRITES === '1') {
+        await ejecutar('admin: oportunidad crea, edita y persiste fecha y hora', async () => {
+          await visitar(page, '/admin/oportunidades', 'Difusión');
+          await page.getByRole('button', { name: /Nueva oportunidad/ }).click();
+          await page.getByRole('heading', { name: 'Nueva oportunidad' }).first().waitFor();
+          const hoy = fechaHoyLima();
+          const titulo = `Convocatoria E2E ${Date.now()}`;
+          const tituloEditado = `${titulo} editada`;
 
-        await page.locator('#oportunidad-fuente').click();
-        await page.getByRole('option', { name: 'Empleos Perú', exact: true }).click();
-        await page.locator('#oportunidad-titulo').fill('Convocatoria E2E');
-        await page.locator('#oportunidad-enlace').fill('https://example.com/convocatoria');
+          await page.locator('#oportunidad-fuente').click();
+          await page.getByRole('option', { name: 'Empleos Perú', exact: true }).click();
+          await page.locator('#oportunidad-titulo').fill(titulo);
+          await page.locator('#oportunidad-enlace').fill('https://example.com/convocatoria');
+          const inicio = page.locator('input.fecha-hora__input').nth(0);
+          const fin = page.locator('input.fecha-hora__input').nth(1);
+          await abrirCalendario(page, inicio);
+          await page.getByRole('button', { name: 'Hoy' }).click();
+          await page.locator('.fecha-hora__hora-input').fill('15:07');
+          await page.keyboard.press('Escape');
+          await abrirCalendario(page, fin);
+          await page.getByRole('button', { name: 'Hoy' }).click();
+          await page.locator('.fecha-hora__hora-input').fill('16:07');
+          await page.keyboard.press('Escape');
+          assert.equal(await inicio.inputValue(), `${fechaDMA(hoy)} 15:07`);
+          assert.equal(await fin.inputValue(), `${fechaDMA(hoy)} 16:07`);
+          await page.locator('#oportunidad-modalidad').click();
+          await page.getByRole('option', { name: 'Virtual', exact: true }).click();
+          const editor = page.locator('[contenteditable="true"]').first();
+          await editor.waitFor();
+          await editor.fill('Descripción persistente de la convocatoria E2E.');
 
-        const inicio = page.locator('input.fecha-hora__input').nth(0);
-        const fin = page.locator('input.fecha-hora__input').nth(1);
-        await abrirCalendario(page, inicio);
-        await page.getByRole('button', { name: 'Hoy' }).click();
-        await page.locator('.fecha-hora__hora input').nth(0).fill('15');
-        await page.locator('.fecha-hora__hora input').nth(1).fill('07');
-        await page.keyboard.press('Escape');
-        await abrirCalendario(page, fin);
-        await page.getByRole('button', { name: 'Hoy' }).click();
-        await page.locator('.fecha-hora__hora input').nth(0).fill('16');
-        await page.locator('.fecha-hora__hora input').nth(1).fill('07');
-        await page.keyboard.press('Escape');
-        assert.equal(await inicio.inputValue(), `${fechaDMA(hoy)} 15:07`);
-        assert.equal(await fin.inputValue(), `${fechaDMA(hoy)} 16:07`);
+          const espera = page.waitForResponse((r) => r.url().includes('/api/admin/oportunidades') && r.request().method() === 'POST');
+          await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+          const respuesta = await espera;
+          assert.equal(respuesta.status(), 201);
+          const datos = respuesta.request().postDataJSON();
+          assert.equal(datos.fecha_inicio, `${hoy} 15:07:00`);
+          assert.equal(datos.fecha_fin, `${hoy} 16:07:00`);
 
-        await page.locator('#oportunidad-modalidad').click();
-        await page.getByRole('option', { name: 'Virtual', exact: true }).click();
-        const editor = page.locator('[contenteditable="true"]').first();
-        await editor.waitFor();
-        await editor.fill('Descripción de la convocatoria E2E.');
+          const tarjeta = page.getByRole('button', { name: `Ver detalle: ${titulo}` });
+          await tarjeta.waitFor();
+          await tarjeta.click();
+          await page.getByRole('dialog').getByRole('button', { name: 'Editar' }).click();
+          await page.getByRole('heading', { name: 'Editar oportunidad' }).first().waitFor();
+          assert.equal(await page.locator('#oportunidad-titulo').inputValue(), titulo);
+          await page.locator('#oportunidad-titulo').fill(tituloEditado);
+          const esperaPut = page.waitForResponse((r) => r.url().includes('/api/admin/oportunidades/') && r.request().method() === 'PUT');
+          await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+          assert.equal((await esperaPut).status(), 200);
+          await page.getByRole('button', { name: `Ver detalle: ${tituloEditado}` }).waitFor();
 
-        let resolver;
-        const capturado = new Promise((resolverPromesa) => { resolver = resolverPromesa; });
-        await page.route('**/api/admin/oportunidades', async (route) => {
-          if (route.request().method() !== 'POST') return route.continue();
-          resolver(route.request().postDataJSON());
-          return route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ success: true, message: 'ok', data: { id: 999999 } }),
-          });
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.getByRole('button', { name: `Ver detalle: ${tituloEditado}` }).waitFor();
         });
-        await page.getByRole('button', { name: 'Guardar', exact: true }).click();
-        const datos = await Promise.race([
-          capturado,
-          new Promise((_, rechazar) => setTimeout(() => rechazar(new Error('La oportunidad no envió el POST esperado.')), 10000)),
-        ]);
-        await page.unroute('**/api/admin/oportunidades');
-        assert.equal(datos.fecha_inicio, `${hoy} 15:07:00`);
-        assert.equal(datos.fecha_fin, `${hoy} 16:07:00`);
-      });
+
+        await ejecutar('admin: actividad crea y edita fecha-hora con imagen', async () => {
+          const nombre = `Feria E2E ${Date.now()}`;
+          const nombreEditado = `${nombre} editada`;
+          const hoy = fechaHoyLima();
+          await visitar(page, '/admin/actividades', 'Actividades');
+          await page.getByRole('button', { name: /Nueva actividad/ }).click();
+          await page.getByRole('heading', { name: 'Nueva actividad' }).first().waitFor();
+          await page.locator('#actividad-tipo').click();
+          await page.getByRole('option', { name: 'Feria de empleo', exact: true }).click();
+          await page.locator('#actividad-nombre').fill(nombre);
+          const inicio = page.locator('input.fecha-hora__input').nth(0);
+          const fin = page.locator('input.fecha-hora__input').nth(1);
+          for (const [input, hora] of [[inicio, '15:07'], [fin, '16:07']]) {
+            await abrirCalendario(page, input);
+            await page.getByRole('button', { name: 'Hoy' }).click();
+            await page.locator('.fecha-hora__hora-input').fill(hora);
+            await page.keyboard.press('Escape');
+          }
+          await page.locator('#actividad-modalidad').click();
+          await page.getByRole('option', { name: 'Presencial', exact: true }).click();
+          await page.locator('#actividad-lugar').fill('Plaza principal');
+          await page.locator('#actividad-organizador').fill('Municipalidad');
+          await page.locator('input[type=file]').setInputFiles({ name: 'actividad.png', mimeType: 'image/png', buffer: PNG_1X1 });
+          const editor = page.locator('[contenteditable="true"]').first();
+          await editor.waitFor();
+          await editor.fill('Descripción de la feria E2E.');
+
+          const espera = page.waitForResponse((r) => r.url().includes('/api/admin/actividades') && r.request().method() === 'POST');
+          await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+          const respuesta = await espera;
+          assert.equal(respuesta.status(), 201);
+          const id = (await respuesta.json()).data.id;
+
+          await page.locator('#actividad-nombre').fill(nombreEditado);
+          const esperaPut = page.waitForResponse((r) => r.url().includes(`/api/admin/actividades/${id}`) && r.request().method() === 'PUT');
+          await page.getByRole('button', { name: 'Guardar cambios' }).click();
+          assert.equal((await esperaPut).status(), 200);
+          await page.getByRole('button', { name: 'Finalizar' }).click();
+          await page.getByText(nombreEditado, { exact: true }).waitFor();
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.getByText(nombreEditado, { exact: true }).waitFor();
+
+          await page.getByRole('button', { name: `Ver detalle: ${nombreEditado}` }).click();
+          await page.getByRole('dialog').getByRole('button', { name: 'Editar' }).click();
+          await page.getByRole('heading', { name: 'Editar actividad' }).first().waitFor();
+          assert.equal(await page.locator('input.fecha-hora__input').nth(0).inputValue(), `${fechaDMA(hoy)} 15:07`);
+          assert.equal(await page.locator('input.fecha-hora__input').nth(1).inputValue(), `${fechaDMA(hoy)} 16:07`);
+        });
+      } else {
+        resultados.push({
+          estado: 'NOT RUN',
+          nombre: 'admin: oportunidad crea y edita (requiere E2E_WRITES=1)',
+        });
+        resultados.push({
+          estado: 'NOT RUN',
+          nombre: 'admin: actividad crea y edita (requiere E2E_WRITES=1)',
+        });
+      }
 
       await ejecutar('admin: badges en una línea y sin compresión', async () => {
         await visitar(page, '/admin/ofertas', 'Ofertas');
@@ -877,13 +1088,44 @@ try {
         await page.keyboard.press('Escape');
       });
 
-      await ejecutar('empresa: dashboard comparte el calendario de periodo', async () => {
+      await ejecutar('empresa: dashboard aplica periodo, exporta y limpia', async () => {
         await visitar(page, '/empresa/dashboard', 'Panel de empresa');
         assert.equal(await page.locator('.fecha-hora-campo.date-field').count(), 2);
-        const desde = page.locator('input.fecha-hora__input').first();
-        await abrirCalendario(page, desde);
-        await page.getByRole('button', { name: 'Hoy' }).click();
-        assert.equal(await desde.inputValue(), fechaDMA(fechaHoyLima()));
+        const desde = page.locator('input.fecha-hora__input').nth(0);
+        const hasta = page.locator('input.fecha-hora__input').nth(1);
+        const d1 = await elegirDiaMesSiguiente(page, desde, 10);
+        const d2 = await elegirDiaMesSiguiente(page, hasta, 12);
+        const iso1 = fechaDMAaISO(d1);
+        const iso2 = fechaDMAaISO(d2);
+        assert.equal(await desde.inputValue(), d1);
+        assert.equal(await hasta.inputValue(), d2);
+
+        const esperaDashboard = page.waitForResponse((r) => {
+          if (r.request().method() !== 'GET' || !r.url().includes('/api/empresa/dashboard')) return false;
+          const params = new URL(r.url()).searchParams;
+          return params.get('desde') === iso1 && params.get('hasta') === iso2;
+        });
+        const esperaContratos = page.waitForResponse((r) => {
+          if (r.request().method() !== 'GET' || !r.url().includes('/api/empresa/contrataciones')) return false;
+          const params = new URL(r.url()).searchParams;
+          return params.get('desde') === iso1 && params.get('hasta') === iso2;
+        });
+        await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+        assert.equal((await esperaDashboard).status(), 200);
+        assert.equal((await esperaContratos).status(), 200);
+        await page.getByText('Sin actividad registrada en el periodo seleccionado.').waitFor();
+
+        const excel = await capturarExportacion(page, '**/api/empresa/reportes/excel*', /Exportar Excel/, 'Reporte Excel generado. Revise su descarga.');
+        assert.equal(excel.searchParams.get('desde'), iso1);
+        assert.equal(excel.searchParams.get('hasta'), iso2);
+        const pdf = await capturarExportacion(page, '**/api/empresa/reportes/pdf*', /Exportar PDF/, 'Reporte PDF generado. Revise su descarga.');
+        assert.equal(pdf.searchParams.get('desde'), iso1);
+        assert.equal(pdf.searchParams.get('hasta'), iso2);
+
+        await page.getByRole('button', { name: 'Limpiar filtros' }).click();
+        await page.getByText('Sin actividad registrada en el periodo seleccionado.').waitFor({ state: 'detached' });
+        assert.equal(await desde.inputValue(), '');
+        assert.equal(await hasta.inputValue(), '');
       });
 
       await ejecutar('empresa: calendario de oferta usa el mismo panel', async () => {
@@ -924,10 +1166,170 @@ try {
             await guardar(original);
           }
         });
+
+        // Requiere una base aislada nueva: la postulación de fixture se consume una vez.
+        await ejecutar('empresa: contratación crea, edita y persiste fechas', async () => {
+          await visitar(page, '/empresa/postulaciones', 'Postulaciones');
+          const tarjeta = page.getByRole('button', { name: /Ver detalle:/ }).first();
+          await tarjeta.waitFor();
+          await tarjeta.click();
+          const dialogo = page.getByRole('dialog');
+          await dialogo.getByRole('button', { name: 'En revisión', exact: true }).click();
+          await dialogo.getByRole('button', { name: 'Seleccionado', exact: true }).waitFor();
+          await dialogo.getByRole('button', { name: 'Seleccionado', exact: true }).click();
+          await page.keyboard.press('Escape');
+          await page.waitForFunction(() => !document.querySelector('[role="dialog"]'));
+
+          const hoy = fechaHoyLima();
+          await visitar(page, '/empresa/contrataciones', 'Contrataciones');
+          await page.getByRole('button', { name: /Registrar contratación/ }).click();
+          await page.getByRole('heading', { name: 'Registrar contratación' }).first().waitFor();
+          await page.locator('#contratacion-postulacion_id').click();
+          await page.getByRole('option', { name: /Ana Torres Rojas/ }).click();
+          const fechaContratacion = page.locator('input.fecha-hora__input').nth(0);
+          await abrirCalendario(page, fechaContratacion);
+          await page.getByRole('button', { name: 'Hoy' }).click();
+          assert.equal(await fechaContratacion.inputValue(), fechaDMA(hoy));
+          await page.locator('#contratacion-cargo').fill('Operario E2E');
+          await page.locator('#contratacion-modalidad').fill('Presencial');
+          await page.locator('#contratacion-remuneracion').fill('1500');
+
+          const esperaPost = page.waitForResponse((r) => r.url().includes('/api/empresa/contrataciones') && r.request().method() === 'POST');
+          await page.getByRole('button', { name: 'Guardar contratación' }).click();
+          const respuesta = await esperaPost;
+          assert.equal(respuesta.status(), 201);
+          assert.equal(respuesta.request().postDataJSON().fecha_contratacion, hoy);
+          const fila = page.locator('.tabla-contrataciones-empresa tbody tr').first();
+          await fila.waitFor();
+          assert.match(await fila.innerText(), /Operario E2E/);
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.locator('.tabla-contrataciones-empresa tbody tr').first().waitFor();
+          assert.match(await page.locator('.tabla-contrataciones-empresa tbody tr').first().innerText(), /Operario E2E/);
+
+          await page.getByRole('button', { name: 'Editar' }).first().click();
+          await page.getByRole('heading', { name: 'Editar contratación' }).first().waitFor();
+          await page.locator('#contratacion-cargo').fill('Operario E2E actualizado');
+          await page.locator('input[name="contratacion-situacion_laboral"][value="finalizado"]').check();
+          const fechaSituacion = page.locator('input.fecha-hora__input').nth(1);
+          await abrirCalendario(page, fechaSituacion);
+          await page.getByRole('button', { name: 'Hoy' }).click();
+          assert.equal(await fechaSituacion.inputValue(), fechaDMA(hoy));
+
+          const esperaPut = page.waitForResponse((r) => r.url().includes('/api/empresa/contrataciones/') && r.request().method() === 'PUT');
+          await page.getByRole('button', { name: 'Guardar contratación' }).click();
+          const respuestaPut = await esperaPut;
+          assert.equal(respuestaPut.status(), 200);
+          const datosPut = respuestaPut.request().postDataJSON();
+          assert.equal(datosPut.fecha_contratacion, hoy);
+          assert.equal(datosPut.fecha_situacion, hoy);
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          const filaEditada = page.locator('.tabla-contrataciones-empresa tbody tr').first();
+          await filaEditada.waitFor();
+          assert.match(await filaEditada.innerText(), /Operario E2E actualizado/);
+          assert.match(await filaEditada.innerText(), /Finalizó contrato/);
+
+          // Semántica inclusiva: desde = hasta = hoy incluye la contratación;
+          // un periodo posterior la excluye.
+          await visitar(page, '/empresa/dashboard', 'Panel de empresa');
+          const desde = page.locator('input.fecha-hora__input').nth(0);
+          const hasta = page.locator('input.fecha-hora__input').nth(1);
+          for (const input of [desde, hasta]) {
+            await abrirCalendario(page, input);
+            await page.getByRole('button', { name: 'Hoy' }).click();
+          }
+          const esperaHoy = page.waitForResponse((r) => {
+            if (r.request().method() !== 'GET' || !r.url().includes('/api/empresa/dashboard')) return false;
+            const params = new URL(r.url()).searchParams;
+            return params.get('desde') === hoy && params.get('hasta') === hoy;
+          });
+          await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+          await esperaHoy;
+          const tarjetaContratos = page.locator('.stat-card').filter({ hasText: 'Contrataciones del periodo' });
+          await tarjetaContratos.waitFor();
+          assert.equal((await tarjetaContratos.locator('.stat-num').innerText()).trim(), '1');
+
+          const d1 = await elegirDiaMesSiguiente(page, desde, 10);
+          const d2 = await elegirDiaMesSiguiente(page, hasta, 12);
+          const esperaFuera = page.waitForResponse((r) => {
+            if (r.request().method() !== 'GET' || !r.url().includes('/api/empresa/dashboard')) return false;
+            const params = new URL(r.url()).searchParams;
+            return params.get('desde') === fechaDMAaISO(d1) && params.get('hasta') === fechaDMAaISO(d2);
+          });
+          await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+          await esperaFuera;
+          assert.equal((await tarjetaContratos.locator('.stat-num').innerText()).trim(), '0');
+        });
+
+        await ejecutar('empresa: oferta con fecha de cierre persiste', async () => {
+          const puesto = `Operario E2E ${Date.now()}`;
+          const hoy = fechaHoyLima();
+          await visitar(page, '/empresa/ofertas', 'Ofertas laborales');
+          await page.getByRole('button', { name: /Nueva oferta/ }).click();
+          await page.getByRole('heading', { name: /Nueva oferta/ }).first().waitFor();
+          await page.getByLabel(/Puesto/).fill(puesto);
+          await page.getByRole('combobox', { name: /Categoría/ }).click();
+          await page.getByRole('option', { name: 'Construcción', exact: true }).click();
+          await page.getByRole('combobox', { name: /Tipo de empleo/ }).click();
+          await page.getByRole('option', { name: 'Tiempo completo', exact: true }).click();
+          await page.getByRole('combobox', { name: /Ubicación/ }).click();
+          await page.getByRole('option', { name: 'Chiclayo', exact: true }).click();
+          await page.getByLabel(/Número de vacantes/).fill('1');
+          await page.getByLabel(/Salario/).fill('1200');
+          await page.getByRole('combobox', { name: /Formación requerida/ }).click();
+          await page.getByRole('option', { name: 'Secundaria completa', exact: true }).click();
+          await page.getByRole('combobox', { name: /Experiencia requerida/ }).click();
+          await page.getByRole('option', { name: 'Sin experiencia', exact: true }).click();
+          const cierre = page.locator('input.fecha-hora__input').first();
+          await abrirCalendario(page, cierre);
+          await page.getByRole('button', { name: 'Hoy' }).click();
+          assert.equal(await cierre.inputValue(), fechaDMA(hoy));
+          await page.getByLabel(/Habilidades/).fill('Trabajo en equipo');
+          const editores = page.locator('[contenteditable="true"]');
+          const totalEditores = await editores.count();
+          for (let i = 0; i < totalEditores; i += 1) {
+            await editores.nth(i).fill(`Contenido de prueba ${i + 1}`);
+          }
+
+          const espera = page.waitForResponse((r) => r.url().includes('/api/empresa/ofertas') && r.request().method() === 'POST');
+          await page.getByRole('button', { name: 'Enviar a revisión' }).click();
+          const respuesta = await espera;
+          assert.equal(respuesta.status(), 201);
+          assert.equal(respuesta.request().postDataJSON().fecha_cierre, hoy);
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.getByText(puesto, { exact: true }).waitFor();
+
+          await page.getByRole('button', { name: `Ver detalle: ${puesto}` }).click();
+          await page.getByRole('dialog').getByRole('button', { name: 'Editar' }).click();
+          await page.getByRole('heading', { name: /Editar oferta/ }).first().waitFor();
+          const cierreEdicion = page.locator('input.fecha-hora__input').first();
+          assert.equal(await cierreEdicion.inputValue(), fechaDMA(hoy));
+          await abrirCalendario(page, cierreEdicion);
+          await page.getByRole('button', { name: 'Mes siguiente' }).click();
+          await page.locator('.fecha-hora__calendario .react-datepicker__day:not(.react-datepicker__day--outside-month)')
+            .filter({ hasText: /^15$/ }).click();
+          const nuevoCierre = await cierreEdicion.inputValue();
+          const esperaPut = page.waitForResponse((r) => r.url().includes('/api/empresa/ofertas/') && r.request().method() === 'PUT');
+          await page.getByRole('button', { name: 'Guardar cambios' }).click();
+          const respuestaPut = await esperaPut;
+          assert.equal(respuestaPut.status(), 200);
+          assert.equal(respuestaPut.request().postDataJSON().fecha_cierre, fechaDMAaISO(nuevoCierre));
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          const tarjeta = page.getByRole('button', { name: `Ver detalle: ${puesto}` });
+          await tarjeta.waitFor();
+          assert.match(await tarjeta.innerText(), new RegExp(`Cierre: ${nuevoCierre}`));
+        });
       } else {
         resultados.push({
           estado: 'NOT RUN',
           nombre: 'empresa: edición de perfil (requiere E2E_WRITES=1)',
+        });
+        resultados.push({
+          estado: 'NOT RUN',
+          nombre: 'empresa: contratación crea y edita (requiere E2E_WRITES=1)',
+        });
+        resultados.push({
+          estado: 'NOT RUN',
+          nombre: 'empresa: oferta con fecha de cierre (requiere E2E_WRITES=1)',
         });
       }
     }
@@ -1059,6 +1461,35 @@ try {
       await page.keyboard.press('Escape');
       await panel.waitFor({ state: 'detached' });
     });
+
+    if (process.env.E2E_WRITES === '1') {
+      await ejecutar('postulante: fecha de nacimiento persiste en MariaDB', async () => {
+        const hoy = fechaHoyLima();
+        await page.goto(`${BASE}/postulante/perfil`, { waitUntil: 'domcontentloaded' });
+        const fecha = page.locator('input.fecha-hora__input').first();
+        await fecha.waitFor({ state: 'visible' });
+        await abrirCalendario(page, fecha);
+        await page.getByRole('button', { name: 'Hoy' }).click();
+        assert.equal(await fecha.inputValue(), fechaDMA(hoy));
+
+        const espera = page.waitForResponse((r) => r.url().includes('/api/postulante/perfil') && r.request().method() === 'PUT');
+        await page.getByRole('button', { name: 'Guardar cambios' }).click();
+        const respuesta = await espera;
+        assert.equal(respuesta.status(), 200);
+        assert.equal(respuesta.request().postDataJSON().fecha_nacimiento, hoy);
+
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForFunction(
+          (valor) => document.querySelector('input.fecha-hora__input')?.value === valor,
+          fechaDMA(hoy),
+        );
+      });
+    } else {
+      resultados.push({
+        estado: 'NOT RUN',
+        nombre: 'postulante: fecha de nacimiento (requiere E2E_WRITES=1)',
+      });
+    }
 
     await guardarErrores('postulante', errores);
     await contexto.close();
