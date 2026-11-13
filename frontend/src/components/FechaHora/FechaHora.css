@@ -1,0 +1,427 @@
+/* SPDX-License-Identifier: MIT */
+/* Adaptación visual de react-datepicker al sistema de diseño de SOL. */
+
+.fecha-hora-campo {
+  min-width: 0;
+}
+
+.fecha-hora__wrapper,
+.fecha-hora__wrapper.react-datepicker-wrapper {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.fecha-hora__wrapper .react-datepicker__input-container {
+  display: block;
+  width: 100%;
+}
+
+.fecha-hora__wrapper .react-datepicker__input-container input.fecha-hora__input {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0.55rem 64px 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+  color: var(--text-1);
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fecha-hora__input::placeholder {
+  color: var(--text-3);
+  opacity: 1;
+}
+
+.fecha-hora__input:hover:not(:disabled) {
+  border-color: var(--blue);
+}
+
+.fecha-hora__input:focus,
+.fecha-hora__input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.fecha-hora__input:disabled {
+  background: var(--gray-bg);
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+
+.fecha-hora-campo.campo-error .fecha-hora__wrapper .react-datepicker__input-container input.fecha-hora__input {
+  border-color: var(--red-tx);
+}
+
+.fecha-hora__ayuda {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.fecha-hora__wrapper .react-datepicker__calendar-icon {
+  right: 10px;
+  left: auto;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--text-3);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.fecha-hora__wrapper:focus-within .react-datepicker__calendar-icon {
+  color: var(--enlace);
+}
+
+.fecha-hora__wrapper .react-datepicker__close-icon {
+  right: 34px;
+  width: 22px;
+  height: 100%;
+  padding: 0;
+}
+
+.fecha-hora__wrapper .react-datepicker__close-icon::after {
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  background: var(--gray-bg);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.fecha-hora__wrapper .react-datepicker__close-icon:hover::after {
+  background: var(--red-bg);
+  color: var(--red-tx);
+}
+
+/* ---------- Panel del calendario ---------- */
+.fecha-hora__popper {
+  z-index: 1100;
+  line-height: normal;
+}
+
+/* react-datepicker compensa la flecha con -0.7em; sin flecha ese margen
+   anularía la separación de 10px del posicionamiento flotante. */
+.fecha-hora__popper.react-datepicker-popper-offset {
+  margin-top: 0;
+}
+
+.fecha-hora__calendario.react-datepicker {
+  width: min(320px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  color: var(--text-1);
+  box-shadow: var(--sombra-hover);
+  font-family: inherit;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.fecha-hora__calendario .react-datepicker__month-container {
+  float: none;
+  width: 100%;
+}
+
+.fecha-hora__calendario .react-datepicker__header {
+  padding: 10px 8px 6px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--sky);
+}
+
+.fecha-hora__calendario .react-datepicker__current-month,
+.fecha-hora__calendario .react-datepicker-time__header,
+.fecha-hora__calendario .react-datepicker-year-header {
+  color: var(--text-1);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.fecha-hora__calendario .react-datepicker__month-select,
+.fecha-hora__calendario .react-datepicker__year-select {
+  height: 30px;
+  margin-top: 4px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.fecha-hora__calendario .react-datepicker__month-select:focus-visible,
+.fecha-hora__calendario .react-datepicker__year-select:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.fecha-hora__calendario .react-datepicker__navigation {
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+}
+
+.fecha-hora__calendario .react-datepicker__navigation:hover {
+  background: var(--sky-2);
+}
+
+.fecha-hora__calendario .react-datepicker__navigation-icon::before {
+  border-color: var(--text-2);
+}
+
+.fecha-hora__calendario .react-datepicker__month {
+  margin: 8px 10px 4px;
+}
+
+.fecha-hora__calendario .react-datepicker__day-names {
+  margin-bottom: 2px;
+}
+
+.fecha-hora__calendario .react-datepicker__day-name,
+.fecha-hora__calendario .react-datepicker__day {
+  width: 38px;
+  height: 38px;
+  line-height: 38px;
+  margin: 2px;
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+}
+
+.fecha-hora__calendario .react-datepicker__day-name {
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.fecha-hora__calendario .react-datepicker__day:not([aria-disabled='true']):hover {
+  background: var(--sky-2);
+  color: var(--text-1);
+}
+
+.fecha-hora__calendario .react-datepicker__day--outside-month {
+  color: var(--text-3);
+  opacity: 0.55;
+}
+
+.fecha-hora__calendario .react-datepicker__day--today {
+  border: 1px solid var(--primario);
+  font-weight: 700;
+}
+
+.fecha-hora__calendario .react-datepicker__day--selected {
+  background: var(--primario);
+  color: var(--accion-primario-texto);
+  font-weight: 700;
+}
+
+.fecha-hora__calendario .react-datepicker__day--selected:hover {
+  background: var(--primario-hover);
+}
+
+/* La preselección de react-datepicker (hoy) no debe parecer una fecha
+   elegida: se marca con un contorno, no con el relleno de selección. */
+.fecha-hora__calendario .react-datepicker__day--keyboard-selected {
+  background: transparent;
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 2px var(--enlace);
+}
+
+.fecha-hora__calendario .react-datepicker__day--keyboard-selected.react-datepicker__day--selected {
+  background: var(--primario);
+  color: var(--accion-primario-texto);
+  box-shadow: none;
+}
+
+.fecha-hora__calendario .react-datepicker__day--disabled,
+.fecha-hora__calendario .react-datepicker__day[aria-disabled='true'] {
+  color: var(--text-3);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fecha-hora__calendario .react-datepicker__day--disabled:hover {
+  background: transparent;
+}
+
+.fecha-hora__calendario .react-datepicker__today-button {
+  padding: 8px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--sky);
+  color: var(--enlace);
+  font-weight: 600;
+}
+
+.fecha-hora__calendario .react-datepicker__today-button:hover {
+  background: var(--sky-2);
+}
+
+.fecha-hora__calendario .fecha-hora__hoy {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.fecha-hora__calendario .fecha-hora__hoy:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.fecha-hora__calendario .react-datepicker__year-dropdown,
+.fecha-hora__calendario .react-datepicker__month-dropdown {
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--text-1);
+}
+
+.fecha-hora__calendario .react-datepicker__year-option:hover,
+.fecha-hora__calendario .react-datepicker__month-option:hover {
+  background: var(--sky-2);
+}
+
+/* ---------- Fecha y hora ---------- */
+.fecha-hora__calendario .react-datepicker__input-time-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  margin: 0;
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--white);
+  float: none;
+}
+
+.fecha-hora__calendario .react-datepicker-time__caption {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fecha-hora__calendario .react-datepicker-time__input-container,
+.fecha-hora__calendario .react-datepicker-time__input {
+  margin: 0;
+}
+
+.fecha-hora__hora {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.fecha-hora__hora-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.fecha-hora__hora-campo span {
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.fecha-hora__hora-campo input {
+  width: 56px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--text-1);
+  font: inherit;
+  text-align: center;
+}
+
+.fecha-hora__hora-campo input:focus {
+  outline: 2px solid var(--blue);
+  border-color: transparent;
+}
+
+.fecha-hora__hora-campo input:disabled {
+  background: var(--gray-bg);
+  color: var(--text-2);
+}
+
+.fecha-hora__hora-separador {
+  padding-bottom: 7px;
+  color: var(--text-2);
+  font-weight: 700;
+}
+
+/* ---------- Accesibilidad visual ---------- */
+[data-contrast='high'] .fecha-hora__wrapper .react-datepicker__input-container input.fecha-hora__input,
+[data-contrast='high'] .fecha-hora__wrapper .react-datepicker__input-container input.fecha-hora__input:hover,
+[data-contrast='high'] .fecha-hora__calendario.react-datepicker {
+  border-width: 2px;
+}
+
+[data-contrast='high'] .fecha-hora__calendario .react-datepicker__day--selected {
+  outline: 2px solid var(--text-1);
+  outline-offset: 1px;
+}
+
+[data-contrast='high'] .fecha-hora__input:focus-visible,
+[data-contrast='high'] .fecha-hora__calendario .react-datepicker__day:focus-visible {
+  outline-width: 3px;
+}
+
+[data-motion='reduced'] .fecha-hora__input,
+[data-motion='reduced'] .fecha-hora__calendario,
+[data-motion='reduced'] .fecha-hora__calendario * {
+  transition: none;
+  animation: none;
+}
+
+@media (max-width: 360px) {
+  .fecha-hora__calendario.react-datepicker {
+    width: min(320px, calc(100vw - 16px));
+  }
+
+  .fecha-hora__calendario .react-datepicker__day-name,
+  .fecha-hora__calendario .react-datepicker__day {
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    margin: 1.5px;
+  }
+}
+
+/* Integración con la barra de filtros de periodo de los dashboards. */
+.fecha-hora-campo.date-field {
+  width: 155px;
+  margin-bottom: 0;
+  gap: 5px;
+}
+
+.fecha-hora-campo.date-field .fecha-hora__etiqueta {
+  font-size: 11px;
+}
+
+@media (min-width: 681px) and (max-width: 1280px) {
+  .filters-left .fecha-hora-campo.date-field {
+    flex: 1 1 150px;
+    width: auto;
+  }
+}
+
+@media (max-width: 680px) {
+  .fecha-hora-campo.date-field {
+    width: 100%;
+  }
+}

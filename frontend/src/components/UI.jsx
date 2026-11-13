@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { useId } from 'react';
 import Selecto from './Selecto';
+import FechaHoraCampo from './FechaHora/FechaHoraCampo';
 
-export { Selecto };
+export { Selecto, FechaHoraCampo };
 
 export function Campo({ etiqueta, error, id, ...props }) {
   const generado = useId();
