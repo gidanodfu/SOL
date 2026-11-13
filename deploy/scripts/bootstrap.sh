@@ -2,6 +2,7 @@
 set -eu
 
 . "$(dirname -- "$0")/lib/common.sh"
+. "$ROOT/.github/scripts/docker-retry.sh"
 
 trap 'code=$?; if [ "$code" -ne 0 ]; then
     printf "\nBootstrap detenido (código %s). No se eliminaron volúmenes ni se restauró nada automáticamente.\n" "$code" >&2
@@ -51,7 +52,7 @@ printf 'Proyecto Compose: %s\n' "$(project_name)"
 printf 'No se ejecutará ningún seeder adicional.\n'
 
 printf 'Asegurando base de datos...\n'
-compose_dev up -d db
+docker_retry compose_dev up -d db
 wait_for_service compose_dev db 90
 
 printf 'Comprobando que la base esté vacía...\n'
@@ -74,7 +75,7 @@ SQL
 fi
 
 printf 'Construyendo imágenes...\n'
-compose_dev build
+docker_retry compose_dev build
 
 printf 'Aplicando migraciones...\n'
 compose_dev run --rm backend php spark migrate --all
@@ -89,7 +90,7 @@ ADMIN_COUNT=$(printf '%s' "$ADMIN_COUNT" | tr -d '[:space:]')
 [ "${ADMIN_COUNT:-0}" = "1" ] || die "No se pudo verificar el administrador inicial. Revise los logs del backend."
 
 printf 'Iniciando servicios...\n'
-compose_dev up -d
+docker_retry compose_dev up -d
 for service in db backend frontend; do
     wait_for_service compose_dev "$service" 90
 done

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 
 const BASE = (process.env.E2E_BASE_URL || 'http://localhost:5173').replace(/\/+$/, '');
+const API = (process.env.E2E_API_URL || BASE).replace(/\/+$/, '');
 const ART = process.env.E2E_ARTIFACTS || '/tmp/sol-e2e';
 mkdirSync(ART, { recursive: true });
 
@@ -208,6 +209,61 @@ async function verificarShell(page, etiqueta) {
   });
 }
 
+async function esperarPanel(page, selector = '.dropdown-panel') {
+  const panel = page.locator(selector);
+  await panel.waitFor({ state: 'visible' });
+  await panel.evaluate((el) => Promise.all(el.getAnimations().map((animacion) => animacion.finished)));
+  return panel;
+}
+
+async function medirScroll(panel) {
+  return panel.evaluate((el) => {
+    const estilo = getComputedStyle(el);
+    const bordes = parseFloat(estilo.borderLeftWidth) + parseFloat(estilo.borderRightWidth);
+    return {
+      overflowY: estilo.overflowY,
+      scrollbarWidth: estilo.scrollbarWidth,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      scrollTop: el.scrollTop,
+      barraAncho: el.offsetWidth - el.clientWidth - bordes,
+    };
+  });
+}
+
+function assertSinBarraVisible(medida, etiqueta) {
+  assert.equal(medida.overflowY, 'auto', `${etiqueta}: se perdió overflow-y: auto`);
+  assert.equal(medida.scrollbarWidth, 'none', `${etiqueta}: scrollbar-width no es none`);
+  assert.equal(medida.barraAncho, 0, `${etiqueta}: hay una barra de scroll visible`);
+}
+
+async function verificarCatalogoCategorias(page) {
+  const respuesta = await page.request.get(`${API}/api/categorias`);
+  const texto = await respuesta.text();
+  writeFileSync(join(ART, 'categorias.json'), texto + '\n');
+  assert.equal(respuesta.status(), 200, `GET /api/categorias respondió ${respuesta.status()}; evidencia en categorias.json`);
+
+  let cuerpo;
+  try {
+    cuerpo = JSON.parse(texto);
+  } catch {
+    throw new Error('GET /api/categorias no devolvió JSON válido; evidencia en categorias.json');
+  }
+
+  assert.equal(cuerpo.success, true, 'GET /api/categorias no devolvió success=true');
+  assert.ok(Array.isArray(cuerpo.data), 'GET /api/categorias no devolvió el arreglo data');
+
+  const categoria = cuerpo.data.find((item) => item.nombre === 'Construcción');
+  assert.ok(
+    categoria,
+    'Fixture incompleta: /api/categorias no incluye "Construcción". Ejecute bootstrap.sh (SystemSeeder) antes de DatosPruebaSeeder.',
+  );
+  assert.ok(
+    ['1', 'true', 1, true].includes(categoria.activo),
+    'Fixture inválida: la categoría "Construcción" no está activa.',
+  );
+}
+
 function escribirInformes() {
   const resumen = {
     base: BASE,
@@ -305,7 +361,7 @@ try {
         await visitar(page, '/admin/usuarios', 'Usuarios');
         const combo = page.getByRole('combobox').first();
         await combo.click();
-        await page.waitForTimeout(250);
+        await esperarPanel(page);
         const m = await page.evaluate(() => {
           const t = document.querySelector('[role="combobox"]').getBoundingClientRect();
           const p = document.querySelector('.dropdown-panel').getBoundingClientRect();
@@ -335,7 +391,7 @@ try {
         await page.setViewportSize({ width: 1280, height: 400 });
         await visitar(page, '/admin/usuarios', 'Usuarios');
         await page.getByRole('combobox').first().click();
-        await page.waitForTimeout(250);
+        await esperarPanel(page);
         const m = await page.evaluate(() => {
           const p = document.querySelector('.dropdown-panel');
           const r = p.getBoundingClientRect();
@@ -344,6 +400,15 @@ try {
         assert.equal(m.placement, 'top');
         assert.ok(m.top >= 0 && m.bottom <= m.vh, 'panel fuera del viewport');
         await page.setViewportSize({ width: 1440, height: 900 });
+      });
+
+      await ejecutar('admin: Selecto sin barra de scroll visible', async () => {
+        await visitar(page, '/admin/usuarios', 'Usuarios');
+        await page.getByRole('combobox').first().click();
+        const panel = await esperarPanel(page);
+        const medida = await medirScroll(panel);
+        assertSinBarraVisible(medida, 'Selecto admin');
+        await page.keyboard.press('Escape');
       });
 
       await ejecutar('admin: badges en una línea y sin compresión', async () => {
@@ -498,6 +563,34 @@ try {
         await page.getByRole('button', { name: 'Cancelar' }).first().click();
       });
 
+      await ejecutar('empresa: Selecto con scroll real y sin barra visible', async () => {
+        await visitar(page, '/empresa/ofertas', 'Ofertas laborales');
+        await page.getByRole('button', { name: /Nueva oferta/ }).click();
+        const combo = page.getByRole('combobox').first();
+        await combo.click();
+        const panel = await esperarPanel(page);
+        const medida = await medirScroll(panel);
+        assertSinBarraVisible(medida, 'Selecto empresa');
+        assert.ok(medida.scrollHeight > medida.clientHeight, 'el Selecto no tiene contenido desplazable');
+
+        await panel.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+        await page.waitForFunction(() => document.querySelector('.dropdown-panel')?.scrollTop > 0);
+        assert.ok((await medirScroll(panel)).scrollTop > 0, 'scrollTo no desplazó el panel');
+
+        await panel.evaluate((el) => el.scrollTo({ top: 0 }));
+        const caja = await panel.boundingBox();
+        await page.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+        await page.mouse.wheel(0, 400);
+        await page.waitForFunction(() => document.querySelector('.dropdown-panel')?.scrollTop > 0);
+        assert.ok((await medirScroll(panel)).scrollTop > 0, 'la rueda no desplazó el panel');
+
+        await panel.evaluate((el) => el.scrollTo({ top: 0 }));
+        await combo.focus();
+        await page.keyboard.press('End');
+        await page.waitForFunction(() => document.querySelector('.dropdown-panel')?.scrollTop > 0);
+        await page.keyboard.press('Escape');
+      });
+
       if (process.env.E2E_WRITES === '1') {
         await ejecutar('empresa: edición de perfil persiste en MariaDB', async () => {
           paginaActiva = page;
@@ -574,11 +667,19 @@ try {
 
 
     await ejecutar('postulante: filtro con panel compartido', async () => {
+      const esperaCategorias = page.waitForResponse(
+        (respuesta) => respuesta.url().includes('/api/categorias') && respuesta.request().method() === 'GET',
+      );
       await page.goto(`${BASE}/postulante/buscar`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(900);
+      const respuestaCategorias = await esperaCategorias.catch(() => null);
+      assert.ok(respuestaCategorias, 'La vista no solicitó /api/categorias al cargar los filtros.');
+      assert.equal(respuestaCategorias.status(), 200, `La vista recibió ${respuestaCategorias.status()} de /api/categorias.`);
+      await verificarCatalogoCategorias(page);
+
       const pill = page.locator('.pill-btn').nth(1);
+      await pill.waitFor({ state: 'visible' });
       await pill.click();
-      await page.waitForTimeout(250);
+      const panel = await esperarPanel(page);
       const m = await page.evaluate(() => {
         const t = document.querySelectorAll('.pill-btn')[1].getBoundingClientRect();
         const p = document.querySelector('.dropdown-panel').getBoundingClientRect();
@@ -592,12 +693,31 @@ try {
       assert.equal(m.rol, 'listbox');
       assert.ok(Math.abs(m.centroTrigger - m.centroPanel) <= 2, 'panel de filtro no centrado');
       assert.ok(m.gap >= 8 && m.gap <= 12, `separación de filtro inesperada: ${m.gap}`);
-      await page.locator('.dropdown-panel [role="option"]').nth(2).click();
-      assert.ok((await page.locator('.pill-btn').nth(1).innerText()).length > 'Categoría'.length);
-      await page.locator('.pill-btn').nth(1).locator('.clear-btn').click();
+
+      const medida = await medirScroll(panel);
+      assertSinBarraVisible(medida, 'FiltroPill');
+      assert.ok(medida.scrollHeight > medida.clientHeight, 'el filtro no tiene contenido desplazable');
+      await panel.evaluate((el) => el.scrollTo({ top: 120 }));
+      await page.waitForFunction(() => document.querySelector('.dropdown-panel')?.scrollTop > 0);
+      assert.ok((await medirScroll(panel)).scrollTop > 0, 'scrollTo no desplazó el filtro');
+
+      const opcion = page.getByRole('option', { name: 'Construcción', exact: true });
+      await opcion.waitFor({ state: 'visible' });
+      await opcion.click();
+      assert.match(await pill.innerText(), /Construcción/);
+
+      const limpiar = pill.locator('.clear-btn');
+      await limpiar.waitFor({ state: 'visible' });
+      await limpiar.click();
+      await page.waitForFunction(
+        () => !document.querySelectorAll('.pill-btn')[1]?.innerText.includes('Construcción'),
+      );
+      assert.doesNotMatch(await pill.innerText(), /Construcción/);
+
       await pill.focus();
       await page.keyboard.press('ArrowDown');
       assert.equal(await pill.getAttribute('aria-expanded'), 'true');
+      await esperarPanel(page);
       await page.keyboard.press('Escape');
       assert.equal(await pill.getAttribute('aria-expanded'), 'false');
       assert.ok((await page.evaluate(() => document.activeElement?.className || '')).includes('pill-btn'));
@@ -605,10 +725,9 @@ try {
 
     await ejecutar('postulante: menú de usuario conserva semántica de menú', async () => {
       await page.locator('.user-block').click();
-      await page.waitForTimeout(250);
-      const m = await page.evaluate(() => {
+      const panel = await esperarPanel(page, '.dropdown-panel--menu');
+      const m = await panel.evaluate((p) => {
         const t = document.querySelector('.user-block').getBoundingClientRect();
-        const p = document.querySelector('.dropdown-panel--menu');
         const r = p.getBoundingClientRect();
         return {
           rol: p.getAttribute('role'),
@@ -620,8 +739,9 @@ try {
       assert.equal(m.rol, 'menu');
       assert.equal(m.rightTrigger, m.rightPanel);
       assert.ok(m.items >= 4);
+      assertSinBarraVisible(await medirScroll(panel), 'menú de usuario');
       await page.keyboard.press('Escape');
-      assert.equal(await page.locator('.dropdown-panel--menu').count(), 0);
+      await panel.waitFor({ state: 'detached' });
     });
 
     await guardarErrores('postulante', errores);

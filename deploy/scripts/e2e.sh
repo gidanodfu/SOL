@@ -8,6 +8,7 @@ set -eu
 # (Node + Headless Shell). El navegador vive fuera del repositorio.
 E2E_IMAGE="sol_e2e:local"
 BASE_URL=${E2E_BASE_URL:-"http://localhost:$(env_get DEV_FRONTEND_PORT 2>/dev/null || printf '5173')"}
+API_URL=${E2E_API_URL:-"$(env_get VITE_API_URL 2>/dev/null || printf 'http://localhost:8080')"}
 ARTIFACTS=${E2E_ARTIFACTS:-"${TMPDIR:-/tmp}/sol-e2e-artifacts"}
 
 require_repo
@@ -29,6 +30,7 @@ docker run --rm --network host \
     -v "$ROOT/tests/e2e:/e2e:ro" \
     -v "$ARTIFACTS:/artifacts" \
     -e E2E_BASE_URL="$BASE_URL" \
+    -e E2E_API_URL="$API_URL" \
     -e E2E_ARTIFACTS=/artifacts \
     -e E2E_ADMIN_USER -e E2E_ADMIN_PASS \
     -e E2E_EMPRESA_USER -e E2E_EMPRESA_PASS \

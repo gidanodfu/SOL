@@ -88,6 +88,7 @@ if [ "$TARGET" = "validation" ]; then
     "$ROOT/tests/deploy/test_validation.sh"
     "$ROOT/tests/deploy/test_docker_context.sh"
     "$ROOT/tests/deploy/test_docker_retry.sh"
+    "$ROOT/tests/deploy/test_bootstrap.sh"
     exit 0
 fi
 

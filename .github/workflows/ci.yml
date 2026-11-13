@@ -221,19 +221,42 @@ jobs:
       - name: Preparar entorno sintético
         run: bash .github/scripts/prepare-ci-env.sh
 
-      - name: Levantar stack con MariaDB temporal
+      - name: Inicializar instalación nueva (bootstrap)
         run: |
           mkdir -p artifacts/e2e
           set -o pipefail
-          ./deploy/scripts/dev.sh up 2>&1 | tee artifacts/e2e/up.log
+          ./deploy/scripts/bootstrap.sh --dev --authorize 2>&1 | tee artifacts/e2e/bootstrap.log
 
-      - name: Migrar y sembrar datos desechables
+      - name: Sembrar fixtures de prueba
         run: |
           set -o pipefail
-          ./deploy/scripts/dev.sh migrate 2>&1 | tee artifacts/e2e/migrate.log
           ./deploy/scripts/dev.sh seed DatosPruebaSeeder --yes 2>&1 | tee artifacts/e2e/seed.log
 
+      - name: Verificar catálogo de referencia
+        run: |
+          set -o pipefail
+          curl -fsS http://localhost:8080/api/categorias | tee artifacts/e2e/categorias.json >/dev/null
+          python3 - <<'PY'
+          import json
+
+          with open('artifacts/e2e/categorias.json', encoding='utf-8') as archivo:
+              cuerpo = json.load(archivo)
+
+          assert cuerpo.get('success') is True, cuerpo
+          datos = cuerpo.get('data')
+          assert isinstance(datos, list) and datos, 'el catálogo de categorías está vacío'
+
+          construccion = next((item for item in datos if item.get('nombre') == 'Construcción'), None)
+          assert construccion is not None, 'falta la categoría Construcción (SystemSeeder no se ejecutó)'
+          assert str(construccion.get('activo')) in ('1', 'true', 'True'), construccion
+
+          print(f'OK catálogo de referencia: {len(datos)} categorías; Construcción activa.')
+          PY
+
       - name: E2E lectura y escritura
+        env:
+          E2E_ADMIN_USER: ci-admin
+          E2E_ADMIN_PASS: CiAdmin123!
         run: |
           set -o pipefail
           E2E_WRITES=1 E2E_ARTIFACTS="$PWD/artifacts/e2e" \

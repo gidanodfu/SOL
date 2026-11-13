@@ -60,7 +60,9 @@ done
 sh -n "$ROOT/tests/smoke/test_docker_http.sh" || die "Error de sintaxis en la prueba HTTP."
 for test in \
     "$ROOT/tests/deploy/test_validation.sh" \
-    "$ROOT/tests/deploy/test_docker_context.sh"; do
+    "$ROOT/tests/deploy/test_docker_context.sh" \
+    "$ROOT/tests/deploy/test_docker_retry.sh" \
+    "$ROOT/tests/deploy/test_bootstrap.sh"; do
     [ -x "$test" ] || die "La prueba $test no es ejecutable."
     sh -n "$test" || die "Error de sintaxis en $test."
 done
