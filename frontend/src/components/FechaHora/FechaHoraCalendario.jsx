@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
@@ -11,7 +12,7 @@ import { formatearFechaHora, limitesFechaHora, parseFechaHora } from './fechaHor
 const MODIFICADORES = [shift({ padding: 12, crossAxis: true })];
 const PLACEHOLDER = { fecha: 'dd/mm/aaaa', 'fecha-hora': 'dd/mm/aaaa hh:mm' };
 
-function HoraUnica({ date, value = '00:00', onChange, disabled = false }) {
+function HoraUnica({ date, value = '00:00', onChange, onEscape, disabled = false }) {
   return (
     <input
       type="time"
@@ -20,6 +21,7 @@ function HoraUnica({ date, value = '00:00', onChange, disabled = false }) {
       value={value || '00:00'}
       disabled={disabled || !date}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Escape') onEscape?.(); }}
       aria-label="Hora"
     />
   );
@@ -53,13 +55,28 @@ export default function FechaHoraCalendario({
 }) {
   const esFechaHora = modo === 'fecha-hora';
   const { minDate, maxDate } = limitesFechaHora(min, max, modo);
+  const pickerRef = useRef(null);
+  const cierrePorEscape = useRef(false);
+
+  const marcarEscape = () => {
+    cierrePorEscape.current = true;
+  };
+
+  const alCerrarCalendario = () => {
+    if (!cierrePorEscape.current) return;
+    cierrePorEscape.current = false;
+    pickerRef.current?.sendFocusBackToInput?.();
+  };
 
   return (
     <DatePicker
+      ref={pickerRef}
       id={id}
       name={name}
       selected={parseFechaHora(value, modo)}
       onChange={(fecha) => onChange(formatearFechaHora(fecha, modo))}
+      onCalendarClose={alCerrarCalendario}
+      onKeyDown={(e) => { if (e.key === 'Escape') marcarEscape(); }}
       locale={es}
       dateFormat={esFechaHora ? 'dd/MM/yyyy HH:mm' : 'dd/MM/yyyy'}
       calendarStartDay={1}
@@ -108,7 +125,7 @@ export default function FechaHoraCalendario({
       shouldCloseOnSelect={!esFechaHora}
       timeFormat="HH:mm"
       timeInputLabel="Hora"
-      customTimeInput={<HoraUnica disabled={disabled} />}
+      customTimeInput={<HoraUnica disabled={disabled} onEscape={marcarEscape} />}
       minDate={minDate}
       maxDate={maxDate}
       placeholderText={placeholder || PLACEHOLDER[modo]}

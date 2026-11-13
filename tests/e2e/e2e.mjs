@@ -705,9 +705,41 @@ try {
         await hora.fill('15:07');
         assert.equal(await inicio.inputValue(), `${fechaDMA(fechaHoyLima())} 15:07`);
 
+        const inicioHandle = await inicio.elementHandle();
         await page.keyboard.press('Escape');
+        await page.waitForFunction((elemento) => document.activeElement === elemento, inicioHandle);
+        assert.equal(await page.locator('.fecha-hora__calendario').count(), 0);
+        assert.equal(await inicio.inputValue(), `${fechaDMA(fechaHoyLima())} 15:07`);
+        await page.evaluate(() => new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(resolver))));
+        assert.equal(await page.locator('.fecha-hora__calendario').count(), 0, 'el calendario se reabrió tras Escape');
+
+        // Escape desde la cuadrícula de días.
+        await abrirCalendario(page, inicio);
+        await page.locator('.fecha-hora__calendario .react-datepicker__day:not(.react-datepicker__day--outside-month)').first().focus();
+        await page.keyboard.press('Escape');
+        await page.waitForFunction((elemento) => document.activeElement === elemento, inicioHandle);
+        assert.equal(await page.locator('.fecha-hora__calendario').count(), 0);
+        assert.equal(await inicio.inputValue(), `${fechaDMA(fechaHoyLima())} 15:07`);
+
+        // Escape desde la cabecera de navegación.
+        await abrirCalendario(page, inicio);
+        await page.getByRole('button', { name: 'Mes siguiente' }).focus();
+        await page.keyboard.press('Escape');
+        await page.waitForFunction((elemento) => document.activeElement === elemento, inicioHandle);
+        assert.equal(await page.locator('.fecha-hora__calendario').count(), 0);
+        assert.equal(await inicio.inputValue(), `${fechaDMA(fechaHoyLima())} 15:07`);
+
+        // Tab continúa la navegación normal; el siguiente campo abre su propio panel.
+        await page.keyboard.press('Tab');
+        await page.waitForFunction(() => document.activeElement?.id === 'actividad-fecha_fin');
+        assert.equal(await inicio.inputValue(), `${fechaDMA(fechaHoyLima())} 15:07`);
+        await page.keyboard.press('Escape');
+
+        // Un clic fuera cierra sin robar el foco al destino real del clic.
+        await abrirCalendario(page, inicio);
+        await page.locator('#actividad-nombre').click();
         await page.waitForFunction(() => !document.querySelector('.fecha-hora__calendario'));
-        assert.ok((await page.evaluate(() => document.activeElement?.className || '')).includes('fecha-hora__input'));
+        assert.equal(await page.evaluate(() => document.activeElement?.id), 'actividad-nombre');
       });
 
       await ejecutar('admin: calendario respeta las cinco paletas y modos', async () => {

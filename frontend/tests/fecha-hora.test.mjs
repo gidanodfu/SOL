@@ -104,6 +104,10 @@ test('el componente global usa react-datepicker, español, portal y formatos SOL
   assert.match(calendario, /popperPlacement="bottom"/);
   assert.match(calendario, /shift\(\{ padding: 12, crossAxis: true \}\)/);
   assert.match(calendario, /onChange=\{\(fecha\) => onChange\(formatearFechaHora\(fecha, modo\)\)\}/);
+  assert.match(calendario, /onCalendarClose=\{alCerrarCalendario\}/);
+  assert.match(calendario, /sendFocusBackToInput/);
+  assert.match(calendario, /onEscape=\{marcarEscape\}/);
+  assert.match(calendario, /onKeyDown=\{\(e\) => \{ if \(e\.key === 'Escape'\) marcarEscape\(\); \}\}/);
   assert.doesNotMatch(calendario, /toISOString/);
   assert.doesNotMatch(calendario, /target:\s*\{\s*value/);
   assert.doesNotMatch(calendario, /localStorage|matchMedia|dataset\.theme/);
