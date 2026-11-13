@@ -85,11 +85,11 @@ export default function Usuarios() {
 
       <div className="form-fila filtros">
         <input placeholder="Buscar por usuario, nombre o empresa…" value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value })} />
-        <Selecto etiqueta="" value={filtros.rol} onChange={(e) => setFiltros({ ...filtros, rol: e.target.value })}>
+        <Selecto etiqueta="" aria-label="Filtrar por rol" value={filtros.rol} onChange={(valor) => setFiltros({ ...filtros, rol: valor })}>
           <option value="">Todos los roles</option>
           {Object.entries(ETIQUETA_ROL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </Selecto>
-        <Selecto etiqueta="" value={filtros.estado} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}>
+        <Selecto etiqueta="" aria-label="Filtrar por estado" value={filtros.estado} onChange={(valor) => setFiltros({ ...filtros, estado: valor })}>
           <option value="">Todos los estados</option>
           <option value="activo">Activo</option>
           <option value="inactivo">Inactivo</option>

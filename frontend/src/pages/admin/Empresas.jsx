@@ -88,7 +88,7 @@ export default function Empresas() {
 
       <div className="form-fila filtros">
         <input placeholder="Buscar por RUC, razón social o nombre comercial…" value={filtros.q} onChange={(e) => setFiltros({ ...filtros, q: e.target.value })} />
-        <Selecto etiqueta="" value={filtros.estado} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}>
+        <Selecto etiqueta="" aria-label="Filtrar por estado" value={filtros.estado} onChange={(valor) => setFiltros({ ...filtros, estado: valor })}>
           <option value="">Todos los estados</option>
           <option value="activo">Activas</option>
           <option value="inactivo">Inactivas</option>

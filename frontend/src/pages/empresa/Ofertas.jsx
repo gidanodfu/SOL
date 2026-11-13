@@ -275,12 +275,13 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
   const guardando = useRef(false);
   const { ejecutar, enviando } = useAccion(() => (esNueva ? crearOferta(convertir(form)) : actualizarOferta(inicial.id, convertir(form))));
 
-  const set = (k) => (e) => {
-    const { value } = e.target;
+  const actualizar = (k, value) => {
     setForm((previo) => ({ ...previo, [k]: value }));
     setErrores((previo) => (previo[k] ? { ...previo, [k]: '' } : previo));
     setError(null);
   };
+  const set = (k) => (e) => actualizar(k, e.target.value);
+  const setSelect = (k) => (value) => actualizar(k, value);
 
   // Si una oferta anterior guarda un valor fuera de las opciones actuales, se
   // agrega como opción para no perder el dato al editarla.
@@ -410,25 +411,25 @@ function EditorOferta({ categorias, inicial, alGuardar }) {
       <Mensaje>{error}</Mensaje>
       <div className="form-malla">
         <Campo etiqueta="Puesto *" required value={form.puesto} onChange={set('puesto')} error={errores.puesto} />
-        <Selecto etiqueta="Categoría *" required value={form.categoria_id} onChange={set('categoria_id')} error={errores.categoria_id}>
+        <Selecto etiqueta="Categoría *" required value={form.categoria_id} onChange={setSelect('categoria_id')} error={errores.categoria_id}>
           <option value="">Selecciona una categoría</option>
           {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
         </Selecto>
-        <Selecto etiqueta="Tipo de empleo *" required value={form.tipo_empleo} onChange={set('tipo_empleo')} error={errores.tipo_empleo}>
+        <Selecto etiqueta="Tipo de empleo *" required value={form.tipo_empleo} onChange={setSelect('tipo_empleo')} error={errores.tipo_empleo}>
           <option value="">Selecciona…</option>
           {TIPOS_EMPLEO.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_EMPLEO[t]}</option>)}
         </Selecto>
-        <Selecto etiqueta="Ubicación / lugar de trabajo *" required value={form.ubicacion} onChange={set('ubicacion')} error={errores.ubicacion}>
+        <Selecto etiqueta="Ubicación / lugar de trabajo *" required value={form.ubicacion} onChange={setSelect('ubicacion')} error={errores.ubicacion}>
           <option value="">Selecciona una ubicación</option>
           {ubicaciones.map((v) => <option key={v} value={v}>{v}</option>)}
         </Selecto>
         <Campo etiqueta="Número de vacantes *" required type="number" min="1" step="1" value={form.vacantes} onChange={set('vacantes')} error={errores.vacantes} />
         <Campo etiqueta="Salario (S/) *" required type="number" min="0" step="0.01" inputMode="decimal" value={form.remuneracion} onChange={set('remuneracion')} error={errores.remuneracion} />
-        <Selecto etiqueta="Formación requerida *" required value={form.formacion_requerida} onChange={set('formacion_requerida')} error={errores.formacion_requerida}>
+        <Selecto etiqueta="Formación requerida *" required value={form.formacion_requerida} onChange={setSelect('formacion_requerida')} error={errores.formacion_requerida}>
           <option value="">Selecciona…</option>
           {formaciones.map((v) => <option key={v} value={v}>{v}</option>)}
         </Selecto>
-        <Selecto etiqueta="Experiencia requerida *" required value={form.experiencia_requerida} onChange={set('experiencia_requerida')} error={errores.experiencia_requerida}>
+        <Selecto etiqueta="Experiencia requerida *" required value={form.experiencia_requerida} onChange={setSelect('experiencia_requerida')} error={errores.experiencia_requerida}>
           <option value="">Selecciona…</option>
           {experiencias.map((v) => <option key={v} value={v}>{v}</option>)}
         </Selecto>

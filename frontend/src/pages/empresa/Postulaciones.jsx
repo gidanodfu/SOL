@@ -82,7 +82,7 @@ export default function Postulaciones() {
           onChange={(e) => setQInput(e.target.value)}
           placeholder="Nombre, apellido, DNI o puesto"
         />
-        <Selecto etiqueta="Filtrar por oferta" value={ofertaId} onChange={(e) => setOfertaId(e.target.value)}>
+        <Selecto etiqueta="Filtrar por oferta" value={ofertaId} onChange={(valor) => setOfertaId(valor)}>
           <option value="">Todas las ofertas</option>
           {ofertas?.map((o) => <option key={o.id} value={String(o.id)}>{o.puesto}</option>)}
         </Selecto>

@@ -65,11 +65,11 @@ export default function Actividades() {
         ) : null}
       >
         <div className="form-fila filtros">
-          <Selecto etiqueta="" value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
+          <Selecto etiqueta="" aria-label="Filtrar por tipo" value={filtros.tipo} onChange={(valor) => setFiltros({ ...filtros, tipo: valor })}>
             <option value="">Todos los tipos</option>
             {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}
           </Selecto>
-          <Selecto etiqueta="" value={filtros.estado} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}>
+          <Selecto etiqueta="" aria-label="Filtrar por estado" value={filtros.estado} onChange={(valor) => setFiltros({ ...filtros, estado: valor })}>
             <option value="">Todos los estados</option>
             {ESTADOS_ACTIVIDAD.map((s) => <option key={s} value={s}>{ETIQUETA_ESTADO_ACTIVIDAD[s]}</option>)}
           </Selecto>
@@ -312,11 +312,12 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
     setError(null);
   };
 
-  const set = (k) => (e) => {
-    const valor = e.target.value;
+  const actualizar = (k, valor) => {
     setForm((prev) => ({ ...prev, [k]: valor }));
     limpiarError(k);
   };
+  const set = (k) => (e) => actualizar(k, e.target.value);
+  const setSelect = (k) => (valor) => actualizar(k, valor);
 
   const manejarSubir = (archivo) => {
     // No se sube nada hasta guardar: así cancelar no deja archivos huérfanos.
@@ -480,7 +481,7 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
       <div className="form-seccion">
         <span className="form-seccion-titulo">Información básica</span>
         <div className="form-actividad-basica">
-          <Selecto etiqueta="Tipo *" id="actividad-tipo" value={form.tipo} onChange={set('tipo')} error={errores.tipo} required>
+          <Selecto etiqueta="Tipo *" id="actividad-tipo" value={form.tipo} onChange={setSelect('tipo')} error={errores.tipo} required>
             <option value="">Seleccionar tipo</option>
             {TIPOS_ACTIVIDAD.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ACTIVIDAD[t]}</option>)}
           </Selecto>
@@ -494,7 +495,7 @@ function EditorActividad({ inicial, alGuardar, alCerrar }) {
           <div className="form-actividad-fila form-actividad-fila-3">
             <Campo etiqueta="Inicio *" id="actividad-fecha_inicio" type="datetime-local" value={form.fecha_inicio} onChange={set('fecha_inicio')} error={errores.fecha_inicio} required />
             <Campo etiqueta="Fin *" id="actividad-fecha_fin" type="datetime-local" value={form.fecha_fin} onChange={set('fecha_fin')} error={errores.fecha_fin} required />
-            <Selecto etiqueta="Modalidad *" id="actividad-modalidad" value={form.modalidad} onChange={set('modalidad')} error={errores.modalidad} required>
+            <Selecto etiqueta="Modalidad *" id="actividad-modalidad" value={form.modalidad} onChange={setSelect('modalidad')} error={errores.modalidad} required>
               <option value="">Seleccionar modalidad</option>
               {MODALIDADES_ACTIVIDAD.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
             </Selecto>

@@ -117,11 +117,11 @@ export default function Oportunidades() {
         ) : null}
       >
         <div className="form-fila filtros">
-          <Selecto etiqueta="" value={filtros.fuente} onChange={(e) => setFiltros({ ...filtros, fuente: e.target.value })}>
+          <Selecto etiqueta="" aria-label="Filtrar por fuente" value={filtros.fuente} onChange={(valor) => setFiltros({ ...filtros, fuente: valor })}>
             <option value="">Todas las fuentes</option>
             {FUENTES_OPORTUNIDAD.map((f) => <option key={f} value={f}>{ETIQUETA_FUENTE_OPORTUNIDAD[f]}</option>)}
           </Selecto>
-          <Selecto etiqueta="" value={filtros.estado} onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}>
+          <Selecto etiqueta="" aria-label="Filtrar por estado" value={filtros.estado} onChange={(valor) => setFiltros({ ...filtros, estado: valor })}>
             <option value="">Todos los estados</option>
             {ESTADOS_ACTIVIDAD.map((s) => <option key={s} value={s}>{ETIQUETA_ESTADO_ACTIVIDAD[s]}</option>)}
           </Selecto>
@@ -352,8 +352,7 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
     );
   }
 
-  const set = (k) => (e) => {
-    const valor = e.target.value;
+  const actualizar = (k, valor) => {
     setForm((previo) => ({ ...previo, [k]: valor }));
     setErrores((previo) => {
       if (!previo[k]) return previo;
@@ -363,6 +362,8 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
     });
     setError(null);
   };
+  const set = (k) => (e) => actualizar(k, e.target.value);
+  const setSelect = (k) => (valor) => actualizar(k, valor);
 
   const enfocarCampo = (campo) => {
     const elemento = document.getElementById(`oportunidad-${campo}`);
@@ -487,7 +488,7 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
             etiqueta="Fuente *"
             id="oportunidad-fuente"
             value={form.fuente}
-            onChange={set('fuente')}
+            onChange={setSelect('fuente')}
             error={errores.fuente}
             required
           >
@@ -548,7 +549,7 @@ function EditorOportunidad({ inicial, alGuardar, alCerrar }) {
               etiqueta="Modalidad *"
               id="oportunidad-modalidad"
               value={form.modalidad}
-              onChange={set('modalidad')}
+              onChange={setSelect('modalidad')}
               error={errores.modalidad}
               required={esNueva || hayProgramacion}
             >

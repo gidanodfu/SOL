@@ -147,12 +147,13 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
     ? 'Si cambias la situación y no especificas una fecha, se utilizará la fecha actual.'
     : 'Si no indicas una fecha, se utilizará la fecha de contratación.';
 
-  const set = (k) => (e) => {
-    const valor = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  const actualizar = (k, valor) => {
     setForm((previo) => ({ ...previo, [k]: valor }));
     setErrores((previo) => (previo[k] ? { ...previo, [k]: undefined } : previo));
     setError(null);
   };
+  const set = (k) => (e) => actualizar(k, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+  const setSelect = (k) => (valor) => actualizar(k, valor);
 
   const seleccionarSituacion = (valor) => {
     setForm((previo) => ({ ...previo, situacion_laboral: valor }));
@@ -227,7 +228,7 @@ function EditorContratacion({ opciones, inicial, alGuardar }) {
               etiqueta="Candidato seleccionado *"
               id="contratacion-postulacion_id"
               value={form.postulacion_id}
-              onChange={set('postulacion_id')}
+              onChange={setSelect('postulacion_id')}
               error={errores.postulacion_id}
               disabled={enviando}
             >

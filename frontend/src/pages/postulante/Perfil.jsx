@@ -182,8 +182,7 @@ function EdicionBasica({ perfil }) {
   const documentoBloqueado = Boolean(perfil.dni) && perfil.proveedor !== 'google';
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const cambiarDocumento = (e) => {
-    const tipo = e.target.value;
+  const cambiarDocumento = (tipo) => {
     setForm({
       ...form,
       tipo_documento: tipo,

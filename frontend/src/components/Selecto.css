@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: MIT */
+.selecto { min-width: 0; }
+.selecto-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 2.5rem;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--white);
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.selecto-trigger:hover { border-color: var(--blue); }
+.selecto-trigger:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 0;
+  border-color: transparent;
+}
+.selecto-trigger[aria-expanded='true'] { border-color: var(--blue); }
+.selecto-trigger:disabled {
+  background: var(--gray-bg);
+  color: var(--text-2);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+.selecto-valor {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.selecto-chevron { flex: none; color: var(--text-3); transition: transform 0.15s ease; }
+.selecto-trigger[aria-expanded='true'] .selecto-chevron { transform: rotate(180deg); }
+.campo-error .selecto-trigger { border-color: var(--red-tx); }
+.dropdown-panel .dropdown-panel__option { font-size: 13.5px; }
