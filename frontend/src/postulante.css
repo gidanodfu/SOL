@@ -216,52 +216,8 @@
 }
 
 /* ---------- Dropdown de usuario ---------- */
-.app-postulante .user-dropdown {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--sombra-hover);
-  min-width: 210px;
-  padding: 6px 0;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-6px);
-  transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
-  z-index: 50;
-}
-.app-postulante .user-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
-.app-postulante .user-dropdown a,
-.app-postulante .user-dropdown button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text-1);
-  text-decoration: none;
-  background: transparent;
-  border: none;
-  width: 100%;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.app-postulante .user-dropdown a:hover, .app-postulante .user-dropdown button:hover { background: var(--sky); }
-.app-postulante .user-dropdown a.active {
-  background: var(--sky);
-  color: var(--enlace);
-  box-shadow: inset 3px 0 0 var(--blue);
-}
-.app-postulante .user-dropdown i { font-size: 17px; color: var(--text-2); width: 20px; text-align: center; }
-.app-postulante .user-dropdown svg { color: var(--text-2); width: 20px; flex-shrink: 0; }
-.app-postulante .user-dropdown .divider { height: 1px; background: var(--line); margin: 4px 12px; }
-.app-postulante .user-dropdown .logout-item { color: var(--red-tx); }
-.app-postulante .user-dropdown .logout-item i { color: var(--red-tx); }
-.app-postulante .user-dropdown .logout-item svg { color: var(--red-tx); }
-.app-postulante .user-dropdown .logout-item:hover { background: var(--red-bg); }
+/* El menú de usuario reutiliza .dropdown-panel; su contenido se estiliza
+   globalmente en Dropdown.css porque el portal vive fuera del shell. */
 
 /* ---------- Layout ---------- */
 /* Workspace: superficie principal del portal del postulante (misma familia
@@ -284,15 +240,13 @@
    Se oculta solo la representación del scrollbar; overflow-y permanece. */
 .app-postulante .lista-ofertas,
 .app-postulante .panel-contenido,
-.app-postulante .panel-detalle,
-.app-postulante .pill-panel {
+.app-postulante .panel-detalle {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 .app-postulante .lista-ofertas::-webkit-scrollbar,
 .app-postulante .panel-contenido::-webkit-scrollbar,
-.app-postulante .panel-detalle::-webkit-scrollbar,
-.app-postulante .pill-panel::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.app-postulante .panel-detalle::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* ---------- Pills de filtro ---------- */
 .app-postulante .filter-bar {
@@ -354,66 +308,6 @@
 .app-postulante .pill.active .pill-btn .pill-label .clear-btn { color: rgba(255, 255, 255, 0.6); }
 .app-postulante .pill.active .pill-btn .pill-label .clear-btn:hover { color: #fff; }
 
-.app-postulante .pill-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  min-width: 230px;
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--sombra-hover);
-  padding: 8px 4px;
-  z-index: 999;
-  max-height: 320px;
-  max-width: calc(100vw - 24px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-.app-postulante .pill.open .pill-panel { display: block; }
-/* El panel se monta fuera del filtro y se posiciona respecto del viewport. */
-.app-postulante .pill-panel.pill-panel-flotante {
-  display: block;
-  position: fixed;
-  min-width: 0;
-  max-width: calc(100vw - 24px);
-  z-index: 1000;
-}
-.app-postulante .pill-panel .option-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 42px;
-  padding: 9px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background 0.12s;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--text-1);
-  position: relative;
-  border: 0;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-.app-postulante .pill-panel .option-item:hover { background: var(--sky); }
-.app-postulante .pill-panel .option-item.selected { background: var(--sky-2); color: var(--enlace); }
-.app-postulante .pill-panel .option-item .count {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-2);
-  background: var(--sky-2);
-  padding: 0 10px;
-  border-radius: var(--radius-pill);
-  line-height: 24px;
-  min-width: 28px;
-  text-align: center;
-}
 
 /* ---------- Resultados ---------- */
 .app-postulante .results-head {

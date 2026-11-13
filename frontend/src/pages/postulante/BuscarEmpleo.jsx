@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { STALE } from '../../queryConfig';
@@ -12,12 +11,12 @@ import { Mensaje } from '../../components/UI';
 import { useToast } from '../../components/Feedbacks';
 import ContenidoEnriquecido from '../../components/ContenidoEnriquecido';
 import ProfileImage from '../../components/ProfileImage';
+import DropdownPanel from '../../components/Dropdown/DropdownPanel';
 import EmpresaModal from '../../components/EmpresaModal';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '../../components/Empty';
 import { ETIQUETA_TIPO_EMPLEO, OPCIONES_EXPERIENCIA_REQUERIDA, OPCIONES_FORMACION_REQUERIDA, ROLES, TIPOS_EMPLEO } from '../../constants';
 import { UBICACIONES_OFERTA } from '../../data/ubicaciones';
 import { errorApi, fechaCalendario, urlArchivo } from '../../utils';
-import { useClickFuera } from '../../hooks/useClickFuera';
 import { useAccion } from '../../hooks/useAccion';
 
 const OPCIONES_FORMACION = OPCIONES_FORMACION_REQUERIDA;
@@ -282,92 +281,66 @@ export default function BuscarEmpleo() {
 function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerrar, onElegir }) {
   const ref = useRef(null);
   const panelRef = useRef(null);
-  const [posicion, setPosicion] = useState(null);
-  const [portalRoot, setPortalRoot] = useState(null);
+  const [activo, setActivo] = useState(-1);
+  const listId = `filtro-${titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   const opcionActiva = opciones.find((o) => String(o.valor) === String(valor));
+  const indiceSeleccionado = opciones.findIndex((o) => String(o.valor) === String(valor));
   const etiquetaMostrada = valor && opcionActiva ? opcionActiva.etiqueta : titulo;
 
-  useClickFuera(ref, abierto, onCerrar, [panelRef]);
-
-  const posicionar = useCallback(() => {
-    const disparador = ref.current;
-    if (!disparador) return;
-
-    // En móviles reales el viewport visual no coincide con innerWidth/Height
-    // (barra del navegador, zoom, teclado). Se usa visualViewport cuando existe.
-    const vv = window.visualViewport;
-    const vw = vv?.width ?? window.innerWidth;
-    const vh = vv?.height ?? window.innerHeight;
-
-    const rect = disparador.getBoundingClientRect();
-    const margen = 12;
-    const separacion = 8;
-
-    // El panel no debe ocupar todo el ancho del teléfono ni salirse del viewport.
-    const ancho = Math.max(0, Math.min(280, vw - margen * 2));
-    const izquierda = Math.max(
-      margen,
-      Math.min(
-        Math.round(rect.left + rect.width / 2 - ancho / 2),
-        vw - ancho - margen,
-      ),
-    );
-
-    const espacioAbajo = Math.max(0, vh - rect.bottom - separacion - margen);
-    const espacioArriba = Math.max(0, rect.top - separacion - margen);
-    // Se abre arriba solo cuando debajo queda muy poco espacio; si hay espacio
-    // suficiente, se mantiene pegado al control y el panel largo hace scroll.
-    const abrirArriba = espacioAbajo < 200 && espacioArriba > espacioAbajo;
-    const disponible = abrirArriba ? espacioArriba : espacioAbajo;
-    const altoMaximo = Math.min(320, Math.max(48, disponible));
-    const top = Math.max(
-      margen,
-      Math.min(
-        abrirArriba ? rect.top - separacion - altoMaximo : rect.bottom + separacion,
-        vh - margen - altoMaximo,
-      ),
-    );
-
-    setPosicion({
-      left: Math.round(izquierda),
-      width: Math.round(ancho),
-      maxHeight: Math.round(altoMaximo),
-      top: Math.round(top),
-    });
-  }, []);
-
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!abierto) {
-      setPosicion(null);
-      setPortalRoot(null);
-      return undefined;
+      setActivo(-1);
+      return;
     }
-
-    // El portal se monta dentro de `.app-postulante` para conservar los estilos
-    // scoped y el tema; nunca dentro de un contenedor con overflow.
-    setPortalRoot(ref.current?.closest('.app-postulante') || document.body);
-    posicionar();
-    const vv = window.visualViewport;
-    window.addEventListener('resize', posicionar);
-    window.addEventListener('scroll', posicionar, true);
-    vv?.addEventListener('resize', posicionar);
-    vv?.addEventListener('scroll', posicionar);
-    return () => {
-      window.removeEventListener('resize', posicionar);
-      window.removeEventListener('scroll', posicionar, true);
-      vv?.removeEventListener('resize', posicionar);
-      vv?.removeEventListener('scroll', posicionar);
-    };
-  }, [abierto, opciones.length, posicionar]);
+    setActivo(indiceSeleccionado >= 0 ? indiceSeleccionado : 0);
+  }, [abierto, indiceSeleccionado]);
 
   useEffect(() => {
-    if (!abierto) return undefined;
-    const alTeclear = (e) => {
-      if (e.key === 'Escape') onCerrar();
-    };
-    document.addEventListener('keydown', alTeclear);
-    return () => document.removeEventListener('keydown', alTeclear);
-  }, [abierto, onCerrar]);
+    if (!abierto || activo < 0) return;
+    document.getElementById(`${listId}-option-${activo}`)?.scrollIntoView({ block: 'nearest' });
+  }, [abierto, activo, listId]);
+
+  const seleccionar = (opcion) => {
+    onElegir(opcion.valor, opcion.etiqueta);
+    onCerrar();
+    ref.current?.focus();
+  };
+
+  const alTeclear = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!abierto) {
+        onToggle();
+        return;
+      }
+      setActivo((previo) => {
+        const paso = e.key === 'ArrowDown' ? 1 : -1;
+        return (previo + paso + opciones.length) % opciones.length;
+      });
+      return;
+    }
+    if (e.key === 'Home' || e.key === 'End') {
+      if (!abierto) return;
+      e.preventDefault();
+      setActivo(e.key === 'Home' ? 0 : opciones.length - 1);
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!abierto) {
+        onToggle();
+      } else if (opciones[activo]) {
+        seleccionar(opciones[activo]);
+      }
+      return;
+    }
+    if (e.key === 'Escape' && abierto) {
+      e.preventDefault();
+      e.stopPropagation();
+      onCerrar();
+      ref.current?.focus();
+    }
+  };
 
   return (
     <div ref={ref} className={`pill${abierto ? ' open' : ''}${valor ? ' active' : ''}`}>
@@ -375,8 +348,12 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
         type="button"
         className="pill-btn"
         onClick={onToggle}
+        onKeyDown={alTeclear}
         aria-haspopup="listbox"
+        aria-controls={listId}
         aria-expanded={abierto}
+        aria-activedescendant={abierto && activo >= 0 ? `${listId}-option-${activo}` : undefined}
+        aria-label={titulo}
         title={etiquetaMostrada}
       >
         <i className={icono} />
@@ -396,42 +373,38 @@ function FiltroPill({ icono, titulo, opciones, valor, abierto, onToggle, onCerra
           ) : null}
         </span>
 
-        <i
-          className={`ti ti-chevron-down filtro-chevron${
-            abierto ? ' rotate' : ''
-          }`}
-        />
+        <i className={`ti ti-chevron-down filtro-chevron${abierto ? ' rotate' : ''}`} />
       </button>
 
-      {abierto && posicion && portalRoot && createPortal(
-        <div
-          ref={panelRef}
-          className="pill-panel pill-panel-flotante"
-          role="listbox"
-          aria-label={titulo}
-          style={{
-            left: posicion.left,
-            top: posicion.top,
-            width: posicion.width,
-            maxHeight: posicion.maxHeight,
-          }}
-        >
-          {opciones.map((o) => (
-            <button
-              key={String(o.valor) || 'todo'}
-              type="button"
-              role="option"
-              aria-selected={String(o.valor) === String(valor)}
-              className={`option-item${String(o.valor) === String(valor) ? ' selected' : ''}`}
-              onClick={() => onElegir(o.valor, o.etiqueta)}
-            >
-              <span>{o.etiqueta}</span>
-              {String(o.valor) === String(valor) ? <i className="ti ti-check" style={{ color: 'var(--blue-dark)' }} /> : null}
-            </button>
-          ))}
-        </div>,
-        portalRoot,
-      )}
+      <DropdownPanel
+        abierto={abierto}
+        triggerRef={ref}
+        panelRef={panelRef}
+        onCerrar={onCerrar}
+        role="listbox"
+        id={listId}
+        etiqueta={titulo}
+        width="content"
+        minWidth={220}
+        maxHeight={320}
+      >
+        {opciones.map((o, indice) => (
+          <div
+            key={String(o.valor) || 'todo'}
+            id={`${listId}-option-${indice}`}
+            role="option"
+            aria-selected={String(o.valor) === String(valor)}
+            aria-disabled={o.disabled || undefined}
+            className="dropdown-panel__option"
+            data-active={indice === activo ? 'true' : undefined}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => seleccionar(o)}
+          >
+            <span>{o.etiqueta}</span>
+            {String(o.valor) === String(valor) ? <i className="ti ti-check dropdown-panel__check" aria-hidden="true" /> : null}
+          </div>
+        ))}
+      </DropdownPanel>
     </div>
   );
 }

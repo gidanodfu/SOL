@@ -300,6 +300,52 @@ try {
         await verificarShell(page, 'admin');
       });
 
+
+      await ejecutar('admin: selector personalizado con panel centrado', async () => {
+        await visitar(page, '/admin/usuarios', 'Usuarios');
+        const combo = page.getByRole('combobox').first();
+        await combo.click();
+        await page.waitForTimeout(250);
+        const m = await page.evaluate(() => {
+          const t = document.querySelector('[role="combobox"]').getBoundingClientRect();
+          const p = document.querySelector('.dropdown-panel').getBoundingClientRect();
+          return {
+            centroTrigger: t.left + t.width / 2,
+            centroPanel: p.left + p.width / 2,
+            gap: p.top - t.bottom,
+            rol: document.querySelector('.dropdown-panel')?.getAttribute('role'),
+          };
+        });
+        assert.equal(m.rol, 'listbox');
+        assert.ok(Math.abs(m.centroTrigger - m.centroPanel) <= 2, 'panel no centrado');
+        assert.ok(m.gap >= 8 && m.gap <= 12, `separación inesperada: ${m.gap}`);
+        await page.locator('.dropdown-panel [role="option"]').filter({ hasText: 'Empresa' }).first().click();
+        assert.equal(await combo.innerText(), 'Empresa');
+        await combo.click();
+        await page.locator('.dropdown-panel [role="option"]').filter({ hasText: 'Todos los roles' }).click();
+        await combo.focus();
+        await page.keyboard.press('ArrowDown');
+        assert.equal(await combo.getAttribute('aria-expanded'), 'true');
+        await page.keyboard.press('Escape');
+        assert.equal(await combo.getAttribute('aria-expanded'), 'false');
+        assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('role')), 'combobox');
+      });
+
+      await ejecutar('admin: panel se abre hacia arriba en viewport bajo', async () => {
+        await page.setViewportSize({ width: 1280, height: 400 });
+        await visitar(page, '/admin/usuarios', 'Usuarios');
+        await page.getByRole('combobox').first().click();
+        await page.waitForTimeout(250);
+        const m = await page.evaluate(() => {
+          const p = document.querySelector('.dropdown-panel');
+          const r = p.getBoundingClientRect();
+          return { placement: p.dataset.placement, top: r.top, bottom: r.bottom, vh: innerHeight };
+        });
+        assert.equal(m.placement, 'top');
+        assert.ok(m.top >= 0 && m.bottom <= m.vh, 'panel fuera del viewport');
+        await page.setViewportSize({ width: 1440, height: 900 });
+      });
+
       await ejecutar('admin: badges en una línea y sin compresión', async () => {
         await visitar(page, '/admin/ofertas', 'Ofertas');
         const m = await page.evaluate(() => {
@@ -525,6 +571,58 @@ try {
         await sinDesbordamiento(page, ruta);
       });
     }
+
+
+    await ejecutar('postulante: filtro con panel compartido', async () => {
+      await page.goto(`${BASE}/postulante/buscar`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(900);
+      const pill = page.locator('.pill-btn').nth(1);
+      await pill.click();
+      await page.waitForTimeout(250);
+      const m = await page.evaluate(() => {
+        const t = document.querySelectorAll('.pill-btn')[1].getBoundingClientRect();
+        const p = document.querySelector('.dropdown-panel').getBoundingClientRect();
+        return {
+          centroTrigger: t.left + t.width / 2,
+          centroPanel: p.left + p.width / 2,
+          gap: p.top - t.bottom,
+          rol: document.querySelector('.dropdown-panel')?.getAttribute('role'),
+        };
+      });
+      assert.equal(m.rol, 'listbox');
+      assert.ok(Math.abs(m.centroTrigger - m.centroPanel) <= 2, 'panel de filtro no centrado');
+      assert.ok(m.gap >= 8 && m.gap <= 12, `separación de filtro inesperada: ${m.gap}`);
+      await page.locator('.dropdown-panel [role="option"]').nth(2).click();
+      assert.ok((await page.locator('.pill-btn').nth(1).innerText()).length > 'Categoría'.length);
+      await page.locator('.pill-btn').nth(1).locator('.clear-btn').click();
+      await pill.focus();
+      await page.keyboard.press('ArrowDown');
+      assert.equal(await pill.getAttribute('aria-expanded'), 'true');
+      await page.keyboard.press('Escape');
+      assert.equal(await pill.getAttribute('aria-expanded'), 'false');
+      assert.ok((await page.evaluate(() => document.activeElement?.className || '')).includes('pill-btn'));
+    });
+
+    await ejecutar('postulante: menú de usuario conserva semántica de menú', async () => {
+      await page.locator('.user-block').click();
+      await page.waitForTimeout(250);
+      const m = await page.evaluate(() => {
+        const t = document.querySelector('.user-block').getBoundingClientRect();
+        const p = document.querySelector('.dropdown-panel--menu');
+        const r = p.getBoundingClientRect();
+        return {
+          rol: p.getAttribute('role'),
+          rightTrigger: Math.round(t.right),
+          rightPanel: Math.round(r.right),
+          items: p.querySelectorAll('[role="menuitem"]').length,
+        };
+      });
+      assert.equal(m.rol, 'menu');
+      assert.equal(m.rightTrigger, m.rightPanel);
+      assert.ok(m.items >= 4);
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('.dropdown-panel--menu').count(), 0);
+    });
 
     await guardarErrores('postulante', errores);
     await contexto.close();

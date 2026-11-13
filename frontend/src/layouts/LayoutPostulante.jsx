@@ -5,9 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, IdCard, Info, Palette, UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BotonSalir from '../components/BotonSalir';
+import DropdownPanel from '../components/Dropdown/DropdownPanel';
 import ProfileImage from '../components/ProfileImage';
 import { perfilPostulante } from '../services/postulante';
-import { useClickFuera } from '../hooks/useClickFuera';
 import { urlArchivo } from '../utils';
 import { NavbarPostulante } from './NavbarPostulante';
 import { STALE } from '../queryConfig';
@@ -22,9 +22,7 @@ export function LayoutPostulante() {
   const { usuario } = useAuth();
   const { data: perfil } = useQuery({ queryKey: ['perfil-postulante'], queryFn: perfilPostulante, staleTime: STALE.perfil });
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const bloqueRef = useRef(null);
-
-  useClickFuera(bloqueRef, menuAbierto, () => setMenuAbierto(false));
+  const menuTriggerRef = useRef(null);
 
   const nombres = perfil?.nombres || usuario?.nombres || 'Postulante';
   const quien = (nombres || '').split(/\s+/)[0] || 'Postulante';
@@ -32,12 +30,21 @@ export function LayoutPostulante() {
   return (
     <div className="app-postulante">
       <NavbarPostulante>
-        <div ref={bloqueRef} className="user-menu">
+        <div className="user-menu">
           <button
+            ref={menuTriggerRef}
             type="button"
             className="user-block"
             onClick={() => setMenuAbierto(!menuAbierto)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && menuAbierto) {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuAbierto(false);
+              }
+            }}
             aria-haspopup="menu"
+            aria-controls="menu-usuario"
             aria-expanded={menuAbierto}
             aria-label={`Menú de ${quien}`}
           >
@@ -57,7 +64,19 @@ export function LayoutPostulante() {
             </span>
           </button>
 
-          <div className={`user-dropdown${menuAbierto ? ' open' : ''}`} role="menu">
+          <DropdownPanel
+            abierto={menuAbierto}
+            triggerRef={menuTriggerRef}
+            onCerrar={() => setMenuAbierto(false)}
+            role="menu"
+            id="menu-usuario"
+            etiqueta={`Menú de ${quien}`}
+            align="end"
+            width="content"
+            minWidth={220}
+            maxHeight={360}
+            className="dropdown-panel--menu"
+          >
             {MENU.map((item) => (
               <Link key={item.to} to={item.to} role="menuitem" onClick={() => setMenuAbierto(false)}>
                 <item.icono size={17} aria-hidden="true" />
@@ -76,7 +95,7 @@ export function LayoutPostulante() {
             </NavLink>
             <div className="divider" />
             <BotonSalir className="logout-item" />
-          </div>
+          </DropdownPanel>
         </div>
       </NavbarPostulante>
 
